@@ -27,7 +27,7 @@ float rgb_to_hue(int r, int g, int b) {
     return hue;
 }
 
-float calculate_hue_shift(const ray::Color source_rgb, const ray::Color target_rgb) {
+float calculate_hue_shift(const ray::Color& source_rgb, const ray::Color& target_rgb) {
     float source_hue = rgb_to_hue(source_rgb.r, source_rgb.g, source_rgb.b);
     float target_hue = rgb_to_hue(target_rgb.r, target_rgb.g, target_rgb.b);
 

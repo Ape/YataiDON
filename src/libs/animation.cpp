@@ -1,33 +1,40 @@
 #include "animation.h"
 #include "rapidjson/error/en.h"
 #include <algorithm>
+#include <atomic>
 #include <cmath>
 #include <spdlog/spdlog.h>
 
 using std::runtime_error;
 
 namespace {
-    int input_lock_count = 0;
+    std::atomic<int> input_lock_count{0};
 }
 
 bool is_input_locked() {
-    return input_lock_count > 0;
+    return input_lock_count.load(std::memory_order_relaxed) > 0;
 }
 
 void reset_input_lock() {
-    input_lock_count = 0;
+    input_lock_count.store(0, std::memory_order_relaxed);
 }
 
 BaseAnimation::BaseAnimation(double duration, double delay, bool loop, bool lock_input)
     : duration(duration), delay(delay), delay_saved(delay),
-      start_ms(get_current_ms()), is_finished(false), is_started(false),
-      is_reversing(false), unlocked(false), loop(loop),
+      start_ms(get_current_ms()), paused_at_ms(0.0), is_finished(false), is_started(false),
+      is_reversing(false), unlocked(true), loop(loop),
       lock_input(lock_input), attribute(0) {
           if (loop) {
               is_started = true;
               restart();
           }
       }
+
+BaseAnimation::~BaseAnimation() {
+    if (lock_input && !unlocked) {
+        input_lock_count--;
+    }
+}
 
 double BaseAnimation::easeIn(double progress, EaseType ease_type) {
   switch (ease_type) {
@@ -79,10 +86,10 @@ void BaseAnimation::restart() {
     is_reversing = false;
     delay = delay_saved;
     if (is_started) {
-        unlocked = false;
-        if (lock_input) {
+        if (lock_input && unlocked) {
             input_lock_count++;
         }
+        unlocked = false;
     }
 }
 
@@ -94,6 +101,7 @@ void BaseAnimation::start() {
 void BaseAnimation::pause() {
     if (!is_started) return;
     is_started = false;
+    paused_at_ms = get_current_ms();
     if (lock_input && !unlocked) {
         unlocked = true;
         input_lock_count--;
@@ -101,7 +109,9 @@ void BaseAnimation::pause() {
 }
 
 void BaseAnimation::unpause() {
+    if (is_started) return;
     is_started = true;
+    start_ms += get_current_ms() - paused_at_ms;
     if (lock_input && unlocked) {
         unlocked = false;
         input_lock_count++;

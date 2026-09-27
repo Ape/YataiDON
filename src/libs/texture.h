@@ -118,7 +118,7 @@ struct FramedTexture : public TextureObject {
     int frame_count() const override { return static_cast<int>(textures.size()); }
 
     const ray::Texture2D* frame_texture(int frame) const override {
-        if (frame >= static_cast<int>(textures.size())) {
+        if (frame < 0 || frame >= static_cast<int>(textures.size())) {
             throw std::runtime_error("Frame " + std::to_string(frame) +
                 " not available in framed texture " + name);
         }

@@ -109,7 +109,13 @@ void DanBox::load_text() {
             sub_str   = song_titles[song_idx].second;
         } else {
             SongParser sp(entry.song_path);
-            title_str = sp.metadata.title.count(lang) ? sp.metadata.title.at(lang) : sp.metadata.title.at("en");
+            auto title_it = sp.metadata.title.find(lang);
+            if (title_it != sp.metadata.title.end()) {
+                title_str = title_it->second;
+            } else {
+                auto en_it = sp.metadata.title.find("en");
+                title_str = en_it != sp.metadata.title.end() ? en_it->second : "";
+            }
             sub_str   = sp.metadata.subtitle.count(lang) ? sp.metadata.subtitle.at(lang) : "";
         }
         if (entry.hidden && song_idx >= revealed) {

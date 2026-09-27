@@ -11,6 +11,7 @@ namespace crypto {
 class Sha256 {
 public:
     void update(const uint8_t* data, size_t len) {
+        if (finalized) return;
         total_len += len;
         while (len > 0) {
             size_t n = std::min(len, size_t(64) - buffer_len);
@@ -26,6 +27,8 @@ public:
     }
 
     std::array<uint8_t, 32> finalize() {
+        if (finalized) return digest;
+
         uint64_t bit_len = total_len * 8;
         uint8_t pad = 0x80;
         update(&pad, 1);
@@ -34,14 +37,14 @@ public:
         for (int i = 0; i < 8; ++i) buffer[56 + i] = static_cast<uint8_t>(bit_len >> (56 - 8 * i));
         process(buffer);
 
-        std::array<uint8_t, 32> out;
         for (int i = 0; i < 8; ++i) {
-            out[i * 4 + 0] = static_cast<uint8_t>(h[i] >> 24);
-            out[i * 4 + 1] = static_cast<uint8_t>(h[i] >> 16);
-            out[i * 4 + 2] = static_cast<uint8_t>(h[i] >> 8);
-            out[i * 4 + 3] = static_cast<uint8_t>(h[i]);
+            digest[i * 4 + 0] = static_cast<uint8_t>(h[i] >> 24);
+            digest[i * 4 + 1] = static_cast<uint8_t>(h[i] >> 16);
+            digest[i * 4 + 2] = static_cast<uint8_t>(h[i] >> 8);
+            digest[i * 4 + 3] = static_cast<uint8_t>(h[i]);
         }
-        return out;
+        finalized = true;
+        return digest;
     }
 
     static std::array<uint8_t, 32> hash(const uint8_t* data, size_t len) {
@@ -62,6 +65,8 @@ private:
     uint8_t buffer[64];
     size_t buffer_len = 0;
     uint64_t total_len = 0;
+    bool finalized = false;
+    std::array<uint8_t, 32> digest{};
 
     static uint32_t rotr(uint32_t x, uint32_t n) { return (x >> n) | (x << (32 - n)); }
 

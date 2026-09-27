@@ -188,7 +188,10 @@ void FolderBox::run_deferred_scans(std::atomic<bool>& abort_flag) {
     }
 }
 
-FolderBox::~FolderBox() = default;
+FolderBox::~FolderBox() {
+    if (box_texture.has_value())
+        ray::UnloadTexture(box_texture.value());
+}
 
 void FolderBox::load_text() {
     BaseBox::load_text();

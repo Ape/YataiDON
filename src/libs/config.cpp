@@ -233,6 +233,12 @@ Config get_config() {
             fs::copy_file(config_path, backup_path, fs::copy_options::overwrite_existing, ec);
             if (ec) {
                 spdlog::error("Failed to back up {}: {}", config_path.string(), ec.message());
+                fs::path aside_path = config_path;
+                aside_path += ".unparsable";
+                fs::rename(config_path, aside_path, ec);
+                if (ec) {
+                    spdlog::error("Failed to preserve unparsable {}: {}", config_path.string(), ec.message());
+                }
             } else {
                 spdlog::warn("Backed up unparsable config to {}", backup_path.string());
             }

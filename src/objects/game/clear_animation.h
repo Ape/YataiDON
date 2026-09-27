@@ -10,8 +10,8 @@ private:
     TextureChangeAnimation* bachio_texture_change;
     TextureChangeAnimation* bachio_out;
     MoveAnimation* bachio_move_out;
-    std::vector<FadeAnimation*> clear_separate_fade_in;
-    std::vector<TextStretchAnimation*> clear_separate_stretch;
+    std::vector<std::unique_ptr<FadeAnimation>> clear_separate_fade_in;
+    std::vector<std::unique_ptr<TextStretchAnimation>> clear_separate_stretch;
     FadeAnimation* clear_highlight_fade_in;
     bool draw_clear_full;
     std::string name;

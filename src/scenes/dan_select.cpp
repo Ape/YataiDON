@@ -210,9 +210,14 @@ int DanNavigator::scan_root_data(const fs::path& root_path, std::vector<DanBoxDa
             }
 #endif
             if (entry.path().filename() == "dan.json") {
-                if (auto d = load_dan_box_data(entry.path())) {
-                    out.push_back(std::move(*d));
-                    added++;
+                try {
+                    if (auto d = load_dan_box_data(entry.path())) {
+                        out.push_back(std::move(*d));
+                        added++;
+                    }
+                } catch (const std::exception& ex) {
+                    spdlog::warn("DanNavigator: failed to load {}: {}",
+                                 entry.path().string(), ex.what());
                 }
             }
         }
@@ -639,6 +644,7 @@ std::optional<Screens> DanSelectScreen::tick_timer(double current_ms) {
     if (!timer_fired) return std::nullopt;
     timer_fired = false;
     if (state == SongSelectState::BROWSING) {
+        if (dan_navigator.boxes.empty()) return std::nullopt;
         audio.play_sound("don_big", VolumePreset::SOUND);
         open_confirm(current_ms);
         return std::nullopt;

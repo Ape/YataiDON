@@ -11,12 +11,12 @@ private:
     void draw_anim(FolderBox* box);
     void draw_exit_anim(float start_position, float end_position, FolderBox* folder);
 
-    MoveAnimation* stretch;
-    TextureResizeAnimation* scale;
-    MoveAnimation* move;
-    FadeAnimation* fade;
-    MoveAnimation* move_left;
-    MoveAnimation* move_right;
+    std::unique_ptr<MoveAnimation> stretch;
+    std::unique_ptr<TextureResizeAnimation> scale;
+    std::unique_ptr<MoveAnimation> move;
+    std::unique_ptr<FadeAnimation> fade;
+    std::unique_ptr<MoveAnimation> move_left;
+    std::unique_ptr<MoveAnimation> move_right;
 
     // Fixed-path textures resolved once in the constructor instead of calling
     // tex.get_texture() every frame from draw()/draw_anim()/draw_exit_anim().

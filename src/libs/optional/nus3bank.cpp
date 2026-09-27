@@ -193,6 +193,7 @@ bool decode_idsp(const std::vector<uint8_t>& file, size_t pack, size_t pack_size
         spdlog::warn("gen4 audio: IDSP interleave {} not usable", interleave);
         return false;
     }
+    if (interleave > data_size) interleave = data_size;
 
     std::vector<IdspChannel> chans(channels);
     for (int c = 0; c < channels; c++) {
@@ -206,11 +207,9 @@ bool decode_idsp(const std::vector<uint8_t>& file, size_t pack, size_t pack_size
     out.channels    = channels;
     out.sample_rate = rate;
     out.samples.clear();
-    out.samples.reserve((size_t)samples * channels);
 
-    // Per-channel decode buffers, filled block by block and merged.
-    const uint32_t frames_per_block  = interleave / 8;
-    const uint32_t samples_per_block = frames_per_block * 14;
+    const size_t frames_per_block  = interleave / 8;
+    const size_t samples_per_block = frames_per_block * 14;
     std::vector<std::vector<int16_t>> pcm(channels,
                                           std::vector<int16_t>(samples_per_block));
 

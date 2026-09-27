@@ -32,7 +32,6 @@ private:
     EntryOverlay entry_overlay;
     std::unique_ptr<Timer> timer;
 
-    bool screen_init;
     std::unique_ptr<Chara3D> chara;
     bool announce_played;
     std::vector<std::unique_ptr<EntryPlayer>> players;

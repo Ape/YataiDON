@@ -11,6 +11,8 @@
 #include <sstream>
 #include <stdexcept>
 #include <utility>
+#include <SDL3/SDL_stdinc.h>
+#include <spdlog/spdlog.h>
 
 #ifdef _WIN32
 #include <windows.h>

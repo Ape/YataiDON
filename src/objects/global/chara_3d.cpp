@@ -124,7 +124,7 @@ static std::unordered_map<std::string, int> parse_glb_material_indices(
 
     if (chunk_type != 0x4E4F534Au) { fclose(f); return result; }
 
-    if (chunk_len == 0 || chunk_len + 20u > total_len) { fclose(f); return result; }
+    if (chunk_len == 0 || total_len < 20u || chunk_len > total_len - 20u) { fclose(f); return result; }
     std::string json(chunk_len, '\0');
     const size_t read = fread(json.data(), 1, chunk_len, f);
     fclose(f);
@@ -256,7 +256,10 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
     // that solid black; blending them would need back-to-front sorting. An alpha test gives
     // the cabinet's cutout look with plain depth writes.
     if (cutout_shader.id != 0)
-        for (int i = 0; i < model.materialCount; i++) model.materials[i].shader = cutout_shader;
+        for (int i = 0; i < model.materialCount; i++) {
+            if (i == face_material_index) continue;
+            model.materials[i].shader = cutout_shader;
+        }
 
     ray::Model glb_model = ray::LoadModel(anim_path.string().c_str());
     int anim_count = 0;
@@ -507,6 +510,8 @@ void Chara3D::set_anim(AnimIndex idx) {
         } else if (get_anim_name(i).find("loop") == std::string::npos) {
             is_looping = false;
             prev_anim_idx = anim_index;
+        } else {
+            is_looping = true;
         }
         anim_index = idx;
         anim_frame = 0;

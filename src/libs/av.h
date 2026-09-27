@@ -183,7 +183,8 @@ public:
 
             // Need more packets – read from the container.
             bool got_packet = false;
-            while (av_read_frame(fmt_ctx_, packet_) >= 0) {
+            int read_ret = 0;
+            while ((read_ret = av_read_frame(fmt_ctx_, packet_)) >= 0) {
                 if (packet_->stream_index == stream_index_) {
                     check(avcodec_send_packet(codec_ctx_, packet_), "avcodec_send_packet");
                     av_packet_unref(packet_);
@@ -193,9 +194,15 @@ public:
                 av_packet_unref(packet_);
             }
 
+            // av_read_frame() < 0 means either a clean EOF or a real I/O/demux
+            // error; treating both as EOF silently swallowed real failures.
+            if (!got_packet && read_ret != AVERROR_EOF) {
+                check(read_ret, "av_read_frame");
+            }
+
             if (!got_packet) {
                 // Flush the decoder.
-                avcodec_send_packet(codec_ctx_, nullptr);
+                check(avcodec_send_packet(codec_ctx_, nullptr), "avcodec_send_packet (flush)");
             }
         }
     }
@@ -564,7 +571,7 @@ public:
     // Seek to a position in seconds (0 = beginning).
     void seek(double seconds) {
         int64_t ts = static_cast<int64_t>(seconds * AV_TIME_BASE);
-        av_seek_frame(fmt_ctx_, -1, ts, seconds == 0.0 ? AVSEEK_FLAG_BACKWARD : 0);
+        check(av_seek_frame(fmt_ctx_, -1, ts, seconds == 0.0 ? AVSEEK_FLAG_BACKWARD : 0), "av_seek_frame");
     }
 
     // Create a sequential decoder for the video stream at the given index.

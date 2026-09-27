@@ -24,15 +24,48 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
         start = sp + 1;
     }
 
+    // Splits a single space-free token into UTF-8-safe pieces no wider than
+    // max_width, so a long word/URL/CJK run gets hard-broken instead of
+    // overflowing the box.
+    auto break_long_word = [&](const std::string& word) {
+        std::vector<std::string> pieces;
+        std::string piece;
+        size_t i = 0;
+        while (i < word.size()) {
+            size_t char_len = 1;
+            while (i + char_len < word.size() && ((unsigned char)word[i + char_len] & 0xC0) == 0x80)
+                char_len++;
+            std::string candidate = piece + word.substr(i, char_len);
+            if (!piece.empty() && ray::MeasureTextEx(font, candidate.c_str(), (float)font_size, spacing).x > max_width) {
+                pieces.push_back(piece);
+                piece = word.substr(i, char_len);
+            } else {
+                piece = candidate;
+            }
+            i += char_len;
+        }
+        if (!piece.empty()) pieces.push_back(piece);
+        return pieces;
+    };
+
     std::string wrapped, current;
     for (const auto& w : words) {
         std::string candidate = current.empty() ? w : current + " " + w;
         float width = ray::MeasureTextEx(font, candidate.c_str(), (float)font_size, spacing).x;
-        if (width > max_width && !current.empty()) {
-            wrapped += current + "\n";
-            current = w;
-        } else {
+        if (width <= max_width) {
             current = candidate;
+            continue;
+        }
+        if (!current.empty()) {
+            wrapped += current + "\n";
+            current.clear();
+        }
+        if (ray::MeasureTextEx(font, w.c_str(), (float)font_size, spacing).x > max_width) {
+            std::vector<std::string> pieces = break_long_word(w);
+            for (size_t i = 0; i + 1 < pieces.size(); i++) wrapped += pieces[i] + "\n";
+            current = pieces.empty() ? "" : pieces.back();
+        } else {
+            current = w;
         }
     }
     if (!current.empty()) wrapped += current;

@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <stdexcept>
 
 namespace {
 
@@ -29,7 +30,9 @@ void md5(const uint8_t* data, size_t len, uint32_t out[4]) {
 
     size_t padded = ((len + 8) / 64 + 1) * 64 - 8;
     std::vector<uint8_t> msg(padded + 8, 0);
-    assert(data != nullptr || len == 0);
+    if (data == nullptr && len > 0) {
+        throw std::invalid_argument("md5: null data with non-zero len");
+    }
     if (len > 0) {
         memcpy(msg.data(), data, len);
     }

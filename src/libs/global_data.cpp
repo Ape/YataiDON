@@ -1,5 +1,6 @@
 #include "global_data.h"
 #include <unordered_map>
+#include <stdexcept>
 #include "filesystem.h"
 #include "texture.h"
 #include "script.h"
@@ -20,6 +21,19 @@ void load_skin() {
     fs::path root_skin_path = fs::path("Skins") / global_data.config->paths.skin;
     set_skin_graphics_path(root_skin_path / "Graphics");
 
+    static const std::unordered_map<std::string, std::string> font_family = {
+        {"zh", "cn"}, {"ko", "kr"}, {"ja", "jp"}, {"zh_tw", "tw"}, {"zh-tw", "tw"}, {"zh_cn", "cn"}, {"zh-cn", "cn"},
+    };
+    const std::string& lang = global_data.config->general.language;
+    fs::path font_path = resolve_skin_path("Fonts/font_" + lang + ".ttf");
+    if (!fs::exists(font_path) && font_family.count(lang))
+        font_path = resolve_skin_path("Fonts/font_" + font_family.at(lang) + ".ttf");
+    if (!fs::exists(font_path)) font_path = resolve_skin_path("Fonts/font.ttf");
+    if (!fs::exists(font_path)) {
+        spdlog::error("No skin font found (tried font_{}.ttf and font.ttf) in {}", lang, root_skin_path.string());
+        throw std::runtime_error("load_skin: no usable font found in " + root_skin_path.string());
+    }
+
     tex.init(root_skin_path / "Graphics");
 #ifndef YATAIDON_PLATFORM_IOS
     const bool was_fullscreen = ray::IsWindowFullscreen();
@@ -31,16 +45,6 @@ void load_skin() {
     global_tex.init(root_skin_path / "Graphics");
     global_tex.load_screen_textures("global");
     script_manager.init(root_skin_path / "Scripts");
-    static const std::unordered_map<std::string, std::string> font_family = {
-        {"zh", "cn"}, {"ko", "kr"}, {"ja", "jp"}, {"zh_tw", "tw"}, {"zh-tw", "tw"}, {"zh_cn", "cn"}, {"zh-cn", "cn"},
-    };
-    const std::string& lang = global_data.config->general.language;
-    fs::path font_path = resolve_skin_path("Fonts/font_" + lang + ".ttf");
-    if (!fs::exists(font_path) && font_family.count(lang))
-        font_path = resolve_skin_path("Fonts/font_" + font_family.at(lang) + ".ttf");
-    if (!fs::exists(font_path)) font_path = resolve_skin_path("Fonts/font.ttf");
-    if (!fs::exists(font_path))
-        spdlog::error("No skin font found (tried font_{}.ttf and font.ttf) in {}", lang, root_skin_path.string());
     font_manager.init(font_path);
     audio.init_audio_device(root_skin_path / "Sounds", global_data.config->audio, global_data.config->volume);
     debug_menu.load_fonts();

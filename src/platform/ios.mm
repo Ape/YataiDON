@@ -60,19 +60,29 @@ void ios_prepare_filesystem() {
 
         // Keep the existing relative-path asset loaders and all writable files
         // together. Copy only missing files so upgrades preserve user content.
-        for (const auto& entry : fs::recursive_directory_iterator(resources)) {
-            // The iterator already yields paths rooted at resources. Avoid
-            // canonicalizing both paths (and querying every ancestor) per file.
-            fs::path relative = entry.path().lexically_relative(resources);
-            fs::path target = destination / relative;
-            if (entry.is_directory()) fs::create_directories(target);
-            else if (entry.is_regular_file()) {
-                // Parent directories were visited before their children.
-                // Shaders ship with the executable and must match its version.
-                bool shader = *relative.begin() == "shader";
-                if (shader || !fs::exists(target)) {
-                    fs::copy_file(entry.path(), target, shader ? fs::copy_options::overwrite_existing
-                                                             : fs::copy_options::skip_existing);
+        std::error_code ec;
+        if (!fs::is_directory(resources, ec)) {
+            spdlog::warn("iOS: bundled GameData missing or not a directory: {}", resources.string());
+        } else {
+            for (const auto& entry : fs::recursive_directory_iterator(resources, ec)) {
+                // The iterator already yields paths rooted at resources. Avoid
+                // canonicalizing both paths (and querying every ancestor) per file.
+                fs::path relative = entry.path().lexically_relative(resources);
+                fs::path target = destination / relative;
+                if (entry.is_directory(ec)) {
+                    fs::create_directories(target, ec);
+                } else if (entry.is_regular_file(ec)) {
+                    // Parent directories were visited before their children.
+                    // Shaders ship with the executable and must match its version.
+                    bool shader = *relative.begin() == "shader";
+                    if (shader || !fs::exists(target, ec)) {
+                        fs::copy_file(entry.path(), target, shader ? fs::copy_options::overwrite_existing
+                                                                 : fs::copy_options::skip_existing, ec);
+                        if (ec) {
+                            spdlog::warn("iOS: failed to copy {}: {}", entry.path().string(), ec.message());
+                            ec.clear();
+                        }
+                    }
                 }
             }
         }

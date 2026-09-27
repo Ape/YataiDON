@@ -21,13 +21,17 @@ private:
         };
 
         struct CacheKeyHash {
+            // Normalize -0.0f to 0.0f so that values comparing equal via CacheKey::operator==
+            // (which uses IEEE-754 == and treats -0.0f == 0.0f) always hash the same.
+            static float norm(float x) { return x == 0.0f ? 0.0f : x; }
+
             std::size_t operator()(const CacheKey& k) const {
-                std::size_t h1 = std::hash<float>{}(k.start_x);
-                std::size_t h2 = std::hash<float>{}(k.start_y);
-                std::size_t h3 = std::hash<float>{}(k.end_x);
-                std::size_t h4 = std::hash<float>{}(k.end_y);
-                std::size_t h5 = std::hash<float>{}(k.control_x);
-                std::size_t h6 = std::hash<float>{}(k.control_y);
+                std::size_t h1 = std::hash<float>{}(norm(k.start_x));
+                std::size_t h2 = std::hash<float>{}(norm(k.start_y));
+                std::size_t h3 = std::hash<float>{}(norm(k.end_x));
+                std::size_t h4 = std::hash<float>{}(norm(k.end_y));
+                std::size_t h5 = std::hash<float>{}(norm(k.control_x));
+                std::size_t h6 = std::hash<float>{}(norm(k.control_y));
                 std::size_t h7 = std::hash<int>{}(k.arc_points);
                 return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4) ^ (h6 << 5) ^ (h7 << 6);
             }

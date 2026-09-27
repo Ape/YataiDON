@@ -385,7 +385,7 @@ void KeyBindControllerOptionBox::update(double current_time) {
         // SDL joysticks (most drum controllers).
         int btn = ray::GetGamepadButtonPressed();
         if (btn <= 0) btn = take_gamepad_button_pressed();
-        if (btn > 0) {
+        if (btn >= 0) {
             value = {btn};
             confirm();
             audio.play_sound("don", VolumePreset::SOUND);

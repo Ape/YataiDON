@@ -474,7 +474,7 @@ double get_last_input_ms() {
 
 int take_gamepad_button_pressed() {
     int vkey = last_gamepad_vkey.exchange(0, std::memory_order_relaxed);
-    if (vkey < GAMEPAD_VKEY_BASE || vkey >= AXIS_VKEY_BASE) return 0;
+    if (vkey < GAMEPAD_VKEY_BASE || vkey >= AXIS_VKEY_BASE) return -1;
     return vkey - GAMEPAD_VKEY_BASE;
 }
 

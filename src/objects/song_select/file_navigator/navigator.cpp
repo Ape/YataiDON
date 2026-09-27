@@ -1107,31 +1107,55 @@ void Navigator::load_songs_inline_async(const fs::path path, BoxDef box_def) {
     };
 
     if (box_def.collection == "RECOMMENDED") {
-        load_collection_recommended(path, box_def);
+        try {
+            load_collection_recommended(path, box_def);
+        } catch (const std::exception& e) {
+            spdlog::error("Error loading recommended collection {}: {}", path.string(), e.what());
+        }
         loading_complete = true;
         return;
     } else if (box_def.collection == "FAVORITE") {
-        load_from_song_list(path, box_def, true);
+        try {
+            load_from_song_list(path, box_def, true);
+        } catch (const std::exception& e) {
+            spdlog::error("Error loading favorite collection {}: {}", path.string(), e.what());
+        }
         loading_complete = true;
         return;
     } else if (box_def.collection == "RECENT") {
-        load_from_song_list(path, box_def, false);
+        try {
+            load_from_song_list(path, box_def, false);
+        } catch (const std::exception& e) {
+            spdlog::error("Error loading recent collection {}: {}", path.string(), e.what());
+        }
         loading_complete = true;
         return;
     } else if (box_def.collection == "DIFFICULTY") {
         if (diff_sort_filter) {
-            load_collection_difficulty(path, box_def, (*diff_sort_filter)[0], (*diff_sort_filter)[1],
-                                       (*diff_sort_filter)[2]);
+            try {
+                load_collection_difficulty(path, box_def, (*diff_sort_filter)[0], (*diff_sort_filter)[1],
+                                           (*diff_sort_filter)[2]);
+            } catch (const std::exception& e) {
+                spdlog::error("Error loading difficulty collection {}: {}", path.string(), e.what());
+            }
             diff_sort_filter.reset();
         }
         loading_complete = true;
         return;
     } else if (box_def.collection == "NEW") {
-        load_collection_new(path, box_def);
+        try {
+            load_collection_new(path, box_def);
+        } catch (const std::exception& e) {
+            spdlog::error("Error loading new collection {}: {}", path.string(), e.what());
+        }
         loading_complete = true;
         return;
     } else if (box_def.collection == "SEARCH") {
-        load_collection_search(path, box_def);
+        try {
+            load_collection_search(path, box_def);
+        } catch (const std::exception& e) {
+            spdlog::error("Error loading search collection {}: {}", path.string(), e.what());
+        }
         loading_complete = true;
         return;
     }

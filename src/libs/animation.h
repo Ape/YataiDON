@@ -20,6 +20,7 @@ protected:
     double delay;
     double delay_saved;
     double start_ms;
+    double paused_at_ms;
     bool unlocked;
     bool loop;
     bool lock_input;
@@ -40,7 +41,7 @@ public:
 
     BaseAnimation(double duration, double delay = 0.0, bool loop = false, bool lock_input = false);
 
-    virtual ~BaseAnimation() = default;
+    virtual ~BaseAnimation();
 
     virtual void update(double current_time_ms);
 

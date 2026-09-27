@@ -17,11 +17,14 @@ void InputCaliScreen::on_screen_start() {
 
     background.reset();
     background.emplace(global_data.player_num, 150, "TUTORIAL");
+    latencies.clear();
     average_latency = 0.0;
 }
 
 Screens InputCaliScreen::on_screen_end(Screens next_screen) {
-    global_data.config->general.audio_offset = average_latency * -1;
+    if (!latencies.empty()) {
+        global_data.config->general.audio_offset = average_latency * -1;
+    }
     return GameScreen::on_screen_end(next_screen);
 }
 

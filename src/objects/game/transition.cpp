@@ -105,6 +105,7 @@ void Transition::update(double current_ms) {
 }
 
 bool Transition::is_finished() {
+    if (is_second) return song_info_fade_out->is_finished;
     return song_info_fade->is_finished;
 }
 

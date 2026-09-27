@@ -1,17 +1,23 @@
 ﻿#include "box.h"
+#include <stdexcept>
 
 static constexpr int ENTRY_BOX_MOVE_ANIM_ID = 10;
 static constexpr int ENTRY_BOX_OPEN_ANIM_ID = 11;
 
 Box::Box(const std::string& text_str, int font_size, Screens location) : location(location) {
-    x = tex.textures["mode_select/box"]->x[0];
-    y = tex.textures["mode_select/box"]->y[0];
-    width = tex.textures["mode_select/box"]->width;
+    auto box_tex = tex.textures.find("mode_select/box");
+    if (box_tex == tex.textures.end() || !box_tex->second) {
+        spdlog::error("Box: texture 'mode_select/box' is missing");
+        throw std::runtime_error("Box: missing texture");
+    }
+    x = box_tex->second->x[0];
+    y = box_tex->second->y[0];
+    width = box_tex->second->width;
     move = dynamic_cast<MoveAnimation*>(tex.get_animation(ENTRY_BOX_MOVE_ANIM_ID));
     open = dynamic_cast<MoveAnimation*>(tex.get_animation(ENTRY_BOX_OPEN_ANIM_ID));
     if (move == nullptr || open == nullptr) {
         spdlog::error("Box: animation {} or {} is missing/not a MoveAnimation", ENTRY_BOX_MOVE_ANIM_ID, ENTRY_BOX_OPEN_ANIM_ID);
-        return;
+        throw std::runtime_error("Box: required MoveAnimation missing");
     }
     is_selected = false;
     moving_left = false;

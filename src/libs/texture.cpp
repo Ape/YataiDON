@@ -549,6 +549,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                     if (existing != textures.end()) {
                         read_tex_obj_data(m.value, existing->second.get(), tex_scale);
                         ids_this_call.insert(tex_id);
+                        ++loaded_count;
                     } else {
                         spdlog::error("Texture {} was not found in {}",
                                tex_name, folder.string());

@@ -40,7 +40,8 @@ public:
 
     // Returns false when the box should become un-selected (exit to outer navigation)
     bool move_left();
-    void move_right();
+    // Returns false while the carousel is still animating from a previous move
+    bool move_right();
 
     bool move_option_left();
     void move_option_right();

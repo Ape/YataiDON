@@ -15,6 +15,7 @@ void DanTransition::start() {
 }
 
 void DanTransition::update(double current_ms) {
+    if (!started || !slide_in) return;
     if (start_ms == 0) start_ms = current_ms;
     last_ms = current_ms;
     slide_in->update(current_ms);
@@ -25,7 +26,7 @@ bool DanTransition::is_started() {
 }
 
 bool DanTransition::is_finished() {
-    return slide_in->is_finished;
+    return started && slide_in && slide_in->is_finished;
 }
 
 double DanTransition::duration() const {
@@ -40,5 +41,6 @@ double DanTransition::progress() const {
 }
 
 void DanTransition::draw() {
+    if (!started || !slide_in) return;
     tex.draw_texture(t_background, {.x2=(float)slide_in->attribute});
 }

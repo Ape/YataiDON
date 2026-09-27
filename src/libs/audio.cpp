@@ -262,7 +262,7 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
         while (frames_to_process > 0 && still_playing) {
             unsigned long src_frame = (unsigned long)frame_f;
             if (src_frame >= snd.frame_count) {
-                if (snd.loop && snd.frame_count > 0) { frame_f = 0.0; continue; }
+                if (std::atomic_ref<bool>(snd.loop).load(std::memory_order_relaxed) && snd.frame_count > 0) { frame_f = 0.0; continue; }
                 else { still_playing = false; break; }
             }
 
@@ -362,7 +362,9 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
                             output_generated += src_data.output_frames_gen;
 
                             if (src_data.input_frames_used == 0 && src_data.output_frames_gen == 0) {
-                                // Converter made no progress on this call; avoid spinning.
+                                spdlog::error("Resampler stalled for music stream {}", name);
+                                aref_playing.store(false, std::memory_order_release);
+                                resample_error = true;
                                 break;
                             }
                         }

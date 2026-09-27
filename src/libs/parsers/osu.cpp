@@ -143,8 +143,14 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
         if (row.size() >= 2)
             timing_points.push_back({row[0], row[1]});
     }
-    std::sort(timing_points.begin(), timing_points.end(),
-              [](const std::array<double, 2>& a, const std::array<double, 2>& b) { return a[0] < b[0]; });
+    // stable_sort + tie-breaker: an inherited (green) and uninherited (red) point
+    // often share the same offset, and get_scroll_multiplier()/get_bpm_at() depend
+    // on the uninherited (positive beatLength) one being processed first.
+    std::stable_sort(timing_points.begin(), timing_points.end(),
+              [](const std::array<double, 2>& a, const std::array<double, 2>& b) {
+                  if (a[0] != b[0]) return a[0] < b[0];
+                  return a[1] > b[1]; // uninherited (positive beatLength) first
+              });
 
     // Metadata
     if (osu_meta.count("Title"))
@@ -274,13 +280,23 @@ NoteList& OsuParser::get_notes() {
             if (line.size() > 7) {
                 try { slider_len = std::stod(line[7]); } catch (const std::exception&) {}
             }
+            // Field 6 is the slide (repeat) count.
+            int slides = 1;
+            if (line.size() > 6) {
+                try { slides = std::stoi(line[6]); } catch (const std::exception&) {}
+            }
+            if (slides < 1) slides = 1;
 
             double beat_len_at = first_beat_length;
+            // Effective slider velocity multiplier from inherited (green) timing
+            // points; an uninherited (red) point resets it back to 1.0.
+            double sv = 1.0;
             for (const auto& tp : timing_points) {
                 if (tp[0] > note_time) break;
                 if (tp[1] > 0) beat_len_at = tp[1];
+                sv = tp[1] < 0 ? (-100.0 / tp[1]) : 1.0;
             }
-            double slider_time = slider_len / (slider_multiplier * 100.0) * beat_len_at;
+            double slider_time = slider_len / (slider_multiplier * 100.0 * sv) * beat_len_at * slides;
 
             bool big = (hit_sound == 4 || hit_sound == 6 || hit_sound == 12);
             NoteType head_type = big ? NoteType::ROLL_HEAD_L : NoteType::ROLL_HEAD;

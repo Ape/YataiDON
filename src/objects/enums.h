@@ -5,6 +5,7 @@
 #include <map>
 #include <set>
 #include <algorithm>
+#include <cctype>
 
 enum class GaugeMode { NORMAL, DAN };
 
@@ -80,7 +81,7 @@ enum class GenreIndex : int {
     DIFFICULTY  = 14
 };
 
-const std::map<GenreIndex, int> GENRE_TO_REF_FRAME = {
+inline const std::map<GenreIndex, int> GENRE_TO_REF_FRAME = {
     { GenreIndex::TUTORIAL,    0 },
     { GenreIndex::JPOP,        1 },
     { GenreIndex::ANIME,       2 },
@@ -103,7 +104,7 @@ inline int genre_to_ref_frame(GenreIndex genre) {
     return it != GENRE_TO_REF_FRAME.end() ? it->second : 0;
 }
 
-const std::map<std::string, TextureIndex> TEXTURE_MAP = {
+inline const std::map<std::string, TextureIndex> TEXTURE_MAP = {
     {"VOCALOID",    TextureIndex::VOCALOID},
     {"ボーカロイド", TextureIndex::VOCALOID},
     {"RECOMMENDED", TextureIndex::RECOMMENDED},
@@ -111,7 +112,7 @@ const std::map<std::string, TextureIndex> TEXTURE_MAP = {
     {"RECENT",      TextureIndex::RECENT},
 };
 
-const std::map<GenreIndex, std::set<std::string>> GENRE_MAP = {
+inline const std::map<GenreIndex, std::set<std::string>> GENRE_MAP = {
     { GenreIndex::TUTORIAL,   {"TUTORIAL"} },
     { GenreIndex::JPOP,       {"J-POP"} },
     { GenreIndex::ANIME,      {"ANIME", "アニメ"} },
@@ -130,7 +131,8 @@ const std::map<GenreIndex, std::set<std::string>> GENRE_MAP = {
 
 inline GenreIndex get_genre_index(const std::string& genreString) {
     std::string genreUpper = genreString;
-    std::transform(genreUpper.begin(), genreUpper.end(), genreUpper.begin(), ::toupper);
+    std::transform(genreUpper.begin(), genreUpper.end(), genreUpper.begin(),
+        [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
 
     for (const auto& [genreIndex, genreSet] : GENRE_MAP) {
         if (genreSet.count(genreUpper)) {
@@ -140,6 +142,6 @@ inline GenreIndex get_genre_index(const std::string& genreString) {
     return GenreIndex::DEFAULT;
 }
 
-const std::array<std::string, 6> COLLECTIONS = {
+inline const std::array<std::string, 6> COLLECTIONS = {
     "NEW", "RECENT", "FAVORITE", "DIFFICULTY", "RECOMMENDED", "SEARCH"
 };

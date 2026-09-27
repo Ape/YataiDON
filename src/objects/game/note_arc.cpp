@@ -83,7 +83,10 @@ void NoteArc::update(double current_ms) {
 void NoteArc::draw(float y, ray::Shader mask_shader) {
     if (is_balloon) {
         const std::shared_ptr<TextureObject>& rainbow = tex.textures["balloon/rainbow"];
-        if (!rainbow) return;
+        if (!rainbow) {
+            tex.draw_texture(t_note, {.x=x_i, .y=y + y_i});
+            return;
+        }
         float rainbow_height;
         if (player_num == PlayerNum::P2) {
             rainbow_height = -rainbow->height;

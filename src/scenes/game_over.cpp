@@ -11,7 +11,12 @@ Screens GameOverScreen::on_screen_end(Screens next_screen) {
 }
 
 std::optional<Screens> GameOverScreen::update() {
-    Screen::update();
+    if (auto result = Screen::update()) {
+        return result;
+    }
+    if (!sequence.has_value()) {
+        return std::nullopt;
+    }
     double current_ms = get_current_ms();
     allnet_indicator.update(current_ms);
     sequence->update(current_ms);
@@ -24,6 +29,9 @@ std::optional<Screens> GameOverScreen::update() {
 }
 
 void GameOverScreen::draw() {
+    if (!sequence.has_value()) {
+        return;
+    }
     sequence->draw();
     coin_overlay.draw();
     allnet_indicator.draw();

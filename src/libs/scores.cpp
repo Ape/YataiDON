@@ -19,52 +19,6 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
     };
     sqlite3_exec(db_fsd, "PRAGMA user_version;", callback, &version, nullptr);
 
-    bool migrations_ok = true;
-    if (version < 2) {
-        const char* migrations[] = {
-            "ALTER TABLE players ADD COLUMN modifier_auto BOOL NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN title TEXT NOT NULL DEFAULT '';",
-            "ALTER TABLE players ADD COLUMN title_bg INTEGER NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN dan INTEGER NOT NULL DEFAULT -1;",
-            "ALTER TABLE players ADD COLUMN gold BOOL NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN rainbow BOOL NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN modifier_speed INTEGER NOT NULL DEFAULT 10;",
-            "ALTER TABLE players ADD COLUMN modifier_display BOOL NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN modifier_inverse BOOL NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN modifier_random INTEGER NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN neiro_index INTEGER NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN chara_color_1 TEXT NOT NULL DEFAULT '#68BFC0';",
-            "ALTER TABLE players ADD COLUMN chara_color_2 TEXT NOT NULL DEFAULT '#F94728';",
-            "ALTER TABLE players ADD COLUMN chara_color_3 TEXT NOT NULL DEFAULT '#F9F0E1';",
-            "ALTER TABLE players ADD COLUMN chara_head_index INTEGER NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN chara_body_index INTEGER NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN chara_cos_index INTEGER NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN chara_is_costume BOOL NOT NULL DEFAULT 1;",
-            "ALTER TABLE players ADD COLUMN chara_paint_index INTEGER NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN chara_face_index INTEGER NOT NULL DEFAULT 0;",
-            "ALTER TABLE players ADD COLUMN chara_acce_index INTEGER NOT NULL DEFAULT 0;",
-        };
-        for (const char* sql : migrations) {
-            if (sqlite3_exec(db_fsd, sql, nullptr, nullptr, nullptr) != SQLITE_OK)
-                migrations_ok = false;
-        }
-    }
-    sqlite3_exec(db_fsd, "ALTER TABLE scores ADD COLUMN played_at INTEGER NOT NULL DEFAULT 0;",
-                    nullptr, nullptr, nullptr);
-
-    if (version < 4) {
-        if (sqlite3_exec(db_fsd, "ALTER TABLE scores ADD COLUMN modifiers TEXT NOT NULL DEFAULT '{}';",
-                     nullptr, nullptr, nullptr) != SQLITE_OK)
-            migrations_ok = false;
-    }
-
-    if (migrations_ok) sqlite3_exec(db_fsd, "PRAGMA user_version = 4;", nullptr, nullptr, nullptr);
-    else spdlog::error("ScoresManager: one or more migrations failed, not raising user_version");
-
-    sqlite3_exec(db_fsd,
-            "ALTER TABLE players ADD COLUMN modifier_skip BOOL NOT NULL DEFAULT 0;",
-            nullptr, nullptr, nullptr);
-
     std::string create_players =
         "CREATE TABLE IF NOT EXISTS players"
         "(player_id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -135,6 +89,56 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
         spdlog::error("Failed to create scores table: {}", errmsg);
         sqlite3_free(errmsg);
     }
+
+    auto run_migration = [&](const char* sql) -> bool {
+        char* mig_errmsg = nullptr;
+        if (sqlite3_exec(db_fsd, sql, nullptr, nullptr, &mig_errmsg) == SQLITE_OK) return true;
+        bool duplicate_column = mig_errmsg && std::string(mig_errmsg).find("duplicate column") != std::string::npos;
+        if (!duplicate_column) spdlog::error("ScoresManager migration failed: {} ({})", mig_errmsg ? mig_errmsg : "?", sql);
+        sqlite3_free(mig_errmsg);
+        return duplicate_column;
+    };
+
+    bool migrations_ok = true;
+    if (version < 2) {
+        const char* migrations[] = {
+            "ALTER TABLE players ADD COLUMN modifier_auto BOOL NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN title TEXT NOT NULL DEFAULT '';",
+            "ALTER TABLE players ADD COLUMN title_bg INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN dan INTEGER NOT NULL DEFAULT -1;",
+            "ALTER TABLE players ADD COLUMN gold BOOL NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN rainbow BOOL NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN modifier_speed INTEGER NOT NULL DEFAULT 10;",
+            "ALTER TABLE players ADD COLUMN modifier_display BOOL NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN modifier_inverse BOOL NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN modifier_random INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN neiro_index INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN chara_color_1 TEXT NOT NULL DEFAULT '#68BFC0';",
+            "ALTER TABLE players ADD COLUMN chara_color_2 TEXT NOT NULL DEFAULT '#F94728';",
+            "ALTER TABLE players ADD COLUMN chara_color_3 TEXT NOT NULL DEFAULT '#F9F0E1';",
+            "ALTER TABLE players ADD COLUMN chara_head_index INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN chara_body_index INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN chara_cos_index INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN chara_is_costume BOOL NOT NULL DEFAULT 1;",
+            "ALTER TABLE players ADD COLUMN chara_paint_index INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN chara_face_index INTEGER NOT NULL DEFAULT 0;",
+            "ALTER TABLE players ADD COLUMN chara_acce_index INTEGER NOT NULL DEFAULT 0;",
+        };
+        for (const char* sql : migrations) {
+            if (!run_migration(sql)) migrations_ok = false;
+        }
+    }
+    run_migration("ALTER TABLE scores ADD COLUMN played_at INTEGER NOT NULL DEFAULT 0;");
+
+    if (version < 4) {
+        if (!run_migration("ALTER TABLE scores ADD COLUMN modifiers TEXT NOT NULL DEFAULT '{}';"))
+            migrations_ok = false;
+    }
+
+    if (migrations_ok) sqlite3_exec(db_fsd, "PRAGMA user_version = 4;", nullptr, nullptr, nullptr);
+    else spdlog::error("ScoresManager: one or more migrations failed, not raising user_version");
+
+    run_migration("ALTER TABLE players ADD COLUMN modifier_skip BOOL NOT NULL DEFAULT 0;");
 
     sqlite3_exec(db_fsd,
         "INSERT OR IGNORE INTO players (player_id, username, title) VALUES (1, 'Don-chan', 'Donder Debut!');",
@@ -237,6 +241,8 @@ void ScoresManager::py_taiko_import(const fs::path& old_db_path) {
 
     int imported = 0, skipped = 0;
 
+    sqlite3_exec(db_fsd, "BEGIN;", nullptr, nullptr, nullptr);
+
     while (sqlite3_step(sel) == SQLITE_ROW) {
         const char* en_raw = reinterpret_cast<const char*>(sqlite3_column_text(sel, 0));
         const char* ja_raw = reinterpret_cast<const char*>(sqlite3_column_text(sel, 1));
@@ -338,11 +344,18 @@ void ScoresManager::py_taiko_import(const fs::path& old_db_path) {
                 sqlite3_bind_int(ins_stmt,  8, combo);
                 sqlite3_bind_int(ins_stmt,  9, crown_val);
             }
-            sqlite3_step(ins_stmt);
+            if (sqlite3_step(ins_stmt) == SQLITE_DONE) {
+                imported++;
+            } else {
+                spdlog::warn("py_taiko_import: failed to {} score for '{}' diff {}: {}",
+                              exists ? "update" : "insert", en, diff, sqlite3_errmsg(db_fsd));
+                skipped++;
+            }
             sqlite3_finalize(ins_stmt);
-            imported++;
         }
     }
+
+    sqlite3_exec(db_fsd, "COMMIT;", nullptr, nullptr, nullptr);
 
     sqlite3_finalize(sel);
     sqlite3_close(old_db);

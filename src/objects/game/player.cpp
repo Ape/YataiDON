@@ -1302,8 +1302,15 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
         };
         const auto& other_lane = (drum_type == DrumType::DON) ? kat_notes : don_notes;
         if (!blocked_by(other_lane) && !blocked_by(other_notes) && ms_from_start > next.hit_ms - ok_window_ms) {
-            curr_note = next;
-            lane_pos = 1;
+            combo = 0;
+            bad_count++;
+            note_judgments[curr_note.index] = Judgments::BAD;
+            if (dan_gauge) dan_gauge->add_bad();
+            else if (gauge.has_value()) gauge->add_bad();
+            if (background.has_value()) background->handle_bad(PlayerNum(1 + is_2p));
+            branch_note_count++;
+            lane.pop_front();
+            curr_note = lane.front();
         }
     }
 
@@ -1832,6 +1839,27 @@ void Player::seek_to(double resume_time) {
 
     reset_chart();
     resume_filter_ms = resume_time;
+
+    while (!timeline.empty() && timeline.front().start_time <= resume_time) {
+        TimelineObject entry = timeline.front();
+        timeline.pop_front();
+        timeline_buffer.push_back(entry);
+        int idx = (int)timeline_buffer.size() - 1;
+        const size_t before = timeline_buffer.size();
+        handle_scroll_type_commands(resume_time, entry, idx);
+        if (timeline_buffer.size() != before) continue;
+        handle_bpmchange(resume_time, entry, idx);
+        if (timeline_buffer.size() != before) continue;
+        handle_judgeposition(resume_time, entry, idx);
+        if (timeline_buffer.size() != before) continue;
+        handle_gogotime(resume_time, entry, idx);
+        if (timeline_buffer.size() != before) continue;
+        handle_branch_param(resume_time, entry, idx);
+        if (timeline_buffer.size() != before) continue;
+        handle_lyric(resume_time, entry, idx);
+        if (timeline_buffer.size() != before) continue;
+        handle_section(resume_time, entry, idx);
+    }
 
     const double boundary_eps = 1.0;
     auto filter = [resume_time, boundary_eps](std::deque<Note>& q) {

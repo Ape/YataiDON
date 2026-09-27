@@ -27,9 +27,11 @@ void SongSelectScreen::on_screen_start() {
     navigator.is_2p = is_2p_screen();
     navigator.init(global_data.config->paths.tja_path);
 #ifndef __EMSCRIPTEN__
-    stats_future = std::async(std::launch::async, [this]() {
-        return navigator.get_statistics(global_data.config->paths.tja_path[0]);
-    });
+    if (!global_data.config->paths.tja_path.empty()) {
+        stats_future = std::async(std::launch::async, [this]() {
+            return navigator.get_statistics(global_data.config->paths.tja_path[0]);
+        });
+    }
 #endif
     navigator.refresh_scores();
 
@@ -267,8 +269,9 @@ std::optional<Screens> SongSelectScreen::update() {
     player->update(current_time);
     if (player->is_ready && !game_transition.has_value() && join_request_ms < 0.0) {
         if (player->selected_difficulty >= Difficulty::EASY) {
-            BaseBox* item = navigator.get_current_item();
-            select_song((SongBox*)item);
+            if (auto* item = dynamic_cast<SongBox*>(navigator.get_current_item())) {
+                select_song(item);
+            }
         } else if (player->selected_difficulty == Difficulty::BACK) {
             navigator.exit_diff_select();
             state = SongSelectState::BROWSING;
@@ -301,7 +304,11 @@ std::optional<Screens> SongSelectScreen::update() {
         if (prev_state == SongSelectState::SEARCHING)
             android_set_keyboard_visible(false);
         if (state == SongSelectState::SONG_SELECTED) {
-            diff_select_timer = std::make_unique<Timer>(60, current_time, [this]() { select_song((SongBox*)navigator.get_current_item()); });
+            diff_select_timer = std::make_unique<Timer>(60, current_time, [this]() {
+                if (auto* item = dynamic_cast<SongBox*>(navigator.get_current_item())) {
+                    select_song(item);
+                }
+            });
         } else if (state == SongSelectState::SEARCHING) {
             search_box.emplace();
             // The don key that opened the search (F/J) is also a typed character still
@@ -318,6 +325,7 @@ std::optional<Screens> SongSelectScreen::update() {
 }
 
 Screens SongSelectScreen::on_screen_end(Screens next_screen) {
+    if (stats_future.valid()) stats_future.wait();
     navigator.join_loader();
     ray::UnloadShader(shader);
     return Screen::on_screen_end(next_screen);

@@ -6,6 +6,7 @@
 #endif
 #include <algorithm>
 #include <fstream>
+#include <mutex>
 #include <unordered_set>
 #include <spdlog/spdlog.h>
 #ifndef _WIN32
@@ -361,9 +362,14 @@ void write_song_list(const fs::path& path, const std::vector<SongListEntry>& ent
 namespace {
 fs::path g_skin_graphics_path;
 fs::path g_parent_skin_graphics_path;
+std::mutex g_skin_path_mutex;
 
 fs::path skin_root(const fs::path& graphics_path) {
     return graphics_path.parent_path();
+}
+
+bool skin_has_parent_locked() {
+    return g_skin_graphics_path != g_parent_skin_graphics_path;
 }
 }
 
@@ -386,23 +392,35 @@ fs::path resolve_parent_graphics_path(const fs::path& graphics_path) {
 }
 
 void set_skin_graphics_path(const fs::path& graphics_path) {
+    fs::path parent_graphics_path = resolve_parent_graphics_path(graphics_path);
+    std::lock_guard<std::mutex> lock(g_skin_path_mutex);
     g_skin_graphics_path = graphics_path;
-    g_parent_skin_graphics_path = resolve_parent_graphics_path(graphics_path);
+    g_parent_skin_graphics_path = parent_graphics_path;
 }
 
 bool skin_has_parent() {
-    return g_skin_graphics_path != g_parent_skin_graphics_path;
+    std::lock_guard<std::mutex> lock(g_skin_path_mutex);
+    return skin_has_parent_locked();
 }
 
 fs::path parent_skin_root() {
+    std::lock_guard<std::mutex> lock(g_skin_path_mutex);
     return skin_root(g_parent_skin_graphics_path);
 }
 
 fs::path resolve_skin_path(const fs::path& relative_path) {
-    fs::path child = skin_root(g_skin_graphics_path) / relative_path;
+    fs::path child_root, parent_root;
+    bool has_parent;
+    {
+        std::lock_guard<std::mutex> lock(g_skin_path_mutex);
+        child_root = skin_root(g_skin_graphics_path);
+        has_parent = skin_has_parent_locked();
+        if (has_parent) parent_root = skin_root(g_parent_skin_graphics_path);
+    }
+    fs::path child = child_root / relative_path;
     if (fs::exists(child)) return child;
-    if (skin_has_parent()) {
-        fs::path parent = skin_root(g_parent_skin_graphics_path) / relative_path;
+    if (has_parent) {
+        fs::path parent = parent_root / relative_path;
         if (fs::exists(parent)) return parent;
     }
     return child;

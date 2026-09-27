@@ -155,6 +155,8 @@ std::optional<int> CostumeMenu::get_index() {
 
 std::string CostumeMenu::get_costume_name() const {
     if (!costume_select_mode && preset_cos_id) return std::to_string(*preset_cos_id);
+    if (pick_stage == CostumePickStage::BODY && picked_head_id >= 0 && costume_ids.empty())
+        return std::to_string(picked_head_id);
     if (costume_ids.empty()) return "";
     return std::to_string(costume_ids[costume_icon_index]);
 }

@@ -22,10 +22,10 @@ GenreBG::GenreBG(std::string& text_name, std::optional<ray::Color> color, Textur
         shader_loaded = true;
     }
 
-    stretch = new MoveAnimation(333, 20 * tex.screen_scale, false, false, 0, 0, 0, std::nullopt, EaseType::Cubic);
-    scale = new TextureResizeAnimation(100, 0.9f, false, false, 1.0);
-    move = new MoveAnimation(600, std::min((float)tex.screen_width, distance) * tex.screen_scale, false, false, 0, stretch->duration*1.5);
-    fade = new FadeAnimation(100, 0.0, false, false, 1.0);
+    stretch = std::make_unique<MoveAnimation>(333, 20 * tex.screen_scale, false, false, 0, 0, 0, std::nullopt, EaseType::Cubic);
+    scale = std::make_unique<TextureResizeAnimation>(100, 0.9f, false, false, 1.0);
+    move = std::make_unique<MoveAnimation>(600, std::min((float)tex.screen_width, distance) * tex.screen_scale, false, false, 0, stretch->duration*1.5);
+    fade = std::make_unique<FadeAnimation>(100, 0.0, false, false, 1.0);
     stretch->start();
     scale->start();
     move->start();
@@ -48,10 +48,10 @@ void GenreBG::exit(float left_position, float right_position, FolderBox* center_
     int left_distance  = (int)(boundary_left_exit  - left_start)  * tex.screen_scale;
     int right_distance = (int)(boundary_right_exit - right_start) * tex.screen_scale;
 
-    move_left  = new MoveAnimation(200, left_distance,  false, false, (int)left_start,  166);
-    move_right = new MoveAnimation(200, right_distance, false, false, (int)right_start, 166);
+    move_left  = std::make_unique<MoveAnimation>(200, left_distance,  false, false, (int)left_start,  166);
+    move_right = std::make_unique<MoveAnimation>(200, right_distance, false, false, (int)right_start, 166);
     float delay = std::max(move_left->duration, move_right->duration);
-    fade = new FadeAnimation(100, 1.0, false, false, 0.0, delay);
+    fade = std::make_unique<FadeAnimation>(100, 1.0, false, false, 0.0, delay);
     move_left->start();
     move_right->start();
     fade->start();
@@ -60,11 +60,11 @@ void GenreBG::exit(float left_position, float right_position, FolderBox* center_
 }
 
 void GenreBG::fade_out() {
-    fade = new FadeAnimation(300);
+    fade = std::make_unique<FadeAnimation>(300);
     fade->start();
 }
 void GenreBG::fade_in() {
-    fade = new FadeAnimation(300, 0.0, false, false, 1.0);
+    fade = std::make_unique<FadeAnimation>(300, 0.0, false, false, 1.0);
     fade->start();
 }
 

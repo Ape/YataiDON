@@ -1,8 +1,12 @@
 #include "drum_hit_effect.h"
+#include <stdexcept>
 
 DrumHitEffect::DrumHitEffect(DrumType type, Side side)
             : type(type), side(side) {
-    fade = (FadeAnimation*)tex.get_animation(1, true);
+    fade = dynamic_cast<FadeAnimation*>(tex.get_animation(1, true));
+    if (!fade) {
+        throw std::runtime_error("DrumHitEffect: animation 1 is not a FadeAnimation");
+    }
     fade->start();
 
     if (type == DrumType::DON) {

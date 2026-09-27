@@ -535,7 +535,18 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
         return info;
     });
 
-    tex.set_function("draw_texture", [](TextureObject* id, sol::optional<sol::table> params_table) {
+    tex.set_function("draw_texture", [](TextureObject* id, sol::optional<sol::table> params_table, sol::this_state state) {
+        if (!id) {
+            DrawLogEntry entry{"null_texture", {}};
+            log_lua_site(entry, state);
+            if (entry.from_lua) {
+                spdlog::warn("draw_texture: null texture (called from {}:{} in {})",
+                             entry.lua_source, entry.lua_line, entry.lua_function.empty() ? "?" : entry.lua_function);
+            } else {
+                spdlog::warn("draw_texture: null texture");
+            }
+            return;
+        }
         script_manager.tex.draw_texture(id, parse_draw_params(params_table));
     });
 

@@ -81,6 +81,7 @@ sol::table build_rd_table(const DanResultData& rd) {
 
 DanResultDraw::DanResultDraw(const DanResultData& rd, int prev_arrival, int prev_best_score, bool best_score_show,
                               int gauge_exam, int gauge_value, int gauge_border) {
+    if (!script_manager.lua) return;
     if (!load("DanResultDraw", "dan_result_draw", build_rd_table(rd), prev_arrival, prev_best_score,
               best_score_show, gauge_exam, gauge_value, gauge_border))
         return;

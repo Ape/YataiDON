@@ -19,6 +19,8 @@ protected:
     void draw_base() const;
 
 public:
+    virtual ~BaseOptionBox() = default;
+
     bool is_highlighted;
 
     BaseOptionBox(const std::string& name, const std::string& description,

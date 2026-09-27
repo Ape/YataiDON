@@ -38,73 +38,81 @@ void LoadingScreen::on_screen_start() {
 }
 
 void LoadingScreen::load_song_hashes() {
-    std::atomic<int> songs_loaded = 0;
-    const int thread_count = std::max(1u, std::thread::hardware_concurrency());
-    std::vector<std::thread> threads;
-    std::mutex scores_mutex;
+    try {
+        std::atomic<int> songs_loaded = 0;
+        const int thread_count = std::max(1u, std::thread::hardware_concurrency());
+        std::vector<std::thread> threads;
+        std::mutex scores_mutex;
 
-    auto worker = [&](int start, int end) {
-        for (int i = start; i < end; i++) {
-            auto u8 = songs[i].u8string();
-            const std::string path(u8.begin(), u8.end());
+        auto worker = [&](int start, int end) {
+            for (int i = start; i < end; i++) {
+                auto u8 = songs[i].u8string();
+                const std::string path(u8.begin(), u8.end());
 
-            std::error_code ec;
-            auto mtime = std::filesystem::last_write_time(songs[i], ec);
-            if (ec) {
-                spdlog::error("Could not stat {}: {}", path, ec.message());
-                continue;
-            }
-
-            std::array<std::string, 5> hashes;
-            std::string title, subtitle;
-
-            try {
-                SongParser parser(songs[i]);
-                spdlog::debug("Parsing song: {}", path);
-                if (songs[i].extension() == ".osu") {
-                    hashes[0] = parser.get_diff_hash(0);
-                } else {
-                    for (const auto& [course, course_data] : parser.metadata.course_data) {
-                        if (course < 0 || course >= static_cast<int>(hashes.size()))
-                            continue;
-                        hashes[course] = parser.get_diff_hash(course);
-                    }
+                std::error_code ec;
+                auto mtime = std::filesystem::last_write_time(songs[i], ec);
+                if (ec) {
+                    spdlog::error("Could not stat {}: {}", path, ec.message());
+                    continue;
                 }
-                title    = parser.metadata.title.count("en") ? parser.metadata.title.at("en") : "";
-                subtitle = parser.metadata.subtitle.count("en") ? parser.metadata.subtitle.at("en") : "";
-            } catch (const std::exception& e) {
-                spdlog::error("Failed to parse song {}: {}", path, e.what());
-                continue;
+
+                std::array<std::string, 5> hashes;
+                std::string title, subtitle;
+
+                try {
+                    SongParser parser(songs[i]);
+                    spdlog::debug("Parsing song: {}", path);
+                    if (songs[i].extension() == ".osu") {
+                        hashes[0] = parser.get_diff_hash(0);
+                    } else {
+                        for (const auto& [course, course_data] : parser.metadata.course_data) {
+                            if (course < 0 || course >= static_cast<int>(hashes.size()))
+                                continue;
+                            hashes[course] = parser.get_diff_hash(course);
+                        }
+                    }
+                    title    = parser.metadata.title.count("en") ? parser.metadata.title.at("en") : "";
+                    subtitle = parser.metadata.subtitle.count("en") ? parser.metadata.subtitle.at("en") : "";
+                } catch (const std::exception& e) {
+                    spdlog::error("Failed to parse song {}: {}", path, e.what());
+                    continue;
+                }
+
+                try {
+                    std::lock_guard<std::mutex> lock(scores_mutex);
+                    scores_manager.add_song(hashes, title, subtitle);
+                    scores_manager.add_path_binding(songs[i], hashes);
+
+                    progress = (float)++songs_loaded / songs.size();
+                } catch (const std::exception& e) {
+                    spdlog::error("Failed to record song {}: {}", path, e.what());
+                }
             }
+        };
 
-            std::lock_guard<std::mutex> lock(scores_mutex);
-            scores_manager.add_song(hashes, title, subtitle);
-            scores_manager.add_path_binding(songs[i], hashes);
-
-            progress = (float)++songs_loaded / songs.size();
-        }
-    };
-
-    scores_manager.begin_transaction();
+        scores_manager.begin_transaction();
 #ifdef __EMSCRIPTEN__
-    worker(0, songs.size());
+        worker(0, songs.size());
 #else
-    int chunk = songs.size() / thread_count;
-    for (int i = 0; i < thread_count; i++) {
-        int start = i * chunk;
-        int end = (i == thread_count - 1) ? songs.size() : start + chunk;
-        threads.emplace_back(worker, start, end);
-    }
-    for (auto& t : threads) t.join();
+        int chunk = songs.size() / thread_count;
+        for (int i = 0; i < thread_count; i++) {
+            int start = i * chunk;
+            int end = (i == thread_count - 1) ? songs.size() : start + chunk;
+            threads.emplace_back(worker, start, end);
+        }
+        for (auto& t : threads) t.join();
 #endif
-    scores_manager.commit();
+        scores_manager.commit();
 
-    if (fs::exists(fs::path("scores_pytaiko.db"))) {
-        scores_manager.py_taiko_import(fs::path("scores_pytaiko.db"));
-        fs::remove(fs::path("scores_pytaiko.db"));
+        if (fs::exists(fs::path("scores_pytaiko.db"))) {
+            scores_manager.py_taiko_import(fs::path("scores_pytaiko.db"));
+            fs::remove(fs::path("scores_pytaiko.db"));
+        }
+
+        load_navigator();
+    } catch (const std::exception& e) {
+        spdlog::error("Loading failed: {}", e.what());
     }
-
-    load_navigator();
     loading_complete = true;
 }
 

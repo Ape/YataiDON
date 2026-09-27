@@ -58,7 +58,7 @@ Background::Background(PlayerNum player_num, float bpm, const std::string& scene
 }
 
 Background::~Background() {
-    if (!lua_object.valid()) return;
+    if (!lua_object.valid() || !script_manager.lua) return;
     sol::optional<sol::protected_function> destroy = lua_object["destroy"];
     if (destroy) {
         auto result = destroy.value()(lua_object);

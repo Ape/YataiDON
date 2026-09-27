@@ -7,9 +7,7 @@ UraSwitchAnimation::UraSwitchAnimation() {
 }
 
 void UraSwitchAnimation::start(bool is_backwards) {
-    if (is_backwards) {
-        texture_change = (TextureChangeAnimation*)tex.get_animation(6);
-    }
+    texture_change = (TextureChangeAnimation*)tex.get_animation(is_backwards ? 6 : 7);
     texture_change->start();
     fade_out->start();
 }

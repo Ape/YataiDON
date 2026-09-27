@@ -354,7 +354,7 @@ void NetworkClient::update_username(const std::string& access_code, const std::s
     if (!network_enabled()) return;
     cpr::Response response = cpr::Post(
         cpr::Url{network_url("/update_username")},
-        signed_headers("POST", "/update_username", {{"access_code", access_code}}),
+        signed_headers("POST", "/update_username", {{"access_code", access_code}, {"username", username}}),
         cpr::Parameters{{"access_code", access_code}},
         cpr::Payload{{"username", username}},
         cpr::Timeout{5000}
@@ -513,10 +513,11 @@ void scan_skins() {
 
 void NetworkClient::check_android_skin_updates() {
     if (skin_update_thread.joinable()) return;
-    skin_update_done = false;
-    skin_update_thread = std::thread([this] {
+    skin_update_done = std::make_shared<std::atomic<bool>>(false);
+    std::shared_ptr<std::atomic<bool>> done = skin_update_done;
+    skin_update_thread = std::thread([done] {
         scan_skins();
-        skin_update_done = true;
+        done->store(true);
     });
 }
 #else
@@ -527,7 +528,13 @@ void NetworkClient::update_costume(const std::string& access_code, int head_inde
     if (!network_enabled()) return;
     cpr::Response response = cpr::Post(
         cpr::Url{network_url("/update_costume")},
-        signed_headers("POST", "/update_costume", {{"access_code", access_code}}),
+        signed_headers("POST", "/update_costume", {
+            {"access_code", access_code},
+            {"chara_head_index", std::to_string(head_index)},
+            {"chara_body_index", std::to_string(body_index)},
+            {"chara_cos_index", std::to_string(cos_index)},
+            {"chara_is_costume", is_costume ? "true" : "false"},
+        }),
         cpr::Parameters{{"access_code", access_code}},
         cpr::Payload{
             {"chara_head_index", std::to_string(head_index)},
@@ -701,10 +708,12 @@ void NetworkClient::submit_score(std::string& hash, int difficulty, const std::s
         {"bad", std::to_string(score.bad)},
         {"drumroll", std::to_string(score.drumroll)},
         {"max_combo", std::to_string(score.max_combo)},
+        {"input_log", map_to_json_impl(input_log)},
+        {"played_at", played_at > 0 ? std::to_string(played_at) : ""},
+        {"modifiers", modifiers_json},
+        {"chara_is_costume", chara_is_costume ? "true" : "false"},
+        {"chara_cos_index", std::to_string(chara_cos_index)},
     };
-    // The upload runs off the render thread: a synchronous POST stalled the end of
-    // the song for up to the 5 s timeout whenever the server was unreachable.
-    // Tracked (not detached) so shutdown() can drain it before the process exits.
     if (pending_score_submit.has_value()) {
         pending_score_submit->wait();
     }
@@ -725,11 +734,11 @@ void NetworkClient::submit_score(std::string& hash, int difficulty, const std::s
             {"max_combo", params["max_combo"]},
         },
         cpr::Payload{
-            {"input_log", map_to_json_impl(input_log)},
-            {"played_at", played_at > 0 ? std::to_string(played_at) : ""},
-            {"modifiers", modifiers_json},
-            {"chara_is_costume", chara_is_costume ? "true" : "false"},
-            {"chara_cos_index", std::to_string(chara_cos_index)},
+            {"input_log", params["input_log"]},
+            {"played_at", params["played_at"]},
+            {"modifiers", params["modifiers"]},
+            {"chara_is_costume", params["chara_is_costume"]},
+            {"chara_cos_index", params["chara_cos_index"]},
         },
         cpr::Timeout{5000}
         NETWORK_CA_OPT
@@ -784,9 +793,8 @@ void NetworkClient::update(double current_ms) {
         if (response.status_code != 200) {
             spdlog::warn("Update check: could not fetch checksums-android.sha256 (HTTP {})", response.status_code);
         } else {
-            std::string expected_sha256 = response.text;
-            while (!expected_sha256.empty() && std::isspace(static_cast<unsigned char>(expected_sha256.back())))
-                expected_sha256.pop_back();
+            std::string expected_sha256;
+            std::istringstream(response.text) >> expected_sha256;
 
             std::string installed_sha256;
             if (std::ifstream marker(kUpdateMarkerPath); marker) std::getline(marker, installed_sha256);
@@ -796,9 +804,8 @@ void NetworkClient::update(double current_ms) {
             } else {
                 spdlog::info("Update check: newer APK available, downloading");
                 pending_update_expected_sha256 = expected_sha256;
-                // Streams straight to disk (cpr::Download, not Get) -- the APK now
-                // bundles Skins/Songs and can be well over a GB; buffering the whole
-                // body in a cpr::Response.text std::string risked an OOM.
+                std::error_code mkdir_ec;
+                fs::create_directories(fs::path(kUpdateApkTmpPath).parent_path(), mkdir_ec);
                 pending_update_apk = cpr::DownloadAsync(fs::path(kUpdateApkTmpPath), cpr::Url{kUpdateApkUrl}, cpr::Timeout{600000}, cpr::ConnectTimeout{5000} NETWORK_CA_OPT);
             }
         }
@@ -934,10 +941,10 @@ void NetworkClient::shutdown() {
         pending_update_apk.reset();
     }
     if (skin_update_thread.joinable()) {
-        for (int waited_ms = 0; waited_ms < 5000 && !skin_update_done.load(); waited_ms += 50) {
+        for (int waited_ms = 0; waited_ms < 5000 && !skin_update_done->load(); waited_ms += 50) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
-        if (skin_update_done.load()) {
+        if (skin_update_done->load()) {
             skin_update_thread.join();
         } else {
             spdlog::warn("Skin update: still running after 5s at shutdown, detaching");

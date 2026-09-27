@@ -37,6 +37,7 @@ void PracticeMenu::step(bool right) {
         return;
     }
     int n = (int)menu_text.size();
+    if (n == 0) return;
     index = ((index + (right ? 1 : -1)) % n + n) % n;
 }
 

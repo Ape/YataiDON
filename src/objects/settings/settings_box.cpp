@@ -3,6 +3,9 @@
 #include "../../libs/filesystem.h"
 
 std::unique_ptr<BaseOptionBox> SettingsBox::make_option_box(const rapidjson::Value& opt) {
+    if (!opt.HasMember("type") || !opt["type"].IsString() ||
+        !opt.HasMember("path") || !opt["path"].IsString())
+        throw std::runtime_error("option missing 'type' or 'path'");
     std::string type        = opt["type"].GetString();
     std::string path        = opt["path"].GetString();
     std::string lang        = global_data.config->general.language;
@@ -131,8 +134,8 @@ bool SettingsBox::move_left() {
     return true;
 }
 
-void SettingsBox::move_right() {
-    if (y != target_position && !std::isinf(target_position)) return;
+bool SettingsBox::move_right() {
+    if (y != target_position && !std::isinf(target_position)) return false;
     move_anim->start();
     direction      = -1;
     start_position = y;
@@ -140,6 +143,7 @@ void SettingsBox::move_right() {
     if (target_position < wrap_top()) {
         target_position = wrap_bottom + (target_position - wrap_top());
     }
+    return true;
 }
 
 bool SettingsBox::move_option_left() {

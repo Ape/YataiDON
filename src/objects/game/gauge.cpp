@@ -1,5 +1,6 @@
 #include "gauge.h"
 #include <cmath>
+#include <stdexcept>
 
 Gauge::Gauge(int total_notes, int difficulty, int level, PlayerNum player_num)
     : player_num(player_num) {
@@ -18,8 +19,11 @@ Gauge::Gauge(int total_notes, int difficulty, int level, PlayerNum player_num)
     else if (this->difficulty <= (int)Difficulty::HARD) string_diff = "_normal";
     else                                                 string_diff = "_hard";
 
-    tamashii_fire_change = (TextureChangeAnimation*)tex.get_animation(25);
-    gauge_update_anim    = (FadeAnimation*)tex.get_animation(10);
+    tamashii_fire_change = dynamic_cast<TextureChangeAnimation*>(tex.get_animation(25, true));
+    gauge_update_anim    = dynamic_cast<FadeAnimation*>(tex.get_animation(10, true));
+    if (!tamashii_fire_change || !gauge_update_anim) {
+        throw std::runtime_error("Gauge: animation 25 or 10 is missing/has unexpected type");
+    }
 
     const std::string p = std::to_string((int)player_num) + "p_";
     t_border = tex.get_texture("gauge/border" + string_diff);

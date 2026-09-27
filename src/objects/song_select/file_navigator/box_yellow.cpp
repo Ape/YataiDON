@@ -44,6 +44,7 @@ YellowBox::YellowBox()
 }
 
 void YellowBox::reset() {
+    is_diff_select = false;
     left_out     = (MoveAnimation*)tex.get_animation(9);
     right_out    = (MoveAnimation*)tex.get_animation(10);
     center_out   = (MoveAnimation*)tex.get_animation(11);

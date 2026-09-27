@@ -195,10 +195,11 @@ SongSelectState SongSelectPlayer::select_song() {
             global_data.dan_folder[(int)player_num] = item->path;
         return SongSelectState::DAN_SELECTED;
     } else if (navigator.is_song(item)) {
-        navigator.enter_diff_select();
-        selected_song = true;
         SongBox* song_item = (SongBox*)item;
         curr_diffs = song_item->get_diffs();
+        if (curr_diffs.empty()) return SongSelectState::BROWSING;
+        navigator.enter_diff_select();
+        selected_song = true;
         init_diff_cursor();
         selected_diff_bounce->start();
         selected_diff_fadein->start();

@@ -643,6 +643,7 @@ private:
         f.push_back({"live_skip_count", DataField::Kind::INT, &g.live_skip_count});
         f.push_back({"live_skip_used", DataField::Kind::BOOL, nullptr, &g.live_skip_used});
 
+        if (g.session_data.empty()) return f;
         size_t idx = std::min((size_t)g.player_num, g.session_data.size() - 1);
         SessionData& sd = g.session_data[idx];
         f.push_back({"session.selected_difficulty", DataField::Kind::INT, &sd.selected_difficulty});

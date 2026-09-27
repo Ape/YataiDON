@@ -31,13 +31,13 @@ ClearAnimation::ClearAnimation(bool is_2p)
     bachio_move_out->start();
 
     for (int i = 0; i < 5; i++) {
-        FadeAnimation* fade = new FadeAnimation(100, 0.0f, false, false, 1.0f, i * 50);
+        auto fade = std::make_unique<FadeAnimation>(100, 0.0f, false, false, 1.0f, i * 50);
         fade->start();
-        clear_separate_fade_in.push_back(fade);
+        clear_separate_fade_in.push_back(std::move(fade));
 
-        TextStretchAnimation* stretch = new TextStretchAnimation(200, i * 50);
+        auto stretch = std::make_unique<TextStretchAnimation>(200, i * 50);
         stretch->start();
-        clear_separate_stretch.push_back(stretch);
+        clear_separate_stretch.push_back(std::move(stretch));
     }
 
     clear_highlight_fade_in = require_anim<FadeAnimation>(CLEAR_ANIM_HIGHLIGHT_FADE_IN);
@@ -65,10 +65,10 @@ void ClearAnimation::update(double current_ms) {
         draw_clear_full = true;
     }
 
-    for (auto fade : clear_separate_fade_in) {
+    for (auto& fade : clear_separate_fade_in) {
         fade->update(current_ms);
     }
-    for (auto stretch : clear_separate_stretch) {
+    for (auto& stretch : clear_separate_stretch) {
         stretch->update(current_ms);
     }
 

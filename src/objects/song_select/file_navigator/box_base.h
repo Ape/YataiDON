@@ -39,9 +39,9 @@ public:
     std::optional<ray::Color> fore_color;
     ray::Color text_color = ray::WHITE;
 
-    FadeAnimation* fade;
-    MoveAnimation* open_anim;
-    FadeAnimation* open_fade;
+    std::unique_ptr<FadeAnimation> fade;
+    std::unique_ptr<MoveAnimation> open_anim;
+    std::unique_ptr<FadeAnimation> open_fade;
 
     float position;
     float cross_pos = 0.0f;

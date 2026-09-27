@@ -18,8 +18,8 @@ public:
 class SongInfo {
 private:
     std::string song_name;
-    int genre;
-    FadeAnimation* fade;
+    int genre = 0;
+    FadeAnimation* fade = nullptr;
     std::unique_ptr<OutlinedText> song_title;
     std::unique_ptr<OutlinedText> song_subtitle;
     std::unique_ptr<OutlinedText> genre_text;

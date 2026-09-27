@@ -16,6 +16,7 @@
 #endif
 
 #include <atomic>
+#include <memory>
 #include <string>
 #include <thread>
 
@@ -112,7 +113,7 @@ private:
     std::string pending_update_expected_sha256;
     bool android_update_checked = false;
     std::thread skin_update_thread;
-    std::atomic<bool> skin_update_done{false};
+    std::shared_ptr<std::atomic<bool>> skin_update_done = std::make_shared<std::atomic<bool>>(false);
 #endif
 #endif
 };

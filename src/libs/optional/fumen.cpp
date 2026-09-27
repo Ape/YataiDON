@@ -1,6 +1,7 @@
 #include "fumen.h"
 #include "../md5.h"
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 
 #pragma pack(push, 1)
@@ -102,8 +103,13 @@ static uint32_t bswap32(uint32_t v) {
     return (v >> 24) | ((v >> 8) & 0xFF00u) | ((v << 8) & 0xFF0000u) | (v << 24);
 }
 static void swap32(void* p, size_t words) {
-    uint32_t* w = static_cast<uint32_t*>(p);
-    for (size_t i = 0; i < words; i++) w[i] = bswap32(w[i]);
+    uint8_t* b = static_cast<uint8_t*>(p);
+    for (size_t i = 0; i < words; i++) {
+        uint32_t v;
+        memcpy(&v, b + i * 4, 4);
+        v = bswap32(v);
+        memcpy(b + i * 4, &v, 4);
+    }
 }
 static void swap16(void* p) {
     uint16_t* h = static_cast<uint16_t*>(p);
@@ -314,6 +320,7 @@ void FumenParser::build_notes(int diff) {
 
                 double hit_ms = measure_ms + static_cast<double>(nb.note_offset);
                 NoteType nt = map_note_type(nb.type);
+                double note_length = std::isfinite(nb.length) && nb.length >= 0.0f ? static_cast<double>(nb.length) : 0.0;
 
                 Note note;
                 note.type     = nt;
@@ -332,7 +339,7 @@ void FumenParser::build_notes(int diff) {
 
                     Note tail;
                     tail.type     = NoteType::TAIL;
-                    tail.hit_ms   = hit_ms + static_cast<double>(nb.length);
+                    tail.hit_ms   = hit_ms + note_length;
                     tail.load_ms  = tail.hit_ms;
                     tail.unload_ms = tail.hit_ms;
                     tail.bpm      = bpm;
@@ -349,7 +356,7 @@ void FumenParser::build_notes(int diff) {
 
                     Note tail;
                     tail.type     = NoteType::TAIL;
-                    tail.hit_ms   = hit_ms + static_cast<double>(nb.length);
+                    tail.hit_ms   = hit_ms + note_length;
                     tail.load_ms  = tail.hit_ms;
                     tail.unload_ms = tail.hit_ms;
                     tail.bpm      = bpm;

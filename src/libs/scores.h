@@ -66,8 +66,8 @@ private:
     std::map<std::tuple<std::string, int, int>, Score> score_cache;
     void load_score_cache();
 public:
-    int player_1;
-    int player_2;
+    int player_1 = 1;
+    int player_2 = 2;
     PlayerData player_1_data;
     PlayerData player_2_data;
     ScoresManager(const fs::path& db_path);

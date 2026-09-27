@@ -18,8 +18,8 @@ BaseBox::BaseBox(const fs::path& path, const BoxDef& box_def)
     position = std::numeric_limits<float>::infinity();
     target_position = std::numeric_limits<float>::infinity();
 
-    open_anim = new MoveAnimation(233, 150.0f * tex.screen_scale, false, false, 0, 133);
-    open_fade = new FadeAnimation(200, 0.0f, false, false, 1.0f, 133);
+    open_anim = std::make_unique<MoveAnimation>(233, 150.0f * tex.screen_scale, false, false, 0, 133);
+    open_fade = std::make_unique<FadeAnimation>(200, 0.0f, false, false, 1.0f, 133);
     move = std::make_unique<MoveAnimation>(133, 0, false, false, 0, 0.0, std::nullopt, std::nullopt, EaseType::Cubic);
     move->start();
 
@@ -119,12 +119,12 @@ void BaseBox::move_box(float target_position, float duration) {
 }
 
 void BaseBox::fade_in(float delay) {
-    fade = new FadeAnimation(266, 0.0f, false, false, 1.0f, delay);
+    fade = std::make_unique<FadeAnimation>(266, 0.0f, false, false, 1.0f, delay);
     fade->start();
 }
 
 void BaseBox::fade_out() {
-    fade = new FadeAnimation(166);
+    fade = std::make_unique<FadeAnimation>(166);
     fade->start();
 }
 

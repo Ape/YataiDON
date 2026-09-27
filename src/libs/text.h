@@ -42,10 +42,6 @@ public:
     void unload();
     ray::Font get_font(const std::string& text, int font_size);
     ray::Font copy_font(const std::string& text, int font_size);
-    // Rasterize the glyphs `text` needs at `font_size` now, without rebuilding the
-    // atlas. Call it for a whole batch (every song title of a genre, every lyric
-    // line of a chart) before the OutlinedTexts are created, so the atlas is
-    // rebuilt once for the batch instead of once per new string.
     void register_text(const std::string& text, int font_size);
 };
 

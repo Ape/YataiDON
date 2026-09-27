@@ -29,6 +29,12 @@ public:
     LoadingScreen() : Screen("loading") {
     }
 
+    ~LoadingScreen() override {
+        if (loading_thread.joinable()) {
+            loading_thread.join();
+        }
+    }
+
     void on_screen_start() override;
 
     Screens on_screen_end(Screens next_screen) override;

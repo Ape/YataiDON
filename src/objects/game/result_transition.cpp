@@ -1,5 +1,6 @@
 #include "result_transition.h"
 #include "../../libs/texture.h"
+#include <stdexcept>
 
 ResultTransition::ResultTransition(PlayerNum player_num)
     : player_num(player_num), is_finished(false), is_started(false) {
@@ -7,7 +8,7 @@ ResultTransition::ResultTransition(PlayerNum player_num)
     move = dynamic_cast<MoveAnimation*>(global_tex.get_animation(5));
     if (!move) {
         spdlog::error("ResultTransition: animation 5 is not a MoveAnimation");
-        return;
+        throw std::runtime_error("ResultTransition: animation 5 is not a MoveAnimation");
     }
     move->reset();
 

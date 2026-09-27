@@ -6,8 +6,8 @@
 
 class ResultTransition : public LuaScript {
 private:
-    PlayerNum player_num;
-    MoveAnimation* move;
+    PlayerNum player_num = PlayerNum::P1;
+    MoveAnimation* move = nullptr;
 
     sol::protected_function fn_start, fn_update, fn_draw, fn_is_finished;
 
@@ -27,8 +27,8 @@ private:
     void init_textures();
 
 public:
-    bool is_finished;
-    bool is_started;
+    bool is_finished = false;
+    bool is_started = false;
 
     ResultTransition() = default;
 

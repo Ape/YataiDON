@@ -31,16 +31,42 @@
 // crashing concurrently don't call into it at the same time.
 static std::atomic_flag g_dbghelp_lock = ATOMIC_FLAG_INIT;
 
+static void win_write(const char* data, std::size_t len) {
+    HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
+    DWORD written = 0;
+    if (h != nullptr && h != INVALID_HANDLE_VALUE) WriteFile(h, data, static_cast<DWORD>(len), &written, nullptr);
+}
+static void win_write(const char* msg) { win_write(msg, strlen(msg)); }
+
+static void win_write_hex(std::uintptr_t value) {
+    char buf[2 + sizeof(value) * 2];
+    buf[0] = '0';
+    buf[1] = 'x';
+    for (std::size_t i = 0; i < sizeof(value) * 2; i++) {
+        int nibble = (value >> (4 * (sizeof(value) * 2 - 1 - i))) & 0xF;
+        buf[2 + i] = nibble < 10 ? char('0' + nibble) : char('a' + nibble - 10);
+    }
+    win_write(buf, sizeof(buf));
+}
+
 static void log_trace_from_context(CONTEXT* ctx) {
     HANDLE process = GetCurrentProcess();
     HANDLE thread  = GetCurrentThread();
 
     while (g_dbghelp_lock.test_and_set(std::memory_order_acquire)) {}
+    struct DbghelpLockGuard {
+        ~DbghelpLockGuard() { g_dbghelp_lock.clear(std::memory_order_release); }
+    } dbghelp_lock_guard;
 
     SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
     const bool sym_initialized = SymInitialize(process, nullptr, TRUE);
+    struct SymCleanupGuard {
+        HANDLE process;
+        bool active;
+        ~SymCleanupGuard() { if (active) SymCleanup(process); }
+    } sym_cleanup_guard{process, sym_initialized};
     if (!sym_initialized) {
-        spdlog::critical("SymInitialize failed (error {}); stack trace may lack symbols", GetLastError());
+        win_write("SymInitialize failed; stack trace may lack symbols\n");
     }
 
     CONTEXT ctx_copy = *ctx;
@@ -68,26 +94,30 @@ static void log_trace_from_context(CONTEXT* ctx) {
 #endif
 
     cpptrace::raw_trace raw;
-    while (StackWalk64(
-        machine_type, process, thread, &sf, &ctx_copy,
-        nullptr, SymFunctionTableAccess64, SymGetModuleBase64, nullptr
-    )) {
-        if (sf.AddrPC.Offset == 0) break;
-        raw.frames.push_back(static_cast<cpptrace::frame_ptr>(sf.AddrPC.Offset));
+    try {
+        while (StackWalk64(
+            machine_type, process, thread, &sf, &ctx_copy,
+            nullptr, SymFunctionTableAccess64, SymGetModuleBase64, nullptr
+        )) {
+            if (sf.AddrPC.Offset == 0) break;
+            raw.frames.push_back(static_cast<cpptrace::frame_ptr>(sf.AddrPC.Offset));
+        }
+    } catch (...) {
+        win_write("(stack walk failed)\n");
+        return; // guards above still release the lock and SymCleanup
     }
 
     try {
         auto resolved = raw.resolve();
         std::ostringstream oss;
         resolved.print(oss, false);
-        spdlog::critical("Stack trace:\n{}", oss.str());
+        std::string trace = oss.str();
+        win_write("Stack trace:\n");
+        win_write(trace.data(), trace.size());
+        win_write("\n");
     } catch (...) {
-        spdlog::critical("(stack trace resolution failed)");
+        win_write("(stack trace resolution failed)\n");
     }
-    spdlog::default_logger()->flush();
-
-    if (sym_initialized) SymCleanup(process);
-    g_dbghelp_lock.clear(std::memory_order_release);
 }
 
 static LONG WINAPI crash_exception_filter(EXCEPTION_POINTERS* ep) {
@@ -100,8 +130,11 @@ static LONG WINAPI crash_exception_filter(EXCEPTION_POINTERS* ep) {
         case EXCEPTION_INT_DIVIDE_BY_ZERO:  exc_name = "Int divide by zero"; break;
         case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: exc_name = "Array bounds exceeded"; break;
     }
-    spdlog::critical("Crash: {} (code 0x{:08X})", exc_name,
-                     static_cast<unsigned>(ep->ExceptionRecord->ExceptionCode));
+    win_write("Crash: ");
+    win_write(exc_name);
+    win_write(" (code ");
+    win_write_hex(static_cast<std::uintptr_t>(ep->ExceptionRecord->ExceptionCode));
+    win_write(")\n");
     log_trace_from_context(ep->ContextRecord);
     std::_Exit(1);
     return EXCEPTION_EXECUTE_HANDLER;
@@ -134,12 +167,6 @@ void handle_exception() {
 
 void signal_handler(int signal) {
     if (signal == SIGINT) {
-        // std::exit() runs static destructors (including the spdlog logger)
-        // from signal-handler context, which is not async-signal-safe and can
-        // deadlock if the interrupted thread was mid-log. Flush best-effort
-        // and terminate immediately instead.
-        auto logger = spdlog::default_logger();
-        if (logger) logger->flush();
         std::_Exit(0);
     }
 }

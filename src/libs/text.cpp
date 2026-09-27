@@ -74,10 +74,6 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
     RL_FREE(g);                                                    // array only; images now live in `cache`
     entry.atlas_dirty = true;
 
-    // LoadFontData silently drops codepoints the font has no glyph for, and raylib then
-    // draws '?' in their place. Simplified / traditional Chinese text hits this constantly
-    // on a Japanese font (戏, 开, 乐 ...), so a missing character borrows the glyph of its
-    // shinjitai form (戲→戯, 开→開) and is stored under its own codepoint.
     std::vector<int> missing, alts;
     for (int cp : cps) {
         if (got.count(cp)) continue;
@@ -89,15 +85,17 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
     ray::GlyphInfo* ag = ray::LoadFontData(font_data.data(), (int)font_data.size(), font_size,
                                            alts.data(), (int)alts.size(), ray::FONT_DEFAULT, &alt_count);
     if (!ag) return true;
+    std::vector<bool> assigned(alts.size(), false);
     for (int i = 0; i < alt_count; i++) {
         bool used = false;
         for (size_t k = 0; k < alts.size(); k++) {
-            if (alts[k] != ag[i].value) continue;
+            if (assigned[k] || alts[k] != ag[i].value) continue;
             ray::GlyphInfo gi = ag[i];
             gi.value = missing[k];
             if (used) gi.image = ray::ImageCopy(ag[i].image);   // two originals folding to one form
             entry.cache.push_back(gi);
             used = true;
+            assigned[k] = true;
         }
         if (!used) ray::UnloadImage(ag[i].image);
     }
@@ -197,21 +195,8 @@ FontManager::SizedFont& FontManager::acquire(const std::string& text, int font_s
     return entry;
 }
 
-// Transparent base for text composition. raylib blends src*a + dst*(1-a) with the
-// destination's RGB even where dst alpha is 0, so drawing onto BLANK (0,0,0,0) pulls every
-// anti-aliased edge towards black (a white outline on a light background gets a dark
-// fringe). A base that is the stroke's own colour at alpha 0 keeps the edges pure.
 static ray::Color clear_of(ray::Color c) { return ray::Color{c.r, c.g, c.b, 0}; }
 
-// ImageDrawTextEx renders the string into a BLANK scratch image first, so every
-// anti-aliased edge is already blended towards black before it reaches our canvas
-// (16 overlapping outline stamps turn that into a grey rim around a light outline).
-// Render the string ourselves, force the RGB to the tint and keep only the coverage
-// in alpha, then composite.
-// Composite an RGBA8 image onto an RGBA8 image with a correctly clamped "over".
-// raylib's ImageDrawImagePro/ColorAlphaBlend integer path yields 256 for two
-// partially transparent pixels of the same colour and wraps it to 0 -- every
-// overlap of anti-aliased outline stamps came out black.
 static void blit_over(ray::Image* dst, const ray::Image& src, int x0, int y0) {
     if (!dst->data || !src.data) return;
     if (dst->format != ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 || src.format != ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) {
@@ -258,14 +243,6 @@ static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* 
     ray::UnloadImage(t);
 }
 
-// Outline = the glyph coverage dilated by a disk of `radius` px (max over the disk),
-// coloured with `outline_color`.  Stamping the text at 16 angles left a ragged,
-// "hairy" rim because the stamps only touch the disk at 16 points; a per-pixel max
-// over the disk gives the exact Minkowski sum.  The disk is anti-aliased: a
-// neighbour at distance d contributes a * clamp(radius + 0.5 - d, 0, 1), so the
-// outer edge of the outline has the same 1 px soft ramp as the glyph itself instead
-// of the pixel staircase a hard disk leaves on curves (the cabinet's strokes are
-// smooth; a hard rim read as "sharper" next to them).
 static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* text, ray::Vector2 pos,
                           float font_size, float spacing, ray::Color outline_color, float radius) {
     ray::Image cov = ray::ImageTextEx(font, text, font_size, spacing, ray::WHITE);

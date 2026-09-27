@@ -1,4 +1,5 @@
 #include "gauge_hit_effect.h"
+#include <stdexcept>
 
 GaugeHitEffect::GaugeHitEffect(NoteType note_type, bool is_big, bool is_2p)
             : note_type(note_type), is_big(is_big), is_2p(is_2p) {
@@ -7,6 +8,10 @@ GaugeHitEffect::GaugeHitEffect(NoteType note_type, bool is_big, bool is_2p)
     resize = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(32, true));
     fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(33, true));
     rotation = dynamic_cast<FadeAnimation*>(tex.get_animation(34, true));
+
+    if (!texture_change || !circle_fadein || !resize || !fade_out || !rotation) {
+        throw std::runtime_error("GaugeHitEffect: animation 2/31/32/33/34 missing or of unexpected type");
+    }
 
     texture_change->start();
     circle_fadein->start();

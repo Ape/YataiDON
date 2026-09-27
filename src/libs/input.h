@@ -30,7 +30,8 @@ bool check_key_pressed(int key);
 bool check_key_released(int key);
 
 // Most recent controller button press, as the bare button number the
-// config stores (0 if none since the last call, which this consumes).
+// config stores (-1 if none since the last call, which this consumes; 0 is
+// a valid real button, so it can't double as the "no event" sentinel).
 // Covers SDL joysticks too, unlike raylib's GetGamepadButtonPressed which
 // only sees devices it has a gamepad mapping for.
 int take_gamepad_button_pressed();

@@ -1,6 +1,7 @@
 #include "game_2p.h"
 #include "../libs/animation.h"
 #include "../libs/input.h"
+#include <algorithm>
 
 void Game2PScreen::init_tja(fs::path song) {
     int delay = (song.extension() == ".osu") ? 0 : start_delay;
@@ -44,7 +45,9 @@ void Game2PScreen::init_tja(fs::path song) {
 }
 
 std::optional<Screens> Game2PScreen::update() {
-    Screen::update();
+    if (auto init = Screen::update()) {
+        return init;
+    }
 
     double current_time = get_current_ms();
     transition->update(current_time);
@@ -69,8 +72,9 @@ std::optional<Screens> Game2PScreen::update() {
     if (result_transition.is_finished && !audio.is_sound_playing("result_transition")) {
         return on_screen_end(Screens::RESULT_2P);
     }
-    else if (ms_from_start >= players[0]->end_time) {
-        if (ms_from_start >= players[0]->end_time + 1000 && !score_saved) {
+    else if (ms_from_start >= std::max(players[0]->end_time, players[1]->end_time)) {
+        const double end_time = std::max(players[0]->end_time, players[1]->end_time);
+        if (ms_from_start >= end_time + 1000 && !score_saved) {
             global_data.session_data[(int)PlayerNum::P1].result_data = players[0]->get_result_score();
             global_data.session_data[(int)PlayerNum::P2].result_data = players[1]->get_result_score();
             save_score(get_player_id(PlayerNum::P1), PlayerNum::P1);
@@ -81,7 +85,7 @@ std::optional<Screens> Game2PScreen::update() {
             global_data.songs_played += 1;
             score_saved = true;
         }
-        if (ms_from_start >= players[0]->end_time + 8533.34) {
+        if (ms_from_start >= end_time + 8533.34) {
             if (!result_transition.is_started) {
                 result_transition.start();
                 audio.play_sound("result_transition", VolumePreset::VOICE);
@@ -100,6 +104,7 @@ std::optional<Screens> Game2PScreen::update() {
         paused = false;
         pause_time = 0;
         last_resync_ms = 0;
+        result_transition = ResultTransition(global_data.player_num);
         start_ms = get_current_ms() - parser->metadata.offset*1000 - (double)global_data.config->general.audio_offset;
         ms_from_start = get_current_ms() - start_ms;
     }

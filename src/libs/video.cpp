@@ -25,7 +25,13 @@ VideoPlayer::VideoPlayer(fs::path path)
         spdlog::error("Failed to open video: {}", path.string());
         return;
     }
-    video_stream = container->streams().video(0);
+    try {
+        video_stream = container->streams().video(0);
+    } catch (const std::exception& e) {
+        spdlog::error("Video has no video stream: {} ({})", path.string(), e.what());
+        container.reset();
+        return;
+    }
     audio_stream = container->streams().audio(0);
     if (!video_stream) {
         spdlog::error("Video has no video stream: {}", path.string());
@@ -130,6 +136,12 @@ void VideoPlayer::stop_decode_thread() {
 void VideoPlayer::upload_frame(const DecodedFrame& frame) {
     const void* pixels_ptr = static_cast<const void*>(frame.bytes.data());
 
+    if (texture.has_value() &&
+        (texture->width != frame.width || texture->height != frame.height)) {
+        ray::UnloadTexture(texture.value());
+        texture.reset();
+    }
+
     if (!texture.has_value()) {
         ray::Image image{};
         image.data    = const_cast<void*>(pixels_ptr);   // raylib copies on load
@@ -153,7 +165,8 @@ bool VideoPlayer::is_started() const {
 void VideoPlayer::start(double current_ms) {
     if (is_static || !container) return;
 
-    stop_decode_thread(); // no-op on first start; resets state on restart
+    stop_decode_thread();
+    audio.stop_music_stream(audio_s);
     decode_stop.store(false);
     frame_index = 0;
     is_finished_arr = {false, false};

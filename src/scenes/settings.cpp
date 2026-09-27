@@ -12,6 +12,12 @@ void save_config(const Config& config);
 void SettingsScreen::on_screen_start() {
     Screen::on_screen_start();
 
+    if (!global_data.config) {
+        spdlog::error("SettingsScreen entered without initialized config");
+        screen_init = false;
+        throw std::runtime_error("SettingsScreen: global_data.config is null");
+    }
+
     fs::path skin_dir = fs::path("Skins") / global_data.config->paths.skin / "Graphics";
     fs::path tmpl_path = skin_dir / "settings_template.json";
     if (!fs::exists(tmpl_path) && tex.has_parent_skin())
@@ -22,7 +28,7 @@ void SettingsScreen::on_screen_start() {
     } catch (const std::exception& e) {
         spdlog::error("Failed to load settings template: {}", e.what());
         screen_init = false;
-        return;
+        throw;
     }
     indicator   = Indicator(Indicator::State::SELECT);
     coin_overlay   = CoinOverlay();
@@ -89,7 +95,12 @@ std::optional<Screens> SettingsScreen::handle_input() {
 }
 
 std::optional<Screens> SettingsScreen::update() {
-    Screen::update();
+    if (auto result = Screen::update()) {
+        return result;
+    }
+    if (!screen_init) {
+        return std::nullopt;
+    }
     double current_time = get_current_ms();
     allnet_indicator->update(current_time);
     indicator->update(current_time);

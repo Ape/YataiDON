@@ -19,16 +19,18 @@ static void init_player_diffs(SongSelectPlayer* p, SongBox* song) {
 void SongSelect2PScreen::handle_input_browsing(double current_ms) {
     SongSelectState s1 = player->handle_input_browsing(current_ms);
     if (s1 == SongSelectState::SONG_SELECTED) {
-        SongBox* song = static_cast<SongBox*>(navigator.get_current_item());
-        init_player_diffs(player_2.get(), song);
-        state = s1;
+        if (auto* song = dynamic_cast<SongBox*>(navigator.get_current_item())) {
+            init_player_diffs(player_2.get(), song);
+            state = s1;
+        }
         return;
     }
     SongSelectState s2 = player_2->handle_input_browsing(current_ms);
     if (s2 == SongSelectState::SONG_SELECTED) {
-        SongBox* song = static_cast<SongBox*>(navigator.get_current_item());
-        init_player_diffs(player.get(), song);
-        state = s2;
+        if (auto* song = dynamic_cast<SongBox*>(navigator.get_current_item())) {
+            init_player_diffs(player.get(), song);
+            state = s2;
+        }
         return;
     }
     if (s1 != SongSelectState::BROWSING) state = s1;
@@ -46,8 +48,8 @@ void SongSelect2PScreen::handle_input_selecting() {
         player_2->handle_input_selecting();
     }
 
-    if (player->is_ura != ura_1p)        player_2->sync_ura(player->is_ura);
-    else if (player_2->is_ura != ura_2p) player->sync_ura(player_2->is_ura);
+    if (player->is_ura != ura_1p && !player_2->is_ready)   player_2->sync_ura(player->is_ura);
+    if (player_2->is_ura != ura_2p && !player->is_ready)   player->sync_ura(player_2->is_ura);
 }
 
 void SongSelect2PScreen::select_song(SongBox* song) {
@@ -81,6 +83,7 @@ std::optional<Screens> SongSelect2PScreen::update() {
     Screen::update();
     SongSelectState prev_state = state;
     double current_time = get_current_ms();
+    allnet_indicator.update(current_time);
     diff_fade_out->update(current_time);
     script->update(current_time);
     select_timer->update(current_time);
@@ -89,6 +92,10 @@ std::optional<Screens> SongSelect2PScreen::update() {
     if (search_box) search_box->update(current_time);
 
     if (navigator.diff_sort_ready() && !diff_sort_selector) {
+        if (stats_future.valid()) {
+            stats_future.wait();
+            cached_stats = stats_future.get();
+        }
         diff_sort_selector.emplace(cached_stats, last_diff_sort.first, last_diff_sort.second,
                                    script.get(), last_diff_order);
     }
@@ -106,8 +113,9 @@ std::optional<Screens> SongSelect2PScreen::update() {
 
     if (player->is_ready && player_2->is_ready && !game_transition.has_value()) {
         if (player->selected_difficulty >= Difficulty::EASY && player_2->selected_difficulty >= Difficulty::EASY) {
-            BaseBox* item = navigator.get_current_item();
-            select_song((SongBox*)item);
+            if (auto* item = dynamic_cast<SongBox*>(navigator.get_current_item())) {
+                select_song(item);
+            }
         }
     }
     if (!game_transition.has_value() &&

@@ -31,6 +31,9 @@ void GameScreen::on_screen_start() {
     SessionData& session_data = global_data.session_data[(int)global_data.player_num];
     if (session_data.selected_song.empty() || !exists(session_data.selected_song)) {
         auto songs = get_song_files(global_data.config->paths.tja_path);
+        if (songs.empty()) {
+            throw std::runtime_error("No songs found in tja_path, cannot load fallback song");
+        }
         session_data.selected_song = songs.front();
         session_data.selected_difficulty = static_cast<int>(Difficulty::EASY);
         try {
@@ -198,7 +201,7 @@ void GameScreen::start_song(double ms_from_start) {
 
 void GameScreen::pause_song() {
     paused = !paused;
-    double audio_time;
+    double audio_time = 0.0;
     if (paused) {
         if (song_music.has_value()) {
             audio_time = audio.get_sound_time_played(song_music.value());
@@ -263,10 +266,15 @@ void GameScreen::update_background(double current_ms) {
 }
 
 void GameScreen::save_score(int player_id, PlayerNum player_num) {
+    Player* target = nullptr;
     for (const auto& player : players) {
-        if (player && player->player_num == player_num && (player->is_auto_play() || player->is_replay()))
-            return;
+        if (player && player->player_num == player_num) {
+            if (player->is_auto_play() || player->is_replay())
+                return;
+            target = player.get();
+        }
     }
+    if (!target) return;
 
     Score score;
     SessionData& session_data = global_data.session_data[(int)player_num];
@@ -288,7 +296,7 @@ void GameScreen::save_score(int player_id, PlayerNum player_num) {
         score.crown = Crown::DFC;
     } else if (score.bad == 0) {
         score.crown = Crown::FC;
-    } else if (players[0]->gauge->get_is_clear()) {
+    } else if (target->gauge->get_is_clear()) {
         score.crown = Crown::CLEAR;
     } else {
         score.crown = Crown::NONE;
@@ -311,11 +319,11 @@ void GameScreen::save_score(int player_id, PlayerNum player_num) {
         score.rank = Rank::_WHITE;
     }
     int64_t played_at = unix_now();
-    std::string modifiers_json = modifiers_to_json(players[0]->get_modifiers());
+    std::string modifiers_json = modifiers_to_json(target->get_modifiers());
     scores_manager.save_score(hash, session_data.selected_difficulty, player_id, score, played_at, modifiers_json);
     PlayerData pd = scores_manager.get_player_data(player_id).value_or(PlayerData{});
     if (global_data.config->general.score_method != ScoreMethod::GEN3) {
-        network.submit_score(hash, session_data.selected_difficulty, global_data.config->network.access_code, score, players[0]->input_log, played_at, modifiers_json, pd.chara_is_costume, pd.chara_cos_index);
+        network.submit_score(hash, session_data.selected_difficulty, global_data.config->network.access_code, score, target->input_log, played_at, modifiers_json, pd.chara_is_costume, pd.chara_cos_index);
     }
 }
 

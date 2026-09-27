@@ -102,7 +102,7 @@ public:
     int get_max_combo() const { return max_combo; }
     int get_combo() const { return combo; }
     int get_total_drumroll() const { return total_drumroll; }
-    int get_scissor_x() const { return virtual_to_screen_x(static_cast<float>(lane_cover_tex_id->x2[0])); }
+    int get_scissor_x() const { return lane_cover_tex_id ? virtual_to_screen_x(static_cast<float>(lane_cover_tex_id->x2[0])) : 0; }
     void set_is_dan(bool v) { is_dan = v; }
 
     void reload_for_dan(std::optional<SongParser>& new_parser, int new_difficulty);

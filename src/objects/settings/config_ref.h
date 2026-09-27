@@ -43,6 +43,7 @@ struct ConfigRef {
 
 inline ConfigRef get_config_ref(const std::string& path) {
     Config* c = global_data.config;
+    if (!c) throw std::runtime_error("Config not initialized");
     // general
     if (path == "general/fps_counter")              return &c->general.fps_counter;
     if (path == "general/audio_offset")             return &c->general.audio_offset;
@@ -63,6 +64,8 @@ inline ConfigRef get_config_ref(const std::string& path) {
     if (path == "network/access_code")              return &c->network.access_code;
     if (path == "network/sync_scores")              return &c->network.sync_scores;
     // nameplate_1p → player 1 data cache
+    if (path.rfind("nameplate_", 0) == 0 && !_scores_manager_ptr)
+        throw std::runtime_error("Scores manager not initialized");
     if (path == "nameplate_1p/name")     return &scores_manager.player_1_data.username;
     if (path == "nameplate_1p/title")    return &scores_manager.player_1_data.title;
     if (path == "nameplate_1p/title_bg") return &scores_manager.player_1_data.title_bg;

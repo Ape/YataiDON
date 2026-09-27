@@ -6,7 +6,7 @@
 
 class DanTransition {
 private:
-    MoveAnimation* slide_in;
+    MoveAnimation* slide_in = nullptr;
     bool started;
     double start_ms = 0;
     double last_ms  = 0;

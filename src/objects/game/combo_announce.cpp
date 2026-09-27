@@ -64,6 +64,8 @@ ComboAnnounce::ComboAnnounce(int combo, double current_ms, PlayerNum player_num)
 }
 
 void ComboAnnounce::update(double current_ms) {
+    if (is_finished && fade->is_finished) return;
+
     if (current_ms >= wait + 1666.67f && !is_finished) {
         fade->start();
         is_finished = true;

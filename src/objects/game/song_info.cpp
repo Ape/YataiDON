@@ -18,8 +18,8 @@ SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bo
     const SkinInfo* plate_cfg = tex.skin_entry("song_num_game");
     this->song_num = std::make_unique<SongNum>(
         song_num, plate_cfg ? plate_cfg->outline : -1.0f);
-    if (song_total > 0 && tex.skin_entry("song_num_max"))
-        song_max = std::make_unique<SongNum>(song_total, "song_num_max");
+    if (song_total > 0 && tex.skin_entry("song_num_max_game"))
+        song_max = std::make_unique<SongNum>(song_total, "song_num_max_game");
     fade = dynamic_cast<FadeAnimation*>(tex.get_animation(3));
 
     t_genre = tex.get_texture("song_info/genre");
@@ -34,11 +34,13 @@ SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bo
                        ? color_it->second[1].value() : ray::Color{101, 0, 82, 255};
 
     genre_shader = load_shader("shader/dummy.vs", "shader/colortransform.fs");
-    float src[3] = { GENRE_PLATE_TEMPLATE_COLOR.r / 255.0f, GENRE_PLATE_TEMPLATE_COLOR.g / 255.0f, GENRE_PLATE_TEMPLATE_COLOR.b / 255.0f };
-    float tgt[3] = { target.r / 255.0f, target.g / 255.0f, target.b / 255.0f };
-    ray::SetShaderValue(genre_shader, ray::GetShaderLocation(genre_shader, "sourceColor"), src, ray::SHADER_UNIFORM_VEC3);
-    ray::SetShaderValue(genre_shader, ray::GetShaderLocation(genre_shader, "targetColor"), tgt, ray::SHADER_UNIFORM_VEC3);
-    genre_shader_loaded = true;
+    genre_shader_loaded = genre_shader.id != 0;
+    if (genre_shader_loaded) {
+        float src[3] = { GENRE_PLATE_TEMPLATE_COLOR.r / 255.0f, GENRE_PLATE_TEMPLATE_COLOR.g / 255.0f, GENRE_PLATE_TEMPLATE_COLOR.b / 255.0f };
+        float tgt[3] = { target.r / 255.0f, target.g / 255.0f, target.b / 255.0f };
+        ray::SetShaderValue(genre_shader, ray::GetShaderLocation(genre_shader, "sourceColor"), src, ray::SHADER_UNIFORM_VEC3);
+        ray::SetShaderValue(genre_shader, ray::GetShaderLocation(genre_shader, "targetColor"), tgt, ray::SHADER_UNIFORM_VEC3);
+    }
 }
 
 void SongInfo::update(double current_ms) {

@@ -478,8 +478,9 @@ std::vector<uint8_t> Library::load_chart(const std::string& id, int difficulty) 
 
     std::ifstream f(path, std::ios::binary);
     if (!f) return {};
-    return std::vector<uint8_t>((std::istreambuf_iterator<char>(f)),
-                                std::istreambuf_iterator<char>());
+    std::vector<uint8_t> raw((std::istreambuf_iterator<char>(f)),
+                              std::istreambuf_iterator<char>());
+    return looks_encrypted(raw) ? std::vector<uint8_t>{} : raw;
 }
 
 int genre_index_for(int genre_no) {

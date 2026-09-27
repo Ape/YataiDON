@@ -48,9 +48,11 @@ void BackBox::draw_open() {
     tex.draw_texture(t_shadow_bottom_right, {.x=bx, .y=by, .fade=mfade, .index=1});
     tex.draw_texture(t_shadow_right,        {.x=bx, .y=by, .fade=mfade, .index=1});
     tex.draw_texture(t_shadow_top_right,    {.x=bx, .y=by, .fade=mfade, .index=1});
-    if (yellow_box.has_value())
+    float x = bx;
+    if (yellow_box.has_value()) {
         yellow_box->draw(mfade, by);
-    float x = bx + (yellow_box->right_out->attribute*0.85 - (yellow_box->right_out->start_position*0.85)) + yellow_box->right_out_2->attribute - yellow_box->right_out_2->start_position;
+        x += (yellow_box->right_out->attribute*0.85 - (yellow_box->right_out->start_position*0.85)) + yellow_box->right_out_2->attribute - yellow_box->right_out_2->start_position;
+    }
     tex.draw_texture(t_back_icon_highlight, {.x=x, .y=by, .fade=mfade});
     if (back_text_highlight) {
         const SkinInfo& cfg = tex.skin_config[SC::BOX_BACK_TEXT];
