@@ -2178,6 +2178,7 @@ void Navigator::draw() {
 
         if (genre_bg.has_value()) {
             FolderBox* folder = pending_inline_folder;
+            genre_bg->draw_center_box = !(script && script->has_draw_box());
             genre_bg->draw(start_pos, end_pos, folder);
         }
     }

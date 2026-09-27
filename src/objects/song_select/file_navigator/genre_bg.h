@@ -31,6 +31,8 @@ public:
     }
     void update(double current_ms, FolderBox* box);
     void draw(float start_position, float end_position, FolderBox* folder);
+    // false when a skin draws the boxes in Lua: the exit animation then leaves the folder box to it
+    bool draw_center_box = true;
     void exit(float left_position, float right_position, FolderBox* center_box);
     void fade_out();
     void fade_in();
