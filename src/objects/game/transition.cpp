@@ -1,14 +1,17 @@
 #include "transition.h"
 #include "../../libs/global_data.h"
 #include <algorithm>
+#include <stdexcept>
 
 Transition::Transition(const std::string& title, const std::string& subtitle, bool is_second) :
     is_second(is_second) {
-    rainbow_up = (MoveAnimation*)global_tex.get_animation(0);
-    mini_up = (MoveAnimation*)global_tex.get_animation(1);
-    chara_down = (MoveAnimation*)global_tex.get_animation(2);
-    song_info_fade = (FadeAnimation*)global_tex.get_animation(3);
-    song_info_fade_out = (FadeAnimation*)global_tex.get_animation(4);
+    rainbow_up = dynamic_cast<MoveAnimation*>(global_tex.get_animation(0));
+    mini_up = dynamic_cast<MoveAnimation*>(global_tex.get_animation(1));
+    chara_down = dynamic_cast<MoveAnimation*>(global_tex.get_animation(2));
+    song_info_fade = dynamic_cast<FadeAnimation*>(global_tex.get_animation(3));
+    song_info_fade_out = dynamic_cast<FadeAnimation*>(global_tex.get_animation(4));
+    if (!rainbow_up || !mini_up || !chara_down || !song_info_fade || !song_info_fade_out)
+        throw std::runtime_error("Transition: animation 0/1/2/3/4 has an unexpected type");
 
     this->title = std::make_unique<OutlinedText>(title, global_tex.skin_config[SC::TRANSITION_TITLE].font_size, ray::WHITE, ray::BLACK, false, 5);
     this->subtitle = std::make_unique<OutlinedText>(subtitle, global_tex.skin_config[SC::TRANSITION_SUBTITLE].font_size, ray::WHITE, ray::BLACK, false, 5);

@@ -329,6 +329,11 @@ namespace {
 // order. Ura is a separate file rather than a flag on oni.
 const char* DIFF_SUFFIX[5] = { "_e", "_n", "_h", "_m", "_x" };
 
+bool is_safe_song_id(const std::string& id) {
+    if (id.empty() || id == "." || id == "..") return false;
+    return id.find('/') == std::string::npos && id.find('\\') == std::string::npos;
+}
+
 // wordlist column -> the language codes this game uses.
 const struct { const char* field; const char* lang; } WORD_LANGS[] = {
     { "japaneseText",  "ja"    },
@@ -462,13 +467,13 @@ const SongEntry* Library::find(const std::string& id) const {
 }
 
 bool Library::has_difficulty(const std::string& id, int difficulty) const {
-    if (difficulty < 0 || difficulty > 4) return false;
+    if (difficulty < 0 || difficulty > 4 || !is_safe_song_id(id)) return false;
     std::error_code ec;
     return fs::exists(data_root / "fumen" / id / (id + DIFF_SUFFIX[difficulty] + ".bin"), ec);
 }
 
 std::vector<uint8_t> Library::load_chart(const std::string& id, int difficulty) const {
-    if (difficulty < 0 || difficulty > 4) return {};
+    if (difficulty < 0 || difficulty > 4 || !is_safe_song_id(id)) return {};
     fs::path path = data_root / "fumen" / id / (id + DIFF_SUFFIX[difficulty] + ".bin");
     std::error_code ec;
     if (!fs::exists(path, ec)) return {};

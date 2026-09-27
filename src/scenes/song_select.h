@@ -64,6 +64,7 @@ protected:
     virtual bool allows_second_player_join() { return true; }
     double join_request_ms = -1.0;
     PlayerNum join_existing_seat = PlayerNum::P1;
+    bool awaiting_join_don_release = false;
     std::optional<Screens> poll_second_player_join(double current_ms);
 
     virtual void draw_overlays();

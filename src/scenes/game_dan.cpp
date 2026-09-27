@@ -94,10 +94,6 @@ void DanGameScreen::init_dan_textures() {
     for (const auto& [exam_type, path] : exam_icon_paths)
         t_exam_icons[exam_type] = exam_icon_id(path, "dan_info");
 
-    // The up50/up80/p100 (and sub-) variants are always inserted, matching get_texture()'s
-    // own always-succeeds-with-a-fallback behavior at the final `.at(id)` in fill() below.
-    // The rainbow/down80 variants are only inserted when actually loaded, since fill() uses
-    // `.count()` on them as a real "does this exist" gate (tex.has_texture(), pre-hoist).
     t_fill_bar = {
         {"dan_info/exam_sub_red",     tex.get_texture("dan_info/exam_sub_red")},
         {"dan_info/exam_red",         tex.get_texture("dan_info/exam_red")},
@@ -116,6 +112,8 @@ void DanGameScreen::init_dan() {
 
     total_notes = 0;
     song_note_counts.clear();
+    song_stats.clear();
+    prev_score = 0;
     for (const auto& entry : sd.selected_dan) {
         int count = 0;
         try {

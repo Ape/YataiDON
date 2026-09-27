@@ -1,4 +1,5 @@
 #include "judgment.h"
+#include <stdexcept>
 
 Judgment::Judgment(Judgments type, bool big)
     : type(type), big(big) {
@@ -7,6 +8,8 @@ Judgment::Judgment(Judgments type, bool big)
     fade_animation_2 = dynamic_cast<FadeAnimation*>(tex.get_animation(28, true));
     move_animation = dynamic_cast<MoveAnimation*>(tex.get_animation(29, true));
     texture_animation = dynamic_cast<TextureChangeAnimation*>(tex.get_animation(30, true));
+    if (!fade_animation_1 || !fade_animation_2 || !move_animation || !texture_animation)
+        throw std::runtime_error("Judgment: animation 27/28/29/30 has an unexpected type");
 
     move_animation->start();
     fade_animation_2->start();

@@ -1,4 +1,5 @@
 #include "kusudama_counter.h"
+#include <stdexcept>
 
 KusudamaCounter::KusudamaCounter(int total)
     : balloon_total(total), balloon_count(0), is_popped(false) {
@@ -11,6 +12,9 @@ KusudamaCounter::KusudamaCounter(int total)
     renda_breathe = dynamic_cast<MoveAnimation*>(tex.get_animation(17));
     open = dynamic_cast<TextureChangeAnimation*>(tex.get_animation(19));
     fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(21));
+    if (!move || !renda_move || !renda_fade_in || !renda_fade_out || !stretch ||
+        !breathing || !renda_breathe || !open || !fade_out)
+        throw std::runtime_error("KusudamaCounter: animation 11/13-17/19-21 has an unexpected type");
 
     move->start();
     renda_move->start();

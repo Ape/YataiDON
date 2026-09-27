@@ -145,7 +145,7 @@ public:
     Navigator();
     ~Navigator();
 
-    bool is_processing = false;
+    std::atomic<bool> is_processing{false};
     bool hide_dan = false;
     bool is_2p = false;
     bool inline_streaming = false;

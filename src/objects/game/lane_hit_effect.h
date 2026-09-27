@@ -9,7 +9,7 @@ class LaneHitEffect {
 private:
     DrumType type;
     Judgments judgment;
-    FadeAnimation* fade;
+    FadeAnimation* fade = nullptr;
     TextureObject* t_effect = nullptr;
 
 public:

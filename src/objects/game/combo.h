@@ -5,8 +5,8 @@
 
 class Combo {
 private:
-    int combo;
-    TextStretchAnimation* stretch;
+    int combo = 0;
+    TextStretchAnimation* stretch = nullptr;
     std::vector<ray::Color> color;
     std::unordered_map<int, int> glimmer_map;
     int total_time;

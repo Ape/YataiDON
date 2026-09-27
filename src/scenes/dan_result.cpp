@@ -157,11 +157,12 @@ void DanResultScreen::build_page2_timeline() {
     totals_end = totals_start + totals_dur;
 
 
-    rows.assign(rd.exams.size(), DanResultRowSchedule{});
-    se_row_fill.assign(rd.exams.size(), false);
-    se_row_judge.assign(rd.exams.size(), false);
+    const size_t row_count = std::min(rd.exams.size(), rd.exam_data.size());
+    rows.assign(row_count, DanResultRowSchedule{});
+    se_row_fill.assign(row_count, false);
+    se_row_judge.assign(row_count, false);
     double t = totals_end + WAIT_DETAIL_MS;
-    for (int i = 0; i < (int)rd.exams.size() && i < (int)rd.exam_data.size(); i++) {
+    for (int i = 0; i < (int)row_count; i++) {
         DanResultRowSchedule& r = rows[i];
         if (i == gauge_exam) {
             r.land  = 0.0;

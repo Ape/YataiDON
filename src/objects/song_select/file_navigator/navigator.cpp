@@ -607,7 +607,7 @@ void Navigator::load_current_directory_async(const fs::path path) {
             gen4_def.name        = own_root.filename().string();
             gen4_def.genre_index = GenreIndex::DEFAULT;
             enqueue_box(std::make_unique<FolderBox>(own_root, gen4_def, song_files));
-            loading_complete = true;
+            if (!reloading_roots) loading_complete = true;
             current_path = path;
             return;
         }
@@ -622,7 +622,7 @@ void Navigator::load_current_directory_async(const fs::path path) {
         } catch (const std::exception& e) {
             spdlog::error("Error listing arcade genres of {}: {}", own_root.string(), e.what());
         }
-        loading_complete = true;
+        if (!reloading_roots) loading_complete = true;
         current_path = path;
         return;
     }
@@ -643,7 +643,7 @@ void Navigator::load_current_directory_async(const fs::path path) {
         } catch (...) {
             spdlog::error("Unknown error listing gen4 genres of {}", path.string());
         }
-        loading_complete = true;
+        if (!reloading_roots) loading_complete = true;
         current_path = path;
         return;
     }
@@ -754,7 +754,7 @@ void Navigator::load_current_directory_async(const fs::path path) {
     } catch (...) {
         spdlog::error("Unknown error loading directory {}", path.string());
     }
-    loading_complete = true;
+    if (!reloading_roots) loading_complete = true;
     current_path = path;
     if (!reloading_roots) FolderBox::run_deferred_scans(abort_loading);
 }

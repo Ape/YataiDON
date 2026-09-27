@@ -8,7 +8,7 @@
 class SearchBox {
 private:
     FadeAnimation* diff_fade_in;
-    TextureChangeAnimation* bg_resize;
+    TextureResizeAnimation* bg_resize;
     TextureObject* t_background = nullptr;
 
 public:

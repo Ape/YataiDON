@@ -14,7 +14,9 @@ GogoTime::GogoTime() {
         change_anim = (int)a->x;
     if (!tex.has_animation(change_anim))
         throw std::runtime_error("gogo time: animation " + std::to_string(change_anim) + " is missing");
-    fire_change = (TextureChangeAnimation*)tex.get_animation(change_anim, true);
+    fire_change = dynamic_cast<TextureChangeAnimation*>(tex.get_animation(change_anim, true));
+    if (!fire_change)
+        throw std::runtime_error("gogo time: animation " + std::to_string(change_anim) + " is not a change animation");
     fire_fade = 0.5f;
     if (const SkinInfo* f = tex.skin_entry("gogo_fire_fade"); f && f->x > 0)
         fire_fade = std::clamp((float)f->x, 0.0f, 1.0f);

@@ -6,8 +6,8 @@
 class DrumrollCounter {
 private:
     int drumroll_count;
-    FadeAnimation* fade;
-    TextStretchAnimation* stretch;
+    FadeAnimation* fade = nullptr;
+    TextStretchAnimation* stretch = nullptr;
     TextureObject* t_bubble = nullptr;
     TextureObject* t_counter = nullptr;
 

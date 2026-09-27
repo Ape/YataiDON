@@ -209,8 +209,8 @@ struct ParserState {
     double scroll_y_modifier = 0.0f;
     ScrollType scroll_type = ScrollType::NMSCROLL;
     bool barline_display = true;
-    std::deque<Note>* curr_note_list;
-    std::deque<TimelineObject>* curr_timeline;
+    std::deque<Note>* curr_note_list = nullptr;
+    std::deque<TimelineObject>* curr_timeline = nullptr;
     double index = 0;
     std::vector<int> balloons;
     size_t balloon_cursor = 0;

@@ -147,6 +147,10 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
     load_score_cache();
 }
 
+ScoresManager::~ScoresManager() {
+    if (db_fsd) sqlite3_close(db_fsd);
+}
+
 void ScoresManager::load_score_cache() {
     std::lock_guard<std::mutex> lock(maps_mutex);
     score_cache.clear();

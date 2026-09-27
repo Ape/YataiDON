@@ -71,6 +71,9 @@ public:
     PlayerData player_1_data;
     PlayerData player_2_data;
     ScoresManager(const fs::path& db_path);
+    ~ScoresManager();
+    ScoresManager(const ScoresManager&) = delete;
+    ScoresManager& operator=(const ScoresManager&) = delete;
     void py_taiko_import(const fs::path& old_db_path);
     void export_to_hiroba(const std::string& access_code, int player_id);
     int sync_from_server(const std::string& access_code);

@@ -1,6 +1,7 @@
 #include "settings_box.h"
 #include "../../libs/input.h"
 #include "../../libs/filesystem.h"
+#include <stdexcept>
 
 std::unique_ptr<BaseOptionBox> SettingsBox::make_option_box(const rapidjson::Value& opt) {
     if (!opt.HasMember("type") || !opt["type"].IsString() ||
@@ -90,8 +91,10 @@ SettingsBox::SettingsBox(const std::string& name,
     , option_index(0)
 {
     move_anim        = tex.get_animation(0, true);
-    blue_arrow_fade  = (FadeAnimation*) tex.get_animation(1, true);
-    blue_arrow_move  = (MoveAnimation*) tex.get_animation(2, true);
+    blue_arrow_fade  = dynamic_cast<FadeAnimation*>(tex.get_animation(1, true));
+    blue_arrow_move  = dynamic_cast<MoveAnimation*>(tex.get_animation(2, true));
+    if (!blue_arrow_fade || !blue_arrow_move)
+        throw std::runtime_error("SettingsBox: animation 1/2 has an unexpected type");
 
     t_box           = tex.get_texture("box/box");
     t_box_highlight = tex.get_texture("box/box_highlight");

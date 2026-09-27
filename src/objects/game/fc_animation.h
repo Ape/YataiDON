@@ -11,8 +11,8 @@ private:
     TextureChangeAnimation* bachio_texture_change;
     TextureChangeAnimation* bachio_out;
     MoveAnimation* bachio_move_out;
-    std::vector<FadeAnimation*> clear_separate_fade_in;
-    std::vector<TextStretchAnimation*> clear_separate_stretch;
+    std::vector<std::unique_ptr<FadeAnimation>> clear_separate_fade_in;
+    std::vector<std::unique_ptr<TextStretchAnimation>> clear_separate_stretch;
     FadeAnimation* clear_highlight_fade_in;
     MoveAnimation* fc_highlight_up;
     FadeAnimation* fc_highlight_fade_out;
@@ -30,7 +30,7 @@ private:
     std::string combo_voice;
     bool has_panel;
     TextureObject* panel_tex;
-    FadeAnimation* panel_fade_in;
+    std::unique_ptr<FadeAnimation> panel_fade_in;
     TextureObject* t_fan_l = nullptr;
     TextureObject* t_fan_r = nullptr;
     TextureObject* t_clear_separated = nullptr;

@@ -79,10 +79,32 @@ void set_working_directory_to_executable() {
 #endif
 }
 
+static bool resolve_safe_extract_path(const fs::path& base_dir, const fs::path& canonical_base_dir,
+                                       const std::string& entry_name, fs::path& out_file) {
+    out_file = (base_dir / entry_name).lexically_normal();
+    const fs::path rel = out_file.lexically_relative(base_dir);
+    if (rel.empty() || *rel.begin() == "..") return false;
+
+    std::error_code ec;
+    fs::create_directories(out_file.parent_path(), ec);
+
+    fs::path canonical_parent = fs::canonical(out_file.parent_path(), ec);
+    if (ec) return false;
+    const fs::path parent_rel = canonical_parent.lexically_relative(canonical_base_dir);
+    if (parent_rel.empty() || *parent_rel.begin() == "..") return false;
+
+    return true;
+}
+
 void extract_osz(const fs::path& osz_path) {
     fs::path out_dir = osz_path.parent_path() / osz_path.stem();
     std::error_code ec;
     fs::create_directories(out_dir, ec);
+    fs::path canonical_out_dir = fs::canonical(out_dir, ec);
+    if (ec) {
+        spdlog::error("extract_osz: failed to resolve {}", out_dir.string());
+        return;
+    }
 
     mz_zip_archive zip = {};
     if (!mz_zip_reader_init_file(&zip, osz_path.string().c_str(), 0)) {
@@ -97,14 +119,12 @@ void extract_osz(const fs::path& osz_path) {
         if (!mz_zip_reader_file_stat(&zip, i, &stat)) { all_ok = false; continue; }
         if (mz_zip_reader_is_file_a_directory(&zip, i)) continue;
 
-        fs::path out_file = (out_dir / stat.m_filename).lexically_normal();
-        const fs::path rel = out_file.lexically_relative(out_dir);
-        if (rel.empty() || *rel.begin() == "..") {
+        fs::path out_file;
+        if (!resolve_safe_extract_path(out_dir, canonical_out_dir, stat.m_filename, out_file)) {
             spdlog::warn("extract_osz: skipping unsafe entry {}", stat.m_filename);
             all_ok = false;
             continue;
         }
-        fs::create_directories(out_file.parent_path(), ec);
 
         if (!mz_zip_reader_extract_to_file(&zip, i, out_file.string().c_str(), 0)) {
             spdlog::warn("extract_osz: failed to extract {} from {}", stat.m_filename, osz_path.string());
@@ -151,6 +171,12 @@ void ensure_skin_extracted(const std::string& skin_name) {
     }
 
     fs::create_directories(skin_dir, ec);
+    fs::path canonical_skin_dir = fs::canonical(skin_dir, ec);
+    if (ec) {
+        spdlog::error("ensure_skin_extracted: failed to resolve {}", skin_dir.string());
+        mz_zip_reader_end(&zip);
+        return;
+    }
     for (int i = 0; i < num_files; i++) {
         mz_zip_archive_file_stat stat;
         if (!mz_zip_reader_file_stat(&zip, i, &stat)) continue;
@@ -161,13 +187,11 @@ void ensure_skin_extracted(const std::string& skin_name) {
             name = name.substr(common_prefix.size());
         if (name.empty()) continue;
 
-        fs::path out_file = (skin_dir / name).lexically_normal();
-        const fs::path rel = out_file.lexically_relative(skin_dir);
-        if (rel.empty() || *rel.begin() == "..") {
+        fs::path out_file;
+        if (!resolve_safe_extract_path(skin_dir, canonical_skin_dir, name, out_file)) {
             spdlog::warn("ensure_skin_extracted: skipping unsafe entry {}", stat.m_filename);
             continue;
         }
-        fs::create_directories(out_file.parent_path(), ec);
 
         if (!mz_zip_reader_extract_to_file(&zip, i, out_file.string().c_str(), 0))
             spdlog::warn("ensure_skin_extracted: failed to extract {} from {}", stat.m_filename, zip_path.string());

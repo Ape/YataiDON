@@ -6,6 +6,7 @@
 #include "../../../libs/audio.h"
 #include <atomic>
 #include <cmath>
+#include <thread>
 
 class SongBox : public BaseBox {
     void preregister_text() override;
@@ -27,6 +28,7 @@ public:
         AudioEngine::PreparedPCM pcm;
     };
     std::shared_ptr<PreviewLoad> preview_load;
+    std::thread preview_thread;
     bool preview_attempted = false;
     std::unique_ptr<ScoreHistory> score_history;
     double box_opened_at = 0.0;
@@ -36,7 +38,10 @@ public:
     std::string song_genre_label;
 
     SongBox(const fs::path& path, const BoxDef& box_def, SongParser parser);
-    ~SongBox() override { release_preview_slot(); }
+    ~SongBox() override {
+        if (preview_thread.joinable()) preview_thread.join();
+        release_preview_slot();
+    }
 
     static void service_bgm_resume(double current_ms);
     static void reset_bgm_slot();

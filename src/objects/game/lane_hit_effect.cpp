@@ -1,9 +1,12 @@
 #include "lane_hit_effect.h"
 #include <spdlog/spdlog.h>
+#include <stdexcept>
 
 LaneHitEffect::LaneHitEffect(DrumType type, Judgments judgment)
             : type(type), judgment(judgment) {
     fade = dynamic_cast<FadeAnimation*>(tex.get_animation(0, true));
+    if (!fade)
+        throw std::runtime_error("LaneHitEffect: animation 0 is not a FadeAnimation");
     fade->start();
     t_effect = tex.get_texture("lane/lane_hit_effect");
 }

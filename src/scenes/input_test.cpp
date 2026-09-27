@@ -20,7 +20,9 @@ void InputTestScreen::on_screen_start() {
 }
 
 std::optional<Screens> InputTestScreen::update() {
-    Screen::update();
+    if (auto result = Screen::update()) {
+        return result;
+    }
 
     if (check_key_pressed(global_data.config->keys.back_key)) {
         return on_screen_end(Screens::SETTINGS);

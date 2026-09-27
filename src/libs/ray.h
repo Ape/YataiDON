@@ -8,8 +8,8 @@ namespace ray {
 
 #if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
 #include <SDL3/SDL.h>
-#include <string>
 #endif
+#include <string>
 
 inline ray::Shader load_shader(const char* vs_path, const char* fs_path) {
 #if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)

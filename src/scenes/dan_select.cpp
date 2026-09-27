@@ -38,8 +38,8 @@ int DanNavigator::total_notes_for(const std::vector<DanSongEntry>& songs) {
 
 Exam DanNavigator::parse_exam(const rapidjson::Value& e) {
     Exam exam;
-    exam.type  = e["type"].GetString();
-    exam.range = e["range"].GetString();
+    exam.type  = e.HasMember("type")  && e["type"].IsString()  ? e["type"].GetString()  : "";
+    exam.range = e.HasMember("range") && e["range"].IsString() ? e["range"].GetString() : "";
     if (e.HasMember("value") && e["value"].IsArray() && e["value"].Size() >= 1 && e["value"][0].IsArray()) {
         // per-song borders: [[red, gold], [red, gold], [red, gold]] (gold optional)
         for (auto& pair : e["value"].GetArray()) {
@@ -112,6 +112,11 @@ std::optional<DanSongEntry> DanNavigator::load_song_entry(const rapidjson::Value
 
 std::optional<DanBoxData> DanNavigator::load_dan_box_data(const fs::path& json_path) {
     auto doc = read_json_file(json_path);
+    if (!doc.IsObject() || !doc.HasMember("title") || !doc["title"].IsString() ||
+        !doc.HasMember("color") || !doc["color"].IsInt()) {
+        spdlog::warn("DanNavigator: {} is missing required title/color", json_path.string());
+        return std::nullopt;
+    }
     std::string title = doc["title"].GetString();
     int color = doc["color"].GetInt();
     int rank = doc.HasMember("rank_art") && doc["rank_art"].IsInt() ? doc["rank_art"].GetInt() : -1;
@@ -546,7 +551,7 @@ void DanSelectScreen::on_screen_start() {
     audio.play_sound("dan_select", VolumePreset::VOICE);
 
     indicator     = std::make_unique<Indicator>(Indicator::State::SELECT);
-    confirm_fade  = (FadeAnimation*)tex.get_animation(8);
+    confirm_fade  = dynamic_cast<FadeAnimation*>(tex.get_animation(8));
     state         = SongSelectState::BROWSING;
     confirm_index = CONFIRM_NO;
     last_moved    = 0;

@@ -3,7 +3,7 @@
 
 SearchBox::SearchBox() {
     current_search = "";
-    bg_resize = (TextureChangeAnimation*)tex.get_animation(19);
+    bg_resize = (TextureResizeAnimation*)tex.get_animation(19);
     diff_fade_in = (FadeAnimation*)tex.get_animation(20);
     bg_resize->start();
     diff_fade_in->start();

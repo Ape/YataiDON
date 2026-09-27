@@ -13,7 +13,7 @@ class ResultScreen : public Screen {
 protected:
     std::unique_ptr<OutlinedText> song_info;
     std::unique_ptr<OutlinedText> song_info_subtitle;
-    FadeAnimation* fade_out;
+    FadeAnimation* fade_out = nullptr;
     AllNetIcon allnet_indicator;
     CoinOverlay coin_overlay;
 

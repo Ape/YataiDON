@@ -10,9 +10,11 @@ void ResultScreen::on_screen_start() {
         song_info_subtitle = std::make_unique<OutlinedText>(session_data.song_subtitle, tex.skin_config[SC::SONG_INFO_RESULT_SUBTITLE].font_size, ray::WHITE, ray::BLACK, false, 5);
     }
     audio.play_sound("bgm", VolumePreset::MUSIC);
-    fade_out = (FadeAnimation*)tex.get_animation(0);
+    fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(0));
     fade_in.emplace(global_data.player_num);
     start_ms = get_current_ms();
+    skipped_time = 0;
+    skip_enabled_ms = 0;
     fs::path loading_graphic_path = global_data.session_data[(int)global_data.player_num].selected_song.parent_path() / "Loading.png";
     if (exists(loading_graphic_path)) {
         loading_graphic.emplace(ray::LoadTexture(loading_graphic_path.string().c_str()));
@@ -37,6 +39,7 @@ double ResultScreen::reveal_end_ms() {
 }
 
 void ResultScreen::handle_input(double current_ms) {
+    if (!fade_out) return;
     bool l = is_l_don_pressed();
     bool r = is_r_don_pressed();
     if (!(l || r)) return;

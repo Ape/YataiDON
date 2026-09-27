@@ -276,54 +276,60 @@ void GameScreen::save_score(int player_id, PlayerNum player_num) {
     }
     if (!target) return;
 
-    Score score;
-    SessionData& session_data = global_data.session_data[(int)player_num];
-    std::string hash = session_data.song_hash;
-    score.score = session_data.result_data.score;
-    score.good = session_data.result_data.good;
-    score.ok = session_data.result_data.ok;
-    score.bad = session_data.result_data.bad;
-    score.max_combo = session_data.result_data.max_combo;
-    score.drumroll = session_data.result_data.total_drumroll;
-    auto prev_score = scores_manager.get_score(hash, global_data.session_data[(int)player_num].selected_difficulty, player_id);
-    if (prev_score.has_value()) {
-        session_data.result_data.prev_score = prev_score->score;
-    }
-    const bool run_skipped = skipped;
-    if (run_skipped) {
-        score.crown = Crown::NONE;
-    } else if (score.ok == 0 && score.bad == 0) {
-        score.crown = Crown::DFC;
-    } else if (score.bad == 0) {
-        score.crown = Crown::FC;
-    } else if (target->gauge->get_is_clear()) {
-        score.crown = Crown::CLEAR;
-    } else {
-        score.crown = Crown::NONE;
-    }
-    if (run_skipped) {
-        score.rank = Rank::_NONE;
-    } else if (score.score >= 1000000) {
-        score.rank = Rank::_RAINBOW;
-    } else if (score.score >= 950000) {
-        score.rank = Rank::_PURPLE;
-    } else if (score.score >= 900000) {
-        score.rank = Rank::_PINK;
-    } else if (score.score >= 800000) {
-        score.rank = Rank::_GOLD;
-    } else if (score.score >= 700000) {
-        score.rank = Rank::_SILVER;
-    } else if (score.score >= 600000) {
-        score.rank = Rank::_BRONZE;
-    } else {
-        score.rank = Rank::_WHITE;
-    }
-    int64_t played_at = unix_now();
-    std::string modifiers_json = modifiers_to_json(target->get_modifiers());
-    scores_manager.save_score(hash, session_data.selected_difficulty, player_id, score, played_at, modifiers_json);
-    PlayerData pd = scores_manager.get_player_data(player_id).value_or(PlayerData{});
-    if (global_data.config->general.score_method != ScoreMethod::GEN3) {
-        network.submit_score(hash, session_data.selected_difficulty, global_data.config->network.access_code, score, target->input_log, played_at, modifiers_json, pd.chara_is_costume, pd.chara_cos_index);
+    try {
+        Score score;
+        SessionData& session_data = global_data.session_data[(int)player_num];
+        std::string hash = session_data.song_hash;
+        score.score = session_data.result_data.score;
+        score.good = session_data.result_data.good;
+        score.ok = session_data.result_data.ok;
+        score.bad = session_data.result_data.bad;
+        score.max_combo = session_data.result_data.max_combo;
+        score.drumroll = session_data.result_data.total_drumroll;
+        auto prev_score = scores_manager.get_score(hash, global_data.session_data[(int)player_num].selected_difficulty, player_id);
+        if (prev_score.has_value()) {
+            session_data.result_data.prev_score = prev_score->score;
+        }
+        const bool run_skipped = skipped;
+        if (run_skipped) {
+            score.crown = Crown::NONE;
+        } else if (score.ok == 0 && score.bad == 0) {
+            score.crown = Crown::DFC;
+        } else if (score.bad == 0) {
+            score.crown = Crown::FC;
+        } else if (target->gauge->get_is_clear()) {
+            score.crown = Crown::CLEAR;
+        } else {
+            score.crown = Crown::NONE;
+        }
+        if (run_skipped) {
+            score.rank = Rank::_NONE;
+        } else if (score.score >= 1000000) {
+            score.rank = Rank::_RAINBOW;
+        } else if (score.score >= 950000) {
+            score.rank = Rank::_PURPLE;
+        } else if (score.score >= 900000) {
+            score.rank = Rank::_PINK;
+        } else if (score.score >= 800000) {
+            score.rank = Rank::_GOLD;
+        } else if (score.score >= 700000) {
+            score.rank = Rank::_SILVER;
+        } else if (score.score >= 600000) {
+            score.rank = Rank::_BRONZE;
+        } else {
+            score.rank = Rank::_WHITE;
+        }
+        int64_t played_at = unix_now();
+        std::string modifiers_json = modifiers_to_json(target->get_modifiers());
+        scores_manager.save_score(hash, session_data.selected_difficulty, player_id, score, played_at, modifiers_json);
+        PlayerData pd = scores_manager.get_player_data(player_id).value_or(PlayerData{});
+        if (global_data.config->general.score_method != ScoreMethod::GEN3) {
+            network.submit_score(hash, session_data.selected_difficulty, global_data.config->network.access_code, score, target->input_log, played_at, modifiers_json, pd.chara_is_costume, pd.chara_cos_index);
+        }
+    } catch (const std::exception& e) {
+        spdlog::error("GameScreen::save_score failed for player {}: {}", player_id, e.what());
+    } catch (...) {
+        spdlog::error("GameScreen::save_score failed for player {}: unknown exception", player_id);
     }
 }
 

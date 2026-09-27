@@ -196,8 +196,15 @@ std::optional<Screens> SongSelectScreen::poll_second_player_join(double current_
 
     const PlayerNum in  = (global_data.player_num == PlayerNum::P2) ? PlayerNum::P2 : PlayerNum::P1;
     const PlayerNum out = (in == PlayerNum::P1) ? PlayerNum::P2 : PlayerNum::P1;
-    if (!is_l_don_pressed(out) && !is_r_don_pressed(out)) return std::nullopt;
-    while (is_l_don_pressed(out) || is_r_don_pressed(out)) {}
+
+    if (awaiting_join_don_release) {
+        if (is_l_don_pressed(out) || is_r_don_pressed(out)) return std::nullopt;
+        awaiting_join_don_release = false;
+    } else {
+        if (!is_l_don_pressed(out) && !is_r_don_pressed(out)) return std::nullopt;
+        awaiting_join_don_release = true;
+        return std::nullopt;
+    }
 
     join_request_ms   = current_ms;
     join_existing_seat = in;

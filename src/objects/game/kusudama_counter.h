@@ -12,15 +12,15 @@ private:
     TextureObject* t_kusudama = nullptr;
     TextureObject* t_renda = nullptr;
     TextureObject* t_counter = nullptr;
-    MoveAnimation* move;
-    MoveAnimation* renda_move;
-    FadeAnimation* renda_fade_in;
-    FadeAnimation* renda_fade_out;
-    TextStretchAnimation* stretch;
-    TextureResizeAnimation* breathing;
-    MoveAnimation* renda_breathe;
-    TextureChangeAnimation* open;
-    FadeAnimation* fade_out;
+    MoveAnimation* move = nullptr;
+    MoveAnimation* renda_move = nullptr;
+    FadeAnimation* renda_fade_in = nullptr;
+    FadeAnimation* renda_fade_out = nullptr;
+    TextStretchAnimation* stretch = nullptr;
+    TextureResizeAnimation* breathing = nullptr;
+    MoveAnimation* renda_breathe = nullptr;
+    TextureChangeAnimation* open = nullptr;
+    FadeAnimation* fade_out = nullptr;
 public:
     KusudamaCounter(int total);
 

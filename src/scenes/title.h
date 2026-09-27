@@ -21,7 +21,7 @@ private:
     std::vector<fs::path> op_video_list;
     std::vector<fs::path> attract_video_list;
 
-    TitleState state;
+    TitleState state = TitleState::OP_VIDEO;
 
     std::optional<VideoPlayer> op_video;
     std::optional<VideoPlayer> attract_video;
@@ -34,8 +34,8 @@ private:
 
     std::unique_ptr<OutlinedText> hit_taiko_text;
 
-    FadeAnimation* fade_out;
-    FadeAnimation* text_overlay_fade;
+    FadeAnimation* fade_out = nullptr;
+    FadeAnimation* text_overlay_fade = nullptr;
 
     void scene_manager(double current_ms);
     void reset_attract_objects();

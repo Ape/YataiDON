@@ -10,8 +10,8 @@ void TitleScreen::on_screen_start() {
     load_videos();
     state = TitleState::OP_VIDEO;
     hit_taiko_text = std::make_unique<OutlinedText>(tex.skin_config[SC::HIT_TAIKO_TO_START].text[global_data.config->general.language], tex.skin_config[SC::HIT_TAIKO_TO_START].font_size, ray::WHITE, ray::BLACK, false, 4);
-    fade_out = (FadeAnimation*)tex.get_animation(13);
-    text_overlay_fade = (FadeAnimation*)tex.get_animation(14);
+    fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(13));
+    text_overlay_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(14));
 }
 
 void TitleScreen::load_videos() {

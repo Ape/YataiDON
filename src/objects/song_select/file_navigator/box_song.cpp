@@ -186,6 +186,7 @@ void SongBox::reset() {
         audio.unload_music_stream("preview");
     }
     music_playing = false;
+    if (preview_thread.joinable()) preview_thread.join();
     preview_load.reset();
     preview_attempted = false;
     release_preview_slot();
@@ -252,10 +253,11 @@ void SongBox::update(double current_time) {
         fs::exists(parser.metadata.wave)) {
         preview_attempted = true;
         preview_load = std::make_shared<PreviewLoad>();
-        std::thread([state = preview_load, wave = parser.metadata.wave] {
+        if (preview_thread.joinable()) preview_thread.join();
+        preview_thread = std::thread([state = preview_load, wave = parser.metadata.wave] {
             state->ok = audio.prepare_nus3bank_pcm(wave, state->pcm, true);
             state->done.store(true, std::memory_order_release);
-        }).detach();
+        });
     }
 
     if (!is_bank && yellow_box.has_value() && (yellow_box->left_out != nullptr) && yellow_box->left_out->is_finished && fs::exists(parser.metadata.wave) && !music_playing) {
@@ -317,6 +319,7 @@ void SongBox::release_preview_slot() {
 void SongBox::close_box() {
     BaseBox::close_box();
     box_opened_at = 0.0;
+    if (preview_thread.joinable()) preview_thread.join();
     preview_load.reset();
     preview_attempted = false;
     release_preview_slot();

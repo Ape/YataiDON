@@ -209,13 +209,17 @@ void FolderBox::load_text() {
         explanation_text[i] = std::make_unique<OutlinedText>(text, explanation_font_size, ray::WHITE, ray::BLACK, vertical_explanation);
     }
     if (is_osu_folder) {
-        auto it = fs::directory_iterator(path);
-        while (it->path().extension() != ".jpg" && it->path().extension() != ".png") {
+        std::error_code dir_ec;
+        auto it = fs::directory_iterator(path, dir_ec);
+        auto end = fs::directory_iterator();
+        while (!dir_ec && it != end && it->path().extension() != ".jpg" && it->path().extension() != ".png") {
             it++;
         }
-        box_texture = ray::LoadTexture((it->path()).string().c_str());
-        ray::GenTextureMipmaps(&box_texture.value());
-        ray::SetTextureFilter(box_texture.value(), ray::TEXTURE_FILTER_TRILINEAR);
+        if (!dir_ec && it != end) {
+            box_texture = ray::LoadTexture((it->path()).string().c_str());
+            ray::GenTextureMipmaps(&box_texture.value());
+            ray::SetTextureFilter(box_texture.value(), ray::TEXTURE_FILTER_TRILINEAR);
+        }
     } else if (fs::exists(fs::path(path / "box.png")) && !box_texture.has_value()) {
         box_texture = ray::LoadTexture((path / "box.png").string().c_str());
         ray::GenTextureMipmaps(&box_texture.value());

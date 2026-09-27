@@ -461,7 +461,12 @@ void update_one_skin(const fs::path& skin_dir, const std::string& repo_url, cons
         if (!rel_path.empty() && rel_path.front() == '*') rel_path.erase(0, 1);
         if (fs::path(rel_path).filename() == "checksums.sha256") continue;
 
-        fs::path local_file = skin_dir / rel_path;
+        fs::path local_file = (skin_dir / rel_path).lexically_normal();
+        const fs::path local_rel = local_file.lexically_relative(skin_dir);
+        if (local_rel.empty() || *local_rel.begin() == "..") {
+            spdlog::warn("Skin update ({}): skipping unsafe manifest path {}", skin_dir.filename().string(), rel_path);
+            continue;
+        }
         std::error_code size_ec;
         uintmax_t size = fs::file_size(local_file, size_ec);
         if (!size_ec) {

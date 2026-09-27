@@ -1,4 +1,5 @@
 #include "drumroll_counter.h"
+#include <stdexcept>
 
 static constexpr int DRUMROLL_COUNTER_FADE_ANIM_ID = 8;
 static constexpr int DRUMROLL_COUNTER_STRETCH_ANIM_ID = 9;
@@ -7,6 +8,8 @@ DrumrollCounter::DrumrollCounter() {
      drumroll_count = 0;
      fade = dynamic_cast<FadeAnimation*>(tex.get_animation(DRUMROLL_COUNTER_FADE_ANIM_ID));
      stretch = dynamic_cast<TextStretchAnimation*>(tex.get_animation(DRUMROLL_COUNTER_STRETCH_ANIM_ID));
+     if (!fade || !stretch)
+         throw std::runtime_error("DrumrollCounter: animation 8/9 has an unexpected type");
      t_bubble = tex.get_texture("drumroll_counter/bubble");
      t_counter = tex.get_texture("drumroll_counter/counter");
 }

@@ -1,7 +1,8 @@
 #include "score_animator.h"
+#include <algorithm>
 
 ScoreAnimator::ScoreAnimator(int target) {
-    target_score = std::to_string(target);
+    target_score = std::to_string(std::max(target, 0));
     current_score_list = std::vector<std::pair<int,int>>(target_score.size(), {0, 0});
     digit_index = target_score.size() - 1;
     is_finished = false;

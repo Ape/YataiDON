@@ -243,7 +243,7 @@ void CostumeMenu::draw(float x, float y) {
 
     constexpr float ITEM_W = 80.0f;
 
-    if (costume_select_mode && !costume_icons.empty()) {
+    if (costume_select_mode && !costume_icons.empty() && t_item_box) {
         float base_x = t_item_box->x[0] + x;
         float base_y = t_item_box->y[0] + y;
         int n = (int)costume_icons.size();

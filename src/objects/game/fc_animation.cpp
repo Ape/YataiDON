@@ -1,5 +1,6 @@
 #include "fc_animation.h"
 #include "../../libs/audio.h"
+#include <stdexcept>
 
 FCAnimation::FCAnimation(bool is_2p, bool donderful)
     : is_2p(is_2p), draw_clear_full(false), name("in"), frame(0) {
@@ -15,7 +16,7 @@ FCAnimation::FCAnimation(bool is_2p, bool donderful)
 
     has_panel = has_dfc_tex && tex.has_texture("ending_donderful/background");
     panel_tex = has_panel ? tex.get_texture("ending_donderful/background") : nullptr;
-    panel_fade_in = new FadeAnimation(250, 0.0, false, false, 1.0, 0.0);
+    panel_fade_in = std::make_unique<FadeAnimation>(250, 0.0, false, false, 1.0, 0.0);
 
     const bool has_dfc_sound = donderful && audio.has_sound("donderful_combo");
     combo_sound = has_dfc_sound ? "donderful_combo" : "full_combo";
@@ -26,6 +27,8 @@ FCAnimation::FCAnimation(bool is_2p, bool donderful)
     bachio_texture_change = dynamic_cast<TextureChangeAnimation*>(tex.get_animation(47, true));
     bachio_out = dynamic_cast<TextureChangeAnimation*>(tex.get_animation(55));
     bachio_move_out = dynamic_cast<MoveAnimation*>(tex.get_animation(49));
+    if (!bachio_fade_in || !bachio_texture_change || !bachio_out || !bachio_move_out)
+        throw std::runtime_error("FCAnimation: animation 46/47/55/49 has an unexpected type");
 
     bachio_fade_in->start();
     bachio_texture_change->start();
@@ -33,26 +36,28 @@ FCAnimation::FCAnimation(bool is_2p, bool donderful)
     bachio_move_out->start();
 
     for (int i = 0; i < 5; i++) {
-        FadeAnimation* fade = new FadeAnimation(100, 1.0f, false, false, 0.0f, i * 50);
+        auto fade = std::make_unique<FadeAnimation>(100, 1.0f, false, false, 0.0f, i * 50);
         fade->start();
-        clear_separate_fade_in.push_back(fade);
+        clear_separate_fade_in.push_back(std::move(fade));
 
-        TextStretchAnimation* stretch = new TextStretchAnimation(200, i * 50);
+        auto stretch = std::make_unique<TextStretchAnimation>(200, i * 50);
         stretch->start();
-        clear_separate_stretch.push_back(stretch);
+        clear_separate_stretch.push_back(std::move(stretch));
     }
 
     clear_highlight_fade_in = dynamic_cast<FadeAnimation*>(tex.get_animation(56));
-    clear_highlight_fade_in->start();
-
     fc_highlight_up = dynamic_cast<MoveAnimation*>(tex.get_animation(57));
-    fc_highlight_up->start();
-
     fc_highlight_fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(58));
     bachio_move_out_2 = dynamic_cast<MoveAnimation*>(tex.get_animation(59));
     bachio_move_up = dynamic_cast<MoveAnimation*>(tex.get_animation(60));
     fan_fade_in = dynamic_cast<FadeAnimation*>(tex.get_animation(61));
     fan_texture_change = dynamic_cast<TextureChangeAnimation*>(tex.get_animation(62));
+    if (!clear_highlight_fade_in || !fc_highlight_up || !fc_highlight_fade_out ||
+        !bachio_move_out_2 || !bachio_move_up || !fan_fade_in || !fan_texture_change)
+        throw std::runtime_error("FCAnimation: animation 56/57/58/59/60/61/62 has an unexpected type");
+
+    clear_highlight_fade_in->start();
+    fc_highlight_up->start();
 
     audio.play_sound(combo_sound, VolumePreset::SOUND);
 
@@ -94,10 +99,10 @@ void FCAnimation::update(double current_ms) {
     }
     panel_fade_in->update(current_ms);
 
-    for (auto fade : clear_separate_fade_in) {
+    for (auto& fade : clear_separate_fade_in) {
         fade->update(current_ms);
     }
-    for (auto stretch : clear_separate_stretch) {
+    for (auto& stretch : clear_separate_stretch) {
         stretch->update(current_ms);
     }
 

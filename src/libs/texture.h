@@ -197,6 +197,9 @@ public:
     bool has_parent_skin() const { return parent_graphics_path != graphics_path; }
 
     fs::path resolve_skin_path(const fs::path& relative_path) const {
+        if (relative_path.is_absolute()) return {};
+        for (const auto& part : relative_path)
+            if (part == "..") return {};
         fs::path child = skin_root() / relative_path;
         if (fs::exists(child)) return child;
         if (has_parent_skin()) {
