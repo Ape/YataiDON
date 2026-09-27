@@ -549,7 +549,7 @@ void GameScreen::draw_players() {
         players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale, mask_shader);
     } else if (players.size() == 2) {
         players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale, mask_shader);
-        players[1]->draw(ms_from_start, 0, 360 * tex.screen_scale, mask_shader);
+        players[1]->draw(ms_from_start, 0, tex.skin_config[SC::GAME_P2_Y].y, mask_shader);
     } else {
         float gap = ((float)tex.screen_height - (players.size() * 176 * tex.screen_scale)) / (players.size() + 1);
         for (int i = 0; i < players.size(); i++) {
