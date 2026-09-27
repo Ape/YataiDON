@@ -38,6 +38,8 @@ void BoxManager::build_board_list() {
     for (auto [screen, sc] : {std::pair{Screens::PRACTICE_SELECT, SC::ENTRY_PRACTICE},
                               std::pair{Screens::ENTRY,           SC::ENTRY_COSTUME},
                               std::pair{Screens::SETTINGS,        SC::ENTRY_SETTINGS}}) {
+        // like the dan board: a skin that blanks the board's text leaves the board out
+        if (skin[sc].text[lang].empty()) continue;
         box_locations.push_back(screen);
         boxes.push_back(std::make_unique<Box>(skin[sc].text[lang], font_size, screen));
     }
