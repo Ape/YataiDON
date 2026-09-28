@@ -518,7 +518,7 @@ void Player::draw(double ms_from_start, float x, float y, ray::Shader& mask_shad
         branch_indicator->draw(y);
     }
     if (gauge.has_value()) {
-        if (is_2p) {
+        if (arc_player() == PlayerNum::P2) {   // the bottom gauge only when two play
             gauge->draw(y + tex.skin_config[SC::GAUGE_2P_OFFSET].y);
         } else {
             gauge->draw(y);
