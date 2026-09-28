@@ -64,6 +64,9 @@ public:
     Player* kusudama_partner = nullptr;
     int kusudama_shared_hits = 0;
     Player* kusudama_owner() { return (kusudama_partner && is_2p) ? kusudama_partner : this; }
+    // hit notes fly to this player's soul gauge: the bottom one only when two play (2P alone plays
+    // on the top lane)
+    PlayerNum arc_player() const { return (is_2p && kusudama_partner) ? PlayerNum::P2 : PlayerNum::P1; }
 
     std::optional<Note> get_first_note();
 

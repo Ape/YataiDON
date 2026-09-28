@@ -1160,7 +1160,7 @@ void Player::note_correct(const Note& note, double current_ms) {
 
     if (note.type != NoteType::KUSUDAMA) {
         bool is_big = note.type == NoteType::DON_L || note.type == NoteType::KAT_L || note.type == NoteType::BALLOON_HEAD;
-        draw_arc_list.push_back(NoteArc(note.type, current_ms, PlayerNum(is_2p + 1), is_big, note.type == NoteType::BALLOON_HEAD, judge_x, judge_y));
+        draw_arc_list.push_back(NoteArc(note.type, current_ms, arc_player(), is_big, note.type == NoteType::BALLOON_HEAD, judge_x, judge_y));
     }
     auto it = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(),
                                note.index, [](const Note& n, int idx) { return n.index < idx; });
@@ -1170,7 +1170,7 @@ void Player::note_correct(const Note& note, double current_ms) {
 }
 
 void Player::check_drumroll(double current_ms, DrumType drum_type, std::optional<Background>& background) {
-    draw_arc_list.push_back(NoteArc(NoteType(drum_type), current_ms, PlayerNum(is_2p + 1), (int)drum_type == 3 || (int)drum_type == 4, false));
+    draw_arc_list.push_back(NoteArc(NoteType(drum_type), current_ms, arc_player(), (int)drum_type == 3 || (int)drum_type == 4, false));
     curr_drumroll_count++;
     total_drumroll++;
     branch_r_count++;
