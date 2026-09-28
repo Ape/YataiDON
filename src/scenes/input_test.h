@@ -2,6 +2,7 @@
 
 #include "../libs/screen.h"
 #include "../objects/game/drum_hit_effect.h"
+#include <algorithm>
 
 class InputTestDrumEffect : public DrumHitEffect {
 private:
@@ -34,7 +35,7 @@ public:
             float right  = left + (float)drum.x2[0];
             int sx = virtual_to_screen_x(side == Side::LEFT ? left   : centre);
             int ex = virtual_to_screen_x(side == Side::LEFT ? centre : right);
-            ray::BeginScissorMode(sx, 0, ex - sx, ray::GetScreenHeight());
+            ray::BeginScissorMode(sx, 0, std::max(0, ex - sx), ray::GetScreenHeight());
             tex.draw_texture(t_drum, {.x = x_offset, .y = y_offset, .fade = fade->attribute});
             ray::EndScissorMode();
         } else {

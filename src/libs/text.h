@@ -2,13 +2,19 @@
 
 #include "texture.h"
 #include <future>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 class FontManager {
 private:
     fs::path font_path;
 
     struct SizedFont {
-        ray::Font font{};                    // texture + recs + glyph structs; glyph images alias `cache`
+        ray::Font font{};                    // texture + recs + glyph structs; glyph images are fresh crops, not aliases of `cache`
         std::unordered_set<int> codepoints;  // only what was asked for AT THIS SIZE
         std::vector<ray::GlyphInfo> cache;   // rasterized once per codepoint (images owned here)
         bool atlas_dirty = false;

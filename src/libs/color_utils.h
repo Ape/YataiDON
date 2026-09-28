@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdio>
 #include <stdexcept>
 #include <string>
 #include "ray.h" // IWYU pragma: keep

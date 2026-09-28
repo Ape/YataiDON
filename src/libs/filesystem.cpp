@@ -300,7 +300,7 @@ static void collect_charts_from(const fs::path& path, std::vector<fs::path>& son
     }
 }
 
-std::vector<fs::path> get_song_files(std::vector<fs::path> root_path) {
+std::vector<fs::path> get_song_files(const std::vector<fs::path>& root_path) {
     std::vector<fs::path> songs;
     for (const fs::path& path : root_path) {
 #ifdef SUPPORT_FUMEN

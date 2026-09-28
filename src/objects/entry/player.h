@@ -1,5 +1,8 @@
 #pragma once
 
+#include <memory>
+#include <optional>
+
 #include "box_manager.h"
 #include "costume_menu.h"
 #include "../global/nameplate.h"

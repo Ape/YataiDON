@@ -127,7 +127,7 @@ void DanBox::load_text() {
         int base_sub_font = tex.skin_config[SC::DAN_SUBTITLE].font_size;
         int sub_font = base_sub_font;
         float sub_outline = 5.0f;
-        if (sub_str.size() >= 30) {
+        if (utf8_char_count(sub_str) >= 30) {
             float shrunk = dan_shrink_font((float)base_sub_font);
             sub_outline = 5.0f * (shrunk / (float)base_sub_font);
             sub_font = (int)shrunk;

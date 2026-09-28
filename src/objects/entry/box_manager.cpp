@@ -8,7 +8,6 @@ BoxManager::BoxManager(bool two_player)
     if (!global_data.config) {
         throw std::runtime_error("BoxManager: global_data.config not initialized");
     }
-    const std::string lang = global_data.config->general.language;
 
     fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(ENTRY_FADE_OUT_ANIM_ID));
     if (!fade_out) {
@@ -103,15 +102,15 @@ void BoxManager::select_box() {
     fade_out->start();
 }
 
-bool BoxManager::is_box_selected() {
+bool BoxManager::is_box_selected() const {
     return fade_out->is_started;
 }
 
-bool BoxManager::is_finished() {
+bool BoxManager::is_finished() const {
     return fade_out->is_finished;
 }
 
-bool BoxManager::is_costume_box() {
+bool BoxManager::is_costume_box() const {
     return boxes[selected_box_index]->location == Screens::ENTRY;
 }
 
@@ -120,7 +119,7 @@ void BoxManager::open_costume_menu(PlayerNum player_num) {
     opening_player = player_num;
 }
 
-Screens BoxManager::selected_box() {
+Screens BoxManager::selected_box() const {
     return boxes[selected_box_index]->location;
 }
 
@@ -135,9 +134,7 @@ void BoxManager::move_left() {
         boxes[selected_box_index + 1]->move_down();
         boxes[selected_box_index]->move_down();
     } else {
-        if (selected_box_index + 1 < num_boxes) {
-            boxes[selected_box_index + 1]->move_right();
-        }
+        boxes[selected_box_index + 1]->move_right();
         boxes[selected_box_index]->move_right();
     }
 }

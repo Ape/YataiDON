@@ -27,7 +27,7 @@ public:
     void enter_box() override;
     void exit_box() override;
 
-    void refresh_scores(std::map<std::pair<std::string, std::string>, fs::path>& song_files);
+    void refresh_scores(const std::map<std::pair<std::string, std::string>, fs::path>& song_files);
     static void run_deferred_scans(std::atomic<bool>& abort_flag);
     bool scan_pending = false;
     static void invalidate_scan_cache();

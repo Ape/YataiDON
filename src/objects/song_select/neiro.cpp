@@ -17,7 +17,6 @@ NeiroSelector::NeiroSelector(PlayerNum player_num, PlayerData* player) : player_
     } else {
         std::string line;
         while (std::getline(neiro_list, line)) {
-            if (!line.empty() && line.back() == '\n') line.pop_back();
             if (!line.empty() && line.back() == '\r') line.pop_back();
             sounds.push_back(line);
         }

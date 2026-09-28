@@ -69,8 +69,8 @@ void unload_skin() {
 }
 
 void reset_session() {
-    global_data.session_data[1] = SessionData();
-    global_data.session_data[2] = SessionData();
+    global_data.session_data[(int)PlayerNum::P1] = SessionData();
+    global_data.session_data[(int)PlayerNum::P2] = SessionData();
 }
 
 int get_player_id(PlayerNum player_num) {

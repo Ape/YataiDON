@@ -2,6 +2,9 @@
 
 #include "../../libs/script.h"
 #include "../../libs/global_data.h" // IWYU pragma: keep
+#include <array>
+#include <optional>
+#include <string>
 #include <vector>
 #include <unordered_map>
 

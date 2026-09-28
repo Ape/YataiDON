@@ -36,7 +36,7 @@ void ScoreCounter::draw(float y) {
     float margin = tex.skin_config[SC::SCORE_COUNTER_MARGIN].x;
     float total_width = counter.length() * margin;
     float start_x = x - total_width;
-    for (int i = 0; i < counter.size(); i++) {
+    for (int i = 0; i < (int)counter.size(); i++) {
         char digit = counter[i];
         tex.draw_texture(t_score_number, {.frame=digit - '0', .x=start_x + (i * margin), .y=(float)(y_pos - stretch->attribute), .y2=(float)stretch->attribute});
     }

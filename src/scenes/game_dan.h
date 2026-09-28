@@ -1,6 +1,11 @@
 #pragma once
 
 #include <array>
+#include <string>
+#include <vector>
+#include <optional>
+#include <unordered_map>
+#include <memory>
 #include "game.h"
 #include "../objects/game/dan_between.h"
 #include "../objects/game/exam_caption.h"

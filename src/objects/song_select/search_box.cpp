@@ -1,5 +1,6 @@
 #include "search_box.h"
 #include "../../libs/text.h"
+#include <algorithm>
 
 SearchBox::SearchBox() {
     current_search = "";
@@ -28,16 +29,17 @@ void SearchBox::draw() {
     tex.draw_texture(t_background, {.scale=(float)bg_resize->attribute, .center=true,
                                              .x=board_dx, .y=board_dy});
 
-    float text_box_width  = tex.skin_config[SC::SEARCH_BOX].width;
-    float text_box_height = tex.skin_config[SC::SEARCH_BOX].height;
-    float offset_x = tex.skin_config[SC::SEARCH_BOX].x;
-    float offset_y = tex.skin_config[SC::SEARCH_BOX].y;
+    const auto& search_box_config = tex.skin_config[SC::SEARCH_BOX];
+    float text_box_width  = search_box_config.width;
+    float text_box_height = search_box_config.height;
+    float offset_x = search_box_config.x;
+    float offset_y = search_box_config.y;
     float x = screen_cx - text_box_width / 2 + offset_x;
     float y = screen_cy - text_box_height / 2 + offset_y;
 
     const ray::Color PILL_OUTLINE = {119, 26, 45, 255};
     ray::Rectangle text_box = {x, y, text_box_width, text_box_height};
-    float roundness = text_box_height > 0 ? 40.0f / text_box_height : 0.0f;
+    float roundness = text_box_height > 0 ? std::min(40.0f / text_box_height, 1.0f) : 0.0f;
     ray::DrawRectangleRounded(text_box, roundness, 16, ray::Fade(ray::WHITE, fade));
     ray::DrawRectangleRoundedLinesEx(text_box, roundness, 16, 3.0f, ray::Fade(PILL_OUTLINE, fade));
 

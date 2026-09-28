@@ -4,6 +4,10 @@
 #include "audio.h"
 #include "global_data.h"
 #include <spdlog/spdlog.h>
+#include <algorithm>
+#include <array>
+#include <optional>
+#include <string>
 
 inline int virtual_to_screen_x(float virtual_x) {
     if (tex.screen_width <= 0 || tex.screen_height <= 0) return 0;

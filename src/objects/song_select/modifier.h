@@ -4,7 +4,12 @@
 #include "../../libs/parsers/tja.h"
 #include "../../libs/scores.h"
 #include "../../libs/text.h"
+#include <algorithm>
+#include <array>
+#include <map>
+#include <memory>
 #include <unordered_map>
+#include <vector>
 
 class ModifierSelector {
 private:
@@ -18,8 +23,6 @@ private:
     int current_mod_index;
     std::string language;
     int direction;
-
-    std::vector<Modifiers> mods;
 
     FadeAnimation* blue_arrow_fade;
     MoveAnimation* blue_arrow_move;

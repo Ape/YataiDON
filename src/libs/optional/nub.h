@@ -9,4 +9,4 @@ namespace gen3 {
 
 bool decode_nub(const fs::path& path, gen4::DecodedAudio& out);
 
-}  // namespace green
+}  // namespace gen3

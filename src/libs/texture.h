@@ -3,9 +3,15 @@
 #include "animation.h"
 #include "ray.h" // IWYU pragma: keep
 #include "skin_config_generated.h"
+#include <cstdint>
 #include <filesystem>
+#include <map>
+#include <memory>
+#include <optional>
 #include <stdexcept>
+#include <string>
 #include <unordered_set>
+#include <vector>
 
 namespace fs = std::filesystem;
 

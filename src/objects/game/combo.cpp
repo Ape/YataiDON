@@ -2,6 +2,9 @@
 #include "../../libs/global_data.h"
 #include <cmath>
 #include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace {
     constexpr int COMBO_STRETCH_ANIM_ID = 5;
@@ -33,9 +36,9 @@ Combo::Combo(int combo, double current_ms)
     t_combo_100 = tex.get_texture("combo/combo_100_" + global_data.config->general.language);
 }
 
-void Combo::update_count(int curr_combo) {
-    if (curr_combo != combo) {
-        combo = curr_combo;
+void Combo::update_count(int new_combo) {
+    if (new_combo != combo) {
+        combo = new_combo;
         stretch->start();
     }
 }
@@ -88,7 +91,7 @@ void Combo::draw(float y) {
         margin = tex.skin_config[SC::COMBO_MARGIN].x;
         total_width = counter.length() * margin;
         tex.draw_texture(t_combo, {.y=y});
-        for (int i = 0; i < counter.size(); i++) {
+        for (int i = 0; i < (int)counter.size(); i++) {
             char digit = counter[i];
             tex.draw_texture(digit_tex, {.frame=digit - '0', .x=-(total_width / 2) + (i * margin), .y=y + (float)-stretch->attribute, .y2=(float)stretch->attribute});
         }
@@ -97,15 +100,15 @@ void Combo::draw(float y) {
         margin = tex.skin_config[SC::COMBO_MARGIN].y;
         total_width = counter.length() * margin;
         tex.draw_texture(t_combo_100, {.y=y});
-        for (int i = 0; i < counter.size(); i++) {
+        for (int i = 0; i < (int)counter.size(); i++) {
             char digit = counter[i];
             tex.draw_texture(digit_tex, {.frame=digit - '0', .x=-(total_width / 2) + (i * margin), .y=y + (float)-stretch->attribute, .y2=(float)stretch->attribute});
         }
-        std::vector<std::pair<float, float>> glimmer_positions = {
+        const std::array<std::pair<float, float>, 3> glimmer_positions = {{
             {tex.skin_config[SC::COMBO_GLIMMER_1].x, tex.skin_config[SC::COMBO_GLIMMER_1].y},
             {tex.skin_config[SC::COMBO_GLIMMER_2].x, tex.skin_config[SC::COMBO_GLIMMER_2].y},
             {tex.skin_config[SC::COMBO_GLIMMER_3].x, tex.skin_config[SC::COMBO_GLIMMER_3].y}
-        };
+        }};
         for (size_t j = 0; j < glimmer_positions.size(); j++) {
             auto [x, y_pos] = glimmer_positions[j];
             for (size_t i = 0; i < counter.size(); i++) {

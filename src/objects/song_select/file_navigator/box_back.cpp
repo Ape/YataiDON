@@ -62,5 +62,5 @@ void BackBox::draw_open() {
             .fade = mfade
         });
     }
-    tex.draw_texture(t_back_graphic, {.y=by, .fade=mfade});
+    tex.draw_texture(t_back_graphic, {.x=x, .y=by, .fade=mfade});
 }

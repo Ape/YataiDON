@@ -485,7 +485,7 @@ void Navigator::flush_pending_boxes() {
                          std::make_move_iterator(batch.end()));
             inline_state->songs_count += (int)batch.size();
         }
-        genre_bg_start = inline_state->first_song_index - 1;
+        genre_bg_start = std::max(0, inline_state->first_song_index - 1);
         genre_bg_end = inline_state->first_song_index + inline_state->songs_count - 1;
     }
 
@@ -1330,7 +1330,7 @@ void Navigator::exit_inline() {
 
     // Kick off fade_out on all inserted items
     int end = state.first_song_index + state.songs_count;
-    for (int i = state.first_song_index - 1; i < end; i++)
+    for (int i = std::max(0, state.first_song_index - 1); i < end; i++)
         items[i]->fade_out();
 
     state.fading_out = true;
@@ -2087,7 +2087,6 @@ void Navigator::update(double current_ms) {
                 static_cast<FolderBox*>(items[open_index].release())
             );
             setup_back_box(*pending_inline_path, false);
-            int before = items.size();
 
             join_loader();
             loading_complete = false;

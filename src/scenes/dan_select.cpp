@@ -791,9 +791,6 @@ std::optional<Screens> DanSelectScreen::update() {
 
     if (state == SongSelectState::BROWSING) {
         handle_input_browsing(current_ms);
-        if (is_r_don_pressed(global_data.player_num) || is_l_don_pressed(global_data.player_num)) {
-            // handled in browsing
-        }
     } else if (state == SongSelectState::SONG_SELECTED) {
         if (modifier_selector.has_value()) {
             modifier_selector->update(current_ms);

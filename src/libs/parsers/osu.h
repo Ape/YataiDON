@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tja.h"
+#include <array>
 
 class OsuParser {
 public:

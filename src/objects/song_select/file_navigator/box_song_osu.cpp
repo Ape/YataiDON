@@ -8,10 +8,6 @@ SongBoxOsu::SongBoxOsu(const fs::path& path, const BoxDef& box_def, SongParser p
     // read from the member instead of keeping two more copies alive.
     text_name = this->parser.get_difficulty_name();
 
-    const std::string& lang = global_data.config->general.language;
-    auto& subtitles = this->parser.metadata.subtitle;
-    text_subtitle = subtitles.count(lang) ? subtitles.at(lang) : subtitles.count("en") ? subtitles.at("en") : subtitles.empty() ? "" : subtitles.begin()->second;
-
     is_favorite = false;
     diff_fade_in = dynamic_cast<FadeAnimation*>(tex.get_animation(12));
     if (!diff_fade_in) throw std::runtime_error("SongBoxOsu: animation 12 is not a FadeAnimation");

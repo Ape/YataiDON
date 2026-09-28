@@ -15,5 +15,5 @@ public:
     void update(double current_ms);
     void draw();
 
-    bool is_finished();
+    bool is_finished() const;
 };

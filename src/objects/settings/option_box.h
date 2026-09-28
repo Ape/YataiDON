@@ -3,6 +3,11 @@
 #include "config_ref.h"
 #include "../../libs/text.h"
 #include "../../libs/screen.h"
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
 class BaseOptionBox {
 protected:

@@ -512,12 +512,6 @@ TJAParser::notes_to_position(int diff) {
                 current_ms += increment;
                 state.curr_note_list->push_back(note);
                 state.index++;
-
-                // Update previous note
-                Note* note_ptr = &note;
-                if (note_ptr) {
-                    state.prev_note = *note_ptr;
-                }
             }
         }
     }
@@ -736,67 +730,6 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
         }
 
         return notes;
-}
-
-float TJAParser::apply_easing(float t, EasingPoint easing_point, EasingFunction easing_function) {
-        const float original_t = t;
-        switch (easing_point) {
-            case EasingPoint::IN_:
-                break;
-            case EasingPoint::OUT_:
-                t = 1.0f - t;
-                break;
-            case EasingPoint::IN_OUT:
-                if (t < 0.5f) {
-                    t = t * 2.0f;
-                } else {
-                    t = (1.0f - t) * 2.0f;
-                }
-                break;
-        }
-
-        float result;
-        switch (easing_function) {
-            case EasingFunction::LINEAR:
-                result = t;
-                break;
-            case EasingFunction::CUBIC:
-                result = t * t * t;  // Faster than pow for small exponents
-                break;
-            case EasingFunction::QUARTIC:
-                result = t * t * t * t;
-                break;
-            case EasingFunction::QUINTIC:
-                result = t * t * t * t * t;
-                break;
-            case EasingFunction::SINUSOIDAL:
-                result = 1.0f - std::cos((t * 3.14) / 2.0f);
-                break;
-            case EasingFunction::EXPONENTIAL:
-                result = (t == 0.0f) ? 0.0f : std::pow(2.0f, 10.0f * (t - 1.0f));
-                break;
-            case EasingFunction::CIRCULAR:
-                result = 1.0f - std::sqrt(1.0f - t * t);
-                break;
-            default:
-                result = t;
-                break;
-        }
-
-        switch (easing_point) {
-            case EasingPoint::OUT_:
-                result = 1.0f - result;
-                break;
-            case EasingPoint::IN_OUT:
-                if (original_t >= 0.5f) {
-                    result = 1.0f - result;
-                }
-                break;
-            default:
-                break;
-        }
-
-        return result;
 }
 
 #define REGISTER_HANDLER(name) \

@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <cctype>
 
 std::vector<std::string> OsuParser::read_file_lines(const fs::path& path) {
     std::vector<std::string> lines;
@@ -194,7 +195,8 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
             if (std::regex_search(el, m, bg_re)) {
                 fs::path candidate = path.parent_path() / m[1].str();
                 std::string ext = candidate.extension().string();
-                std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
+                std::transform(ext.begin(), ext.end(), ext.begin(),
+                    [](unsigned char c) { return (char)std::tolower(c); });
                 if (ext == ".mp4" || ext == ".avi" || ext == ".mkv" || ext == ".mov" || ext == ".flv") {
                     metadata.bgmovie = candidate;
                     break;

@@ -2,6 +2,12 @@
 
 #include "../libs/screen.h"
 #include "../objects/global/allnet_indicator.h"
+#include <atomic>
+#include <thread>
+#include <vector>
+#include <memory>
+#include <optional>
+#include <filesystem>
 
 class LoadingScreen : public Screen {
 private:

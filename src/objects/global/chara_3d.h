@@ -92,15 +92,14 @@ private:
     bool mirror = false;
     double last_frame_ms = 0;
 
-    float scale;
+    float scale = 1.0f;
     float draw_scale = 1.0f;
-    float rot_x;
-    float rot_y;
-    float rot_z;
+    float rot_x = 0.0f;
+    float rot_y = 0.0f;
+    float rot_z = 0.0f;
 
     AnimIndex prev_anim_idx = AnimIndex::DON_BALLOON_FAILURE;
     bool is_looping = true;
-    bool model_valid = false;
     bool use_render_textures = true;
 
     ray::RenderTexture2D scene_target = {};

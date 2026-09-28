@@ -4,8 +4,14 @@
 #include <sol/sol.hpp>
 #include <spdlog/spdlog.h>
 #include <set>
+#include <map>
+#include <memory>
+#include <string>
+#include <utility>
 
 class LuaScript {
+public:
+    virtual ~LuaScript() = default;
 protected:
     sol::table lua_object;
 

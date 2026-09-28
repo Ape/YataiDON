@@ -8,7 +8,6 @@
 class Judgment {
 private:
     Judgments type;
-    bool big;
 
     FadeAnimation* fade_animation_1;
     FadeAnimation* fade_animation_2;

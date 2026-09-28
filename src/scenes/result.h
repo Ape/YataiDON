@@ -19,7 +19,6 @@ protected:
 
     std::optional<ResultBackground> background;
     std::optional<ray::Texture2D> loading_graphic;
-    double start_ms = 0;
     double skipped_time = 0;
     static constexpr double kFrameMs        = 1000.0 / 120.0;
     static constexpr double kEnableSkipMs   =  100 * kFrameMs;

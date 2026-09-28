@@ -2,6 +2,7 @@
 #include "../../libs/animation.h"
 #include "../../libs/input.h"
 #include <algorithm>
+#include <cmath>
 
 std::string getKeyString(int key_code);
 
@@ -458,12 +459,12 @@ void FloatOptionBox::update(double current_time) {
 }
 
 void FloatOptionBox::move_left() {
-    value = ((value * 100.0f) - 1.0f) / 100.0f;
+    value = std::round((value * 100.0f) - 1.0f) / 100.0f;
     rebuild_text();
 }
 
 void FloatOptionBox::move_right() {
-    value = ((value * 100.0f) + 1.0f) / 100.0f;
+    value = std::round((value * 100.0f) + 1.0f) / 100.0f;
     rebuild_text();
 }
 

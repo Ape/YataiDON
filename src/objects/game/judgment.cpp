@@ -2,7 +2,7 @@
 #include <stdexcept>
 
 Judgment::Judgment(Judgments type, bool big)
-    : type(type), big(big) {
+    : type(type) {
 
     fade_animation_1 = dynamic_cast<FadeAnimation*>(tex.get_animation(27, true));
     fade_animation_2 = dynamic_cast<FadeAnimation*>(tex.get_animation(28, true));

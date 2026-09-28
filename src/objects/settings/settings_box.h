@@ -44,11 +44,12 @@ public:
 
     bool can_move() const;
 
-    // Returns false when the box should become un-selected (exit to outer navigation)
+    // Returns false while the carousel is still animating from a previous move
     bool move_left();
     // Returns false while the carousel is still animating from a previous move
     bool move_right();
 
+    // Returns false when the box should become un-selected (exit to outer navigation)
     bool move_option_left();
     void move_option_right();
 

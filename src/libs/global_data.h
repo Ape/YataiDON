@@ -1,9 +1,13 @@
 #pragma once
 
+#include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <filesystem>
 #include <map>
 #include <optional>
+#include <string>
+#include <vector>
 
 #include "config.h"
 #include "ray.h" // IWYU pragma: keep

@@ -216,7 +216,6 @@ struct ParserState {
     size_t balloon_cursor = 0;
     double balloon_index = 0;
     size_t branch_balloon_cursor = 0;
-    std::optional<Note> prev_note;
     bool barline_added = false;
     double sudden_appear = 0.0f;
     double sudden_moving = 0.0f;
@@ -298,24 +297,6 @@ private:
     std::vector<std::vector<std::string>> data_to_notes(int diff);
 
     Note* get_note_ptr(Note& variant);
-
-    enum class EasingPoint {
-        IN_,
-        OUT_,
-        IN_OUT
-    };
-
-    enum class EasingFunction {
-        LINEAR,
-        CUBIC,
-        QUARTIC,
-        QUINTIC,
-        SINUSOIDAL,
-        EXPONENTIAL,
-        CIRCULAR
-    };
-
-    float apply_easing(float t, EasingPoint easing_point, EasingFunction easing_function);
 
     void set_branch_params(std::vector<TimelineObject>& bar_list, std::string branch_params,
                           std::optional<Note> section_bar);

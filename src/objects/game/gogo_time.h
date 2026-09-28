@@ -6,8 +6,8 @@
 
 class GogoTime {
 private:
-    TextureResizeAnimation* fire_resize;
-    TextureChangeAnimation* fire_change;
+    TextureResizeAnimation* fire_resize = nullptr;
+    TextureChangeAnimation* fire_change = nullptr;
     float fire_fade;
     TextureObject* t_fire = nullptr;
 

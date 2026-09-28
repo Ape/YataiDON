@@ -16,8 +16,8 @@ public:
     void start();
     void update(double current_ms);
     void draw();
-    bool is_started();
-    bool is_finished();
+    bool is_started() const;
+    bool is_finished() const;
 
     double progress() const;
     double duration() const;

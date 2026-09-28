@@ -52,6 +52,7 @@ Screens SettingsScreen::on_screen_end(Screens next_screen) {
     if (!access_code.empty() && scores_manager.player_1_data.username != username_on_entry) {
         network.update_username(access_code, scores_manager.player_1_data.username);
     }
+    username_on_entry.clear();
 
     box_manager.reset();
 

@@ -4,6 +4,10 @@
 
 #include "../../../libs/texture.h"
 
+#include <array>
+#include <optional>
+#include <vector>
+
 class ScoreHistory {
 public:
     ScoreHistory(const std::array<std::optional<Score>, 5>& scores, double current_ms);
@@ -17,18 +21,14 @@ private:
     double last_ms = 0.0;
 
     void draw_long();
-    void draw_short();
 
     // Fixed-path textures resolved once in the constructor instead of calling
-    // tex.get_texture() every frame from draw_long()/draw_short().
+    // tex.get_texture() every frame from draw_long().
     TextureObject* t_background_2 = nullptr;
-    TextureObject* t_background = nullptr;
     TextureObject* t_shinuchi_ura = nullptr;
     TextureObject* t_shinuchi = nullptr;
     TextureObject* t_pts = nullptr;
     TextureObject* t_normal = nullptr;
-    TextureObject* t_normal_ura = nullptr;
-    TextureObject* t_ura = nullptr;
     TextureObject* t_difficulty = nullptr;
     TextureObject* t_judge_good = nullptr;
     TextureObject* t_judge_ok = nullptr;

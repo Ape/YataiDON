@@ -25,6 +25,10 @@ GaugeHitEffect::GaugeHitEffect(NoteType note_type, bool is_big, bool is_2p)
     t_note = tex.get_texture("notes/" + std::to_string((int)note_type));
     t_circle = is_big ? tex.get_texture("gauge/hit_effect_circle_big") : tex.get_texture("gauge/hit_effect_circle");
 
+    if (!t_hit_effect) {
+        throw std::runtime_error("GaugeHitEffect: texture gauge/hit_effect missing");
+    }
+
     width = t_hit_effect->width;
 
     dest_width = width * tex.screen_scale;

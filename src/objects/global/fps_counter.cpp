@@ -19,7 +19,7 @@ void FPSCounter::update() {
     currentFrame = (currentFrame + 1) % SAMPLE_SIZE;
 }
 
-float FPSCounter::get_fps() {
+float FPSCounter::get_fps() const {
     float sum = 0;
     for (int i = 0; i < SAMPLE_SIZE; i++) {
         sum += frameTimes[i];

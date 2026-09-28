@@ -192,6 +192,8 @@ static std::vector<int> parseKeyArray(const toml::array& arr) {
             } catch (const std::runtime_error& e) {
                 spdlog::warn("Skipping invalid key binding: {}", e.what());
             }
+        } else {
+            spdlog::warn("Skipping non-string key binding entry");
         }
     }
     return result;

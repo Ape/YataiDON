@@ -9,6 +9,7 @@
 #include <cmath>
 #include <fstream>
 #include <map>
+#include <unordered_set>
 
 #ifdef DrawTextEx
     #undef DrawTextEx
@@ -21,6 +22,7 @@ public:
     static constexpr float TAB_HEIGHT       = 36.0f;
     static constexpr float ROW_HEIGHT       = 20.0f;
     static constexpr float SCROLLBAR_WIDTH  = 6.0f;
+    static constexpr float SCROLLBAR_THUMB_MIN = 12.0f;
     static constexpr float EDIT_ROW_HEIGHT   = 24.0f;
     static constexpr float VERDICT_TOP       = 44.0f;
     static constexpr float VERDICT_HEIGHT    = 34.0f;
@@ -169,6 +171,46 @@ public:
         edit_data_buffer.clear();
     }
 
+    // Which scrollbar (if any) currently owns the mouse for thumb dragging.
+    enum class ScrollDrag { None, Scenes, Data, Textures };
+    ScrollDrag scroll_drag = ScrollDrag::None;
+    float scroll_drag_offset = 0.0f;   // mouse.y - thumb_top captured at grab time
+
+    // Shared thumb-drag logic for the panel's scrollbars. Returns true while
+    // `id` owns the mouse, so callers can swallow the press and keep it from
+    // also hitting the list drawn underneath the scrollbar. The caller must
+    // clear scroll_drag whenever the mouse button is up.
+    bool scrollbar_drag(ScrollDrag id, const ray::Vector2& mouse, bool pressed,
+                        float track_x, float track_top, float track_h,
+                        int count, int shown, int& scroll) {
+        if (count <= shown) {
+            if (scroll_drag == id) scroll_drag = ScrollDrag::None;
+            return false;
+        }
+
+        const bool mouse_on_track = mouse.x >= track_x && mouse.x <= track_x + SCROLLBAR_WIDTH &&
+                                    mouse.y >= track_top && mouse.y <= track_top + track_h;
+        const int   max_scroll = count - shown;
+        const float thumb_h    = std::max(SCROLLBAR_THUMB_MIN, track_h * ((float)shown / count));
+        const float travel     = std::max(0.0f, track_h - thumb_h);
+
+        if (pressed && mouse_on_track) {
+            const float thumb_y  = track_top + (max_scroll > 0 ? (scroll / (float)max_scroll) * travel : 0.0f);
+            const bool  on_thumb = mouse.y >= thumb_y && mouse.y <= thumb_y + thumb_h;
+            scroll_drag = id;
+            // Grabbing the thumb keeps the grab offset; clicking the track
+            // re-centers the thumb under the mouse and starts dragging too.
+            scroll_drag_offset = on_thumb ? mouse.y - thumb_y : thumb_h * 0.5f;
+        }
+
+        if (scroll_drag != id) return false;
+
+        const float thumb_top = std::clamp(mouse.y - scroll_drag_offset, track_top, track_top + travel);
+        scroll = travel > 0.0f ? (int)std::lround((thumb_top - track_top) * max_scroll / travel) : 0;
+        scroll = std::clamp(scroll, 0, max_scroll);
+        return true;
+    }
+
     void update(const ray::Camera2D& camera) {
         if (ray::IsKeyPressed(ray::KEY_F7)) toggle_open();
         if (slide_anim) slide_anim->update(get_frame_ms());
@@ -178,7 +220,7 @@ public:
 
         const bool textures_tab_active = open && active_tab == 0;
         debug_log_draws = open && (active_tab == 0 || active_tab == 2);
-        if (!open) { commit_edit(); commit_data_edit(); return; }
+        if (!open) { commit_edit(); commit_data_edit(); scroll_drag = ScrollDrag::None; return; }
 
         const float panel_x   = tex.screen_width - PANEL_WIDTH + slide_offset();
         const float tab_width = PANEL_WIDTH / TAB_COUNT;
@@ -187,6 +229,9 @@ public:
         const bool mouse_over_panel = mouse.x >= panel_x;
 
         if (clicked) { commit_edit(); commit_data_edit(); }
+
+        // Releasing the mouse always ends an in-progress scrollbar drag.
+        if (!ray::IsMouseButtonDown(ray::MOUSE_BUTTON_LEFT)) scroll_drag = ScrollDrag::None;
 
         if (editing_field < 0 && !editing_data_ptr && ray::IsKeyPressed(ray::KEY_TAB)) active_tab = (active_tab + 1) % TAB_COUNT;
 
@@ -209,7 +254,12 @@ public:
             }
             scene_scroll = std::clamp(scene_scroll, 0, scene_max_scroll);
 
-            if (clicked && mouse_in_scenes) {
+            const bool dragging_scenes = scrollbar_drag(
+                ScrollDrag::Scenes, mouse, clicked,
+                panel_x + PANEL_WIDTH - SCROLLBAR_WIDTH, list_top, SCENE_LIST_HEIGHT,
+                scene_count, scene_shown, scene_scroll);
+
+            if (clicked && !dragging_scenes && mouse_in_scenes) {
                 int row = (int)((mouse.y - list_top) / ROW_HEIGHT) + scene_scroll;
                 if (row >= 0 && row < scene_count) selected_screen = ALL_SCREENS[row];
             }
@@ -235,7 +285,12 @@ public:
             }
             data_scroll = std::clamp(data_scroll, 0, data_max_scroll);
 
-            if (clicked && mouse_in_data) {
+            const bool dragging_data = scrollbar_drag(
+                ScrollDrag::Data, mouse, clicked,
+                panel_x + PANEL_WIDTH - SCROLLBAR_WIDTH, data_top, data_bottom - data_top,
+                field_count, data_shown, data_scroll);
+
+            if (clicked && !dragging_data && mouse_in_data) {
                 int row = (int)((mouse.y - data_top) / ROW_HEIGHT) + data_scroll;
                 if (row >= 0 && row < field_count) {
                     const DataField& f = fields[row];
@@ -315,8 +370,13 @@ public:
         }
         scroll_offset = std::clamp(scroll_offset, 0, max_scroll);
 
+        const bool dragging_list = scrollbar_drag(
+            ScrollDrag::Textures, mouse, clicked,
+            panel_x + PANEL_WIDTH - SCROLLBAR_WIDTH, list_top, list_bottom - list_top,
+            row_count, rows_shown, scroll_offset);
+
         hovered_log_index = -1;
-        if (!mouse_over_panel) {
+        if (!mouse_over_panel && scroll_drag == ScrollDrag::None) {
             for (int i = (int)debug_draw_log_prev.size() - 1; i >= 0; i--) {
                 const ray::Rectangle& r = debug_draw_log_prev[i].rect;
                 if (mouse.x >= r.x && mouse.x <= r.x + r.width &&
@@ -327,7 +387,7 @@ public:
             }
         }
 
-        if (clicked && mouse_in_list) {
+        if (clicked && !dragging_list && mouse_in_list) {
             int row = (int)((mouse.y - list_top) / ROW_HEIGHT) + scroll_offset;
             if (row >= 0 && row < row_count) {
                 const VisualRow& vr = visible_rows[row];
@@ -718,7 +778,7 @@ private:
             float track_x = panel_x + PANEL_WIDTH - SCROLLBAR_WIDTH;
             ray::DrawRectangle((int)track_x, (int)list_top, (int)SCROLLBAR_WIDTH, (int)SCENE_LIST_HEIGHT, ray::Fade(ray::WHITE, 0.1f));
             int max_scroll = scene_count - scene_shown;
-            float thumb_h = std::max(10.0f, SCENE_LIST_HEIGHT * ((float)scene_shown / scene_count));
+            float thumb_h = std::max(SCROLLBAR_THUMB_MIN, SCENE_LIST_HEIGHT * ((float)scene_shown / scene_count));
             float thumb_y = list_top + (max_scroll > 0 ? (scene_scroll / (float)max_scroll) * (SCENE_LIST_HEIGHT - thumb_h) : 0.0f);
             ray::DrawRectangle((int)track_x, (int)thumb_y, (int)SCROLLBAR_WIDTH, (int)thumb_h, ray::Fade(ray::WHITE, 0.5f));
         }
@@ -792,7 +852,7 @@ private:
             float area_h = data_bottom - data_top;
             ray::DrawRectangle((int)track_x, (int)data_top, (int)SCROLLBAR_WIDTH, (int)area_h, ray::Fade(ray::WHITE, 0.1f));
             int max_scroll = field_count - data_shown;
-            float thumb_h = std::max(10.0f, area_h * ((float)data_shown / field_count));
+            float thumb_h = std::max(SCROLLBAR_THUMB_MIN, area_h * ((float)data_shown / field_count));
             float thumb_y = data_top + (max_scroll > 0 ? (data_scroll / (float)max_scroll) * (area_h - thumb_h) : 0.0f);
             ray::DrawRectangle((int)track_x, (int)thumb_y, (int)SCROLLBAR_WIDTH, (int)thumb_h, ray::Fade(ray::WHITE, 0.5f));
         }
@@ -990,7 +1050,7 @@ private:
             float track_x = panel_x + PANEL_WIDTH - SCROLLBAR_WIDTH;
             ray::DrawRectangle((int)track_x, (int)list_top, (int)SCROLLBAR_WIDTH, (int)(list_bottom - list_top), ray::Fade(ray::WHITE, 0.1f));
             float list_height = list_bottom - list_top;
-            float thumb_h = std::max(12.0f, list_height * ((float)rows_shown / row_count));
+            float thumb_h = std::max(SCROLLBAR_THUMB_MIN, list_height * ((float)rows_shown / row_count));
             int max_scroll = row_count - rows_shown;
             float thumb_y = list_top + (max_scroll > 0 ? (scroll_offset / (float)max_scroll) * (list_height - thumb_h) : 0.0f);
             ray::DrawRectangle((int)track_x, (int)thumb_y, (int)SCROLLBAR_WIDTH, (int)thumb_h, ray::Fade(ray::WHITE, 0.5f));

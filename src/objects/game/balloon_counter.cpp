@@ -66,7 +66,7 @@ void BalloonCounter::draw(float y) {
         if (const SkinInfo* m = tex.skin_entry("balloon_counter_margin"); m && m->x > 0)
             margin = m->x;
         float total_width = counter.length() * margin;
-        for (int i = 0; i < counter.size(); i++) {
+        for (int i = 0; i < (int)counter.size(); i++) {
             char digit = counter[i];
             tex.draw_texture(t_counter, {.frame=digit - '0', .x=x_offset - (total_width / 2.0f) + (i * margin), .y=y - (float)stretch->attribute + digit_y_offset, .y2=(float)stretch->attribute, .fade=fade->attribute});
         }

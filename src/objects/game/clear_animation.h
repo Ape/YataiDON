@@ -31,5 +31,5 @@ public:
     ClearAnimation(bool is_2p);
 
     void update(double current_ms);
-    void draw();
+    void draw() const;
 };

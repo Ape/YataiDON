@@ -114,22 +114,6 @@ static DrawTextureParams parse_draw_params(sol::optional<sol::table> params_tabl
     return parse_draw_params_legacy(params_table, allow_blend);
 }
 
-static bool same_params(const DrawTextureParams& a, const DrawTextureParams& b) {
-    if (a.color.r != b.color.r || a.color.g != b.color.g ||
-        a.color.b != b.color.b || a.color.a != b.color.a) return false;
-    if (a.frame != b.frame || a.scale != b.scale || a.center != b.center) return false;
-    if (a.mirror != b.mirror) return false;
-    if (a.x != b.x || a.y != b.y || a.x2 != b.x2 || a.y2 != b.y2) return false;
-    if (a.origin.x != b.origin.x || a.origin.y != b.origin.y) return false;
-    if (a.rotation != b.rotation || a.fade != b.fade || a.index != b.index) return false;
-    if (a.src.has_value() != b.src.has_value()) return false;
-    if (a.src && (a.src->x != b.src->x || a.src->y != b.src->y ||
-                  a.src->width != b.src->width || a.src->height != b.src->height))
-        return false;
-    if (a.blend != b.blend) return false;
-    return true;
-}
-
 // Index every script under one Scripts folder. Names already present are
 // kept: the skin's own scripts are indexed first, and a parent skin only
 // fills the gaps, the same way its graphics do.
@@ -155,6 +139,7 @@ void ScriptManager::index_scripts(const fs::path& script_path) {
                     scripts[sub_p.stem().string()] = sub_p.string();
                 }
             }
+            if (sub_ec) spdlog::warn("Unable to index scripts in {}: {}", p.string(), sub_ec.message());
         } else if (p.extension() == ".lua" && !scripts.count(p.stem().string())) {
             scripts[p.stem().string()] = p.string();
         }

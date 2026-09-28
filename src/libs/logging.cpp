@@ -15,6 +15,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -266,6 +267,7 @@ static spdlog::level::level_enum parse_log_level(const std::string& log_level_st
     if (log_level_str == "warning") return spdlog::level::warn;
     if (log_level_str == "error") return spdlog::level::err;
     if (log_level_str == "critical") return spdlog::level::critical;
+    fprintf(stderr, "Unknown log level '%s'; using info\n", log_level_str.c_str());
     return spdlog::level::info;
 }
 
@@ -290,8 +292,10 @@ static void setup_fallback_logging(const std::string& log_level_str) {
 
 void setup_logging(const std::string& log_level_str) {
     try {
+#ifndef __ANDROID__
         auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         console_sink->set_pattern("[%^%l%$] %n: %v");
+#endif
 
         auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
             "latest.log", true);

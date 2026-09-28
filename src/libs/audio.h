@@ -17,6 +17,9 @@
 #include <atomic>
 #include <shared_mutex>
 #include <vector>
+#include <string>
+#include <unordered_map>
+#include <cstdint>
 
 #ifdef __ANDROID__
 // NDK r27d libc++ omits std::atomic_ref; polyfill with __atomic builtins

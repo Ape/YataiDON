@@ -30,8 +30,6 @@ private:
 
     float                                   fps             = 0.f;
     double                                  duration        = 0.0;
-    float                                   width           = 0.f;
-    float                                   height          = 0.f;
     int                                     frame_count     = 0;
 
     std::optional<double>                   start_ms;

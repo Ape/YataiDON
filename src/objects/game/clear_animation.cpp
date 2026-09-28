@@ -80,7 +80,7 @@ void ClearAnimation::update(double current_ms) {
     }
 }
 
-void ClearAnimation::draw() {
+void ClearAnimation::draw() const {
     if (draw_clear_full) {
         tex.draw_texture(t_clear, {
             .index = (int)is_2p

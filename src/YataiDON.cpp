@@ -289,8 +289,6 @@ static void run_frame() {
 #endif
     poll_touch_once();
 
-    auto frame_start = std::chrono::steady_clock::now();
-
 #ifndef YATAIDON_PLATFORM_IOS
     if (check_key_pressed(global_data.config->keys.fullscreen_key)) {
         ray::ToggleFullscreen();

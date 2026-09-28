@@ -16,9 +16,12 @@
 #endif
 
 #include <atomic>
+#include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <thread>
+#include <vector>
 
 enum class InputLogType {
     KAT_L = 0,
@@ -52,7 +55,7 @@ public:
 
     std::string register_user(const std::string& username);
     std::string map_to_json(const std::map<double, InputLogType>& my_map);
-    void submit_score(std::string& hash, int difficulty, const std::string& access_code, const Score& score, const std::map<double, InputLogType>& input_log, int64_t played_at, const std::string& modifiers_json, bool chara_is_costume, int chara_cos_index);
+    void submit_score(const std::string& hash, int difficulty, const std::string& access_code, const Score& score, const std::map<double, InputLogType>& input_log, int64_t played_at, const std::string& modifiers_json, bool chara_is_costume, int chara_cos_index);
 
     bool check_import_requested(const std::string& access_code);
     void clear_import_flag(const std::string& access_code);

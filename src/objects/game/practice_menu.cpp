@@ -207,7 +207,6 @@ void PracticeMenu::draw() const {
 
 void PracticeMenu::draw_dialog() const {
     float panel_w = tex.skin_config[SC::PRACTICE_MENU_PANEL].width;
-    float panel_h = tex.skin_config[SC::PRACTICE_MENU_PANEL].height;
     float panel_x = (tex.screen_width - panel_w) / 2.0f;
     float panel_y = tex.skin_config[SC::PRACTICE_MENU_PANEL].y;
 
@@ -258,5 +257,4 @@ void PracticeMenu::draw_dialog() const {
     if (dlg_right)
         dlg_right->draw({.x = right_x + (btn_w - dlg_right->width) / 2.0f,
                          .y = row_y + (btn_h - dlg_right->height) / 2.0f});
-    (void)panel_h;
 }

@@ -6,6 +6,7 @@
 #include "result_crown.h"
 #include "score_animator.h"
 #include "../../libs/script.h"
+#include "../../libs/global_data.h"
 
 class ResultPlayer : public LuaScript {
     sol::protected_function fn_update, fn_draw, fn_draw_gauge, fn_chara_pos, fn_nameplate_pos;

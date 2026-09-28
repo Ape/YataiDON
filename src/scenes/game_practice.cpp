@@ -500,7 +500,8 @@ std::optional<Screens> PracticeGameScreen::update() {
 
     scrobble_move->update(current_ms);
     if (scrobble_move->is_started && scrobble_move->is_finished) {
-        scrobble_time = bars[scrobble_index].hit_ms;
+        if (scrobble_index >= 0 && scrobble_index < (int)bars.size())
+            scrobble_time = bars[scrobble_index].hit_ms;
         scrobble_move = std::make_unique<MoveAnimation>(200.0, 0);
     }
 
@@ -705,8 +706,8 @@ void PracticeGameScreen::draw() {
         tex.draw_texture(t_skip_l_kat,  {.scale = skip_l_kat_anim  ? (float)skip_l_kat_anim->attribute  : 1.0f, .center = true, .index = player_idx * 2});
         tex.draw_texture(t_skip_r_kat,  {.scale = skip_r_kat_anim  ? (float)skip_r_kat_anim->attribute  : 1.0f, .center = true, .index = player_idx * 2 + 1});
         tex.draw_texture(t_menu_don,    {.scale = menu_don_anim    ? (float)menu_don_anim->attribute    : 1.0f, .center = true, .index = other_idx});
-        tex.draw_texture(t_speed_r_kat, {.scale = speed_l_kat_anim ? (float)speed_l_kat_anim->attribute : 1.0f, .center = true, .index = other_idx * 2});
-        tex.draw_texture(t_speed_l_kat, {.scale = speed_r_kat_anim ? (float)speed_r_kat_anim->attribute : 1.0f, .center = true, .index = other_idx * 2 + 1});
+        tex.draw_texture(t_speed_r_kat, {.scale = speed_r_kat_anim ? (float)speed_r_kat_anim->attribute : 1.0f, .center = true, .index = other_idx * 2});
+        tex.draw_texture(t_speed_l_kat, {.scale = speed_l_kat_anim ? (float)speed_l_kat_anim->attribute : 1.0f, .center = true, .index = other_idx * 2 + 1});
     }
 
     if (!paused) {

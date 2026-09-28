@@ -9,8 +9,8 @@ private:
     int balloon_total;
     bool is_popped;
     bool is_2p;
-    TextStretchAnimation* stretch;
-    FadeAnimation* fade;
+    TextStretchAnimation* stretch = nullptr;
+    FadeAnimation* fade = nullptr;
     TextureObject* t_pop = nullptr;
     TextureObject* t_bubble = nullptr;
     TextureObject* t_counter = nullptr;

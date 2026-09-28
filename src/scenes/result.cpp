@@ -12,7 +12,6 @@ void ResultScreen::on_screen_start() {
     audio.play_sound("bgm", VolumePreset::MUSIC);
     fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(0));
     fade_in.emplace(global_data.player_num);
-    start_ms = get_current_ms();
     skipped_time = 0;
     skip_enabled_ms = 0;
     fs::path loading_graphic_path = global_data.session_data[(int)global_data.player_num].selected_song.parent_path() / "Loading.png";
@@ -92,7 +91,6 @@ std::optional<Screens> ResultScreen::update() {
     if (fade_out) {
         fade_out->update(current_time);
         if (fade_out->is_finished) {
-            fade_out->update(current_time);
             if (global_data.config->general.song_limit > 0 && global_data.config->general.song_limit == global_data.songs_played) {
                 global_data.songs_played = 0;
                 return on_screen_end(Screens::GAME_OVER);

@@ -705,7 +705,7 @@ std::string NetworkClient::map_to_json(const std::map<double, InputLogType>& my_
     return map_to_json_impl(my_map);
 }
 
-void NetworkClient::submit_score(std::string& hash, int difficulty, const std::string& access_code, const Score& score, const std::map<double, InputLogType>& input_log, int64_t played_at, const std::string& modifiers_json, bool chara_is_costume, int chara_cos_index) {
+void NetworkClient::submit_score(const std::string& hash, int difficulty, const std::string& access_code, const Score& score, const std::map<double, InputLogType>& input_log, int64_t played_at, const std::string& modifiers_json, bool chara_is_costume, int chara_cos_index) {
     if (!network_enabled()) return;
     std::map<std::string, std::string> params{
         {"access_code", access_code},
@@ -985,7 +985,7 @@ void NetworkClient::shutdown() {
 
 bool NetworkClient::probe_online() { return false; }
 std::string NetworkClient::register_user(const std::string&) { return ""; }
-void NetworkClient::submit_score(std::string&, int, const std::string&, const Score&, const std::map<double, InputLogType>&, int64_t, const std::string&, bool, int) {}
+void NetworkClient::submit_score(const std::string&, int, const std::string&, const Score&, const std::map<double, InputLogType>&, int64_t, const std::string&, bool, int) {}
 bool NetworkClient::check_import_requested(const std::string&) { return false; }
 void NetworkClient::clear_import_flag(const std::string&) {}
 bool NetworkClient::fetch_chara_colors(const std::string&, ray::Color&, ray::Color&, ray::Color&) { return false; }

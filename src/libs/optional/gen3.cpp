@@ -242,7 +242,8 @@ bool Library::has_difficulty(const std::string& id, int difficulty) const {
 
 fs::path Library::sound_path(const std::string& id) const {
     std::string upper = id;
-    std::transform(upper.begin(), upper.end(), upper.begin(), ::toupper);
+    std::transform(upper.begin(), upper.end(), upper.begin(),
+        [](unsigned char c) { return (char)std::toupper(c); });
     return data_root / "sound" / "bgm" / "nub" / ("SONG_" + upper + ".nub");
 }
 

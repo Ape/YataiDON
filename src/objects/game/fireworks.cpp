@@ -38,6 +38,6 @@ void Fireworks::draw() {
     }
 }
 
-bool Fireworks::is_finished() {
+bool Fireworks::is_finished() const {
     return !explosion_anim || explosion_anim->is_finished;
 }

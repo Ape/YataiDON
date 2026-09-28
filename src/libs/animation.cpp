@@ -397,23 +397,6 @@ std::unique_ptr<BaseAnimation> TextureResizeAnimation::copy() const {
     );
 }
 
-template<typename T>
-std::optional<T> AnimationParser::getOptional(const Value& obj, const char* key) {
-    if (!obj.HasMember(key)) return std::nullopt;
-
-    if constexpr (std::is_same_v<T, double>) {
-        if (obj[key].IsDouble()) return obj[key].GetDouble();
-        if (obj[key].IsInt()) return static_cast<double>(obj[key].GetInt());
-    } else if constexpr (std::is_same_v<T, int>) {
-        if (obj[key].IsInt()) return obj[key].GetInt();
-    } else if constexpr (std::is_same_v<T, bool>) {
-        if (obj[key].IsBool()) return obj[key].GetBool();
-    } else if constexpr (std::is_same_v<T, std::string>) {
-        if (obj[key].IsString()) return std::string(obj[key].GetString());
-    }
-    return std::nullopt;
-}
-
 Value AnimationParser::resolveValue(const Value& ref_obj, std::set<int>& visited) {
     if (!ref_obj.HasMember("property")) {
         throw std::runtime_error("Reference requires 'property' field");

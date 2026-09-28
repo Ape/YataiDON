@@ -43,6 +43,8 @@ int64_t mem_seek(void* opaque, int64_t offset, int whence) {
     MemReader* r = static_cast<MemReader*>(opaque);
     whence &= ~AVSEEK_FORCE;
     if (whence == AVSEEK_SIZE) return (int64_t)r->size;
+    if (whence != SEEK_SET && whence != SEEK_CUR && whence != SEEK_END)
+        return AVERROR(EINVAL);
     size_t base = whence == SEEK_CUR ? r->pos : whence == SEEK_END ? r->size : 0;
     int64_t target = (int64_t)base + offset;
     if (target < 0 || target > (int64_t)r->size) return AVERROR(EINVAL);
@@ -254,7 +256,7 @@ bool decode_nub(const fs::path& path, gen4::DecodedAudio& out) {
 
         // Cut the priming delay off the front and the padding off the end, so
         // sample zero of the result is sample zero of the song.
-        if (fact_delay > 0 && (size_t)fact_delay * out.channels < out.samples.size())
+        if (fact_delay > 0 && (size_t)fact_delay * out.channels <= out.samples.size())
             out.samples.erase(out.samples.begin(),
                               out.samples.begin() + (size_t)fact_delay * out.channels);
         if (fact_samples > 0 && (size_t)fact_samples * out.channels < out.samples.size())

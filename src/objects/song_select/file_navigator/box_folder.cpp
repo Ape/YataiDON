@@ -129,7 +129,7 @@ void FolderBox::load_textures() {
     t_folder_graphic = tex.get_texture("box/folder_graphic");
 }
 
-void FolderBox::refresh_scores(std::map<std::pair<std::string, std::string>, fs::path>& song_files) {
+void FolderBox::refresh_scores(const std::map<std::pair<std::string, std::string>, fs::path>& song_files) {
     (void)song_files;
     {
         std::lock_guard<std::mutex> lock(scan_cache_mutex);

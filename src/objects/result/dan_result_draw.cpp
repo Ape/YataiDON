@@ -92,7 +92,7 @@ DanResultDraw::DanResultDraw(const DanResultData& rd, int prev_arrival, int prev
 }
 
 void DanResultDraw::draw(const FrameState& s) {
-    if (!fn_draw.valid()) return;
+    if (!fn_draw.valid() || !script_manager.lua) return;
     sol::state& lua = *script_manager.lua;
     sol::table t = lua.create_table();
     t["now"]              = s.now;

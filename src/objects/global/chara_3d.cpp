@@ -321,8 +321,6 @@ Chara3D::Chara3D(std::string& model_name, bool mirror, bool use_skin_config) {
     fs::path anim_path  = resolve_skin_path("Models/animations.glb");
     load_part(model_path, anim_path);
 
-    model_valid = parts[0].meshCount > 0;
-
     fs::path face_dir = resolve_skin_path("Models/face");
     load_face_textures(face_dir);
 
@@ -348,8 +346,6 @@ Chara3D::Chara3D(std::string& head_name, std::string& body_name, bool mirror, bo
     fs::path anim_path = resolve_skin_path("Models/animations.glb");
     load_part(body_path, anim_path);
     load_part(head_path, anim_path, true);
-
-    model_valid = parts[0].meshCount > 0 && parts[1].meshCount > 0;
 
     fs::path face_dir = resolve_skin_path("Models/face");
     load_face_textures(face_dir);

@@ -29,16 +29,6 @@ namespace {
         return cache.get();
     }
 
-    OutlinedText* leaderboard_title_short() {
-        static std::unique_ptr<OutlinedText> cache;
-        static std::string cached_lang;
-        const std::string& lang = global_data.config->general.language;
-        if (lang != cached_lang) {
-            cache = build_leaderboard_title(tex.skin_config[SC::LEADERBOARD_TITLE_SHORT]);
-            cached_lang = lang;
-        }
-        return cache.get();
-    }
 }
 
 ScoreHistory::ScoreHistory(const std::array<std::optional<Score>, 5>& scores, double current_ms)
@@ -52,13 +42,10 @@ ScoreHistory::ScoreHistory(const std::array<std::optional<Score>, 5>& scores, do
         curr_index = 1 % (int)available.size();
 
     t_background_2 = tex.get_texture("leaderboard/background_2");
-    t_background = tex.get_texture("leaderboard/background");
     t_shinuchi_ura = tex.get_texture("leaderboard/shinuchi_ura");
     t_shinuchi = tex.get_texture("leaderboard/shinuchi");
     t_pts = tex.get_texture("leaderboard/pts");
     t_normal = tex.get_texture("leaderboard/normal");
-    t_normal_ura = tex.get_texture("leaderboard/normal_ura");
-    t_ura = tex.get_texture("leaderboard/ura");
     t_difficulty = tex.get_texture("leaderboard/difficulty");
     t_judge_good = tex.get_texture("leaderboard/judge_good");
     t_judge_ok = tex.get_texture("leaderboard/judge_ok");
@@ -131,43 +118,5 @@ void ScoreHistory::draw_long() {
                 tex.draw_texture(t_judge_num, {.frame = counter[i] - '0', .x = x, .y = y});
             }
         }
-    }
-}
-
-void ScoreHistory::draw_short() {
-    if (available.empty()) return;
-
-    const auto& [curr_diff, score] = available[curr_index];
-    float offset_y = tex.skin_config[SC::SCORE_INFO_BG_OFFSET].y;
-    float margin_w = tex.skin_config[SC::SCORE_INFO_COUNTER_MARGIN].width;
-
-    tex.draw_texture(t_background, {});
-    const SkinInfo& title_pos = tex.skin_config[SC::LEADERBOARD_TITLE_SHORT];
-    leaderboard_title_short()->draw({.x = title_pos.x, .y = title_pos.y});
-
-    ray::Color color = ray::BLACK;
-    if (curr_diff == (int)Difficulty::URA) {
-        tex.draw_texture(t_normal_ura, {});
-        tex.draw_texture(t_shinuchi_ura, {});
-        color = ray::WHITE;
-        tex.draw_texture(t_ura, {});
-    } else {
-        tex.draw_texture(t_normal, {});
-        tex.draw_texture(t_shinuchi, {});
-    }
-
-    tex.draw_texture(t_pts, {.color = color});
-    tex.draw_texture(t_pts, {.color = color, .y = offset_y});
-    tex.draw_texture(t_difficulty, {.frame = curr_diff});
-
-    std::string counter = std::to_string(score.score);
-    float total_width = (float)counter.size() * margin_w;
-    for (int i = 0; i < (int)counter.size(); i++) {
-        float x = -(total_width / 2.0f) + (float)i * margin_w;
-        tex.draw_texture(t_counter, {.color = color, .frame = counter[i] - '0', .x = x});
-    }
-    for (int i = 0; i < (int)counter.size(); i++) {
-        float x = -(total_width / 2.0f) + (float)i * margin_w;
-        tex.draw_texture(t_counter, {.color = ray::WHITE, .frame = counter[i] - '0', .x = x, .y = offset_y});
     }
 }

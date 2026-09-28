@@ -8,7 +8,7 @@ class ScoreCounter {
 private:
     int score;
     bool is_2p;
-    TextStretchAnimation* stretch;
+    TextStretchAnimation* stretch = nullptr;
 
     TextureObject* t_lane_score_cover = nullptr;
     TextureObject* t_score_number = nullptr;

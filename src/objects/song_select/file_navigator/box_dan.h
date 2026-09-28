@@ -8,8 +8,8 @@ class DanBox : public BaseBox {
 public:
     std::string dan_title;
     int dan_color = 0;
-    int dan_rank = -1;
-    int dan_index = -1;
+    int dan_rank = -1;   // -1 = unearned/not yet ranked
+    int dan_index = -1;  // -1 = unselected
     bool gaiden = false;
     std::vector<DanSongEntry> songs;
     std::vector<Exam> exams;

@@ -25,7 +25,7 @@ private:
     TextureObject* t_folder_background_folder_edge = nullptr;
     TextureObject* t_folder_background_folder = nullptr;
 public:
-    GenreBG(std::string& text_name, std::optional<ray::Color> color, TextureIndex texture_index, float distance);
+    GenreBG(const std::string& text_name, std::optional<ray::Color> color, TextureIndex texture_index, float distance);
     ~GenreBG() {
         if (shader_loaded) ray::UnloadShader(shader);
     }

@@ -2,7 +2,10 @@
 
 #include "../../libs/animation.h"
 #include "../../libs/texture.h"
+#include <array>
+#include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 class Combo {
@@ -10,7 +13,7 @@ private:
     int combo = 0;
     TextStretchAnimation* stretch = nullptr;
     std::vector<ray::Color> color;
-    std::unordered_map<int, int> glimmer_map;
+    std::array<int, 3> glimmer_map;
     int total_time;
     int cycle_time;
     std::vector<double> start_times;
@@ -21,7 +24,7 @@ private:
     TextureObject* t_combo = nullptr;
     TextureObject* t_combo_100 = nullptr;
 
-    void update_count(int combo);
+    void update_count(int new_combo);
 public:
     Combo() = default;
     Combo(int combo, double current_ms);

@@ -23,11 +23,11 @@ void DanTransition::update(double current_ms) {
     slide_in->update(current_ms);
 }
 
-bool DanTransition::is_started() {
+bool DanTransition::is_started() const {
     return started;
 }
 
-bool DanTransition::is_finished() {
+bool DanTransition::is_finished() const {
     return started && slide_in && slide_in->is_finished;
 }
 

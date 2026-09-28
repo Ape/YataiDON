@@ -50,7 +50,7 @@ void LoadingScreen::load_song_hashes() {
                 const std::string path(u8.begin(), u8.end());
 
                 std::error_code ec;
-                auto mtime = std::filesystem::last_write_time(songs[i], ec);
+                (void)std::filesystem::last_write_time(songs[i], ec);
                 if (ec) {
                     spdlog::error("Could not stat {}: {}", path, ec.message());
                     continue;

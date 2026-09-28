@@ -13,6 +13,12 @@
 #include <atomic>
 #include <thread>
 #include <mutex>
+#include <filesystem>
+#include <vector>
+#include <string>
+#include <optional>
+#include <memory>
+#include <utility>
 
 struct DanBoxData {
     fs::path                   json_path;

@@ -39,7 +39,7 @@ YellowBox::YellowBox()
     t_top          = tex.get_texture("yellow_box/yellow_box_top");
     t_center       = tex.get_texture("yellow_box/yellow_box_center");
 
-    bottom_y    = t_bottom_right->y[0];
+    bottom_y    = tex.skin_config[SC::YELLOW_BOX_BOTTOM].y;
     edge_height = t_bottom_right->height;
 }
 
@@ -54,6 +54,19 @@ void YellowBox::reset() {
     top_y_out    = (MoveAnimation*)tex.get_animation(16);
     center_h_out = (MoveAnimation*)tex.get_animation(17);
     fade_in      = (FadeAnimation*)tex.get_animation(18);
+
+    left_out->reset();
+    right_out->reset();
+    center_out->reset();
+    right_out_2->reset();
+    top_y_out->reset();
+    center_h_out->reset();
+
+    right_x       = right_out->attribute;
+    left_x        = left_out->attribute;
+    center_width  = center_out->attribute;
+    top_y         = top_y_out->attribute;
+    center_height = center_h_out->attribute;
 }
 
 void YellowBox::create_anim() {
