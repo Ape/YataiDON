@@ -1223,7 +1223,7 @@ void Player::check_kusudama(double current_ms, DrumType drum_type, const Note& b
         owner->kusudama_counter = KusudamaCounter(balloon.count.value());
         owner->kusudama_shared_hits = 0;
     }
-    if (background.has_value()) background->handle_balloon(PlayerNum(is_2p + 1));
+    if (background.has_value()) background->handle_kusudama(PlayerNum(is_2p + 1));
     total_drumroll++;
     score += 100;
     base_score_list.push_back(ScoreCounterAnimation(player_num, 100, is_2p));
