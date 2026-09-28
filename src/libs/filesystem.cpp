@@ -9,82 +9,40 @@
 #include <mutex>
 #include <unordered_set>
 #include <spdlog/spdlog.h>
-#ifndef _WIN32
-    #include <unistd.h>
-#endif
 
 #ifdef YATAIDON_PLATFORM_IOS
     #include "../platform/ios.h"
 #endif
 
 #ifdef _WIN32
-    #include <windows.h>
-#endif
-#ifdef __APPLE__
-    #include <mach-o/dyld.h>
+    #include "../platform/platform_windows.h"
+#elif defined(__APPLE__) && !defined(YATAIDON_PLATFORM_IOS)
+    #include "../platform/platform_macos.h"
+#elif defined(__ANDROID__)
+    #include "../platform/platform_android.h"
+#elif defined(__EMSCRIPTEN__)
+    #include "../platform/platform_emscripten.h"
+#else
+    #include "../platform/platform_linux.h"
 #endif
 
 void set_working_directory_to_executable() {
 #ifdef YATAIDON_PLATFORM_IOS
     ios_prepare_filesystem();
 #elif defined(__ANDROID__)
-    std::filesystem::path exe_dir("/sdcard/YataiDON");
-    std::error_code ec;
-    std::filesystem::create_directories(exe_dir, ec);
-    std::filesystem::current_path(exe_dir, ec);
-    if (ec) {
-        spdlog::error("Failed to set working directory to {}: {}", exe_dir.string(), ec.message());
-        return;
-    }
-    spdlog::info("Working directory set to: {}", exe_dir.string());
-#elif __EMSCRIPTEN__
-    spdlog::info("Emscripten: using virtual FS root as working directory");
+    android_get_working_directory();
+#elif defined(__EMSCRIPTEN__)
+    emscripten_get_working_directory();
 #elif _WIN32
-    wchar_t buffer[MAX_PATH];
-    DWORD n = GetModuleFileNameW(NULL, buffer, MAX_PATH);
-    if (n == 0 || n >= MAX_PATH) {
-        spdlog::error("Failed to get executable path (error {}), keeping current working directory", GetLastError());
-        return;
-    }
-    buffer[n] = L'\0';
-    std::filesystem::path exe_path(buffer);
-    std::filesystem::path exe_dir = exe_path.parent_path();
-    std::error_code ec;
-    std::filesystem::current_path(exe_dir, ec);
-    if (ec) {
-        spdlog::error("Failed to set working directory to {}: {}", exe_dir.string(), ec.message());
-        return;
-    }
-    spdlog::info("Working directory set to: {}", exe_dir.string());
-#elif __APPLE__
-    char buffer[PATH_MAX];
-    uint32_t size = sizeof(buffer);
-    if (_NSGetExecutablePath(buffer, &size) != 0) {
-        spdlog::error("Failed to get executable path: buffer too small");
-        return;
-    }
-    char resolved[PATH_MAX];
-    if (realpath(buffer, resolved) == nullptr) {
-        spdlog::error("Failed to resolve executable path");
-        return;
-    }
-    std::filesystem::path exe_dir = std::filesystem::path(resolved).parent_path();
-    std::error_code ec;
-    std::filesystem::current_path(exe_dir, ec);
-    if (ec) {
-        spdlog::error("Failed to set working directory to {}: {}", exe_dir.string(), ec.message());
-        return;
-    }
-    spdlog::info("Working directory set to: {}", exe_dir.string());
+    std::filesystem::path exe_dir = win32_get_executable_dir();
+#elif defined(__APPLE__) && !defined(YATAIDON_PLATFORM_IOS)
+    std::filesystem::path exe_dir = macos_get_executable_dir();
 #else
-    char buffer[PATH_MAX];
-    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
-    if (len == -1) {
-        spdlog::error("Failed to get executable path");
+    std::filesystem::path exe_dir = unix_get_executable_dir();
+#endif
+    if (exe_dir.empty()) {
         return;
     }
-    buffer[len] = '\0';
-    std::filesystem::path exe_dir = std::filesystem::path(buffer).parent_path();
     std::error_code ec;
     std::filesystem::current_path(exe_dir, ec);
     if (ec) {
@@ -92,7 +50,6 @@ void set_working_directory_to_executable() {
         return;
     }
     spdlog::info("Working directory set to: {}", exe_dir.string());
-#endif
 }
 
 static bool resolve_safe_extract_path(const fs::path& base_dir, const fs::path& canonical_base_dir,

@@ -87,17 +87,38 @@ include(cmake/codegen.cmake)
 
 ### Source files
 
+# Main source files (excluding platform-specific and optional)
 file(GLOB_RECURSE CppFiles src/*.cpp)
 file(GLOB_RECURSE HeaderFiles
     src/*.h
     src/*.hpp
 )
 
+# Exclude platform-specific and optional sources from main glob
 list(FILTER CppFiles EXCLUDE REGEX "/src/libs/optional/")
+list(FILTER CppFiles EXCLUDE REGEX "/src/platform/")
+
+# Platform-specific sources
+if(WIN32)
+    file(GLOB PLATFORM_SOURCES src/platform/*_windows.cpp)
+elseif(ANDROID)
+    file(GLOB PLATFORM_SOURCES src/platform/*_android.cpp)
+elseif(APPLE AND NOT IOS)
+    file(GLOB PLATFORM_SOURCES src/platform/*_macos.cpp)
+elseif(IOS)
+    file(GLOB PLATFORM_SOURCES src/platform/*_ios.mm)
+elseif(EMSCRIPTEN)
+    file(GLOB PLATFORM_SOURCES src/platform/*_emscripten.cpp)
+elseif(UNIX)
+    file(GLOB PLATFORM_SOURCES src/platform/*_linux.cpp)
+endif()
+
 if(SUPPORT_FUMEN)
   file(GLOB Gen4CppFiles src/libs/optional/*.cpp)
   list(APPEND CppFiles ${Gen4CppFiles})
 endif()
+
+list(APPEND CppFiles ${PLATFORM_SOURCES})
 
 message(STATUS "C++ files found: ${CppFiles}")
 

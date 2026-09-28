@@ -20,129 +20,20 @@
 #include <cstring>
 #include <exception>
 #include <vector>
-#ifndef _WIN32
-#include <unistd.h>
-#endif
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
 #include <cpptrace/cpptrace.hpp>
 #endif
 
 #ifdef _WIN32
-#include <windows.h>
-#include <dbghelp.h>
-
-// dbghelp is not reentrant/thread-safe; serialize entry so two threads
-// crashing concurrently don't call into it at the same time.
-static std::atomic_flag g_dbghelp_lock = ATOMIC_FLAG_INIT;
-
-static void win_write(const char* data, std::size_t len) {
-    HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
-    DWORD written = 0;
-    if (h != nullptr && h != INVALID_HANDLE_VALUE) WriteFile(h, data, static_cast<DWORD>(len), &written, nullptr);
-}
-static void win_write(const char* msg) { win_write(msg, strlen(msg)); }
-
-static void win_write_hex(std::uintptr_t value) {
-    char buf[2 + sizeof(value) * 2];
-    buf[0] = '0';
-    buf[1] = 'x';
-    for (std::size_t i = 0; i < sizeof(value) * 2; i++) {
-        int nibble = (value >> (4 * (sizeof(value) * 2 - 1 - i))) & 0xF;
-        buf[2 + i] = nibble < 10 ? char('0' + nibble) : char('a' + nibble - 10);
-    }
-    win_write(buf, sizeof(buf));
-}
-
-static void log_trace_from_context(CONTEXT* ctx) {
-    HANDLE process = GetCurrentProcess();
-    HANDLE thread  = GetCurrentThread();
-
-    while (g_dbghelp_lock.test_and_set(std::memory_order_acquire)) {}
-    struct DbghelpLockGuard {
-        ~DbghelpLockGuard() { g_dbghelp_lock.clear(std::memory_order_release); }
-    } dbghelp_lock_guard;
-
-    SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
-    const bool sym_initialized = SymInitialize(process, nullptr, TRUE);
-    struct SymCleanupGuard {
-        HANDLE process;
-        bool active;
-        ~SymCleanupGuard() { if (active) SymCleanup(process); }
-    } sym_cleanup_guard{process, sym_initialized};
-    if (!sym_initialized) {
-        win_write("SymInitialize failed; stack trace may lack symbols\n");
-    }
-
-    CONTEXT ctx_copy = *ctx;
-    STACKFRAME64 sf  = {};
-    sf.AddrPC.Mode      = AddrModeFlat;
-    sf.AddrStack.Mode   = AddrModeFlat;
-    sf.AddrFrame.Mode   = AddrModeFlat;
-#if defined(_M_X64)
-    sf.AddrPC.Offset    = ctx_copy.Rip;
-    sf.AddrStack.Offset = ctx_copy.Rsp;
-    sf.AddrFrame.Offset = ctx_copy.Rbp;
-    const DWORD machine_type = IMAGE_FILE_MACHINE_AMD64;
-#elif defined(_M_ARM64)
-    sf.AddrPC.Offset    = ctx_copy.Pc;
-    sf.AddrStack.Offset = ctx_copy.Sp;
-    sf.AddrFrame.Offset = ctx_copy.Fp;
-    const DWORD machine_type = IMAGE_FILE_MACHINE_ARM64;
-#elif defined(_M_IX86)
-    sf.AddrPC.Offset    = ctx_copy.Eip;
-    sf.AddrStack.Offset = ctx_copy.Esp;
-    sf.AddrFrame.Offset = ctx_copy.Ebp;
-    const DWORD machine_type = IMAGE_FILE_MACHINE_I386;
+#include "../platform/platform_windows.h"
+#elif defined(__APPLE__) && !defined(YATAIDON_PLATFORM_IOS)
+#include "../platform/platform_macos.h"
+#elif defined(__ANDROID__)
+#include "../platform/platform_android.h"
+#elif defined(__EMSCRIPTEN__)
+#include "../platform/platform_emscripten.h"
 #else
-    #error "Unsupported architecture for Windows stack walking"
-#endif
-
-    cpptrace::raw_trace raw;
-    try {
-        while (StackWalk64(
-            machine_type, process, thread, &sf, &ctx_copy,
-            nullptr, SymFunctionTableAccess64, SymGetModuleBase64, nullptr
-        )) {
-            if (sf.AddrPC.Offset == 0) break;
-            raw.frames.push_back(static_cast<cpptrace::frame_ptr>(sf.AddrPC.Offset));
-        }
-    } catch (...) {
-        win_write("(stack walk failed)\n");
-        return; // guards above still release the lock and SymCleanup
-    }
-
-    try {
-        auto resolved = raw.resolve();
-        std::ostringstream oss;
-        resolved.print(oss, false);
-        std::string trace = oss.str();
-        win_write("Stack trace:\n");
-        win_write(trace.data(), trace.size());
-        win_write("\n");
-    } catch (...) {
-        win_write("(stack trace resolution failed)\n");
-    }
-}
-
-static LONG WINAPI crash_exception_filter(EXCEPTION_POINTERS* ep) {
-    const char* exc_name = "Unknown exception";
-    switch (ep->ExceptionRecord->ExceptionCode) {
-        case EXCEPTION_ACCESS_VIOLATION:    exc_name = "Access violation"; break;
-        case EXCEPTION_STACK_OVERFLOW:      exc_name = "Stack overflow"; break;
-        case EXCEPTION_ILLEGAL_INSTRUCTION: exc_name = "Illegal instruction"; break;
-        case EXCEPTION_FLT_DIVIDE_BY_ZERO:  exc_name = "FP divide by zero"; break;
-        case EXCEPTION_INT_DIVIDE_BY_ZERO:  exc_name = "Int divide by zero"; break;
-        case EXCEPTION_ARRAY_BOUNDS_EXCEEDED: exc_name = "Array bounds exceeded"; break;
-    }
-    win_write("Crash: ");
-    win_write(exc_name);
-    win_write(" (code ");
-    win_write_hex(static_cast<std::uintptr_t>(ep->ExceptionRecord->ExceptionCode));
-    win_write(")\n");
-    log_trace_from_context(ep->ContextRecord);
-    std::_Exit(1);
-    return EXCEPTION_EXECUTE_HANDLER;
-}
+#include "../platform/platform_linux.h"
 #endif
 
 static void log_stacktrace() {
@@ -169,95 +60,19 @@ void handle_exception() {
     std::_Exit(1);
 }
 
-void signal_handler(int signal) {
-    if (signal == SIGINT) {
-        std::_Exit(0);
-    }
-}
-
-#ifndef _WIN32
-static void write_all(int fd, const char* buf, std::size_t len) {
-    while (len > 0) {
-        ssize_t n = write(fd, buf, len);
-        if (n > 0) {
-            buf += n;
-            len -= static_cast<std::size_t>(n);
-            continue;
-        }
-        if (n < 0 && errno == EINTR) continue;
-        break; // real error -- nothing signal-safe left to do about it
-    }
-}
-
-#define CRASH_WRITE_LIT(fd, lit) write_all((fd), (lit), sizeof(lit) - 1)
-
-static void write_hex(int fd, std::uintptr_t value) {
-    char buf[2 + sizeof(value) * 2];
-    buf[0] = '0';
-    buf[1] = 'x';
-    for (std::size_t i = 0; i < sizeof(value) * 2; i++) {
-        int nibble = (value >> (4 * (sizeof(value) * 2 - 1 - i))) & 0xF;
-        buf[2 + i] = nibble < 10 ? char('0' + nibble) : char('a' + nibble - 10);
-    }
-    write_all(fd, buf, sizeof(buf));
-}
-
-static void crash_signal_handler(int sig) {
-    switch (sig) {
-        case SIGSEGV: CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGSEGV (Segmentation fault)\n"); break;
-        case SIGABRT: CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGABRT (Abort)\n"); break;
-        case SIGFPE:  CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGFPE (Floating point exception)\n"); break;
-        case SIGILL:  CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGILL (Illegal instruction)\n"); break;
-        default:      CRASH_WRITE_LIT(STDERR_FILENO, "Unknown signal\n"); break;
-    }
-#if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
-    // Raw addresses only -- symbolizing (resolve()) allocates and is not
-    // signal-safe. Pipe these through addr2line/cpptrace offline.
-    cpptrace::frame_ptr frames[64];
-    std::size_t count = cpptrace::safe_generate_raw_trace(frames, 64);
-    for (std::size_t i = 0; i < count; i++) {
-        write_hex(STDERR_FILENO, frames[i]);
-        CRASH_WRITE_LIT(STDERR_FILENO, "\n");
-    }
-#endif
-    _exit(1);
-}
-#endif
-
 static void install_crash_handlers() {
     std::set_terminate(handle_exception);
 #ifdef _WIN32
     std::signal(SIGINT, signal_handler);
-    SetUnhandledExceptionFilter(crash_exception_filter);
+    win32_install_crash_handlers();
+#elif defined(__APPLE__) && !defined(YATAIDON_PLATFORM_IOS)
+    macos_install_crash_handlers();
+#elif defined(__ANDROID__)
+    android_install_crash_handlers();
+#elif defined(__EMSCRIPTEN__)
+    emscripten_install_crash_handlers();
 #else
-    // Run the crash handler on its own stack so a stack-overflow SIGSEGV
-    // (where the normal stack is exhausted) still gets caught. On modern
-    // glibc SIGSTKSZ is not a compile-time constant and is too small for
-    // spdlog formatting + cpptrace symbolisation, so enforce a floor.
-    static std::vector<char> altstack(std::max<std::size_t>(SIGSTKSZ, 64 * 1024));
-    stack_t ss{};
-    ss.ss_sp = altstack.data();
-    ss.ss_size = altstack.size();
-    ss.ss_flags = 0;
-    if (sigaltstack(&ss, nullptr) != 0) {
-        spdlog::warn("sigaltstack failed: {}", strerror(errno));
-    }
-
-    struct sigaction sa{};
-    sa.sa_handler = crash_signal_handler;
-    sa.sa_flags = SA_ONSTACK;
-    sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGSEGV, &sa, nullptr) != 0) spdlog::warn("sigaction(SIGSEGV) failed: {}", strerror(errno));
-    if (sigaction(SIGABRT, &sa, nullptr) != 0) spdlog::warn("sigaction(SIGABRT) failed: {}", strerror(errno));
-    if (sigaction(SIGFPE,  &sa, nullptr) != 0) spdlog::warn("sigaction(SIGFPE) failed: {}", strerror(errno));
-    if (sigaction(SIGILL,  &sa, nullptr) != 0) spdlog::warn("sigaction(SIGILL) failed: {}", strerror(errno));
-
-    // Use sigaction (not std::signal) for consistent restart/mask semantics
-    // with the crash handlers above.
-    struct sigaction sa_int{};
-    sa_int.sa_handler = signal_handler;
-    sigemptyset(&sa_int.sa_mask);
-    if (sigaction(SIGINT, &sa_int, nullptr) != 0) spdlog::warn("sigaction(SIGINT) failed: {}", strerror(errno));
+    unix_install_crash_handlers();
 #endif
 }
 

@@ -245,13 +245,7 @@ std::optional<Screens> GameScreen::global_keys() {
         return on_screen_end(Screens::SONG_SELECT);
     }
 
-    if (
-#ifdef YATAIDON_PLATFORM_IOS
-        check_key_pressed(global_data.config->keys.pause_key)
-#else
-        ray::IsKeyPressed(global_data.config->keys.pause_key)
-#endif
-    )
+    if (check_key_pressed(global_data.config->keys.pause_key))
         pause_song();
 
     return std::nullopt;

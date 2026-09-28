@@ -15,7 +15,7 @@
 #include <spdlog/spdlog.h>
 
 #ifdef _WIN32
-#include <windows.h>
+#include "platform/platform_windows.h"
 #endif
 
 
@@ -83,6 +83,14 @@ std::string test_encodings(const std::filesystem::path& file_path) {
     return "shift-jis";
 }
 
+inline std::filesystem::path get_proper_path(const std::string& path, const std::string& encoding, const std::filesystem::path& base_path) {
+    #ifdef _WIN32
+    return win32_path_from_encoded(path, encoding, base_path);
+    #else
+    return path;
+    #endif
+}
+
 TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int player_num)
     : file_path(path), start_ms(static_cast<double>(start_delay)), current_ms(static_cast<double>(start_delay)), player_num(player_num) {
 
@@ -123,18 +131,6 @@ TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int pla
     branch_m = std::deque<NoteList>();
     branch_e = std::deque<NoteList>();
     branch_n = std::deque<NoteList>();
-}
-
-fs::path convert_to_windows_path(fs::path parent_path, std::string path_str, const std::string& encoding) {
-    #ifdef _WIN32
-    int codepage = (encoding.find("utf-8") != std::string::npos) ? 65001 : 932;
-    int wlen = MultiByteToWideChar(codepage, 0, path_str.c_str(), -1, nullptr, 0);
-    std::wstring wide(wlen, 0);
-    MultiByteToWideChar(codepage, 0, path_str.c_str(), -1, wide.data(), wlen);
-    return parent_path / wide;
-    #else
-    return fs::path(path_str);
-    #endif
 }
 
 void TJAParser::get_metadata() {
@@ -193,11 +189,7 @@ void TJAParser::get_metadata() {
             else if (item.find("WAVE") == 0) {
                 std::string data_str = trim(split_after_colon(item));
 
-            #ifdef _WIN32
-                fs::path wave_path = convert_to_windows_path(file_path.parent_path(), data_str, encoding);
-            #else
-                fs::path wave_path = file_path.parent_path() / data_str;
-            #endif
+                fs::path wave_path = get_proper_path(data_str, encoding, file_path.parent_path());
                 metadata.wave = wave_path;
             }
             else if (item.find("OFFSET") == 0) {
@@ -232,11 +224,7 @@ void TJAParser::get_metadata() {
                     spdlog::warn("Invalid BGMOVIE value in TJA file: {}", file_path.string());
                     metadata.bgmovie = std::filesystem::path();
                 } else {
-                #ifdef _WIN32
-                    metadata.bgmovie = convert_to_windows_path(file_path.parent_path(), trim(data_str), encoding);
-                #else
-                    metadata.bgmovie = file_path.parent_path() / fs::path(trim(data_str));
-                #endif
+                metadata.bgmovie = get_proper_path(trim(data_str), encoding, file_path.parent_path());
                 }
             }
             else if (item.find("MOVIEOFFSET") == 0) {
@@ -257,11 +245,7 @@ void TJAParser::get_metadata() {
                 if (data_str.empty()) {
                     metadata.preimage = std::filesystem::path();
                 } else {
-                    #ifdef _WIN32
-                    metadata.preimage = convert_to_windows_path(file_path.parent_path(), trim(data_str), encoding);
-                    #else
-                    metadata.preimage = file_path.parent_path() / fs::path(trim(data_str));
-                    #endif
+                    metadata.preimage = get_proper_path(trim(data_str), encoding, file_path.parent_path());
                 }
             }
             else if (item.find("SCENEPRESET") == 0) {

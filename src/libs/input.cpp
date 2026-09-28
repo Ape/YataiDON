@@ -7,11 +7,11 @@
 #include <unordered_set>
 
 #ifdef _WIN32
-#define CloseWindow CloseWindow_WinAPI
-#define ShowCursor ShowCursor_WinAPI
-#include <windows.h>
-#undef CloseWindow
-#undef ShowCursor
+#include "../platform/platform_windows.h"
+#elif defined(__ANDROID__)
+#include "../platform/platform_android.h"
+#else
+#include "../platform/platform_linux.h"
 #endif
 
 
@@ -198,107 +198,6 @@ bool is_r_kat_pressed(PlayerNum player_num) {
     return a || b;
 }
 
-#ifdef _WIN32
-// Windows-specific key state checking using GetAsyncKeyState
-bool is_key_down_native(int raylib_key) {
-    int vk_code = 0;
-
-    // Handle letters (A-Z)
-    if (raylib_key >= 65 && raylib_key <= 90) {
-        vk_code = raylib_key;
-    }
-    // Handle numbers (0-9)
-    else if (raylib_key >= 48 && raylib_key <= 57) {
-        vk_code = raylib_key;
-    }
-    // Handle special keys
-    else {
-        switch (raylib_key) {
-            case 32: vk_code = VK_SPACE; break;
-            case 256: vk_code = VK_ESCAPE; break;
-            case 257: vk_code = VK_RETURN; break;
-            case 258: vk_code = VK_TAB; break;
-            case 259: vk_code = VK_BACK; break;
-            case 260: vk_code = VK_INSERT; break;
-            case 261: vk_code = VK_DELETE; break;
-            case 262: vk_code = VK_RIGHT; break;
-            case 263: vk_code = VK_LEFT; break;
-            case 264: vk_code = VK_DOWN; break;
-            case 265: vk_code = VK_UP; break;
-            case 266: vk_code = VK_PRIOR; break; // Page Up
-            case 267: vk_code = VK_NEXT; break;  // Page Down
-            case 268: vk_code = VK_HOME; break;
-            case 269: vk_code = VK_END; break;
-            case 280: vk_code = VK_CAPITAL; break;
-            case 281: vk_code = VK_SCROLL; break;
-            case 282: vk_code = VK_NUMLOCK; break;
-            case 283: vk_code = VK_SNAPSHOT; break; // Print Screen
-            case 284: vk_code = VK_PAUSE; break;
-            case 290: vk_code = VK_F1; break;
-            case 291: vk_code = VK_F2; break;
-            case 292: vk_code = VK_F3; break;
-            case 293: vk_code = VK_F4; break;
-            case 294: vk_code = VK_F5; break;
-            case 295: vk_code = VK_F6; break;
-            case 296: vk_code = VK_F7; break;
-            case 297: vk_code = VK_F8; break;
-            case 298: vk_code = VK_F9; break;
-            case 299: vk_code = VK_F10; break;
-            case 300: vk_code = VK_F11; break;
-            case 301: vk_code = VK_F12; break;
-            case 340: vk_code = VK_LSHIFT; break;
-            case 341: vk_code = VK_LCONTROL; break;
-            case 342: vk_code = VK_LMENU; break; // Left Alt
-            case 343: vk_code = VK_LWIN; break;
-            case 344: vk_code = VK_RSHIFT; break;
-            case 345: vk_code = VK_RCONTROL; break;
-            case 346: vk_code = VK_RMENU; break; // Right Alt
-            case 347: vk_code = VK_RWIN; break;
-            case 348: vk_code = VK_APPS; break;   // KB menu
-            // Punctuation
-            case 39:  vk_code = VK_OEM_7; break;  // '
-            case 44:  vk_code = VK_OEM_COMMA; break;
-            case 45:  vk_code = VK_OEM_MINUS; break;
-            case 46:  vk_code = VK_OEM_PERIOD; break;
-            case 47:  vk_code = VK_OEM_2; break;  // /
-            case 59:  vk_code = VK_OEM_1; break;  // ;
-            case 61:  vk_code = VK_OEM_PLUS; break; // =
-            case 91:  vk_code = VK_OEM_4; break;  // [
-            case 92:  vk_code = VK_OEM_5; break;  // backslash
-            case 93:  vk_code = VK_OEM_6; break;  // ]
-            case 96:  vk_code = VK_OEM_3; break;  // `
-            // Numpad
-            case 320: vk_code = VK_NUMPAD0; break;
-            case 321: vk_code = VK_NUMPAD1; break;
-            case 322: vk_code = VK_NUMPAD2; break;
-            case 323: vk_code = VK_NUMPAD3; break;
-            case 324: vk_code = VK_NUMPAD4; break;
-            case 325: vk_code = VK_NUMPAD5; break;
-            case 326: vk_code = VK_NUMPAD6; break;
-            case 327: vk_code = VK_NUMPAD7; break;
-            case 328: vk_code = VK_NUMPAD8; break;
-            case 329: vk_code = VK_NUMPAD9; break;
-            case 330: vk_code = VK_DECIMAL; break;
-            case 331: vk_code = VK_DIVIDE; break;
-            case 332: vk_code = VK_MULTIPLY; break;
-            case 333: vk_code = VK_SUBTRACT; break;
-            case 334: vk_code = VK_ADD; break;
-            case 335: vk_code = VK_RETURN; break; // numpad enter (Windows has no separate VK)
-            default: return false;
-        }
-    }
-
-    if (vk_code == 0) return false;
-
-    if (!ray::IsWindowFocused()) return false;
-
-    return (GetAsyncKeyState(vk_code) & 0x8000) != 0;
-}
-#endif
-
-// Drum is a circle centered at bottom-center of the virtual overlay (tex.screen_width x tex.screen_height).
-// Virtual center ≈ (screen_w/2, screen_h), radius ≈ 340px in virtual space.
-// Scale to actual screen using render_scale = min(sw/screen_w, sh/screen_h) — same as rendering.
 static int touch_quadrant_vkey(ray::Vector2 pos, int sw, int sh) {
     bool left = pos.x < sw / 2.0f;
     bool top  = pos.y < sh / 2.0f;
@@ -330,37 +229,11 @@ static int char_to_raylib_key(unsigned char c) {
 }
 
 static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
-#ifdef YATAIDON_PLATFORM_IOS
-    if (event->type == SDL_EVENT_WILL_ENTER_BACKGROUND) {
-        {
-            std::lock_guard<std::mutex> lock(input_mutex);
-            touch_id_to_vkey.clear();
-        }
-        touch_drum_pressed.store(false, std::memory_order_relaxed);
-        clear_input_buffers();
-        return true;
-    }
-#endif
     if (is_input_locked()) return 1;
 
-#if defined(__linux__) && !defined(PLATFORM_ANDROID)
-    if (event->type == SDL_EVENT_TEXT_INPUT && event->text.text) {
-        const bool* key_state = SDL_GetKeyboardState(nullptr);
-        std::lock_guard<std::mutex> lock(input_mutex);
-        for (const char* p = event->text.text; *p; p++) {
-            unsigned char c = (unsigned char)*p;
-            int key = char_to_raylib_key(c);
-            if (!key) continue;
-            SDL_Keycode keycode = (c >= 'A' && c <= 'Z') ? (c + 32) : c;
-            SDL_Keymod mod = SDL_KMOD_NONE;
-            SDL_Scancode sc = SDL_GetScancodeFromKey(keycode, &mod);
-            if (sc != SDL_SCANCODE_UNKNOWN && key_state && key_state[sc]) continue;
-            pressed_keys.insert(key);
-            released_keys.insert(key);
-        }
+    if (linux_handle_text_input(event, is_input_locked(), input_mutex, pressed_keys, released_keys)) {
         return 1;
     }
-#endif
 
     if (event->type == SDL_EVENT_KEY_DOWN &&
         event->key.scancode == SDL_SCANCODE_AC_BACK) {
@@ -386,12 +259,7 @@ static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
             ray::Vector2 pos = { event->tfinger.x * sw, event->tfinger.y * sh };
             int vkey = touch_quadrant_vkey(pos, sw, sh);
 #ifdef YATAIDON_PLATFORM_IOS
-            // The two top-center controls remain clear of landscape notches.
-            bool navigation = event->tfinger.y >= 0.025f && event->tfinger.y <= 0.125f;
-            if (navigation && event->tfinger.x >= 0.36f && event->tfinger.x <= 0.49f)
-                vkey = global_data.config->keys.back_key;
-            else if (navigation && event->tfinger.x >= 0.51f && event->tfinger.x <= 0.64f)
-                vkey = global_data.config->keys.pause_key;
+            vkey = ios_handle_touch_navigation(vkey, event->tfinger.x, event->tfinger.y);
 #endif
             touch_id_to_vkey[id] = vkey;
             touch_drum_pressed.store(true, std::memory_order_relaxed);
@@ -430,16 +298,7 @@ bool draw_touch_drum() {
         y_fix = drum_it->second->height * 0.5f * (1.0f - scale);
     global_tex.draw_texture(global_tex.get_texture("overlay/touch_drum"), {.scale=scale, .center=true, .y=y_fix, .fade=0.5f});
 #ifdef YATAIDON_PLATFORM_IOS
-    float sw = static_cast<float>(ray::GetScreenWidth());
-    float sh = static_cast<float>(ray::GetScreenHeight());
-    int font_size = std::max(16, static_cast<int>(sh * 0.04f));
-    const char* labels[] = {"Back", "Pause"};
-    for (int i = 0; i < 2; ++i) {
-        float x = sw * (0.36f + i * 0.15f);
-        ray::DrawRectangleRec({x, sh * 0.025f, sw * 0.13f, sh * 0.10f}, ray::Fade(ray::BLACK, 0.6f));
-        ray::DrawText(labels[i], static_cast<int>(x + (sw * 0.13f - ray::MeasureText(labels[i], font_size)) / 2),
-            static_cast<int>(sh * 0.075f - font_size / 2), font_size, ray::WHITE);
-    }
+    ios_draw_touch_navigation_labels(static_cast<float>(ray::GetScreenWidth()), static_cast<float>(ray::GetScreenHeight()));
 #endif
     return true;
 }
@@ -462,7 +321,7 @@ void poll_keyboard_once() {
 
 #ifdef _WIN32
     for (int key = 32; key < 349; key++) {
-        bool current_state  = is_key_down_native(key);
+        bool current_state  = win32_is_key_down_native(key);
         bool previous_state = previous_key_states[key];
         if (current_state  && !previous_state) local_pressed.push_back(key);
         if (!current_state && previous_state)  local_released.push_back(key);
@@ -603,7 +462,12 @@ void shutdown_sdl_joysticks() {
 }
 
 void android_set_keyboard_visible(bool visible) {
-#if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
+#if defined(__ANDROID__)
+    // On Android, this is handled by the platform-specific Java code
+    // The C++ side just signals the intent
+    (void)visible;
+#else
+    // On iOS and other platforms, use SDL directly
     int count = 0;
     SDL_Window** windows = SDL_GetWindows(&count);
     if (!windows || count == 0) return;
@@ -616,7 +480,5 @@ void android_set_keyboard_visible(bool visible) {
         SDL_StopTextInput(win);
         SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "0");
     }
-#else
-    (void)visible;
 #endif
 }

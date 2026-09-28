@@ -1,0 +1,40 @@
+#pragma once
+
+#ifndef YATAIDON_PLATFORM_WIN32_H
+#define YATAIDON_PLATFORM_WIN32_H
+
+#include <filesystem>
+#include <string>
+#include <optional>
+
+// Win32-specific platform services.
+
+// Converts a UTF-8 string to a filesystem::path using Windows APIs.
+// Handles both UTF-8 and ANSI codepages (CP932 for Japanese).
+std::filesystem::path win32_path_from_utf8(const std::string& utf8_str);
+
+// Converts a path string with a specific encoding to a filesystem::path.
+// encoding: "utf-8", "utf-8-sig", "shift-jis", etc.
+std::filesystem::path win32_path_from_encoded(const std::string& path_str, const std::string& encoding, const std::filesystem::path& base_path = {});
+
+// Gets the directory containing the current executable.
+std::filesystem::path win32_get_executable_dir();
+
+// Initializes Windows-specific crash handlers (SEH exception filter, dbghelp stack traces).
+void win32_install_crash_handlers();
+
+// Checks if a key is currently down using GetAsyncKeyState.
+// raylib_key: Raylib key code (KEY_A, KEY_SPACE, etc.)
+// Returns true if the key is currently pressed.
+bool win32_is_key_down_native(int raylib_key);
+
+// Converts a filesystem::path to a string suitable for Windows APIs (CP932 for Japanese).
+std::string win32_path_to_string(const std::filesystem::path& path);
+
+// Windows audio backend initialization functions.
+// Returns true if initialization succeeded.
+bool win32_init_portaudio_wdmks(double target_sample_rate, unsigned long buffer_size);
+bool win32_init_portaudio_mme(double target_sample_rate, unsigned long buffer_size);
+void win32_close_portaudio();
+
+#endif // YATAIDON_PLATFORM_WIN32_H

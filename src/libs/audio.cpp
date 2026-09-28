@@ -1,7 +1,15 @@
 #include "audio.h"
 #include "spdlog/spdlog.h"
 #ifdef YATAIDON_PLATFORM_IOS
-#include "../platform/ios.h"
+#include "platform/platform_ios.h"
+#endif
+#ifdef _WIN32
+#include "platform/platform_windows.h"
+#endif
+
+// Global iOS audio stream for platform access
+#ifdef YATAIDON_PLATFORM_IOS
+SDL_AudioStream* g_ios_audio_stream = nullptr;
 #endif
 #ifdef SUPPORT_FUMEN
 #include "optional/nus3bank.h"
@@ -585,66 +593,6 @@ bool AudioEngine::init_rtaudio_device(RtAudio::Api api, const char* label) {
 }
 #endif
 
-#ifdef _WIN32
-bool AudioEngine::init_portaudio_device(PaHostApiTypeId api, const char* label) {
-    PaError err = Pa_Initialize();
-    if (err != paNoError) {
-        spdlog::error("Failed to initialize PortAudio: {}", Pa_GetErrorText(err));
-        return false;
-    }
-
-    PaHostApiIndex host_index = Pa_HostApiTypeIdToHostApiIndex(api);
-    if (host_index < 0) {
-        spdlog::error("PortAudio host API {} not available", label);
-        Pa_Terminate();
-        return false;
-    }
-
-    const PaHostApiInfo* host_info = Pa_GetHostApiInfo(host_index);
-    if (!host_info || host_info->defaultOutputDevice == paNoDevice) {
-        spdlog::error("No output device found for PortAudio host API {}", label);
-        Pa_Terminate();
-        return false;
-    }
-
-    PaStreamParameters out_params{};
-    out_params.device                    = host_info->defaultOutputDevice;
-    out_params.channelCount              = 2;
-    out_params.sampleFormat              = paFloat32;
-    out_params.suggestedLatency          = Pa_GetDeviceInfo(out_params.device)->defaultLowOutputLatency;
-    out_params.hostApiSpecificStreamInfo = nullptr;
-
-    err = Pa_OpenStream(&pa_stream, nullptr, &out_params, target_sample_rate,
-                         static_cast<unsigned long>(buffer_size), paNoFlag,
-                         &AudioEngine::pa_stream_callback, this);
-    if (err != paNoError) {
-        spdlog::error("Failed to open {} stream: {}", label, Pa_GetErrorText(err));
-        Pa_Terminate();
-        return false;
-    }
-
-    err = Pa_StartStream(pa_stream);
-    if (err != paNoError) {
-        spdlog::error("Failed to start {} stream: {}", label, Pa_GetErrorText(err));
-        Pa_CloseStream(pa_stream);
-        pa_stream = nullptr;
-        Pa_Terminate();
-        return false;
-    }
-
-    is_ready = true;
-
-    const PaDeviceInfo* dev_info = Pa_GetDeviceInfo(out_params.device);
-    spdlog::info("Audio Device initialized successfully");
-    spdlog::info("    > Backend:       PortAudio | {}", label);
-    spdlog::info("    > Device:        {}", dev_info ? dev_info->name : "unknown");
-    spdlog::info("    > Format:        Float32");
-    spdlog::info("    > Channels:      2");
-    spdlog::info("    > Sample rate:   {} Hz", target_sample_rate);
-    spdlog::info("    > Buffer size:   {} frames (requested)", buffer_size);
-    return true;
-}
-#endif
 
 bool AudioEngine::init_sdl3_device() {
 #ifdef YATAIDON_PLATFORM_IOS
@@ -679,6 +627,10 @@ bool AudioEngine::init_sdl3_device() {
         }
         return false;
     }
+
+#ifdef YATAIDON_PLATFORM_IOS
+    g_ios_audio_stream = sdl_stream;
+#endif
 
     if (!SDL_ResumeAudioStreamDevice(sdl_stream)) {
         spdlog::error("Failed to start SDL audio stream: {}", SDL_GetError());
@@ -732,8 +684,8 @@ bool AudioEngine::init_audio_device(const fs::path& sounds_path, const AudioConf
 #endif
 #ifdef _WIN32
         switch (audio_config.device_type) {
-            case 9:  return init_portaudio_device(paWDMKS, "WDM-KS");
-            case 10: return init_portaudio_device(paMME,   "MME");
+            case 9:  return win32_init_portaudio_wdmks(target_sample_rate, buffer_size);
+            case 10: return win32_init_portaudio_mme(target_sample_rate, buffer_size);
             default: break;
         }
 #endif
@@ -758,7 +710,8 @@ void AudioEngine::close_audio_device() {
             SDL_QuitSubSystem(SDL_INIT_AUDIO);
             sdl_audio_subsystem_initialized = false;
         }
-#if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
+#if defined(__ANDROID__) || defined(YATAIDON_PLATFORM_IOS) || defined(__EMSCRIPTEN__) || defined(_WIN32)
+#else
         if (rt_audio != nullptr) {
             if (rt_audio->isStreamRunning()) rt_audio->stopStream();
             if (rt_audio->isStreamOpen()) rt_audio->closeStream();
@@ -767,12 +720,7 @@ void AudioEngine::close_audio_device() {
         }
 #endif
 #ifdef _WIN32
-        if (pa_stream != nullptr) {
-            Pa_StopStream(pa_stream);
-            Pa_CloseStream(pa_stream);
-            pa_stream = nullptr;
-            Pa_Terminate();
-        }
+        win32_close_portaudio();
 #endif
         is_ready = false;
 
@@ -796,16 +744,10 @@ float AudioEngine::get_master_volume() {
 
 std::string AudioEngine::path_to_string(const fs::path& path) const {
 #ifdef _WIN32
-    // Convert to ANSI codepage for Windows (CP932 for Japanese)
-    std::wstring wpath = path.wstring();
-    int size = WideCharToMultiByte(932, 0, wpath.c_str(), -1, nullptr, 0, nullptr, nullptr);
-    if (size > 0) {
-        std::string result(size - 1, '\0');
-        WideCharToMultiByte(932, 0, wpath.c_str(), -1, &result[0], size, nullptr, nullptr);
-        return result;
-    }
-#endif
+    return win32_path_to_string(path);
+#else
     return path.string();
+#endif
 }
 
 // A decoded buffer handed over as raw float PCM, resampled to the device rate
@@ -1686,13 +1628,3 @@ void AudioEngine::seek_music_stream(const std::string& name, float position) {
 }
 
 AudioEngine audio;
-
-#ifdef YATAIDON_PLATFORM_IOS
-void AudioEngine::suspend_ios_audio(bool suspended) {
-    if (!sdl_stream) return;
-    if (suspended) SDL_PauseAudioStreamDevice(sdl_stream);
-    else {
-        SDL_ResumeAudioStreamDevice(sdl_stream);
-    }
-}
-#endif

@@ -1,10 +1,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <rlgl.h>
-#if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
-#include <SDL3/SDL_main.h>
-#include <SDL3/SDL.h>
-#endif
 
 #include "libs/animation.h"
 #include "libs/audio.h"
@@ -17,6 +13,14 @@
 #include "libs/screen.h"
 #include "libs/script.h"
 #include "libs/song_parser.h"
+
+#ifdef _WIN32
+#include "platform/platform_windows.h"
+#elif defined(__ANDROID__)
+#include "platform/platform_android.h"
+#elif defined(__EMSCRIPTEN__)
+#include "platform/platform_emscripten.h"
+#endif
 
 #include "scenes/dan_result.h"
 #include "scenes/dan_select.h"
@@ -40,18 +44,6 @@
 #include "objects/global/debug_menu.h"
 #include "objects/global/fps_counter.h"
 
-#ifdef _WIN32
-    #define CloseWindow CloseWindow_WinAPI
-    #define ShowCursor ShowCursor_WinAPI
-    #include <windows.h>
-    #undef CloseWindow
-    #undef ShowCursor
-#endif
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten.h>
-#endif
-
 void draw_outer_border(int screen_width, int screen_height, ray::Color last_color) {
     DrawRectangle(-screen_width, 0, screen_width, screen_height, last_color);
     DrawRectangle(screen_width, 0, screen_width, screen_height, last_color);
@@ -68,18 +60,7 @@ void draw_outer_border(int screen_width, int screen_height, ray::Color last_colo
 
 static std::filesystem::path path_from_arg(const std::string& arg) {
 #ifdef _WIN32
-    if (arg.empty()) return {};
-    UINT cp = CP_UTF8;
-    int n = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS,
-                                arg.c_str(), -1, nullptr, 0);
-    if (n <= 0) {
-        cp = CP_ACP;
-        n = MultiByteToWideChar(CP_ACP, 0, arg.c_str(), -1, nullptr, 0);
-    }
-    if (n <= 1) return {};
-    std::wstring wide(static_cast<size_t>(n - 1), L'\0');
-    if (MultiByteToWideChar(cp, 0, arg.c_str(), -1, wide.data(), n) <= 0) return {};
-    return std::filesystem::path(wide);
+    return win32_path_from_utf8(arg);
 #else
     try {
         return std::filesystem::path(arg);
@@ -260,36 +241,18 @@ void reload_skin_screens() {
     populate_screens(g_loop->screens, g_loop->current_screen);
 }
 
-#ifdef YATAIDON_PLATFORM_IOS
-static bool SDLCALL ios_lifecycle_event(void*, SDL_Event* event) {
-    if (event->type == SDL_EVENT_WILL_ENTER_BACKGROUND) {
-        ios_set_suspended(true);
-        audio.suspend_ios_audio(true);
-        clear_input_buffers();
-    } else if (event->type == SDL_EVENT_DID_ENTER_FOREGROUND) {
-        clear_input_buffers();
-        ios_set_suspended(false);
-        audio.suspend_ios_audio(false);
-    }
-    return true;
-}
-#endif
-
 static void run_frame() {
     LoopState& L = *g_loop;
 
     g_frame_ms = get_current_ms();
 
     ray::PollInputEvents();
-#ifdef YATAIDON_PLATFORM_IOS
-    if (ios_is_suspended()) return;
-#endif
-#if defined(__EMSCRIPTEN__) || defined(YATAIDON_PLATFORM_IOS)
+#if defined(YATAIDON_PLATFORM_IOS)
+    if (ios_is_suspended_state()) return;
     poll_keyboard_once();
 #endif
     poll_touch_once();
 
-#ifndef YATAIDON_PLATFORM_IOS
     if (check_key_pressed(global_data.config->keys.fullscreen_key)) {
         ray::ToggleFullscreen();
         spdlog::info("Toggled fullscreen");
@@ -297,8 +260,6 @@ static void run_frame() {
         ray::ToggleBorderlessWindowed();
         spdlog::info("Toggled borderless windowed mode");
     }
-
-#endif
 
     L.camera = compute_camera2d(tex.screen_width, tex.screen_height);
     debug_menu.update(L.camera);
@@ -428,17 +389,8 @@ int main(int argc, char* argv[]) {
         flags |= ray::FLAG_VSYNC_HINT;
         spdlog::info("VSync enabled");
     }
-    #ifdef PLATFORM_ANDROID
-        SDL_SetHint(SDL_HINT_ANDROID_TRAP_BACK_BUTTON, "1");
-        SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
-    #endif
 #ifdef YATAIDON_PLATFORM_IOS
-    // UIKit owns the event loop. SDL_WaitEvent while minimized would prevent
-    // UIKit from delivering the foreground event that wakes the game again.
-    flags = ray::FLAG_VSYNC_HINT | ray::FLAG_WINDOW_ALWAYS_RUN;
-    SDL_SetHint(SDL_HINT_ORIENTATIONS, "LandscapeLeft LandscapeRight");
-    SDL_SetHint(SDL_HINT_AUDIO_CATEGORY, "playback");
-    SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "0");
+    ios_configure_window_flags(flags);
 #endif
     ray::SetConfigFlags(flags);
     ray::SetTraceLogLevel(ray::LOG_ERROR);
@@ -455,9 +407,14 @@ int main(int argc, char* argv[]) {
         scores_manager.player_2_data = *pd;
 
 #ifdef PLATFORM_ANDROID
-    network.check_and_install_android_update();
-    network.check_android_skin_updates();
+    android_check_and_install_update();
+    android_check_skin_updates();
 #endif
+
+#ifdef YATAIDON_PLATFORM_IOS
+    ios_initialize_after_window();
+#endif
+
     const bool net_ok = network.probe_online();
     if (net_ok && global_data.config->network.access_code.empty()) {
         std::string access_code = network.register_user(scores_manager.player_1_data.username);
@@ -564,30 +521,13 @@ int main(int argc, char* argv[]) {
 
     L.next_frame_time = std::chrono::steady_clock::now();
 #ifdef __EMSCRIPTEN__
-    emscripten_set_main_loop(run_frame, 0, 1);
+    return emscripten_run_main_loop(run_frame);
 #elif defined(YATAIDON_PLATFORM_IOS)
-    poll_touch_once();
-    SDL_AddEventWatch(ios_lifecycle_event, nullptr);
-    int window_count = 0;
-    SDL_Window** windows = SDL_GetWindows(&window_count);
-    if (!windows || window_count == 0) {
-        SDL_free(windows);
-        return 1;
-    }
-    bool registered = SDL_SetiOSAnimationCallback(windows[0], 1,
-        [](void*) { run_frame(); }, nullptr);
-    SDL_free(windows);
-    if (!registered) return 1;
-    // UIKit owns the loop. No background input thread may outlive main().
-    return 0;
+    return ios_run_main_loop(run_frame);
 #else
     input_thread = std::thread(input_polling_thread);
 
-#ifdef PLATFORM_ANDROID
-    while (!ray::WindowShouldClose()) {
-#else
     while (!ray::WindowShouldClose() && !check_key_pressed(global_data.config->keys.exit_key)) {
-#endif
         run_frame();
     }
 
