@@ -150,7 +150,9 @@ void Transition::draw_default(float total_offset) {
 void Transition::draw() {
     float total_offset = 0;
     if (is_second) total_offset = global_tex.skin_config[SC::TRANSITION_OFFSET].y;
-    if (dan_color >= 0) {
+    // the dan loading art (loading_dan/night, plaque) is optional: without it a dan course loads
+    // like any song
+    if (dan_color >= 0 && global_tex.has_texture("loading_dan/night")) {
         draw_dan(total_offset);
         return;
     }
