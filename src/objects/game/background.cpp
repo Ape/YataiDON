@@ -114,9 +114,9 @@ void Background::handle_drumroll(PlayerNum player_num) {
     }
 }
 
-void Background::handle_balloon(PlayerNum player_num) {
+void Background::handle_balloon(PlayerNum player_num, int remaining) {
     if (!fn_handle_balloon.valid()) return;
-    auto result = fn_handle_balloon(lua_object, static_cast<int>(player_num));
+    auto result = fn_handle_balloon(lua_object, static_cast<int>(player_num), remaining);
     if (!result.valid()) {
         sol::error err = result;
         spdlog::error("Error calling handle_balloon: {}", err.what());
