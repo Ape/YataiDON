@@ -12,9 +12,6 @@
 extern std::atomic<bool> input_thread_running;
 extern std::thread input_thread;
 
-extern std::mutex input_mutex;
-extern std::unordered_multiset<int> pressed_keys;
-extern std::unordered_multiset<int> released_keys;
 extern std::atomic<bool> touch_drum_pressed;
 
 void input_polling_thread();

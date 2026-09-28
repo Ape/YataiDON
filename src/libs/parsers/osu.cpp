@@ -195,11 +195,13 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
                 fs::path candidate = path.parent_path() / m[1].str();
                 std::string ext = candidate.extension().string();
                 std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
-                if (ext == ".mp4" || ext == ".avi" || ext == ".mkv" || ext == ".mov" || ext == ".flv")
+                if (ext == ".mp4" || ext == ".avi" || ext == ".mkv" || ext == ".mov" || ext == ".flv") {
                     metadata.bgmovie = candidate;
-                else if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp")
+                    break;
+                } else if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp") {
                     metadata.preimage = candidate;
-                break;
+                    break;
+                }
             }
         }
     }
@@ -298,7 +300,7 @@ NoteList& OsuParser::get_notes() {
             }
             double slider_time = slider_len / (slider_multiplier * 100.0 * sv) * beat_len_at * slides;
 
-            bool big = (hit_sound == 4 || hit_sound == 6 || hit_sound == 12);
+            bool big = (hit_sound & 4) != 0;        // finish bit -> big roll head
             NoteType head_type = big ? NoteType::ROLL_HEAD_L : NoteType::ROLL_HEAD;
 
             Note head;

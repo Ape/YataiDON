@@ -17,6 +17,8 @@ inline ray::Shader load_shader(const char* vs_path, const char* fs_path) {
         if (!p) return "";
         std::string s(p);
         const std::string prefix = "shader/";
+        const std::string es_prefix = "shader/es/";
+        if (s.compare(0, es_prefix.size(), es_prefix) == 0) return s;
         if (s.size() >= prefix.size() && s.substr(0, prefix.size()) == prefix)
             s.insert(prefix.size(), "es/");
         return s;
@@ -29,8 +31,9 @@ inline ray::Shader load_shader(const char* vs_path, const char* fs_path) {
         Sint64 size = SDL_GetIOSize(io);
         if (size <= 0) { SDL_CloseIO(io); return ""; }
         std::string buf(static_cast<size_t>(size), '\0');
-        SDL_ReadIO(io, buf.data(), static_cast<size_t>(size));
+        size_t got = SDL_ReadIO(io, buf.data(), static_cast<size_t>(size));
         SDL_CloseIO(io);
+        if (got != static_cast<size_t>(size)) return "";
         return buf;
     };
 
@@ -48,13 +51,16 @@ inline ray::Shader load_shader(const char* vs_path, const char* fs_path) {
         if (!p) return "";
         std::string s(p);
         const std::string prefix = "shader/";
+        const std::string es_prefix = "shader/es/";
+        if (s.compare(0, es_prefix.size(), es_prefix) == 0) return s;
         if (s.size() >= prefix.size() && s.substr(0, prefix.size()) == prefix)
             s.insert(prefix.size(), "es/");
         return s;
     };
     std::string vs_repath = vs_path ? repath(vs_path) : std::string{};
     std::string fs_repath = fs_path ? repath(fs_path) : std::string{};
-    return ray::LoadShader(vs_repath.c_str(), fs_repath.c_str());
+    return ray::LoadShader(vs_path ? vs_repath.c_str() : nullptr,
+                           fs_path ? fs_repath.c_str() : nullptr);
 #endif
     return ray::LoadShader(vs_path, fs_path);
 }

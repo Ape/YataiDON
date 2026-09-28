@@ -293,7 +293,20 @@ std::vector<uint8_t> gzip_inflate(const uint8_t* data, size_t len) {
         spdlog::warn("gen4: inflate incomplete/failed ({})", status);
         return {};
     }
+    if (isize != 0 && stream.total_out != isize) {
+        spdlog::warn("gen4: inflate size mismatch (got {}, isize {}), truncated/corrupt archive",
+                     stream.total_out, isize);
+        return {};
+    }
     out.resize(stream.total_out);
+
+    uint32_t crc_stored = (uint32_t)data[len - 8] | ((uint32_t)data[len - 7] << 8) |
+                          ((uint32_t)data[len - 6] << 16) | ((uint32_t)data[len - 5] << 24);
+    uint32_t crc_actual = (uint32_t)mz_crc32(MZ_CRC32_INIT, out.data(), out.size());
+    if (crc_actual != crc_stored) {
+        spdlog::warn("gen4: gzip CRC32 mismatch, truncated/corrupt archive");
+        return {};
+    }
     return out;
 }
 
@@ -575,14 +588,23 @@ const Library* library_for(const fs::path& path) {
 
     static std::map<std::string, Library> cache;
     static std::mutex cache_mutex;
+    const std::string key = root.string();
+
+    {
+        std::lock_guard<std::mutex> lock(cache_mutex);
+        auto it = cache.find(key);
+        if (it != cache.end()) return &it->second;
+    }
+
+    // Load outside the lock: file I/O, decryption, inflation and JSON
+    // parsing shouldn't serialize callers that only need a cache hit.
+    Library lib;
+    if (!lib.load(root)) return nullptr;
 
     std::lock_guard<std::mutex> lock(cache_mutex);
-    auto it = cache.find(root.string());
-    if (it == cache.end()) {
-        Library lib;
-        if (!lib.load(root)) return nullptr;
-        it = cache.emplace(root.string(), std::move(lib)).first;
-    }
+    auto it = cache.find(key);
+    if (it == cache.end())
+        it = cache.emplace(key, std::move(lib)).first;
     return &it->second;
 }
 

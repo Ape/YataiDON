@@ -29,6 +29,7 @@ bool parse_config_version(const std::string& name, int& version, int& revision) 
 fs::path newest_config(const fs::path& data_root) {
     fs::path best;
     int best_ver = -1;
+    int best_rev = -1;
     uintmax_t best_size = 0;
     std::error_code ec;
     for (const auto& entry : fs::directory_iterator(data_root / "config", ec)) {
@@ -37,8 +38,10 @@ fs::path newest_config(const fs::path& data_root) {
         if (!parse_config_version(entry.path().filename().string(), ver, rev)) continue;
         uintmax_t size = fs::file_size(entry.path() / "musicinfo.xml", ec);
         if (ec) { ec.clear(); continue; }
-        if (ver > best_ver || (ver == best_ver && size > best_size)) {
+        if (ver > best_ver ||
+            (ver == best_ver && (rev > best_rev || (rev == best_rev && size > best_size)))) {
             best_ver  = ver;
+            best_rev  = rev;
             best_size = size;
             best = entry.path();
         }
@@ -230,8 +233,8 @@ fs::path Library::chart_path(const std::string& id, int difficulty) const {
 
 bool Library::has_difficulty(const std::string& id, int difficulty) const {
     if (difficulty < 0 || difficulty > 4) return false;
-    if (const SongEntry* e = find(id); e && e->charts_known)
-        return e->has_chart[difficulty];
+    if (const SongEntry* e = find(id); e && e->charts_known && e->has_chart[difficulty])
+        return true;
     std::error_code ec;
     fs::path p = chart_path(id, difficulty);
     return !p.empty() && fs::exists(p, ec);
@@ -319,7 +322,7 @@ const Library* library_for(const fs::path& path) {
     auto it = libraries.find(root);
     if (it == libraries.end()) {
         Library lib;
-        lib.load(root);
+        if (!lib.load(root)) return nullptr;  // don't cache a failed load; allow retry
         it = libraries.emplace(root, std::move(lib)).first;
     }
     return it->second.loaded() ? &it->second : nullptr;

@@ -8,7 +8,7 @@ class DanTransition {
 private:
     MoveAnimation* slide_in = nullptr;
     bool started;
-    double start_ms = 0;
+    double start_ms = -1.0;
     double last_ms  = 0;
     TextureObject* t_background = nullptr;
 public:

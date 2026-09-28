@@ -124,6 +124,7 @@ void PracticeMenu::open_dialog(Dialog which, bool auto_on) {
     }
 
     int fs = (int)(tex.skin_config[SC::SONG_BOX_NAME].font_size);
+    if (fs <= 0) fs = 1;
     dlg_title = std::make_unique<OutlinedText>(skin_text_for(title, lang), fs, ray::WHITE, ray::BLACK, false);
     dlg_left  = std::make_unique<OutlinedText>(skin_text_for(left, lang),  fs, ray::WHITE, ray::BLACK, false);
     dlg_right = std::make_unique<OutlinedText>(skin_text_for(right, lang), fs, ray::WHITE, ray::BLACK, false);

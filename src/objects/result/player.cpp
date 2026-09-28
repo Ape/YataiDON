@@ -158,7 +158,7 @@ void ResultPlayer::update_score_animation(double current_ms, bool is_skipped) {
 }
 
 void ResultPlayer::update(double current_ms, bool fade_in_finished, bool is_skipped) {
-    if (!score_delay.has_value()) {
+    if (!score_delay.has_value() && lua_object.valid()) {
         sol::optional<bool> lua_started = lua_object["fade_in_started"];
         if (lua_started && lua_started.value()) {
             score_delay = current_ms;

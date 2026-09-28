@@ -134,8 +134,9 @@ void EntryPlayer::handle_input() {
         }
         if (costume_menu->confirmed) {
             int player_id = get_player_id(player_num);
+            bool parsed = false;
             if (auto pd = scores_manager.get_player_data(player_id)) {
-                bool parsed = true;
+                parsed = true;
                 try {
                     if (costume_menu->get_pick_stage() == CostumePickStage::BODY) {
                         pd->chara_head_index = costume_menu->get_picked_head_id();
@@ -164,8 +165,10 @@ void EntryPlayer::handle_input() {
             costume_menu.reset();
             chara_index = -1;
             chara_pick_stage = CostumePickStage::NONE;
-            audio.play_sound("costume_select_" + std::to_string((int)player_num) + "p", VolumePreset::VOICE);
-            chara->set_anim(AnimIndex::DON_BALLOON_SUCCESS);
+            if (parsed) {
+                audio.play_sound("costume_select_" + std::to_string((int)player_num) + "p", VolumePreset::VOICE);
+                chara->set_anim(AnimIndex::DON_BALLOON_SUCCESS);
+            }
         }
         return;
     }

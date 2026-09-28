@@ -1,4 +1,5 @@
 #include "audio.h"
+#include "spdlog/spdlog.h"
 #ifdef YATAIDON_PLATFORM_IOS
 #include "../platform/ios.h"
 #endif
@@ -672,6 +673,10 @@ bool AudioEngine::init_sdl3_device() {
                                             AudioEngine::sdl_audio_callback, this);
     if (!sdl_stream) {
         spdlog::error("Failed to open SDL audio device stream: {}", SDL_GetError());
+        if (sdl_audio_subsystem_initialized) {
+            SDL_QuitSubSystem(SDL_INIT_AUDIO);
+            sdl_audio_subsystem_initialized = false;
+        }
         return false;
     }
 
@@ -679,6 +684,10 @@ bool AudioEngine::init_sdl3_device() {
         spdlog::error("Failed to start SDL audio stream: {}", SDL_GetError());
         SDL_DestroyAudioStream(sdl_stream);
         sdl_stream = nullptr;
+        if (sdl_audio_subsystem_initialized) {
+            SDL_QuitSubSystem(SDL_INIT_AUDIO);
+            sdl_audio_subsystem_initialized = false;
+        }
         return false;
     }
 
@@ -698,6 +707,8 @@ bool AudioEngine::init_sdl3_device() {
 }
 
 bool AudioEngine::init_audio_device(const fs::path& sounds_path, const AudioConfig& audio_config, const VolumeConfig& volume_presets) {
+    if (is_ready) close_audio_device();
+
     this->sounds_path = sounds_path;
     this->target_sample_rate = audio_config.sample_rate <= 0 ? 44100.0 : audio_config.sample_rate;
     this->buffer_size = audio_config.buffer_size;
@@ -1473,7 +1484,7 @@ std::string AudioEngine::load_music_stream_memory(
         music& stored = music_streams[name] = std::move(mus);  // reference into the map – stable address
 
         // vio_cursor now lives inside the map entry and will never move again.
-        stored.vio_cursor = VirtualFile{ stored.memory_buffer.get(), 0 };
+        stored.vio_cursor = VirtualFile{ stored.memory_buffer, 0 };
 
         SF_VIRTUAL_IO vio{};
         vio.get_filelen = vf_get_filelen;
@@ -1554,7 +1565,10 @@ float AudioEngine::get_music_time_length(const std::string& name) const {
     if (it != music_streams.end()) {
         if (it->second.pcm_data)
             return static_cast<float>(it->second.pcm_total_frames) / static_cast<float>(target_sample_rate);
-        return static_cast<float>(it->second.file_info.frames) / static_cast<float>(target_sample_rate);
+        // file_info.frames/samplerate are in the source file's own rate --
+        // pcm_data above is already resampled to target_sample_rate, but
+        // this file-backed stream is not.
+        return static_cast<float>(it->second.file_info.frames) / static_cast<float>(it->second.file_info.samplerate);
     }
     spdlog::warn("Music stream {} not found", name);
     return 0.0f;

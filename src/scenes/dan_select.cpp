@@ -31,7 +31,10 @@ int DanNavigator::total_notes_for(const std::vector<DanSongEntry>& songs) {
             for (auto& sec : bm)
                 for (const Note& n : sec.notes)
                     if (n.type >= NoteType::DON && n.type <= NoteType::KAT_L) total++;
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            spdlog::warn("DanNavigator::total_notes_for: failed to parse '{}': {}",
+                         entry.song_path.string(), e.what());
+        }
     }
     return total;
 }

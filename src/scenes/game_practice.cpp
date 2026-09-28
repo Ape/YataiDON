@@ -328,7 +328,7 @@ std::optional<Screens> PracticeGameScreen::global_keys_practice() {
             pause_song_practice();
             if (other_don) pause_don_anim->start();
             if (other_kat) pause_kat_anim->start();
-            practice_player->spawn_scrobble_effect(DrumType::DON, Side::LEFT, other_idx);
+            if (practice_player) practice_player->spawn_scrobble_effect(DrumType::DON, Side::LEFT, other_idx);
         }
     } else {
         if (menu.open) {
@@ -440,7 +440,7 @@ std::optional<Screens> PracticeGameScreen::global_keys_practice() {
         if (is_l_don_pressed(global_data.player_num) || is_r_don_pressed(global_data.player_num)) {
             pause_song_practice();
             resume_don_anim->start();
-            practice_player->spawn_scrobble_effect(DrumType::DON, Side::LEFT, player_idx);
+            if (practice_player) practice_player->spawn_scrobble_effect(DrumType::DON, Side::LEFT, player_idx);
         }
 
         bool speed_down = is_l_kat_pressed(other_player);
@@ -448,7 +448,7 @@ std::optional<Screens> PracticeGameScreen::global_keys_practice() {
         if (paused && (speed_down || speed_up)) {
             audio.play_sound("kat", VolumePreset::SOUND);
             if (speed_down) { song_speed = std::max(1, song_speed - 1); speed_l_kat_anim->start(); }
-            if (speed_up)   { song_speed++;                              speed_r_kat_anim->start(); }
+            if (speed_up)   { song_speed = std::min(99, song_speed + 1); speed_r_kat_anim->start(); }
             if (song_music.has_value())
                 audio.set_sound_pitch(song_music.value(), song_speed / 10.0f);
         }
@@ -557,7 +557,12 @@ void PracticeGameScreen::draw_drumroll_scrobble(const Note& head, double current
     // Find corresponding TAIL
     const Note* tail = nullptr;
     for (const auto& n : scrobble_note_list) {
-        if (n.type == NoteType::TAIL && n.index > head.index) { tail = &n; break; }
+        // Match by hit_ms, not index: scrobble_note_list is built by
+        // concatenating whichever branch section was chosen per checkpoint
+        // (each with its own locally-numbered indices) and then re-sorting
+        // by hit_ms, so index is not comparable across checkpoint/branch
+        // boundaries. hit_ms ordering is what the list is actually sorted by.
+        if (n.type == NoteType::TAIL && n.hit_ms > head.hit_ms) { tail = &n; break; }
     }
     if (!tail) return;
     float end_pos = get_scrobble_position_x(*tail, current_ms);
@@ -584,7 +589,7 @@ void PracticeGameScreen::draw_balloon_scrobble(const Note& head, double current_
     float start_pos = get_scrobble_position_x(head, current_ms);
     const Note* tail = nullptr;
     for (const auto& n : scrobble_note_list) {
-        if (n.type == NoteType::TAIL && n.index > head.index) { tail = &n; break; }
+        if (n.type == NoteType::TAIL && n.hit_ms > head.hit_ms) { tail = &n; break; }
     }
     if (!tail) return;
     float end_pos   = get_scrobble_position_x(*tail, current_ms);

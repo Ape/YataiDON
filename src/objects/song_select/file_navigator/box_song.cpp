@@ -234,6 +234,7 @@ void SongBox::load_text() {
     name_black = make_unique<OutlinedText>(text_name, (int)font_size, ray::WHITE, ray::BLACK, true, name_outline);
     bpm_text = make_unique<OutlinedText>("BPM\n" + std::to_string(static_cast<int>(parser.metadata.bpm)), tex.skin_config[SC::SONG_BOX_BPM].font_size, ray::WHITE, ray::BLACK, false);
     if (exists(parser.metadata.preimage)) {
+        if (preimage.has_value()) ray::UnloadTexture(preimage.value());
         preimage = ray::LoadTexture(parser.metadata.preimage.string().c_str());
         ray::GenTextureMipmaps(&preimage.value());
         ray::SetTextureFilter(preimage.value(), ray::TEXTURE_FILTER_TRILINEAR);
@@ -261,10 +262,10 @@ void SongBox::update(double current_time) {
     }
 
     if (!is_bank && yellow_box.has_value() && (yellow_box->left_out != nullptr) && yellow_box->left_out->is_finished && fs::exists(parser.metadata.wave) && !music_playing) {
-        music_playing = true;
-        audio.stop_sound("bgm");
         audio.load_music_stream(parser.metadata.wave, "preview");
         if (audio.is_music_stream_valid("preview")) {
+            music_playing = true;
+            audio.stop_sound("bgm");
             audio.play_music_stream("preview", VolumePreset::MUSIC);
             audio.seek_music_stream("preview", parser.metadata.demostart);
         }
@@ -275,13 +276,13 @@ void SongBox::update(double current_time) {
         yellow_box->left_out->is_finished && !music_playing) {
         auto state = std::move(preview_load);
         if (state->ok) {
-            music_playing = true;
-            audio.stop_sound("bgm");
             float demo_start = state->pcm.preview_ms > 0
                              ? state->pcm.preview_ms / 1000.0f
                              : parser.metadata.demostart;
             audio.load_music_stream_prepared(std::move(state->pcm), "preview");
             if (audio.is_music_stream_valid("preview")) {
+                music_playing = true;
+                audio.stop_sound("bgm");
                 audio.play_music_stream("preview", VolumePreset::MUSIC);
                 audio.seek_music_stream("preview", demo_start);
             }
@@ -399,6 +400,7 @@ void SongBox::draw_box_crown(float x, float y, double fade_val) {
 }
 
 void SongBox::draw_diff_crown(int diff, float x, float y, double fade_val) {
+    if (diff < 0 || diff >= (int)scores.size()) return;
     auto draw_one = [&](const std::optional<Score>& s, float px) {
         if (!s.has_value()) return;
         if      (s->crown == Crown::DFC)   tex.draw_texture(t_s_crown_dfc,   {.x=px, .y=y, .fade=fade_val});

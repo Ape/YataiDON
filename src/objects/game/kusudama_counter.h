@@ -6,9 +6,9 @@
 
 class KusudamaCounter {
 private:
-    int balloon_total;
-    int balloon_count;
-    bool is_popped;
+    int balloon_total = 0;
+    int balloon_count = 0;
+    bool is_popped = false;
     TextureObject* t_kusudama = nullptr;
     TextureObject* t_renda = nullptr;
     TextureObject* t_counter = nullptr;

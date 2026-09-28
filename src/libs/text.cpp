@@ -84,7 +84,10 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
     int alt_count = 0;
     ray::GlyphInfo* ag = ray::LoadFontData(font_data.data(), (int)font_data.size(), font_size,
                                            alts.data(), (int)alts.size(), ray::FONT_DEFAULT, &alt_count);
-    if (!ag) return true;
+    if (!ag) {
+        for (int cp : missing) entry.codepoints.erase(cp);
+        return true;
+    }
     std::vector<bool> assigned(alts.size(), false);
     for (int i = 0; i < alt_count; i++) {
         bool used = false;
@@ -100,6 +103,9 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
         if (!used) ray::UnloadImage(ag[i].image);
     }
     RL_FREE(ag);
+    // Any alt LoadFontData silently dropped never got assigned; retry those too.
+    for (size_t k = 0; k < alts.size(); k++)
+        if (!assigned[k]) entry.codepoints.erase(missing[k]);
     return true;
 }
 
@@ -681,9 +687,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(
         }
 
         if (pass == 0) {
-            ray::ImageDrawImagePro(&img, outline_img,
-                                  {0, 0, (float)img_w, (float)img_h},
-                                  {0, 0, (float)img_w, (float)img_h}, {0, 0}, 0.0f, ray::WHITE);
+            blit_over(&img, outline_img, 0, 0);
             ray::UnloadImage(outline_img);
         }
     }

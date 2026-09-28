@@ -47,6 +47,8 @@ void Box::set_positions(float x, float y) {
     static_right = right_x;
     this->y_pos = y;
     this->static_y = y;
+    moving_left = moving_right = moving_up = moving_down = false;
+    move->reset();
 }
 
 void Box::update(double current_ms, bool is_selected) {
@@ -83,7 +85,7 @@ void Box::update(double current_ms, bool is_selected) {
 }
 
 void Box::move_left() {
-    if (!move->is_started) {
+    if (!move->is_started || move->is_finished) {
         move->start();
     }
     moving_right = moving_up = moving_down = false;
@@ -91,7 +93,7 @@ void Box::move_left() {
 }
 
 void Box::move_right() {
-    if (!move->is_started) {
+    if (!move->is_started || move->is_finished) {
         move->start();
     }
     moving_left = moving_up = moving_down = false;
@@ -99,7 +101,7 @@ void Box::move_right() {
 }
 
 void Box::move_up() {
-    if (!move->is_started) {
+    if (!move->is_started || move->is_finished) {
         move->start();
     }
     moving_left = moving_right = moving_down = false;
@@ -107,7 +109,7 @@ void Box::move_up() {
 }
 
 void Box::move_down() {
-    if (!move->is_started) {
+    if (!move->is_started || move->is_finished) {
         move->start();
     }
     moving_left = moving_right = moving_up = false;

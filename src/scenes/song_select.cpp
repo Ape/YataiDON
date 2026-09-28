@@ -11,7 +11,10 @@ void SongSelectScreen::on_screen_start() {
     audio.play_sound("bgm", VolumePreset::MUSIC);
     audio.play_sound("voice_enter", VolumePreset::VOICE);
 
-    diff_fade_out = (FadeAnimation*)tex.get_animation(2);
+    diff_fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(2));
+    if (!diff_fade_out) {
+        throw std::runtime_error("SongSelectScreen: animation 2 is not a FadeAnimation");
+    }
     script = std::make_unique<SongSelectScript>();
     t_song_num_bg = tex.get_texture("global/song_num_bg");
     navigator.script = script.get();
@@ -156,7 +159,7 @@ std::optional<Screens> SongSelectScreen::start_replay(const ReplayData& replay) 
         return std::nullopt;
     }
 
-    SessionData& session_data = global_data.session_data[(int)PlayerNum::P1];
+    SessionData& session_data = global_data.session_data[(int)global_data.player_num];
     session_data.selected_song = *song_path;
     session_data.selected_difficulty = replay.difficulty;
     session_data.song_hash = replay.hash;
@@ -171,7 +174,6 @@ std::optional<Screens> SongSelectScreen::start_replay(const ReplayData& replay) 
     session_data.replay_chara_body_index = replay.player_data.chara_body_index;
     session_data.replay_chara_cos_index = replay.player_data.chara_cos_index;
     session_data.replay_chara_is_costume = replay.player_data.chara_is_costume;
-    global_data.player_num = PlayerNum::P1;
     return on_screen_end(Screens::GAME);
 }
 

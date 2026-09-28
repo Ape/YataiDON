@@ -12,6 +12,8 @@ class AttractScene : public LuaScript {
 public:
     AttractScene();
     ~AttractScene();
+    AttractScene(const AttractScene&) = delete;
+    AttractScene& operator=(const AttractScene&) = delete;
     void update(double current_ms);
     void draw();
     bool is_finished();

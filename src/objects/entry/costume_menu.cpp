@@ -42,7 +42,9 @@ void CostumeMenu::load_costume_icons(const std::string& subdir, const std::strin
     for (auto& e : fs::directory_iterator(dir)) {
         if (e.path().extension() == ".png") {
             try { entries.push_back({std::stoi(e.path().stem().string()), e.path()}); }
-            catch (...) {}
+            catch (const std::exception& ex) {
+                spdlog::warn("CostumeMenu: skipping icon with non-numeric filename {}: {}", e.path().string(), ex.what());
+            }
         }
     }
     std::sort(entries.begin(), entries.end(),
@@ -67,7 +69,9 @@ void CostumeMenu::load_costume_icons(const std::string& subdir, const std::strin
                     costume_names[std::stoi(m.name.GetString())] = m.value["name"].GetString();
                 }
             }
-        } catch (...) {}
+        } catch (const std::exception& ex) {
+            spdlog::warn("CostumeMenu: failed to parse {}: {}", names_path.string(), ex.what());
+        }
     }
 }
 
@@ -85,7 +89,10 @@ void CostumeMenu::load_preset_data() {
     if (fs::exists(dir)) {
         for (auto& e : fs::directory_iterator(dir)) {
             if (e.path().extension() != ".png") continue;
-            try { preset_pool.push_back(std::stoi(e.path().stem().string())); } catch (...) {}
+            try { preset_pool.push_back(std::stoi(e.path().stem().string())); }
+            catch (const std::exception& ex) {
+                spdlog::warn("CostumeMenu: skipping preset icon with non-numeric filename {}: {}", e.path().string(), ex.what());
+            }
         }
     }
     std::sort(preset_pool.begin(), preset_pool.end());
@@ -109,7 +116,9 @@ void CostumeMenu::load_preset_data() {
                     if (v.IsInt()) ids.push_back(v.GetInt());
                 if (!ids.empty()) preset_sets[item] = std::move(ids);
             }
-        } catch (...) {}
+        } catch (const std::exception& ex) {
+            spdlog::warn("CostumeMenu: failed to parse {}: {}", presets_path.string(), ex.what());
+        }
     }
     if (!preset_sets.count("costume_select/default"))
         preset_sets["costume_select/default"] = {0};

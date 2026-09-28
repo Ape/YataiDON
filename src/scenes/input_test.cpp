@@ -14,6 +14,7 @@ void InputTestScreen::on_screen_start() {
     t_large_drum = tex.get_texture("practice/large_drum");
 
     // Centre the drum by its drawn size (x2/y2: a skin may give it a size other than the PNG's).
+    if (!t_large_drum) return;
     auto& drum = *t_large_drum;
     drum_x_offset = (tex.screen_width - drum.x2[0]) / 2.0f - drum.x[0];
     drum_y_offset = (tex.screen_height - drum.y2[0]) / 2.0f - drum.y[0];

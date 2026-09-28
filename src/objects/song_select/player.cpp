@@ -1,5 +1,4 @@
 #include "player.h"
-#include "raylib.h"
 #include "song_select_script.h"
 #include "../../libs/audio.h"
 #include "../../libs/input.h"
@@ -239,6 +238,7 @@ SongSelectState SongSelectPlayer::handle_input_browsing(double current_ms) {
         audio.play_sound("skip", VolumePreset::SOUND);
         navigator.skip_right();
         last_moved = current_ms;
+        navigated = true;
     } else if (r_kat || wheel < 0) {
         audio.play_sound("kat", VolumePreset::SOUND);
         navigator.move_right();
@@ -402,8 +402,8 @@ SongSelectState SongSelectPlayer::handle_input_selecting() {
             neiro_selector->right();
         } else {
             audio.play_sound("kat", VolumePreset::SOUND);
-            navigate_difficulty_right();
             Difficulty prev_difficulty = selected_difficulty;
+            navigate_difficulty_right();
             if (selected_difficulty >= Difficulty::EASY) {
                 selected_diff_bounce->start();
                 if (prev_difficulty != selected_difficulty)

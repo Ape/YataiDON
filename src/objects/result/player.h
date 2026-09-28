@@ -9,7 +9,7 @@
 
 class ResultPlayer : public LuaScript {
     sol::protected_function fn_update, fn_draw, fn_draw_gauge, fn_chara_pos, fn_nameplate_pos;
-    PlayerNum player_num;
+    PlayerNum player_num = PlayerNum::P1;
     bool has_2p = false;
     bool is_2p  = false;
     Nameplate nameplate;

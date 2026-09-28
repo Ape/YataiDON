@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cassert>
 #include <cmath>
 #include <map>
 #include <optional>
@@ -67,6 +68,7 @@ struct Exam {
     bool per_song() const { return !song_red.empty(); }
     // The exam as it applies to song i: red/gold swapped for that song's pair.
     Exam for_song(int i) const {
+        assert(!per_song() || (i >= 0 && i < (int)song_red.size()));
         Exam ex = *this;
         if (per_song() && i >= 0 && i < (int)song_red.size()) {
             ex.red  = song_red[i];
@@ -94,7 +96,8 @@ inline std::string dan_bar_state(const Exam& exam, int value,
     int gauge = (exam.red > 0)
         ? (int)std::floor(100.0 * (double)value / (double)exam.red) : 100;
     if (gauge > 100) gauge = 100;
-    if (down) { gauge = 100 - gauge; if (gauge < 0) gauge = 0; }
+    if (gauge < 0) gauge = 0;
+    if (down) gauge = 100 - gauge;
     if (gauge <= 0) return "empty";
     if (!down) {
         if (gauge <= 49) return "up_50";

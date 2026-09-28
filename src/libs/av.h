@@ -119,10 +119,12 @@ public:
     AVPlane plane(int index) const {
         if (index != 0) throw std::runtime_error("av::AVDecodedFrame::plane: only plane 0 is supported");
         const ::AVFrame* src = rgb_frame_ ? rgb_frame_ : frame_;
-        std::size_t size = static_cast<std::size_t>(
-            av_image_get_buffer_size(
-                static_cast<AVPixelFormat>(src->format),
-                src->width, src->height, 1));
+        // av_image_get_buffer_size() returns the size of the *entire* frame
+        // buffer (all planes combined). For a non-reformatted planar source
+        // (e.g. YUV420P) data[0] holds only the luma plane, so advertising
+        // the whole-frame size here would let callers read past plane 0.
+        // Report plane 0's own size instead.
+        std::size_t size = static_cast<std::size_t>(src->linesize[0]) * static_cast<std::size_t>(src->height);
         return AVPlane(src->data[0], size);
     }
 
@@ -144,15 +146,20 @@ public:
         codec_ctx_ = avcodec_alloc_context3(codec);
         if (!codec_ctx_) throw std::runtime_error("avcodec_alloc_context3 failed");
 
-        check(avcodec_parameters_to_context(
-                  codec_ctx_,
-                  fmt_ctx_->streams[stream_index_]->codecpar),
-              "avcodec_parameters_to_context");
+        try {
+            check(avcodec_parameters_to_context(
+                      codec_ctx_,
+                      fmt_ctx_->streams[stream_index_]->codecpar),
+                  "avcodec_parameters_to_context");
 
-        check(avcodec_open2(codec_ctx_, codec, nullptr), "avcodec_open2");
+            check(avcodec_open2(codec_ctx_, codec, nullptr), "avcodec_open2");
 
-        packet_ = av_packet_alloc();
-        if (!packet_) throw std::runtime_error("av_packet_alloc failed");
+            packet_ = av_packet_alloc();
+            if (!packet_) throw std::runtime_error("av_packet_alloc failed");
+        } catch (...) {
+            avcodec_free_context(&codec_ctx_);
+            throw;
+        }
     }
 
     ~AVFrameDecoder() {

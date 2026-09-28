@@ -17,37 +17,43 @@ void load_skin() {
         return;
     }
     unload_skin();
-    ensure_skin_extracted(global_data.config->paths.skin.string());
-    fs::path root_skin_path = fs::path("Skins") / global_data.config->paths.skin;
-    set_skin_graphics_path(root_skin_path / "Graphics");
+    try {
+        ensure_skin_extracted(global_data.config->paths.skin.string());
+        fs::path root_skin_path = fs::path("Skins") / global_data.config->paths.skin;
+        set_skin_graphics_path(root_skin_path / "Graphics");
 
-    static const std::unordered_map<std::string, std::string> font_family = {
-        {"zh", "cn"}, {"ko", "kr"}, {"ja", "jp"}, {"zh_tw", "tw"}, {"zh-tw", "tw"}, {"zh_cn", "cn"}, {"zh-cn", "cn"},
-    };
-    const std::string& lang = global_data.config->general.language;
-    fs::path font_path = resolve_skin_path("Fonts/font_" + lang + ".ttf");
-    if (!fs::exists(font_path) && font_family.count(lang))
-        font_path = resolve_skin_path("Fonts/font_" + font_family.at(lang) + ".ttf");
-    if (!fs::exists(font_path)) font_path = resolve_skin_path("Fonts/font.ttf");
-    if (!fs::exists(font_path)) {
-        spdlog::error("No skin font found (tried font_{}.ttf and font.ttf) in {}", lang, root_skin_path.string());
-        throw std::runtime_error("load_skin: no usable font found in " + root_skin_path.string());
-    }
+        static const std::unordered_map<std::string, std::string> font_family = {
+            {"zh", "cn"}, {"ko", "kr"}, {"ja", "jp"}, {"zh_tw", "tw"}, {"zh-tw", "tw"}, {"zh_cn", "cn"}, {"zh-cn", "cn"},
+        };
+        const std::string& lang = global_data.config->general.language;
+        fs::path font_path = resolve_skin_path("Fonts/font_" + lang + ".ttf");
+        if (!fs::exists(font_path) && font_family.count(lang))
+            font_path = resolve_skin_path("Fonts/font_" + font_family.at(lang) + ".ttf");
+        if (!fs::exists(font_path)) font_path = resolve_skin_path("Fonts/font.ttf");
+        if (!fs::exists(font_path)) {
+            spdlog::error("No skin font found (tried font_{}.ttf and font.ttf) in {}", lang, root_skin_path.string());
+            throw std::runtime_error("load_skin: no usable font found in " + root_skin_path.string());
+        }
 
-    tex.init(root_skin_path / "Graphics");
+        tex.init(root_skin_path / "Graphics");
 #ifndef YATAIDON_PLATFORM_IOS
-    const bool was_fullscreen = ray::IsWindowFullscreen();
-    if (was_fullscreen) ray::ToggleFullscreen();
-    ray::SetWindowSize(tex.screen_width, tex.screen_height);
-    if (was_fullscreen) ray::ToggleFullscreen();
+        const bool was_fullscreen = ray::IsWindowFullscreen();
+        if (was_fullscreen) ray::ToggleFullscreen();
+        ray::SetWindowSize(tex.screen_width, tex.screen_height);
+        if (was_fullscreen) ray::ToggleFullscreen();
 #endif
 
-    global_tex.init(root_skin_path / "Graphics");
-    global_tex.load_screen_textures("global");
-    script_manager.init(root_skin_path / "Scripts");
-    font_manager.init(font_path);
-    audio.init_audio_device(root_skin_path / "Sounds", global_data.config->audio, global_data.config->volume);
-    debug_menu.load_fonts();
+        global_tex.init(root_skin_path / "Graphics");
+        global_tex.load_screen_textures("global");
+        script_manager.init(root_skin_path / "Scripts");
+        font_manager.init(font_path);
+        audio.init_audio_device(root_skin_path / "Sounds", global_data.config->audio, global_data.config->volume);
+        debug_menu.load_fonts();
+    } catch (...) {
+        spdlog::error("load_skin() failed; rolling back to unloaded state");
+        unload_skin();
+        throw;
+    }
 }
 
 void unload_skin() {
@@ -70,7 +76,11 @@ void reset_session() {
 int get_player_id(PlayerNum player_num) {
     if (!global_data.config) {
         spdlog::error("get_player_id() called before config was initialized");
-        return 0;
+        return -1;
+    }
+    if (player_num != PlayerNum::P1 && player_num != PlayerNum::P2) {
+        spdlog::error("get_player_id() called with invalid player_num: {}", (int)player_num);
+        return -1;
     }
     return (player_num == global_data.first_login_player)
         ? global_data.config->general.player_1_id

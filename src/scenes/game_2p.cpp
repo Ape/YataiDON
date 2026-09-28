@@ -94,7 +94,10 @@ std::optional<Screens> Game2PScreen::update() {
     }
 
     if (ray::IsKeyPressed(global_data.config->keys.restart_key)) {
-        if (song_music.has_value()) audio.stop_sound(song_music.value());
+        if (song_music.has_value()) {
+            audio.stop_sound(song_music.value());
+            song_music.reset();
+        }
         players.clear();
         parser_2p.reset();
         init_tja(global_data.session_data[(int)PlayerNum::P1].selected_song);

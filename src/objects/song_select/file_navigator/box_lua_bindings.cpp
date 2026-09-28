@@ -61,7 +61,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
 
     lua.new_usertype<FolderBox>("FolderBox",
         sol::base_classes, sol::bases<BaseBox>(),
-        "tja_count",      &FolderBox::tja_count,
+        "tja_count",      sol::readonly(&FolderBox::tja_count),
         "kind", [](FolderBox& self) -> std::string {
             if (self.genre_index == GenreIndex::DAN) return "dan";
             if (!self.collection.empty())            return "sort";

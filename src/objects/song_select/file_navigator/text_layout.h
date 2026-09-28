@@ -13,6 +13,20 @@ inline bool language_is_cjk(const std::string& lang) {
 }
 
 inline std::string word_wrap(const std::string& text, int font_size, float spacing, float max_width) {
+    if (text.find('\n') != std::string::npos) {
+        std::string result;
+        size_t start = 0;
+        while (start <= text.size()) {
+            size_t nl = text.find('\n', start);
+            size_t len = (nl == std::string::npos) ? std::string::npos : nl - start;
+            if (!result.empty()) result += "\n";
+            result += word_wrap(text.substr(start, len), font_size, spacing, max_width);
+            if (nl == std::string::npos) break;
+            start = nl + 1;
+        }
+        return result;
+    }
+
     ray::Font font = font_manager.get_font(text, font_size);
 
     std::vector<std::string> words;

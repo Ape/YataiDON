@@ -30,7 +30,6 @@ public:
 
     std::optional<VideoPlayer> movie;
     std::optional<std::string> song_music;
-    std::future<std::string> pending_song_load;
     std::optional<SongParser> parser;
     std::string scene_preset;
     std::vector<std::unique_ptr<Player>> players;
@@ -92,4 +91,7 @@ public:
     void draw_overlay(bool with_song_info = true);
 
     void draw() override;
+
+private:
+    std::future<std::string> pending_song_load;
 };

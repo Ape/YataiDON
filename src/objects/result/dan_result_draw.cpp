@@ -1,4 +1,5 @@
 #include "dan_result_draw.h"
+#include <algorithm>
 
 namespace {
 
@@ -59,7 +60,7 @@ sol::table build_rd_table(const DanResultData& rd) {
         dt["counter_value"]  = d.counter_value;
         dt["failed"]         = d.failed;
         sol::table sv = lua.create_table(), sp = lua.create_table(), ss = lua.create_table();
-        for (int j = 0; j < 3; j++) {
+        for (size_t j = 0; j < std::size(d.song_value); j++) {
             sv[j + 1] = d.song_value[j];
             sp[j + 1] = d.song_progress[j];
             ss[j + 1] = d.song_state[j];
@@ -83,7 +84,7 @@ DanResultDraw::DanResultDraw(const DanResultData& rd, int prev_arrival, int prev
                               int gauge_exam, int gauge_value, int gauge_border) {
     if (!script_manager.lua) return;
     if (!load("DanResultDraw", "dan_result_draw", build_rd_table(rd), prev_arrival, prev_best_score,
-              best_score_show, gauge_exam, gauge_value, gauge_border))
+              best_score_show, gauge_exam, gauge_value, std::max(gauge_border, 1)))
         return;
     fn_draw          = lua_object["draw"];
     fn_chara_pos     = lua_object["chara_pos"];

@@ -1,5 +1,6 @@
 #include "input.h"
 #include "animation.h"
+#include "spdlog/spdlog.h"
 #include "texture.h"
 #include <array>
 #include <unordered_set>
@@ -29,14 +30,15 @@ static bool sdl_joysticks_init_done = false;
 static void refresh_sdl_joysticks() {
     bool& init_done = sdl_joysticks_init_done;
     if (!init_done) {
-        SDL_InitSubSystem(SDL_INIT_JOYSTICK);
+        if (!SDL_InitSubSystem(SDL_INIT_JOYSTICK)) {
+            spdlog::error("Failed to init SDL joystick subsystem: {}", SDL_GetError());
+            return; // retry on the next call instead of latching a failed init
+        }
         init_done = true;
     }
 
     int count = 0;
     SDL_JoystickID* ids = SDL_GetJoysticks(&count);
-    if (!ids) return;
-
     std::unordered_set<SDL_JoystickID> current(ids, ids + count);
 
     for (auto it = sdl_joysticks.begin(); it != sdl_joysticks.end();) {
@@ -63,9 +65,13 @@ static void refresh_sdl_joysticks() {
     SDL_free(ids);
 }
 
-std::mutex input_mutex;
-std::unordered_multiset<int> pressed_keys;
-std::unordered_multiset<int> released_keys;
+// Not exposed in input.h: every access must go through check_key_pressed/
+// check_key_released/clear_input_buffers below, which hold input_mutex --
+// keeping these file-local prevents external code from touching the
+// containers without the lock.
+static std::mutex input_mutex;
+static std::unordered_multiset<int> pressed_keys;
+static std::unordered_multiset<int> released_keys;
 
 static const int TOUCH_L_KAT = 40001;
 static const int TOUCH_R_KAT = 40002;
@@ -240,6 +246,36 @@ bool is_key_down_native(int raylib_key) {
             case 345: vk_code = VK_RCONTROL; break;
             case 346: vk_code = VK_RMENU; break; // Right Alt
             case 347: vk_code = VK_RWIN; break;
+            case 348: vk_code = VK_APPS; break;   // KB menu
+            // Punctuation
+            case 39:  vk_code = VK_OEM_7; break;  // '
+            case 44:  vk_code = VK_OEM_COMMA; break;
+            case 45:  vk_code = VK_OEM_MINUS; break;
+            case 46:  vk_code = VK_OEM_PERIOD; break;
+            case 47:  vk_code = VK_OEM_2; break;  // /
+            case 59:  vk_code = VK_OEM_1; break;  // ;
+            case 61:  vk_code = VK_OEM_PLUS; break; // =
+            case 91:  vk_code = VK_OEM_4; break;  // [
+            case 92:  vk_code = VK_OEM_5; break;  // backslash
+            case 93:  vk_code = VK_OEM_6; break;  // ]
+            case 96:  vk_code = VK_OEM_3; break;  // `
+            // Numpad
+            case 320: vk_code = VK_NUMPAD0; break;
+            case 321: vk_code = VK_NUMPAD1; break;
+            case 322: vk_code = VK_NUMPAD2; break;
+            case 323: vk_code = VK_NUMPAD3; break;
+            case 324: vk_code = VK_NUMPAD4; break;
+            case 325: vk_code = VK_NUMPAD5; break;
+            case 326: vk_code = VK_NUMPAD6; break;
+            case 327: vk_code = VK_NUMPAD7; break;
+            case 328: vk_code = VK_NUMPAD8; break;
+            case 329: vk_code = VK_NUMPAD9; break;
+            case 330: vk_code = VK_DECIMAL; break;
+            case 331: vk_code = VK_DIVIDE; break;
+            case 332: vk_code = VK_MULTIPLY; break;
+            case 333: vk_code = VK_SUBTRACT; break;
+            case 334: vk_code = VK_ADD; break;
+            case 335: vk_code = VK_RETURN; break; // numpad enter (Windows has no separate VK)
             default: return false;
         }
     }
@@ -538,7 +574,6 @@ void android_set_keyboard_visible(bool visible) {
     } else {
         SDL_StopTextInput(win);
         SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "0");
-        SDL_StartTextInput(win);
     }
 #else
     (void)visible;

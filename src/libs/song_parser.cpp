@@ -60,11 +60,9 @@ std::string SongParser::get_difficulty_name() {
 
 std::tuple<NoteList, std::deque<NoteList>, std::deque<NoteList>, std::deque<NoteList>>
 SongParser::notes_to_position(int diff) {
-    auto result = std::visit([diff](auto& p) {
+    return std::visit([diff](auto& p) {
         return p.notes_to_position(diff);
     }, impl);
-    sync();
-    return result;
 }
 
 std::string SongParser::get_song_hash() {

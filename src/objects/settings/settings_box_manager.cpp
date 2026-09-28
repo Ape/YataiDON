@@ -6,8 +6,7 @@ static constexpr float BOX_STEP_BASE      = 100.0f;
 static constexpr float BOX_INITIAL_Y_BASE = -50.0f;
 
 SettingsBoxManager::SettingsBoxManager(const rapidjson::Document& tmpl)
-    : num_boxes(0)
-    , selected_box_index(INITIAL_SELECTED)
+    : selected_box_index(INITIAL_SELECTED)
     , box_selected(false)
 {
     std::string lang = global_data.config->general.language;
@@ -31,8 +30,7 @@ SettingsBoxManager::SettingsBoxManager(const rapidjson::Document& tmpl)
         boxes.push_back(std::make_unique<SettingsBox>(cat_name, label, *opts));
     }
 
-    num_boxes = (int)boxes.size();
-
+    int num_boxes = (int)boxes.size();
     for (int i = 0; i < num_boxes; i++) {
         boxes[i]->set_box_count(num_boxes);
         boxes[i]->set_y((BOX_INITIAL_Y_BASE + i * BOX_STEP_BASE) * tex.screen_scale);
@@ -49,13 +47,15 @@ void SettingsBoxManager::move_left() {
     if (box_selected) {
         box_selected = boxes[selected_box_index]->move_option_left();
     } else {
-        bool moved = true;
+        // All-or-nothing: only start moving the carousel once every box is
+        // idle, so a box still animating from a previous move can't leave
+        // the others (and the selection index) out of sync.
         for (auto& b : boxes) {
-            if (!b->move_left()) moved = false;
+            if (!b->can_move()) return;
         }
-        if (moved) {
-            selected_box_index = (selected_box_index - 1 + num_boxes) % num_boxes;
-        }
+        for (auto& b : boxes) b->move_left();
+        int num_boxes = (int)boxes.size();
+        selected_box_index = (selected_box_index - 1 + num_boxes) % num_boxes;
     }
 }
 
@@ -63,17 +63,15 @@ void SettingsBoxManager::move_right() {
     if (box_selected) {
         boxes[selected_box_index]->move_option_right();
     } else {
-        bool moved = true;
         for (auto& b : boxes) {
-            if (!b->move_right()) moved = false;
+            if (!b->can_move()) return;
         }
-        if (moved) {
-            selected_box_index = (selected_box_index + 1) % num_boxes;
-        }
+        for (auto& b : boxes) b->move_right();
+        selected_box_index = (selected_box_index + 1) % (int)boxes.size();
     }
 }
 
-std::optional<Screens> SettingsBoxManager::pending_screen_change() const {
+std::optional<Screens> SettingsBoxManager::pending_screen_change() {
     for (auto& b : boxes) {
         auto result = b->pending_screen_change();
         if (result) return result;
@@ -95,7 +93,7 @@ bool SettingsBoxManager::select_box() {
 }
 
 void SettingsBoxManager::update(double current_time_ms) {
-    for (int i = 0; i < num_boxes; i++) {
+    for (int i = 0; i < (int)boxes.size(); i++) {
         bool selected = (i == selected_box_index) && !box_selected;
         boxes[i]->update(current_time_ms, selected);
     }

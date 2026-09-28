@@ -41,6 +41,7 @@ public:
     ~SongBox() override {
         if (preview_thread.joinable()) preview_thread.join();
         release_preview_slot();
+        if (preimage.has_value()) ray::UnloadTexture(preimage.value());
     }
 
     static void service_bgm_resume(double current_ms);

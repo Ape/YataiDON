@@ -83,23 +83,23 @@ void NoteArc::update(double current_ms) {
 void NoteArc::draw(float y, ray::Shader mask_shader) {
     if (is_balloon) {
         const std::shared_ptr<TextureObject>& rainbow = tex.textures["balloon/rainbow"];
-        if (!rainbow) {
+        if (!rainbow || !t_rainbow_mask) {
             tex.draw_texture(t_note, {.x=x_i, .y=y + y_i});
             return;
         }
         float rainbow_height;
         if (player_num == PlayerNum::P2) {
-            rainbow_height = -rainbow->height;
+            rainbow_height = -t_rainbow_mask->height;
         } else {
-            rainbow_height = rainbow->height;
+            rainbow_height = t_rainbow_mask->height;
         }
         float trail_length_ratio = 0.5f;
         float trail_start_progress = std::max(0.0f, current_progress - trail_length_ratio);
         float trail_end_progress = current_progress;
 
         if (trail_end_progress > trail_start_progress) {
-            float crop_start_x = std::round(trail_start_progress * rainbow->width);
-            float crop_end_x = std::round(trail_end_progress * rainbow->width);
+            float crop_start_x = std::round(trail_start_progress * t_rainbow_mask->width);
+            float crop_end_x = std::round(trail_end_progress * t_rainbow_mask->width);
             float crop_width = crop_end_x - crop_start_x;
 
             if (crop_width > 0) {
@@ -112,7 +112,7 @@ void NoteArc::draw(float y, ray::Shader mask_shader) {
                     y_pos = 0;
                 }
                 ray::BeginShaderMode(mask_shader);
-                tex.draw_texture(t_rainbow_mask, {.mirror=mirror, .x=crop_start_x, .y=y + y_pos, .x2=-rainbow->width + crop_width, .src=src});
+                tex.draw_texture(t_rainbow_mask, {.mirror=mirror, .x=crop_start_x, .y=y + y_pos, .x2=-t_rainbow_mask->width + crop_width, .src=src});
                 ray::EndShaderMode();
             }
         }

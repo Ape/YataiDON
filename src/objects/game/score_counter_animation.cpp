@@ -1,18 +1,22 @@
 #include "score_counter_animation.h"
+#include <algorithm>
 #include <cmath>
+#include <stdexcept>
 
-ScoreCounterAnimation::ScoreCounterAnimation(PlayerNum player_num, int counter, bool is_2p) : counter(counter) {
+ScoreCounterAnimation::ScoreCounterAnimation(PlayerNum player_num, int counter, bool is_2p) : counter(std::max(counter, 0)) {
     direction = is_2p ? -1 : 1;
-    counter_str = std::to_string(counter);
+    counter_str = std::to_string(this->counter);
     margin = tex.skin_config[SC::SCORE_COUNTER_MARGIN].x;
     total_width = counter_str.length() * margin;
     y_pos_list.resize(counter_str.length(), 0.0f);
 
-    fade_animation_1 = (FadeAnimation*)tex.get_animation(35, true);
-    move_animation_x = (MoveAnimation*)tex.get_animation(36, true);
-    fade_animation_2 = (FadeAnimation*)tex.get_animation(37, true);
-    move_animation_y_pre = (MoveAnimation*)tex.get_animation(38, true);
-    move_animation_y_fan = (MoveAnimation*)tex.get_animation(39, true);
+    fade_animation_1 = dynamic_cast<FadeAnimation*>(tex.get_animation(35, true));
+    move_animation_x = dynamic_cast<MoveAnimation*>(tex.get_animation(36, true));
+    fade_animation_2 = dynamic_cast<FadeAnimation*>(tex.get_animation(37, true));
+    move_animation_y_pre = dynamic_cast<MoveAnimation*>(tex.get_animation(38, true));
+    move_animation_y_fan = dynamic_cast<MoveAnimation*>(tex.get_animation(39, true));
+    if (!fade_animation_1 || !move_animation_x || !fade_animation_2 || !move_animation_y_pre || !move_animation_y_fan)
+        throw std::runtime_error("ScoreCounterAnimation: animation 35/36/37/38/39 has an unexpected type");
 
     fade_animation_1->start();
     move_animation_x->start();

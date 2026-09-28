@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstring>
 #include <fstream>
+#include <memory>
 
 extern "C" {
 #include <g719.h>
@@ -217,14 +218,16 @@ bool decode_idsp(const std::vector<uint8_t>& file, size_t pack, size_t pack_size
     for (uint32_t b = 0; b < blocks; b++) {
         uint32_t block_bytes = std::min<uint32_t>(interleave, data_size - b * interleave);
         uint32_t block_frames = block_bytes / 8;
+        bool block_ok = true;
         for (int c = 0; c < channels; c++) {
             const size_t src_off = data_off +
                 ((size_t)b * channels + c) * (size_t)interleave;
-            if (src_off + block_bytes > pack_size) break;   // malformed: stop early
+            if (src_off + block_bytes > pack_size) { block_ok = false; break; }   // malformed: stop early
             const uint8_t* src = p + src_off;
             for (uint32_t f = 0; f < block_frames; f++)
                 idsp_decode_frame(src + f * 8, chans[c], pcm[c].data() + f * 14);
         }
+        if (!block_ok) break;   // don't emit stale/zero samples for skipped channels
         for (uint32_t s = 0; s < block_frames * 14; s++)
             for (int c = 0; c < channels; c++)
                 out.samples.push_back((float)pcm[c][s] / 32768.0f);
@@ -276,14 +279,16 @@ bool decode_nus3bank(const fs::path& path, DecodedAudio& out) {
     // One decoder per channel, each fed its own frames: the channels are
     // interleaved a whole frame at a time, not sample by sample.
     int frame_bytes = info.block_size / info.channels;
-    std::vector<g719_handle*> decoders(info.channels, nullptr);
+    using G719Handle = std::unique_ptr<g719_handle, decltype(&g719_free)>;
+    std::vector<G719Handle> decoders;
+    decoders.reserve(info.channels);
     for (int c = 0; c < info.channels; c++) {
-        decoders[c] = g719_init(frame_bytes);
-        if (!decoders[c]) {
+        G719Handle h(g719_init(frame_bytes), g719_free);
+        if (!h) {
             spdlog::warn("gen4 audio: decoder would not start for {}", path.string());
-            for (g719_handle* h : decoders) if (h) g719_free(h);
             return false;
         }
+        decoders.push_back(std::move(h));
     }
 
     out.channels    = info.channels;
@@ -299,7 +304,7 @@ bool decode_nus3bank(const fs::path& path, DecodedAudio& out) {
 
     while (pos + (size_t)info.block_size <= info.data_size) {
         for (int c = 0; c < info.channels; c++) {
-            g719_decode_frame(decoders[c],
+            g719_decode_frame(decoders[c].get(),
                               (void*)(data + pos + (size_t)c * frame_bytes),
                               pcm[c].data());
         }
@@ -309,8 +314,6 @@ bool decode_nus3bank(const fs::path& path, DecodedAudio& out) {
             for (int c = 0; c < info.channels; c++)
                 out.samples.push_back((float)pcm[c][s] / 32768.0f);
     }
-
-    for (g719_handle* h : decoders) g719_free(h);
 
     // The header's sample count is the real length; the last frame is padding.
     size_t wanted = (size_t)info.num_samples * info.channels;

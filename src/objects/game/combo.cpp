@@ -108,7 +108,7 @@ void Combo::draw(float y) {
         };
         for (size_t j = 0; j < glimmer_positions.size(); j++) {
             auto [x, y_pos] = glimmer_positions[j];
-            for (int i = 0; i < 3; i++) {
+            for (size_t i = 0; i < counter.size(); i++) {
                 tex.draw_texture(t_gleam, {.color=color[j], .x=x+(i*margin), .y=y+y_pos+glimmer_map[j]});
             }
         }

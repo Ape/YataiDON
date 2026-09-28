@@ -1,11 +1,13 @@
 #pragma once
 
 #include "settings_box.h"
+#include <memory>
+#include <optional>
+#include <vector>
 
 class SettingsBoxManager {
 private:
     std::vector<std::unique_ptr<SettingsBox>> boxes;
-    int   num_boxes;
     int   selected_box_index;
     bool  box_selected;
 
@@ -16,7 +18,7 @@ public:
     // Returns true if the exit box was selected, otherwise false
     bool select_box();
 
-    std::optional<Screens> pending_screen_change() const;
+    std::optional<Screens> pending_screen_change();
 
     void move_left();
     void move_right();

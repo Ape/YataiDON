@@ -1,4 +1,5 @@
 #include "drumroll_counter.h"
+#include <algorithm>
 #include <stdexcept>
 
 static constexpr int DRUMROLL_COUNTER_FADE_ANIM_ID = 8;
@@ -15,6 +16,7 @@ DrumrollCounter::DrumrollCounter() {
 }
 
 void DrumrollCounter::update_count(int count) {
+    count = std::max(count, 0);
     if (drumroll_count != count) {
         drumroll_count = count;
         fade->start();
@@ -23,10 +25,10 @@ void DrumrollCounter::update_count(int count) {
 }
 
 void DrumrollCounter::update(double current_ms, int count) {
+    update_count(count);
+
     fade->update(current_ms);
     stretch->update(current_ms);
-
-    update_count(count);
 }
 
 void DrumrollCounter::update_animations(double current_ms) {

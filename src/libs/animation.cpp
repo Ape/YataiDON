@@ -9,6 +9,11 @@ using std::runtime_error;
 
 namespace {
     std::atomic<int> input_lock_count{0};
+
+    void release_input_lock() {
+        int prev = input_lock_count.fetch_sub(1, std::memory_order_relaxed);
+        if (prev <= 0) input_lock_count.store(0, std::memory_order_relaxed);
+    }
 }
 
 bool is_input_locked() {
@@ -32,7 +37,7 @@ BaseAnimation::BaseAnimation(double duration, double delay, bool loop, bool lock
 
 BaseAnimation::~BaseAnimation() {
     if (lock_input && !unlocked) {
-        input_lock_count--;
+        release_input_lock();
     }
 }
 
@@ -73,7 +78,7 @@ double BaseAnimation::applyEasing(double progress, const std::optional<EaseType>
 void BaseAnimation::update(double current_time_ms) {
     if (lock_input && is_finished && !unlocked) {
         unlocked = true;
-        input_lock_count--;
+        release_input_lock();
     }
     if (loop && is_finished) {
         restart();
@@ -104,7 +109,7 @@ void BaseAnimation::pause() {
     paused_at_ms = get_current_ms();
     if (lock_input && !unlocked) {
         unlocked = true;
-        input_lock_count--;
+        release_input_lock();
     }
 }
 
@@ -215,7 +220,15 @@ void MoveAnimation::update(double current_time_ms) {
         attribute = start_position;
     } else if (elapsed_time >= delay + duration) {
         attribute = start_position + total_distance;
-        if (reverse_delay.has_value()) {
+        if (reverse_delay.has_value() && !waypoints.empty()) {
+            // Reversing would need the waypoint list (and each segment's
+            // easing direction) mirrored, which isn't implemented -- just
+            // negating total_distance/start_position here would replay the
+            // same forward waypoint sequence from the new position instead
+            // of retracing it backward. Finish rather than play a wrong path.
+            spdlog::warn("MoveAnimation: reverse_delay combined with waypoints is not supported; finishing without reversing");
+            is_finished = true;
+        } else if (reverse_delay.has_value()) {
             start_ms = current_time_ms;
             delay = reverse_delay.value();
             start_position = start_position + total_distance;
@@ -656,31 +669,31 @@ std::unordered_map<int, std::unique_ptr<BaseAnimation>> AnimationParser::parse_a
     allocator = &temp_doc.GetAllocator();
     raw_anims.clear();
 
-    // First pass: collect all animations
-    for (SizeType i = 0; i < animation_json.Size(); i++) {
-        const Value& item = animation_json[i];
-
-        if (!item.HasMember("id")) {
-            throw std::runtime_error("Animation requires id");
-        }
-        if (!item.HasMember("type")) {
-            throw std::runtime_error("Animation requires type");
-        }
-        if (!item["id"].IsInt()) {
-            throw std::runtime_error("Animation 'id' must be an int");
-        }
-        int id = item["id"].GetInt();
-        if (raw_anims.find(id) != raw_anims.end()) {
-            throw std::runtime_error("Duplicate animation id: " + std::to_string(id));
-        }
-        Value item_copy;
-        item_copy.CopyFrom(item, *allocator);
-        raw_anims[id] = std::move(item_copy);
-    }
-
     std::unordered_map<int, std::unique_ptr<BaseAnimation>> anim_dict;
 
     try {
+        // First pass: collect all animations
+        for (SizeType i = 0; i < animation_json.Size(); i++) {
+            const Value& item = animation_json[i];
+
+            if (!item.HasMember("id")) {
+                throw std::runtime_error("Animation requires id");
+            }
+            if (!item.HasMember("type")) {
+                throw std::runtime_error("Animation requires type");
+            }
+            if (!item["id"].IsInt()) {
+                throw std::runtime_error("Animation 'id' must be an int");
+            }
+            int id = item["id"].GetInt();
+            if (raw_anims.find(id) != raw_anims.end()) {
+                throw std::runtime_error("Duplicate animation id: " + std::to_string(id));
+            }
+            Value item_copy;
+            item_copy.CopyFrom(item, *allocator);
+            raw_anims[id] = std::move(item_copy);
+        }
+
         for (auto& [id, _] : raw_anims) {
             std::set<int> visited;
             Value absolute_anim = findRefs(id, visited);

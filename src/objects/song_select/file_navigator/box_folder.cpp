@@ -81,7 +81,7 @@ void scan_folder_now(const fs::path& path) {
                     update_crown(*found, player_2_id, crown_p2, disqualified_p2);
                 }
             scan.increment(scan_ec);
-            if (scan_ec) scan_ec.clear();
+            if (scan_ec) break;
             continue;
         }
         auto ext = entry.path().extension();
@@ -92,7 +92,7 @@ void scan_folder_now(const fs::path& path) {
         }
 
         scan.increment(scan_ec);
-        if (scan_ec) scan_ec.clear();
+        if (scan_ec) break;
     }
 
     std::lock_guard<std::mutex> lock(scan_cache_mutex);

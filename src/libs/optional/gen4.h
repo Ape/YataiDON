@@ -34,11 +34,16 @@ struct OrderEntry {
 
 class Library {
 public:
+    // Check loaded() before trusting songs()/order()/root(): a failed load()
+    // (returns false) may leave those holding partial state from the attempt.
     bool load(const fs::path& data_root);
 
     bool loaded() const { return is_loaded; }
     const fs::path& root() const { return data_root; }
 
+    // The returned pointer is valid only as long as this Library is not
+    // reloaded (load() clears and repopulates `entries`); it is not
+    // synchronized against a concurrent load() on the same instance.
     const SongEntry* find(const std::string& id) const;
     const std::vector<SongEntry>& songs() const { return entries; }
 
@@ -66,6 +71,9 @@ fs::path genre_path(const fs::path& data_root, int genre_no);
 
 int genre_of_path(const fs::path& path);
 
+// Returns a pointer into a process-lifetime cache keyed by data root; once a
+// root is cached the Library is never mutated again, so the pointer stays
+// valid for the life of the program (or nullptr if the root can't be loaded).
 const Library* library_for(const fs::path& path);
 
 fs::path find_data_root(const fs::path& path);

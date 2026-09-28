@@ -6,7 +6,7 @@
 
 class Fireworks {
 private:
-    TextureChangeAnimation* explosion_anim;
+    TextureChangeAnimation* explosion_anim = nullptr;
     TextureObject* t_explosion = nullptr;
 
 public:

@@ -96,6 +96,8 @@ public:
         total_drumroll = 0;
         was_gauge_full = false;
         note_judgments.clear();
+        last_reported_score = -1;
+        arc_points = 25;
         if (judge_counter) judge_counter = JudgeCounter();
     }
     int get_score() const { return score; }

@@ -2,33 +2,34 @@
 
 #include <toml++/toml.h>
 #include <filesystem>
-#include <spdlog/spdlog.h>
+#include <string>
+#include <vector>
 
 namespace fs = std::filesystem;
 
 struct GeneralConfig {
-    bool fps_counter;
-    int audio_offset;
-    int visual_offset;
+    bool fps_counter = false;
+    int audio_offset = 0;
+    int visual_offset = 0;
     std::string language;
-    bool timer_frozen;
-    bool song_timer;
-    bool judge_counter;
+    bool timer_frozen = false;
+    bool song_timer = false;
+    bool judge_counter = false;
     std::string log_level;
-    int practice_mode_bar_delay;
+    int practice_mode_bar_delay = 0;
     std::string score_method;
-    bool display_bpm;
-    int song_limit;
-    int webcam_number;
-    int player_1_id;
-    int player_2_id;
-    bool touch_input;
+    bool display_bpm = false;
+    int song_limit = 0;
+    int webcam_number = -1;
+    int player_1_id = 1;
+    int player_2_id = 1;
+    bool touch_input = false;
 };
 
 struct NetworkConfig {
     std::string access_code;
-    bool online_play;
-    bool sync_scores;
+    bool online_play = false;
+    bool sync_scores = false;
 };
 
 struct PathsConfig {
@@ -37,12 +38,12 @@ struct PathsConfig {
 };
 
 struct KeysConfig {
-    int exit_key;
-    int fullscreen_key;
-    int borderless_key;
-    int pause_key;
-    int back_key;
-    int restart_key;
+    int exit_key = 0;
+    int fullscreen_key = 0;
+    int borderless_key = 0;
+    int pause_key = 0;
+    int back_key = 0;
+    int restart_key = 0;
 };
 
 struct Keys1PConfig {
@@ -67,26 +68,26 @@ struct GamepadConfig {
 };
 
 struct AudioConfig {
-    int device_type;
-    int sample_rate;
-    int buffer_size;
+    int device_type = 0;
+    int sample_rate = 44100;
+    int buffer_size = 512;
     std::vector<int> asio_channel;
 };
 
 struct VolumeConfig {
-    float global;
-    float sound;
-    float music;
-    float voice;
-    float hitsound;
-    float attract_mode;
+    float global = 1.0f;
+    float sound = 1.0f;
+    float music = 1.0f;
+    float voice = 1.0f;
+    float hitsound = 1.0f;
+    float attract_mode = 1.0f;
 };
 
 struct VideoConfig {
-    bool fullscreen;
-    bool borderless;
-    int target_fps;
-    bool vsync;
+    bool fullscreen = false;
+    bool borderless = false;
+    int target_fps = 60;
+    bool vsync = true;
 };
 
 struct Config {

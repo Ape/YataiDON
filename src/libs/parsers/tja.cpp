@@ -407,6 +407,7 @@ TJAParser::notes_to_position(int diff) {
     if (metadata.course_data.count(diff) == 0) {
         return std::make_tuple(NoteList(), std::deque<NoteList>(), std::deque<NoteList>(), std::deque<NoteList>());
     }
+    last_diff = diff;
     current_ms = start_ms;
     master_notes = NoteList();
     branch_m = std::deque<NoteList>();
@@ -838,8 +839,10 @@ void TJAParser::handle_MEASURE(const std::string& value, ParserState& state) {
         try {
             double num = std::stof(value.substr(0, slash_pos));
             double den = std::stof(value.substr(slash_pos + 1));
-            if (den != 0.0f) {
+            if (num > 0.0f && den != 0.0f) {
                 state.time_signature = num / den;
+            } else {
+                spdlog::warn("Ignoring degenerate #MEASURE {} in {}", value, file_path.string());
             }
         } catch (const std::exception&) {
             spdlog::warn("Invalid #MEASURE value '{}' in {}", value, file_path.string());
@@ -998,7 +1001,7 @@ void TJAParser::handle_BRANCHSTART(const std::string& value, ParserState& state)
     std::string branch_params = value;
 
     TimelineObject branch_obj;
-    double two_measures = (state.bpm != 0.0) ? (240000.0 / state.bpm) * 2 : 0.0;
+    double two_measures = get_ms_per_measure(state.bpm, state.time_signature) * 2.0;
     if (state.section_bar.has_value()) {
         branch_obj.start_time = state.section_bar.value().hit_ms - two_measures;
         state.section_bar.reset();
@@ -1107,6 +1110,9 @@ void TJAParser::handle_JPOSSCROLL(const std::string& part, ParserState& state) {
             double available_time = this->current_ms - obj.start_time;
             double total_duration = obj.end_time - obj.start_time;
             double ratio = (total_duration > 0) ? std::min(1.0, available_time / total_duration) : 1.0;
+
+            state.judge_pos_x -= obj.delta_x.value() * (1.0 - ratio);
+            state.judge_pos_y -= obj.delta_y.value() * (1.0 - ratio);
 
             obj.delta_x.value() *= ratio;
             obj.delta_y.value() *= ratio;

@@ -220,6 +220,7 @@ void GameScreen::pause_song() {
 void GameScreen::restart_song() {
     if (song_music.has_value()) {
         audio.stop_sound(song_music.value());
+        song_music.reset();
     }
     players.clear();
     init_tja(global_data.session_data[(int)global_data.player_num].selected_song);
@@ -424,7 +425,6 @@ void GameScreen::poll_skip() {
     int value = -1;
     if      (is_l_kat_pressed(skip_lane)) value = 1;
     else if (is_r_kat_pressed(skip_lane)) value = 0;
-    while (is_l_kat_pressed(skip_lane) || is_r_kat_pressed(skip_lane)) {}
     if (value < 0) return;
 
     if (skip_count == 0) {
@@ -479,7 +479,7 @@ void GameScreen::draw_skip() {
 void GameScreen::end_song() {
     if (ms_from_start >= players[0]->end_time + 1000 && !score_saved) {
         global_data.session_data[(int)players[0]->player_num].result_data = players[0]->get_result_score();
-        save_score(global_data.config->general.player_1_id, players[0]->player_num);
+        save_score(get_player_id(players[0]->player_num), players[0]->player_num);
         for (auto& player : players) {
             player->spawn_ending_anim(background.has_value() ? &*background : nullptr);
             if (background.has_value()) {

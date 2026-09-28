@@ -12,7 +12,10 @@ public:
     FumenParser() = default;
     explicit FumenParser(const fs::path& path, int start_delay = 0);
     void get_metadata() {}
-    std::string get_difficulty_name() { return ""; }
+    std::string get_difficulty_name() {
+        auto it = TJAParser::DIFFS.find(cached_diff);
+        return it != TJAParser::DIFFS.end() ? it->second : "";
+    }
 
     std::tuple<NoteList, std::deque<NoteList>, std::deque<NoteList>, std::deque<NoteList>>
     notes_to_position(int diff);

@@ -58,6 +58,8 @@ Screens SettingsScreen::on_screen_end(Screens next_screen) {
     indicator.reset();
     coin_overlay.reset();
     allnet_indicator.reset();
+    t_background = nullptr;
+    t_footer = nullptr;
     drop_other_screens_for_skin_reload();
     // navigator is a global, not a Screen -- the rebuild above never
     // touches it, so it needs its own reset.

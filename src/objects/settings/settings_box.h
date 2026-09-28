@@ -2,6 +2,10 @@
 
 #include "../../libs/text.h"
 #include "option_box.h"
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
 
 class SettingsBox {
 private:
@@ -38,6 +42,8 @@ public:
     void set_y(float new_y);
     void set_box_count(int box_count);
 
+    bool can_move() const;
+
     // Returns false when the box should become un-selected (exit to outer navigation)
     bool move_left();
     // Returns false while the carousel is still animating from a previous move
@@ -50,8 +56,9 @@ public:
 
     void select();
 
-    // Returns non-null if an option requested a screen transition
-    std::optional<Screens> pending_screen_change() const;
+    // Returns non-null if an option requested a screen transition. Consumes
+    // (clears) the pending transition, so it is not a pure query.
+    std::optional<Screens> pending_screen_change();
 
     void update(double current_time_ms, bool selected);
     void draw();

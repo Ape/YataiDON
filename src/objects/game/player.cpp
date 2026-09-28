@@ -162,7 +162,7 @@ void Player::spawn_ending_anim(Background* background) {
         ending_anim = ClearAnimation(is_2p);
         kind = "clear";
     }
-    if (ending_background && ending_background->wants_ending())
+    if (ending_background && ending_background->wants_handle_ending())
         ending_background->handle_ending(player_num, kind);
 }
 
@@ -185,6 +185,7 @@ void Player::reload_for_dan(std::optional<SongParser>& new_parser, int new_diffi
     gauge.reset();
     reset_chart();
     gauge.reset();  // reset_chart recreates gauge; discard it for dan mode
+    branch_history.clear();  // switching charts: old song's branch decisions don't apply here
     skipped_run = false;
 }
 
@@ -1673,7 +1674,7 @@ void Player::draw_notes(double current_ms, float y) {
 }
 
 void Player::draw_song_timer(double current_ms, float y) {
-    float progress = current_ms / end_time;
+    float progress = end_time > 0 ? (float)(current_ms / end_time) : 0.0f;
     float width = tex.skin_config[SC::SONG_TIMER].width * std::max(std::min(progress, 1.0f), 0.0f);
     ray::DrawRectangle(tex.skin_config[SC::SONG_TIMER].x, y + tex.skin_config[SC::SONG_TIMER].y, width, tex.skin_config[SC::SONG_TIMER].height, ray::Color(0, 255, 158, 255));
     tex.draw_texture(t_timer, {.y=y});
@@ -1739,7 +1740,7 @@ void Player::draw_lane_cover(float y) {
 void Player::draw_overlays(float y, const ray::Shader& mask_shader) {
     tex.draw_texture(t_drum, {.y=y});
     if (ending_anim.has_value()) {
-        if (ending_background && ending_background->wants_ending())
+        if (ending_background && ending_background->wants_draw_ending())
             ending_background->draw_ending(player_num);
         else
             std::visit([](auto& anim) { anim.draw(); }, ending_anim.value());

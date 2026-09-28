@@ -2,6 +2,9 @@
 
 #include "../../libs/animation.h"
 #include "../../libs/texture.h"
+#include <memory>
+#include <string>
+#include <vector>
 
 class ClearAnimation {
 private:

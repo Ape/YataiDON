@@ -24,9 +24,13 @@ const uint32_t MD5_K[64] = {
 
 } // namespace
 
-void md5(const uint8_t* data, size_t len, uint32_t out[4]) {
+void md5(const uint8_t* data, size_t len, uint32_t (&out)[4]) {
     out[0] = 0x67452301; out[1] = 0xefcdab89;
     out[2] = 0x98badcfe; out[3] = 0x10325476;
+
+    if (len > 0x1FFFFFFFFFFFFFFFULL) {
+        throw std::invalid_argument("md5: input too large to hash (>= 2^61 bytes)");
+    }
 
     size_t padded = ((len + 8) / 64 + 1) * 64 - 8;
     std::vector<uint8_t> msg(padded + 8, 0);

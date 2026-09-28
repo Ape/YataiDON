@@ -110,6 +110,13 @@ void DanGameScreen::init_dan_textures() {
 void DanGameScreen::init_dan() {
     SessionData& sd = global_data.session_data[(int)global_data.player_num];
 
+    if (sd.selected_dan.size() > 3) {
+        spdlog::warn("DanGameScreen: dan course '{}' has {} songs, only the first 3 are supported; truncating",
+                     sd.song_title, sd.selected_dan.size());
+        sd.selected_dan.resize(3);
+        if (sd.selected_dan_exam.size() > 3) sd.selected_dan_exam.resize(3);
+    }
+
     total_notes = 0;
     song_note_counts.clear();
     song_stats.clear();
@@ -124,7 +131,10 @@ void DanGameScreen::init_dan() {
             for (auto& sec : bm)
                 for (const Note& n : sec.notes)
                     if (n.type >= NoteType::DON && n.type <= NoteType::KAT_L) count++;
-        } catch (...) {}
+        } catch (const std::exception& e) {
+            spdlog::warn("DanGameScreen::init_dan: failed to parse '{}': {}",
+                         entry.song_path.string(), e.what());
+        }
         song_note_counts.push_back(count);
         total_notes += count;
     }
@@ -622,7 +632,7 @@ std::optional<Screens> DanGameScreen::update() {
             const bool music_running = song_music.has_value() && audio.is_sound_playing(song_music.value());
             if (music_running && ms_from_start < players[0]->end_time + MAX_TAIL_MS)
                 return std::nullopt;
-            song_max_combo = players[0]->get_combo();
+            song_max_combo = 0;
 
             prev_good     = players[0]->get_good();
             prev_ok       = players[0]->get_ok();

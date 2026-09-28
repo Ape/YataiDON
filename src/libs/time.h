@@ -1,3 +1,5 @@
+#pragma once
+
 #include <chrono>
 
 #ifdef YATAIDON_PLATFORM_IOS
@@ -9,7 +11,7 @@ inline double get_current_ms() {
     return ios_game_time_ms();
 #else
     using namespace std::chrono;
-    auto now = high_resolution_clock::now();
+    auto now = steady_clock::now();
     return duration<double, std::milli>(now.time_since_epoch()).count();
 #endif
 }

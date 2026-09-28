@@ -84,7 +84,7 @@ void GaugeHitEffect::draw(float y) {
                     .index=is_2p});
 
     //Note type texture
-    const SkinInfo& pos_data = tex.skin_config.at(SC::GAUGE_HIT_EFFECT_NOTE);
+    const SkinInfo& pos_data = tex.skin_config[SC::GAUGE_HIT_EFFECT_NOTE];
     tex.draw_texture(t_note,
         {.x=pos_data.x, .y=y+pos_data.y + (pos_data.height * is_2p), .fade=fade_out->attribute});
 

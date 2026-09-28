@@ -1,6 +1,8 @@
 #include "webcam.h"
 #include <SDL3/SDL_camera.h>
 #include <spdlog/spdlog.h>
+#include <cstring>
+#include <vector>
 
 WebCamera webcam;
 
@@ -65,6 +67,7 @@ bool WebCamera::open(int device_index) {
     }
 
     m_camera = cam;
+    m_permission_denied_logged = false;
     spdlog::info("WebCamera: opened device {}", device_index);
     return true;
 }
@@ -81,6 +84,7 @@ void WebCamera::close() {
     }
     m_width  = 0;
     m_height = 0;
+    m_permission_denied_logged = false;
 }
 
 void WebCamera::update() {
@@ -89,7 +93,15 @@ void WebCamera::update() {
     // 0 = pending, -1 = denied
     int perm = SDL_GetCameraPermissionState(static_cast<SDL_Camera*>(m_camera));
     if (perm == -1) {
-        spdlog::warn("WebCamera: permission denied");
+        if (!m_permission_denied_logged) {
+            spdlog::warn("WebCamera: permission denied");
+            m_permission_denied_logged = true;
+            if (m_texture.has_value()) {
+                ray::UnloadTexture(m_texture.value());
+                m_texture.reset();
+                m_width = m_height = 0;
+            }
+        }
         return;
     }
     if (perm == 0) return;
@@ -103,10 +115,14 @@ void WebCamera::update() {
 
     if (!rgba) return;
 
+    std::vector<uint8_t> packed;
+    void* pixels = rgba->pixels;
     if (rgba->pitch != rgba->w * 4) {
-        spdlog::warn("WebCamera: padded surface pitch {} (w={}), skipping frame", rgba->pitch, rgba->w);
-        SDL_DestroySurface(rgba);
-        return;
+        packed.resize((size_t)rgba->w * rgba->h * 4);
+        const uint8_t* src = static_cast<const uint8_t*>(rgba->pixels);
+        for (int y = 0; y < rgba->h; y++)
+            memcpy(packed.data() + (size_t)y * rgba->w * 4, src + (size_t)y * rgba->pitch, (size_t)rgba->w * 4);
+        pixels = packed.data();
     }
 
     if (!m_texture.has_value()) {
@@ -114,7 +130,7 @@ void WebCamera::update() {
         m_height = rgba->h;
 
         ray::Image img{};
-        img.data    = rgba->pixels;
+        img.data    = pixels;
         img.width   = m_width;
         img.height  = m_height;
         img.mipmaps = 1;
@@ -136,7 +152,7 @@ void WebCamera::update() {
         m_width  = rgba->w;
         m_height = rgba->h;
         ray::Image img{};
-        img.data    = rgba->pixels;
+        img.data    = pixels;
         img.width   = m_width;
         img.height  = m_height;
         img.mipmaps = 1;
@@ -151,7 +167,7 @@ void WebCamera::update() {
         ray::SetTextureFilter(tex, ray::TEXTURE_FILTER_BILINEAR);
         m_texture = tex;
     } else {
-        ray::UpdateTexture(m_texture.value(), rgba->pixels);
+        ray::UpdateTexture(m_texture.value(), pixels);
     }
 
     SDL_DestroySurface(rgba);

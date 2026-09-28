@@ -75,6 +75,34 @@ bool append_samples(const AVFrame* frame, int channels, std::vector<float>& out)
                 out.push_back(p[i] / 32768.0f);
             return true;
         }
+        case AV_SAMPLE_FMT_S32P:
+            for (int s = 0; s < frame->nb_samples; s++)
+                for (int c = 0; c < channels; c++)
+                    out.push_back(reinterpret_cast<const int32_t*>(frame->data[c])[s] / 2147483648.0f);
+            return true;
+        case AV_SAMPLE_FMT_S32: {
+            const int32_t* p = reinterpret_cast<const int32_t*>(frame->data[0]);
+            for (int i = 0; i < frame->nb_samples * channels; i++)
+                out.push_back(p[i] / 2147483648.0f);
+            return true;
+        }
+        case AV_SAMPLE_FMT_U8: {
+            const uint8_t* p = reinterpret_cast<const uint8_t*>(frame->data[0]);
+            for (int i = 0; i < frame->nb_samples * channels; i++)
+                out.push_back((p[i] - 128) / 128.0f);
+            return true;
+        }
+        case AV_SAMPLE_FMT_DBLP:
+            for (int s = 0; s < frame->nb_samples; s++)
+                for (int c = 0; c < channels; c++)
+                    out.push_back((float)reinterpret_cast<const double*>(frame->data[c])[s]);
+            return true;
+        case AV_SAMPLE_FMT_DBL: {
+            const double* p = reinterpret_cast<const double*>(frame->data[0]);
+            for (int i = 0; i < frame->nb_samples * channels; i++)
+                out.push_back((float)p[i]);
+            return true;
+        }
         default:
             return false;
     }
@@ -190,7 +218,8 @@ bool decode_nub(const fs::path& path, gen4::DecodedAudio& out) {
         if (!pkt || !frame) break;
 
         bool bad_format = false;
-        while (av_read_frame(fmt, pkt) >= 0) {
+        int read_ret = 0;
+        while ((read_ret = av_read_frame(fmt, pkt)) >= 0) {
             if (pkt->stream_index == idx) {
                 int send_ret = avcodec_send_packet(codec_ctx, pkt);
                 if (send_ret == AVERROR(EAGAIN)) {
@@ -212,8 +241,13 @@ bool decode_nub(const fs::path& path, gen4::DecodedAudio& out) {
             av_packet_unref(pkt);
             if (bad_format) break;
         }
+        if (!bad_format && read_ret != AVERROR_EOF) {
+            spdlog::warn("nub audio: read error in {} ({})", path.filename().string(), read_ret);
+            bad_format = true;
+        }
         if (!bad_format) {
-            avcodec_send_packet(codec_ctx, nullptr);
+            int flush_ret = avcodec_send_packet(codec_ctx, nullptr);
+            if (flush_ret < 0 && flush_ret != AVERROR_EOF) bad_format = true;
             while (avcodec_receive_frame(codec_ctx, frame) >= 0)
                 if (!append_samples(frame, out.channels, out.samples)) { bad_format = true; break; }
         }

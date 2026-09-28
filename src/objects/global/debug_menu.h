@@ -188,7 +188,7 @@ public:
 
         if (clicked) { commit_edit(); commit_data_edit(); }
 
-        if (editing_field < 0 && ray::IsKeyPressed(ray::KEY_TAB)) active_tab = (active_tab + 1) % TAB_COUNT;
+        if (editing_field < 0 && !editing_data_ptr && ray::IsKeyPressed(ray::KEY_TAB)) active_tab = (active_tab + 1) % TAB_COUNT;
 
         if (clicked && mouse_over_panel && mouse.y < TAB_HEIGHT) {
             int hit = (int)((mouse.x - panel_x) / tab_width);
@@ -367,9 +367,14 @@ public:
                     FrameCellButtons b = frame_cell_buttons(idx, panel_x, frames_top);
                     if (in_rect(mouse, b.left) && idx > 0) {
                         std::swap(framed->textures[idx], framed->textures[idx - 1]);
+                        // Keep the highlighted frame following the slot it moved into.
+                        if (selected_tex_index == idx) selected_tex_index = idx - 1;
+                        else if (selected_tex_index == idx - 1) selected_tex_index = idx;
                         break;
                     } else if (in_rect(mouse, b.right) && idx < frame_count - 1) {
                         std::swap(framed->textures[idx], framed->textures[idx + 1]);
+                        if (selected_tex_index == idx) selected_tex_index = idx + 1;
+                        else if (selected_tex_index == idx + 1) selected_tex_index = idx;
                         break;
                     }
                 }
@@ -503,7 +508,13 @@ private:
         file.checked_at = ray::GetTime();
         std::error_code ec;
         fs::file_time_type mtime = fs::last_write_time(path, ec);
-        if (!ec && (file.lines.empty() || mtime != file.mtime)) {
+        if (ec) {
+            // File gone/inaccessible: drop the stale cache instead of
+            // silently re-serving old content forever.
+            file.lines.clear();
+            return nullptr;
+        }
+        if (file.lines.empty() || mtime != file.mtime) {
             file.mtime = mtime;
             file.lines.clear();
             if (fs::file_size(path, ec) <= SOURCE_MAX_BYTES && !ec) {

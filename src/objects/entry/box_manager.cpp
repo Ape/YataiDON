@@ -160,8 +160,8 @@ void BoxManager::move_right() {
     }
 }
 
-void BoxManager::update(double current_time_ms, bool is_2p) {
-    this->is_2p = is_2p;
+void BoxManager::update(double current_time_ms, bool two_player) {
+    this->is_2p = two_player;
     if (!fade_out->is_started && check_board_list_change()) change_board_list();
     for (int i = 0; i < num_boxes; i++) {
         if (box_locations[i] == Screens::SONG_SELECT)

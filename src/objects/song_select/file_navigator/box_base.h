@@ -51,8 +51,8 @@ public:
     void snap_cross(float x)  { cross_pos = cross_target = x; cross_lead = 0.0f; }
     void glide_cross(float x) { cross_lead = cross_pos - x; cross_target = x; }
     bool vertical = false;
-    float left_bound;
-    float right_bound;
+    float left_bound = 0.0f;
+    float right_bound = 0.0f;
 
     float box_x() const { return vertical ? cross_pos : position; }
     float box_y() const { return vertical ? position  : 0.0f; }

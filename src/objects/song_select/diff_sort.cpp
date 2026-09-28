@@ -25,8 +25,8 @@ DiffSortSelect::DiffSortSelect(Statistics statistics, int prev_diff, int prev_le
     diff_fade_in = (FadeAnimation*)tex.get_animation(20);
     box_flicker = (FadeAnimation*)tex.get_animation(21);
     confirmation_bounce = (MoveAnimation*)tex.get_animation(22);
-    blue_arrow_fade = (FadeAnimation*)tex.get_animation(29);
-    blue_arrow_move = (MoveAnimation*)tex.get_animation(30);
+    blue_arrow_fade = (FadeAnimation*)tex.get_animation(29, true);
+    blue_arrow_move = (MoveAnimation*)tex.get_animation(30, true);
 
     if (!one_menu_sort) {
         bg_resize->start();
@@ -89,7 +89,12 @@ DiffSortSelect::DiffSortSelect(Statistics statistics, int prev_diff, int prev_le
 }
 
 void DiffSortSelect::one_menu_sort_refresh_song_num() {
-    song_num = statistics[std::min(sort_param[0], 5) - 1][sort_param[1]].total;
+    song_num = 0;
+    auto course_it = statistics.find(std::min(sort_param[0], 5) - 1);
+    if (course_it == statistics.end()) return;
+    auto level_it = course_it->second.find(sort_param[1]);
+    if (level_it == course_it->second.end()) return;
+    song_num = level_it->second.total;
 }
 
 bool DiffSortSelect::one_menu_sort_input_locked() const {
@@ -156,6 +161,8 @@ void DiffSortSelect::update(double current_ms) {
     diff_fade_in->update(current_ms);
     box_flicker->update(current_ms);
     confirmation_bounce->update(current_ms);
+    blue_arrow_fade->update(current_ms);
+    blue_arrow_move->update(current_ms);
 }
 
 std::optional<std::pair<int, int>> DiffSortSelect::input_select() {
@@ -242,8 +249,9 @@ void DiffSortSelect::draw_statistics() {
             tex.draw_texture(t_stat_num_star, {.frame=digit, .x=tex.skin_config[SC::DIFF_SORT_STAT_NUM_STAR].x-(counter.size() - i) * margin, .y=tex.skin_config[SC::DIFF_SORT_STAT_NUM_STAR].y});
         }
 
-        counter = std::to_string(statistics[selected_box][selected_level].total);
-        if (selected_box == 5) counter = std::to_string(statistics[prev_diff][prev_level].total);
+        counter = (selected_box == 5)
+            ? std::to_string(statistics[prev_diff][prev_level].total)
+            : std::to_string(statistics[selected_box][selected_level].total);
         margin = tex.skin_config[SC::DIFF_SORT_MARGIN_2].x;
         total_width = counter.size() * margin;
         for (size_t i = 0; i < counter.size(); i++) {

@@ -166,13 +166,9 @@ void ScriptManager::init(fs::path script_path) {
     lua->open_libraries(sol::lib::base, sol::lib::package, sol::lib::string,
                         sol::lib::math, sol::lib::table);
 
-    // index_scripts() only inserts a name that isn't already indexed, so a
-    // stale entry from the previous skin (or its parent) would otherwise
-    // permanently shadow this skin's own script of the same name.
     scripts.clear();
+    executed_scripts.clear();
 
-    // A partial skin scripts only some screens and leans on its parent for
-    // the rest, exactly like its graphics.
     fs::path parent_scripts;
     if (skin_has_parent())
         parent_scripts = parent_skin_root() / "Scripts";
@@ -184,7 +180,8 @@ void ScriptManager::init(fs::path script_path) {
         package_path += ";" + parent_scripts.string() + "/?.lua;" +
                         parent_scripts.string() + "/?/init.lua";
     }
-    (*lua)["package"]["path"] = package_path;
+    std::string default_path = (*lua)["package"]["path"];
+    (*lua)["package"]["path"] = package_path + ";" + default_path;
 
     index_scripts(script_path);
     if (!parent_scripts.empty()) index_scripts(parent_scripts);
@@ -214,6 +211,7 @@ std::string ScriptManager::get_lua_script_path(const std::string& script_name) {
 void ScriptManager::shutdown() {
     tex.unload_textures();
     scripts.clear();
+    executed_scripts.clear();
     lua.reset();
 }
 
@@ -453,7 +451,11 @@ void ScriptManager::register_lua_bindings() {
             debug_draw_log.push_back({"rect", {x, y, w, h}});
             log_lua_site(debug_draw_log.back(), state);
         }
-        ray::DrawRectangle((int)x, (int)y, (int)w, (int)h, ray::Color{to_u8(r), to_u8(g), to_u8(b), to_u8(a)});
+        int sx = virtual_to_screen_x(x);
+        int ex = virtual_to_screen_x(x + w);
+        int sy = virtual_to_screen_y(y);
+        int ey = virtual_to_screen_y(y + h);
+        ray::DrawRectangle(sx, sy, ex - sx, ey - sy, ray::Color{to_u8(r), to_u8(g), to_u8(b), to_u8(a)});
     });
 
 tex.set_function("begin_scissor", [](float x, float y, float w, float h) {

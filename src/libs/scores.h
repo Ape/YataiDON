@@ -2,6 +2,7 @@
 
 #include "global_data.h"
 #include "parsers/tja.h"
+#include <cassert>
 #include <chrono>
 #include <sqlite3.h>
 #include <mutex>
@@ -77,8 +78,8 @@ public:
     void py_taiko_import(const fs::path& old_db_path);
     void export_to_hiroba(const std::string& access_code, int player_id);
     int sync_from_server(const std::string& access_code);
-    std::optional<Score> get_score(std::string& hash, int difficulty, int player_id);
-    Score save_score(std::string& hash, int difficulty, int player_id, Score score, int64_t played_at, const std::string& modifiers_json);
+    std::optional<Score> get_score(const std::string& hash, int difficulty, int player_id);
+    Score save_score(const std::string& hash, int difficulty, int player_id, Score score, int64_t played_at, const std::string& modifiers_json);
     void add_path_binding(const fs::path& path, const std::array<std::string, 5>& hashes);
     std::array<std::string, 5> get_hashes(const fs::path& path);
     std::string get_single_hash(const fs::path& path);
@@ -91,12 +92,17 @@ public:
     std::optional<PlayerData> get_player_data(int player_id);
     void save_player_data(const PlayerData& player);
     int add_player(const std::string& name);
-    void begin_transaction();
-    void commit();
+    bool begin_transaction();
+    bool commit();
+    void rollback();
 };
 
 extern ScoresManager* _scores_manager_ptr;
-#define scores_manager (*_scores_manager_ptr)
+inline ScoresManager& get_scores_manager() {
+    assert(_scores_manager_ptr && "scores_manager used before init_scores_manager()");
+    return *_scores_manager_ptr;
+}
+#define scores_manager get_scores_manager()
 void init_scores_manager(bool gen3);
 
 inline ray::Color chara_default_color_1(int player_id) {

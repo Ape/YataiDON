@@ -138,43 +138,49 @@ cpr::Header signed_headers(const std::string& method, const std::string& path,
 }
 
 #if defined(__ANDROID__)
+static std::string extract_bundled_cacert(const std::string& out_path) {
+    SDL_IOStream* io = SDL_IOFromFile("cacert.pem", "r");
+    if (!io) {
+        spdlog::error("Failed to open bundled cacert.pem asset");
+        return std::string{};
+    }
+    Sint64 size = SDL_GetIOSize(io);
+    if (size <= 0) {
+        SDL_CloseIO(io);
+        return std::string{};
+    }
+    std::string buf(static_cast<std::size_t>(size), '\0');
+    const std::size_t read = SDL_ReadIO(io, buf.data(), static_cast<std::size_t>(size));
+    SDL_CloseIO(io);
+    if (read != static_cast<std::size_t>(size)) {
+        spdlog::error("Truncated read of bundled cacert.pem ({} of {} bytes)", read, size);
+        return std::string{};
+    }
+
+    std::ofstream out(out_path, std::ios::binary | std::ios::trunc);
+    if (!out) {
+        spdlog::error("Failed to write cacert.pem to {}", out_path);
+        return std::string{};
+    }
+    out << buf;
+    return out_path;
+}
+
 // libcurl on Android has no system CA store to fall back on; extract the
-// bundled Mozilla cacert.pem (android/app/src/main/assets/cacert.pem) to a
-// real path once and point every request's CURLOPT_CAINFO at it.
+// bundled Mozilla cacert.pem to a real path once and point every request's
+// CURLOPT_CAINFO at it.
 std::string ca_bundle_path() {
     static const std::string path = [] {
         // Store in app-private storage; external storage (/sdcard/...) is
         // writable by other apps, which would let them substitute a rogue
         // trust anchor for every HTTPS request.
         const std::string out_path = std::string(SDL_GetPrefPath("YataiDON", "certs")) + "cacert.pem";
-        std::ifstream existing(out_path, std::ios::binary);
-        if (existing.good()) return out_path;
+        std::ifstream existing(out_path, std::ios::binary | std::ios::ate);
+        // A truncated/empty file left over from an interrupted previous
+        // extraction must not be trusted as-is -- re-extract instead.
+        if (existing.good() && existing.tellg() > 0) return out_path;
 
-        SDL_IOStream* io = SDL_IOFromFile("cacert.pem", "r");
-        if (!io) {
-            spdlog::error("Failed to open bundled cacert.pem asset");
-            return std::string{};
-        }
-        Sint64 size = SDL_GetIOSize(io);
-        if (size <= 0) {
-            SDL_CloseIO(io);
-            return std::string{};
-        }
-        std::string buf(static_cast<std::size_t>(size), '\0');
-        const std::size_t read = SDL_ReadIO(io, buf.data(), static_cast<std::size_t>(size));
-        SDL_CloseIO(io);
-        if (read != static_cast<std::size_t>(size)) {
-            spdlog::error("Truncated read of bundled cacert.pem ({} of {} bytes)", read, size);
-            return std::string{};
-        }
-
-        std::ofstream out(out_path, std::ios::binary | std::ios::trunc);
-        if (!out) {
-            spdlog::error("Failed to write cacert.pem to {}", out_path);
-            return std::string{};
-        }
-        out << buf;
-        return out_path;
+        return extract_bundled_cacert(out_path);
     }();
     return path;
 }
@@ -699,7 +705,7 @@ std::string NetworkClient::map_to_json(const std::map<double, InputLogType>& my_
     return map_to_json_impl(my_map);
 }
 
-void NetworkClient::submit_score(std::string& hash, int difficulty, const std::string& access_code, Score score, std::map<double, InputLogType> input_log, int64_t played_at, const std::string& modifiers_json, bool chara_is_costume, int chara_cos_index) {
+void NetworkClient::submit_score(std::string& hash, int difficulty, const std::string& access_code, const Score& score, const std::map<double, InputLogType>& input_log, int64_t played_at, const std::string& modifiers_json, bool chara_is_costume, int chara_cos_index) {
     if (!network_enabled()) return;
     std::map<std::string, std::string> params{
         {"access_code", access_code},
@@ -720,7 +726,16 @@ void NetworkClient::submit_score(std::string& hash, int difficulty, const std::s
         {"chara_cos_index", std::to_string(chara_cos_index)},
     };
     if (pending_score_submit.has_value()) {
-        pending_score_submit->wait();
+        if (pending_score_submit->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
+            cpr::Response response = pending_score_submit->get();
+            pending_score_submit.reset();
+            if (response.status_code != 200) {
+                spdlog::error("Failed to submit score: HTTP {} - {}", response.status_code, response.text);
+            }
+        } else {
+            spdlog::warn("Score submission still in flight; dropping this submission");
+            return;
+        }
     }
     pending_score_submit = cpr::PostAsync(
         cpr::Url{network_url("/submit_score")},
@@ -970,7 +985,7 @@ void NetworkClient::shutdown() {
 
 bool NetworkClient::probe_online() { return false; }
 std::string NetworkClient::register_user(const std::string&) { return ""; }
-void NetworkClient::submit_score(std::string&, int, const std::string&, Score, std::map<double, InputLogType> input_log, int64_t, const std::string&, bool, int) {}
+void NetworkClient::submit_score(std::string&, int, const std::string&, const Score&, const std::map<double, InputLogType>&, int64_t, const std::string&, bool, int) {}
 bool NetworkClient::check_import_requested(const std::string&) { return false; }
 void NetworkClient::clear_import_flag(const std::string&) {}
 bool NetworkClient::fetch_chara_colors(const std::string&, ray::Color&, ray::Color&, ray::Color&) { return false; }

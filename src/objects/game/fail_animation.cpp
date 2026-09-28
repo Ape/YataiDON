@@ -84,14 +84,6 @@ void FailAnimation::draw() {
         .center = true,
         .y = (is_2p * tex.skin_config[SC::OFFSET_2P].y),
         .fade = (float)(bachio_boom_fade_in->attribute),
-        .index = 0
-    });
-
-    tex.draw_texture(t_bachio_boom, {
-        .scale = (float)(bachio_boom_scale->attribute),
-        .center = true,
-        .y = (is_2p * tex.skin_config[SC::OFFSET_2P].y),
-        .fade = (float)(bachio_boom_fade_in->attribute),
-        .index = 1
+        .index = (int)is_2p
     });
 }

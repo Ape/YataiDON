@@ -17,6 +17,7 @@ BalloonCounter::BalloonCounter(int count, bool is_2p)
 }
 
 void BalloonCounter::update_count(int count) {
+    count = std::clamp(count, 0, std::max(balloon_total, 0));
     if (balloon_count != count) {
         balloon_count = count;
         fade->start();

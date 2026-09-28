@@ -34,6 +34,6 @@ public:
     Screens selected_box();
     void move_left();
     void move_right();
-    void update(double current_time_ms, bool is_2p);
+    void update(double current_time_ms, bool two_player);
     void draw();
 };

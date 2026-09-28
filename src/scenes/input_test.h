@@ -24,7 +24,7 @@ public:
     }
 
     void draw(float) override {
-        if (type == DrumType::DON) {
+        if (type == DrumType::DON && t_large_drum) {
             // The skin ships a single full-face don flash, so clip it to the
             // half that was actually hit - otherwise left and right don look
             // identical on the input test.

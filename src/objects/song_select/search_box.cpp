@@ -17,6 +17,7 @@ void SearchBox::update(double current_ms) {
 
 void SearchBox::draw() {
     ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::BLACK, 0.6));
+    if (!t_background) return;
 
     float fade = diff_fade_in->attribute;
 

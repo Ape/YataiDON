@@ -17,8 +17,8 @@ std::unique_ptr<BaseOptionBox> SettingsBox::make_option_box(const rapidjson::Val
         return "";
     };
 
-    std::string name = localise(opt["name"]);
-    std::string desc = localise(opt["description"]);
+    std::string name = opt.HasMember("name")        ? localise(opt["name"])        : "";
+    std::string desc = opt.HasMember("description")  ? localise(opt["description"]) : "";
 
     std::map<std::string,std::string> values_map;
     if (opt.HasMember("values") && opt["values"].IsObject()) {
@@ -57,7 +57,7 @@ std::unique_ptr<BaseOptionBox> SettingsBox::make_option_box(const rapidjson::Val
     if (type == "float") {
         return std::make_unique<FloatOptionBox>(name, desc, path);
     }
-    return std::make_unique<StrOptionBox>(name, desc, path, values_map);
+    throw std::runtime_error("unknown option type '" + type + "'");
 }
 
 // Laid out for the 1280x720 base canvas; scale with the skin so box
@@ -119,14 +119,17 @@ void SettingsBox::set_y(float new_y) {
     target_position = std::numeric_limits<float>::infinity();
 }
 
-// The wrap range must equal box_count * box_step exactly, or boxes overlap
-// (and hide each other) once they've cycled through the carousel once.
 void SettingsBox::set_box_count(int box_count) {
+    if (box_count <= 0) return;
     wrap_bottom = wrap_top() + box_count * box_step();
 }
 
+bool SettingsBox::can_move() const {
+    return y == target_position || std::isinf(target_position);
+}
+
 bool SettingsBox::move_left() {
-    if (y != target_position && !std::isinf(target_position)) return false;
+    if (!can_move()) return false;
     move_anim->start();
     direction      = 1;
     start_position = y;
@@ -138,7 +141,7 @@ bool SettingsBox::move_left() {
 }
 
 bool SettingsBox::move_right() {
-    if (y != target_position && !std::isinf(target_position)) return false;
+    if (!can_move()) return false;
     move_anim->start();
     direction      = -1;
     start_position = y;
@@ -163,7 +166,8 @@ bool SettingsBox::move_option_left() {
 }
 
 void SettingsBox::move_option_right() {
-    if (!options.empty() && options[option_index]->is_highlighted) {
+    if (options.empty()) return;
+    if (options[option_index]->is_highlighted) {
         options[option_index]->move_right();
     } else {
         option_index = std::min(option_index + 1, (int)options.size() - 1);
@@ -182,7 +186,7 @@ void SettingsBox::select() {
     in_box = true;
 }
 
-std::optional<Screens> SettingsBox::pending_screen_change() const {
+std::optional<Screens> SettingsBox::pending_screen_change() {
     for (auto& opt : options) {
         auto* ao = dynamic_cast<AudioOffsetOptionBox*>(opt.get());
         if (ao && ao->wants_screen_change) {
@@ -210,6 +214,7 @@ void SettingsBox::update(double current_time_ms, bool selected) {
 }
 
 void SettingsBox::draw_text() const {
+    if (!t_box) return;
     float text_x = x + t_box->x[0] + (t_box->x2[0] / 2.0f) - (label->width  / 2.0f);
     float text_y = y + t_box->y[0] + (t_box->y2[0] / 2.0f) - (label->height / 2.0f);
 

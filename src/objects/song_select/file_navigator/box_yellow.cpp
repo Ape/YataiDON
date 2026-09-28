@@ -108,7 +108,7 @@ void YellowBox::update(double current_ms) {
 }
 
 void YellowBox::draw(float fade, float y_offset) {
-    tex.draw_texture(t_bottom_right, {.x=right_x,             .y=y_offset,                    .fade=fade});
+    tex.draw_texture(t_bottom_right, {.x=right_x,             .y=bottom_y    + y_offset,      .fade=fade});
     tex.draw_texture(t_bottom_left,  {.x=left_x,              .y=bottom_y    + y_offset,      .fade=fade});
     tex.draw_texture(t_top_right,    {.x=right_x,             .y=top_y       + y_offset,      .fade=fade});
     tex.draw_texture(t_top_left,     {.x=left_x,              .y=top_y       + y_offset,      .fade=fade});

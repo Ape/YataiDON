@@ -95,6 +95,7 @@ void BaseBox::close_box() {
 }
 
 void BaseBox::enter_box() {
+    if (!yellow_box.has_value()) return;
     yellow_box->create_anim_2();
 }
 

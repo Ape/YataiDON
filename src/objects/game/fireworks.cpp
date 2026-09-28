@@ -1,5 +1,6 @@
 #include "fireworks.h"
 #include <algorithm>
+#include <cmath>
 
 static constexpr int GOGO_EXPLOSION_ANIM_ID = 23;
 
@@ -24,9 +25,9 @@ void Fireworks::draw() {
         int slots = 5;
         int mirror_from = -1;
         constexpr int MAX_EXPLOSION_SLOTS = 32;
-        if (const SkinInfo* s = tex.skin_entry("gogo_explosion_slots"); s && s->x > 0) {
-            slots = std::clamp(static_cast<int>(s->x), 1, MAX_EXPLOSION_SLOTS);
-            if (s->y > 0) mirror_from = std::min(static_cast<int>(s->y), slots);
+        if (const SkinInfo* s = tex.skin_entry("gogo_explosion_slots"); s && std::isfinite(s->x) && s->x > 0) {
+            slots = static_cast<int>(std::clamp(s->x, 1.0f, static_cast<float>(MAX_EXPLOSION_SLOTS)));
+            if (std::isfinite(s->y) && s->y > 0) mirror_from = static_cast<int>(std::min(s->y, static_cast<float>(slots)));
         }
         for (int i = 0; i < slots; i++) {
             tex.draw_texture(t_explosion, {

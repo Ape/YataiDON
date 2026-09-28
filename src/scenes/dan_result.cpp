@@ -33,8 +33,11 @@ void DanResultScreen::on_screen_start() {
     audio.play_sound("announce", VolumePreset::VOICE);
     audio.play_sound("partial_intro", VolumePreset::SOUND);
 
-    fade_out   = (FadeAnimation*)tex.get_animation(0);
-    page2_fade = (FadeAnimation*)tex.get_animation(1);
+    fade_out   = dynamic_cast<FadeAnimation*>(tex.get_animation(0));
+    page2_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(1));
+    if (!fade_out || !page2_fade) {
+        throw std::runtime_error("DanResultScreen: animation 0/1 is not a FadeAnimation");
+    }
     is_page2   = false;
     page_start_ms = get_current_ms();
     page1_start_ms = page_start_ms;
@@ -82,6 +85,8 @@ void DanResultScreen::on_screen_start() {
     se_congrats = false;
     prev_best_score = 0;
     best_score_show = false;
+    prev_arrival = 0;
+    nameplate_last_dan = -2;
 
     apply_reward();
     build_page2_timeline();
@@ -116,13 +121,6 @@ void DanResultScreen::apply_reward() {
                    rd.dan_index_max >= 0 && rd.dan_index == rd.dan_index_max &&
                    prev_best <= 1;
 
-    DanRecord rec;
-    rec.dan_index = rd.dan_index;
-    rec.rank      = std::max(prev_best, new_rank);
-    rec.score     = std::max(prev_best_score, rd.score);
-    rec.arrival   = std::max(prev ? prev->arrival : 0, arrival);
-    scores_manager.save_dan_record(pid, rd.dan_title, rec);
-
     if (shodan && rd.dan_index >= 0) {
         if (auto pd = scores_manager.get_player_data(pid)) {
             if (pd->dan <= rd.dan_index) {
@@ -133,8 +131,18 @@ void DanResultScreen::apply_reward() {
                 spdlog::info("Dan rank-up: '{}' -> nameplate dan={} gold={} rainbow={} (rank {} > prev {})",
                              rd.dan_title, pd->dan, pd->gold, pd->rainbow, new_rank, prev_best);
             }
+        } else {
+            spdlog::warn("Dan rank-up: '{}' could not update player profile (player data unavailable); dan record will still be saved",
+                         rd.dan_title);
         }
     }
+
+    DanRecord rec;
+    rec.dan_index = rd.dan_index;
+    rec.rank      = std::max(prev_best, new_rank);
+    rec.score     = std::max(prev_best_score, rd.score);
+    rec.arrival   = std::max(prev ? prev->arrival : 0, arrival);
+    scores_manager.save_dan_record(pid, rd.dan_title, rec);
 }
 
 void DanResultScreen::build_page2_timeline() {
@@ -320,7 +328,7 @@ void DanResultScreen::update_sounds(double now) {
             const bool less = i < (int)rd.exams.size() && rd.exams[i].range == "less";
             audio.play_sound(less ? "gauge_down_loop" : "gauge_up_loop", VolumePreset::SOUND);
         }
-        if (!se_row_judge[i] && on_page >= rows[i].numin) {
+        if (!se_row_judge[i] && on_page >= rows[i].numin && !page2_skipped) {
             se_row_judge[i] = true;
             audio.play_sound("gauge_judgement", VolumePreset::SOUND);
         }
@@ -363,11 +371,10 @@ std::optional<Screens> DanResultScreen::update() {
 
     if (celebrating && current_ms - celebrate_start_ms >= 3000.0) {
         if (auto pd = scores_manager.get_player_data(get_player_id(global_data.player_num))) {
-            static int last_built_dan = -2;
-            if (last_built_dan != pd->dan) {
+            if (nameplate_last_dan != pd->dan) {
                 nameplate = Nameplate(pd->username, pd->title, global_data.player_num,
                                       pd->dan, pd->gold, pd->rainbow, pd->title_bg);
-                last_built_dan = pd->dan;
+                nameplate_last_dan = pd->dan;
             }
         }
     }
@@ -386,6 +393,7 @@ std::optional<Screens> DanResultScreen::update() {
 void DanResultScreen::draw() {
     double now = get_current_ms();
     if (background.has_value()) background->draw();
+    if (!draw_seq.has_value()) return;
 
     DanResultDraw::FrameState s;
     s.now               = now;

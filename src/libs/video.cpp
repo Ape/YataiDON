@@ -172,7 +172,13 @@ void VideoPlayer::start(double current_ms) {
     is_finished_arr = {false, false};
     audio_started = false;
     start_ms = current_ms;
-    decode_thread = std::thread(&VideoPlayer::decode_loop, this);
+    try {
+        decode_thread = std::thread(&VideoPlayer::decode_loop, this);
+    } catch (const std::system_error& e) {
+        spdlog::error("VideoPlayer: failed to start decode thread: {}", e.what());
+        start_ms.reset();
+        is_finished_arr = {true, true};
+    }
 }
 
 bool VideoPlayer::is_finished() const {
@@ -202,6 +208,7 @@ void VideoPlayer::update(double current_ms) {
     // intermediate catch-up frames skip the GPU entirely
     std::optional<DecodedFrame> latest;
     bool drained_at_eof;
+    bool queue_empty;
     {
         std::lock_guard<std::mutex> lock(queue_mutex);
         while (!frame_queue.empty() && frame_queue.front().index <= target_frame) {
@@ -211,7 +218,8 @@ void VideoPlayer::update(double current_ms) {
             latest = std::move(frame_queue.front());
             frame_queue.pop_front();
         }
-        drained_at_eof = decode_eof && frame_queue.empty();
+        queue_empty = frame_queue.empty();
+        drained_at_eof = decode_eof && queue_empty;
     }
     queue_cv.notify_one();
 
@@ -222,10 +230,7 @@ void VideoPlayer::update(double current_ms) {
         spare_buffers.push_back(std::move(latest->bytes));
     } else if (drained_at_eof) {
         is_finished_arr[0] = true;
-    } else if (frame_count > 0 && frame_index >= frame_count) {
-        // Sanity bound only: real completion is decode_eof + empty queue
-        // above. This just prevents playback from running forever if the
-        // fps*duration estimate is off and decode_eof never arrives.
+    } else if (frame_count > 0 && frame_index >= frame_count && queue_empty) {
         is_finished_arr[0] = true;
     }
 }

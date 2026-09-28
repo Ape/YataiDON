@@ -74,10 +74,10 @@ void ComboAnnounce::update(double current_ms) {
     fade->update(current_ms);
 
     if (!audio_played && combo >= 100) {
+        audio_played = true;
         std::string sound_name = "combo_" + std::to_string(combo) + "_" + std::to_string(static_cast<int>(player_num)) + "p";
         if (audio.has_sound(sound_name)) {
             audio.play_sound(sound_name, VolumePreset::VOICE);
-            audio_played = true;
         }
     }
 }
@@ -143,6 +143,8 @@ void ComboAnnounce::draw_default(float y, float fade_value) {
         } else {
             if (thousands <= 5) {
                 tex.draw_texture(t_announce_add, {.frame = thousands, .x = tex.skin_config[SC::COMBO_ANNOUNCE_THOUSANDS_ADD_X].x + thousands_offset, .y = y, .fade = fade_value});
+            } else {
+                tex.draw_texture(t_announce_number, {.frame = thousands - 1, .x = tex.skin_config[SC::COMBO_ANNOUNCE_NUMBER_THOUSANDS_X].x, .y = y, .fade = fade_value});
             }
             if (remaining_hundreds > 0) {
                 tex.draw_texture(t_announce_number, {.frame = remaining_hundreds - 1, .x = hundreds_offset, .y = y, .fade = fade_value});

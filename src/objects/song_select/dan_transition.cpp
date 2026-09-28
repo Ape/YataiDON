@@ -1,22 +1,24 @@
 #include "dan_transition.h"
 #include <algorithm>
+#include <stdexcept>
 
 DanTransition::DanTransition() {
     started = false;
 }
 
 void DanTransition::start() {
-    slide_in = (MoveAnimation*)tex.get_animation(38);
+    slide_in = dynamic_cast<MoveAnimation*>(tex.get_animation(38));
+    if (!slide_in) throw std::runtime_error("DanTransition: animation 38 is not a MoveAnimation");
     slide_in->start();
     started  = true;
-    start_ms = 0;
+    start_ms = -1.0;
     last_ms  = 0;
     t_background = tex.get_texture("dan_transition/background");
 }
 
 void DanTransition::update(double current_ms) {
     if (!started || !slide_in) return;
-    if (start_ms == 0) start_ms = current_ms;
+    if (start_ms < 0) start_ms = current_ms;
     last_ms = current_ms;
     slide_in->update(current_ms);
 }
@@ -34,7 +36,7 @@ double DanTransition::duration() const {
 }
 
 double DanTransition::progress() const {
-    if (!started || start_ms == 0) return 0.0;
+    if (!started || start_ms < 0) return 0.0;
     double d = duration();
     if (d <= 0.0) return 1.0;
     return std::clamp((last_ms - start_ms) / d, 0.0, 1.0);

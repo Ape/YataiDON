@@ -16,8 +16,15 @@ void ResultScreen::on_screen_start() {
     skipped_time = 0;
     skip_enabled_ms = 0;
     fs::path loading_graphic_path = global_data.session_data[(int)global_data.player_num].selected_song.parent_path() / "Loading.png";
+    background.reset();
     if (exists(loading_graphic_path)) {
-        loading_graphic.emplace(ray::LoadTexture(loading_graphic_path.string().c_str()));
+        ray::Texture2D loaded = ray::LoadTexture(loading_graphic_path.string().c_str());
+        if (loaded.id != 0) {
+            loading_graphic.emplace(loaded);
+        } else {
+            spdlog::error("Failed to load result loading graphic: {}", loading_graphic_path.string());
+            background.emplace(global_data.player_num, tex.screen_width);
+        }
     } else {
         background.emplace(global_data.player_num, tex.screen_width);
     }

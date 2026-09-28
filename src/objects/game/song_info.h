@@ -6,8 +6,8 @@ class SongNum {
 private:
     std::unique_ptr<OutlinedText> text;
 public:
-    float width;
-    float height;
+    float width = 0.0f;
+    float height = 0.0f;
     SongNum() = default;
     SongNum(int song_num, float outline_override = -1.0f);
     SongNum(int value, const std::string& config_key);
@@ -34,6 +34,11 @@ private:
 public:
     SongInfo() = default;
     SongInfo(const std::string& song_name, const std::string& subtitle, bool show_subtitle, int genre, int song_num, int song_total = 0, const std::string& genre_label = "");
+    SongInfo(const SongInfo&) = delete;
+    SongInfo& operator=(const SongInfo&) = delete;
+    SongInfo(SongInfo&& other) noexcept;
+    SongInfo& operator=(SongInfo&& other) noexcept;
+    ~SongInfo();
 
     void update(double current_ms);
     void draw();

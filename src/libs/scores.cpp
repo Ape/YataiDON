@@ -288,7 +288,8 @@ void ScoresManager::py_taiko_import(const fs::path& old_db_path) {
         {
             sqlite3_stmt* check_stmt;
             const char* check_query =
-                "SELECT crown, score FROM scores WHERE player_id = 1 AND hash = ? AND difficulty = ? LIMIT 1;";
+                "SELECT crown, score FROM scores WHERE player_id = 1 AND hash = ? AND difficulty = ? "
+                "ORDER BY crown DESC, score DESC LIMIT 1;";
             if (sqlite3_prepare_v2(db_fsd, check_query, -1, &check_stmt, nullptr) != SQLITE_OK) {
                 spdlog::warn("py_taiko_import: failed to prepare check statement, skipping");
                 skipped++;
@@ -425,14 +426,14 @@ int ScoresManager::sync_from_server(const std::string& access_code) {
     return updated;
 }
 
-std::optional<Score> ScoresManager::get_score(std::string& hash, int difficulty, int player_id) {
+std::optional<Score> ScoresManager::get_score(const std::string& hash, int difficulty, int player_id) {
     std::lock_guard<std::mutex> lock(maps_mutex);
     auto it = score_cache.find(std::make_tuple(hash, difficulty, player_id));
     if (it != score_cache.end()) return it->second;
     return std::nullopt;
 }
 
-Score ScoresManager::save_score(std::string& hash, int difficulty, int player_id, Score score, int64_t played_at, const std::string& modifiers_json) {
+Score ScoresManager::save_score(const std::string& hash, int difficulty, int player_id, Score score, int64_t played_at, const std::string& modifiers_json) {
     sqlite3_stmt* stmt;
 
     char query[512];
@@ -807,16 +808,30 @@ void ScoresManager::save_dan_record(int player_id, const std::string& course_tit
     sqlite3_finalize(stmt);
 }
 
-void ScoresManager::begin_transaction() {
-    sqlite3_exec(db_fsd, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+bool ScoresManager::begin_transaction() {
+    if (sqlite3_exec(db_fsd, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        spdlog::error("begin_transaction failed: {}", sqlite3_errmsg(db_fsd));
+        return false;
+    }
+    return true;
 }
 
-void ScoresManager::commit() {
-    sqlite3_exec(db_fsd, "COMMIT;", nullptr, nullptr, nullptr);
+bool ScoresManager::commit() {
+    if (sqlite3_exec(db_fsd, "COMMIT;", nullptr, nullptr, nullptr) != SQLITE_OK) {
+        spdlog::error("commit failed: {}", sqlite3_errmsg(db_fsd));
+        return false;
+    }
+    return true;
+}
+
+void ScoresManager::rollback() {
+    if (sqlite3_exec(db_fsd, "ROLLBACK;", nullptr, nullptr, nullptr) != SQLITE_OK)
+        spdlog::error("rollback failed: {}", sqlite3_errmsg(db_fsd));
 }
 
 ScoresManager* _scores_manager_ptr = nullptr;
 
 void init_scores_manager(bool gen3) {
+    delete _scores_manager_ptr;  // calling this more than once would otherwise leak the previous manager
     _scores_manager_ptr = new ScoresManager(gen3 ? "scores_gen3.db" : "scores.db");
 }

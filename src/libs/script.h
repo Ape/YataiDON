@@ -3,6 +3,7 @@
 #include "texture.h"
 #include <sol/sol.hpp>
 #include <spdlog/spdlog.h>
+#include <set>
 
 class LuaScript {
 protected:
@@ -30,13 +31,19 @@ protected:
             spdlog::error("Lua error in {}: {}", context, err.what());
             return sol::nullopt;
         }
-        return result.template get<Ret>();
+        try {
+            return result.template get<Ret>();
+        } catch (const std::exception& e) {
+            spdlog::error("Lua error in {} (bad return value): {}", context, e.what());
+            return sol::nullopt;
+        }
     }
 };
 
 class ScriptManager {
 private:
     std::map<std::string, std::string> scripts;
+    std::set<std::string> executed_scripts;
 public:
     TextureWrapper tex;
     std::unique_ptr<sol::state> lua;
@@ -47,6 +54,9 @@ public:
     std::string get_lua_script_path(const std::string& script_name);
     void index_scripts(const fs::path& script_path);
     void register_lua_bindings();
+
+    bool script_executed(const std::string& script_name) const { return executed_scripts.count(script_name) != 0; }
+    void mark_script_executed(const std::string& script_name) { executed_scripts.insert(script_name); }
 };
 
 extern ScriptManager script_manager;
@@ -60,7 +70,7 @@ bool LuaScript::load(const std::string& class_name, const std::string& script_na
     if (!script_manager.lua) return false;
     sol::state& lua = *script_manager.lua;
 
-    if (!lua[class_name].valid()) {
+    if (!script_manager.script_executed(script_name)) {
         // A skin that scripts some screens but not this one simply has no
         // script here; that is a plain "not scripted", not an error.
         if (!script_manager.has_lua_script(script_name)) return false;
@@ -70,9 +80,19 @@ bool LuaScript::load(const std::string& class_name, const std::string& script_na
             spdlog::error("Error loading {}.lua: {}", script_name, err.what());
             return false;
         }
+        script_manager.mark_script_executed(script_name);
+    }
+
+    if (!lua[class_name].valid()) {
+        spdlog::error("{}.lua loaded but does not define class {}", script_name, class_name);
+        return false;
     }
 
     sol::protected_function new_func = lua[class_name]["new"];
+    if (!new_func.valid()) {
+        spdlog::error("{}.new is not a defined function for class {}", script_name, class_name);
+        return false;
+    }
     auto call_result = new_func(std::forward<Args>(args)...);
     if (!call_result.valid()) {
         sol::error err = call_result;

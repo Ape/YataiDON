@@ -10,9 +10,12 @@
 #include <spdlog/sinks/android_sink.h>
 #endif
 #include <algorithm>
+#include <atomic>
 #include <cerrno>
+#include <chrono>
 #include <csignal>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <exception>
 #include <vector>
@@ -172,6 +175,21 @@ void signal_handler(int signal) {
 }
 
 #ifndef _WIN32
+static void write_all(int fd, const char* buf, std::size_t len) {
+    while (len > 0) {
+        ssize_t n = write(fd, buf, len);
+        if (n > 0) {
+            buf += n;
+            len -= static_cast<std::size_t>(n);
+            continue;
+        }
+        if (n < 0 && errno == EINTR) continue;
+        break; // real error -- nothing signal-safe left to do about it
+    }
+}
+
+#define CRASH_WRITE_LIT(fd, lit) write_all((fd), (lit), sizeof(lit) - 1)
+
 static void write_hex(int fd, std::uintptr_t value) {
     char buf[2 + sizeof(value) * 2];
     buf[0] = '0';
@@ -180,18 +198,17 @@ static void write_hex(int fd, std::uintptr_t value) {
         int nibble = (value >> (4 * (sizeof(value) * 2 - 1 - i))) & 0xF;
         buf[2 + i] = nibble < 10 ? char('0' + nibble) : char('a' + nibble - 10);
     }
-    (void)!write(fd, buf, sizeof(buf));
+    write_all(fd, buf, sizeof(buf));
 }
 
 static void crash_signal_handler(int sig) {
-    const char* name = "Unknown signal\n";
     switch (sig) {
-        case SIGSEGV: name = "Crash: SIGSEGV (Segmentation fault)\n"; break;
-        case SIGABRT: name = "Crash: SIGABRT (Abort)\n"; break;
-        case SIGFPE:  name = "Crash: SIGFPE (Floating point exception)\n"; break;
-        case SIGILL:  name = "Crash: SIGILL (Illegal instruction)\n"; break;
+        case SIGSEGV: CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGSEGV (Segmentation fault)\n"); break;
+        case SIGABRT: CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGABRT (Abort)\n"); break;
+        case SIGFPE:  CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGFPE (Floating point exception)\n"); break;
+        case SIGILL:  CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGILL (Illegal instruction)\n"); break;
+        default:      CRASH_WRITE_LIT(STDERR_FILENO, "Unknown signal\n"); break;
     }
-    (void)!write(STDERR_FILENO, name, strlen(name));
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
     // Raw addresses only -- symbolizing (resolve()) allocates and is not
     // signal-safe. Pipe these through addr2line/cpptrace offline.
@@ -199,7 +216,7 @@ static void crash_signal_handler(int sig) {
     std::size_t count = cpptrace::safe_generate_raw_trace(frames, 64);
     for (std::size_t i = 0; i < count; i++) {
         write_hex(STDERR_FILENO, frames[i]);
-        (void)!write(STDERR_FILENO, "\n", 1);
+        CRASH_WRITE_LIT(STDERR_FILENO, "\n");
     }
 #endif
     _exit(1);

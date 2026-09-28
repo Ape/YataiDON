@@ -2,8 +2,13 @@
 
 #include <rapidjson/document.h>
 #include <map>
+#include <memory>
+#include <optional>
+#include <string>
+#include <tuple>
 #include <unordered_map>
 #include <set>
+#include <vector>
 #include "time.h"
 
 enum class EaseType {

@@ -19,7 +19,7 @@ void EntryScreen::on_screen_start() {
 
     timer = std::make_unique<Timer>(60, get_current_ms(), [this]() {
         if (box_manager->is_costume_box()) {
-            box_manager->open_costume_menu(global_data.player_num);
+            box_manager->open_costume_menu(players[0] ? players[0]->player_num : PlayerNum::P1);
         } else {
             if (!box_manager->selection_allowed()) box_manager->move_left();
             box_manager->select_box();
@@ -107,7 +107,7 @@ void EntryScreen::join_player(PlayerNum player_num) {
         is_2p = false;
     }
     audio.play_sound("cloud", VolumePreset::SOUND);
-    audio.play_sound("entry_start_" + std::to_string((int)global_data.player_num) + "p", VolumePreset::VOICE);
+    audio.play_sound("entry_start_" + std::to_string((int)player_num) + "p", VolumePreset::VOICE);
     if (state == EntryState::SELECT_SIDE) lua_entry->decide_side_select(side);
     state = EntryState::SELECT_MODE;
     audio.play_sound("don", VolumePreset::SOUND);
@@ -134,23 +134,7 @@ std::optional<Screens> EntryScreen::handle_input() {
                 }
                 return on_screen_end(Screens::TITLE);
             }
-            global_data.player_num = (side == 0) ? PlayerNum::P1 : PlayerNum::P2;
-
-            if (players[0]) {
-                players[1] = std::make_unique<EntryPlayer>(global_data.player_num, side, box_manager.get());
-                players[1]->start_animations();
-                global_data.player_num = PlayerNum::P1;
-                is_2p = true;
-            } else {
-                global_data.first_login_player = global_data.player_num;
-                players[0] = std::make_unique<EntryPlayer>(global_data.player_num, side, box_manager.get());
-                players[0]->start_animations();
-                is_2p = false;
-            }
-            audio.play_sound("cloud", VolumePreset::SOUND);
-            audio.play_sound("entry_start_" + std::to_string((int)global_data.player_num) + "p", VolumePreset::VOICE);
-            state = EntryState::SELECT_MODE;
-            audio.play_sound("don", VolumePreset::SOUND);
+            join_player((side == 0) ? PlayerNum::P1 : PlayerNum::P2);
         }
         if (is_l_kat_pressed()) {
             audio.play_sound("kat", VolumePreset::SOUND);
@@ -212,9 +196,16 @@ std::optional<Screens> EntryScreen::handle_input() {
         } else if (players[0] && players[0]->player_num == PlayerNum::P2 && (is_l_don_pressed(PlayerNum::P1) || is_r_don_pressed(PlayerNum::P1))) {
             audio.play_sound("don", VolumePreset::SOUND);
             state = EntryState::SELECT_SIDE;
+            {
+                auto pd = scores_manager.get_player_data(global_data.config->general.player_1_id);
+                nameplate = Nameplate(
+                    pd ? pd->username : "", pd ? pd->title : "",
+                    PlayerNum::ALL,
+                    pd ? pd->dan : -1, pd ? pd->gold : false, pd ? pd->rainbow : false, pd ? pd->title_bg : 0);
+            }
             lua_entry->restart_side_select();
             side = 1;
-            reload_preview_chara(global_data.config->general.player_2_id);
+            reload_preview_chara(global_data.config->general.player_1_id);
         }
     }
     return std::nullopt;

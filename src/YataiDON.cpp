@@ -113,15 +113,24 @@ Screens check_args(int argc, char* argv[]) {
             std::cout << "  --auto      : Enable auto mode\n";
             std::cout << "  --practice  : Start in practice mode\n";
             exit_now(0);
+        } else if (!arg.empty() && arg[0] == '-') {
+            std::cerr << "Error: Unknown option: " << arg << "\n";
+            exit_now(1);
         } else if (song_path.empty()) {
             song_path = arg;
         } else if (!difficulty.has_value()) {
             try {
-                difficulty = std::stoi(arg);
+                size_t pos = 0;
+                int value = std::stoi(arg, &pos);
+                if (pos != arg.size()) throw std::invalid_argument(arg);
+                difficulty = value;
             } catch (const std::exception& e) {
                 std::cerr << "Error: Invalid difficulty value: " << arg << "\n";
                 exit_now(1);
             }
+        } else {
+            std::cerr << "Error: Unexpected extra argument: " << arg << "\n";
+            exit_now(1);
         }
     }
 
@@ -619,6 +628,8 @@ int main(int argc, char* argv[]) {
     network.shutdown();
     shutdown_sdl_joysticks();
     delete g_loop;
+    delete global_data.config;
+    global_data.config = nullptr;
     global_tex.unload_textures();
     tex.unload_textures();
     script_manager.shutdown();

@@ -100,6 +100,11 @@ public:
     MoveAnimation* move_out = nullptr;
 
     ModifierSelector(PlayerNum player_num, PlayerData* player);
+    ~ModifierSelector();
+    ModifierSelector(const ModifierSelector&) = delete;
+    ModifierSelector& operator=(const ModifierSelector&) = delete;
+    ModifierSelector(ModifierSelector&&) = default;
+    ModifierSelector& operator=(ModifierSelector&&) = default;
     void update(double current_ms);
     void confirm();
     void left();

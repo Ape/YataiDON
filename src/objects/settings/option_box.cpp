@@ -1,6 +1,7 @@
 #include "option_box.h"
 #include "../../libs/animation.h"
 #include "../../libs/input.h"
+#include <algorithm>
 
 std::string getKeyString(int key_code);
 
@@ -106,17 +107,36 @@ IntOptionBox::IntOptionBox(const std::string& name,
 {
     if (!values.empty()) {
         for (auto& [k, v] : values) {
-            value_list.emplace_back(std::stoi(k), v);
-        }
-
-        for (int i = 0; i < (int)value_list.size(); i++) {
-            if (value_list[i].first == value) {
-                value_index = i;
-                break;
+            try {
+                value_list.emplace_back(std::stoi(k), v);
+            } catch (const std::exception&) {
+                continue;
             }
         }
-        value_text = std::make_unique<OutlinedText>(value_list[value_index].second,
-                                      option_font_size(), ray::WHITE, ray::BLACK, false, 4, -4);
+
+        std::sort(value_list.begin(), value_list.end(),
+                  [](const auto& a, const auto& b) { return a.first < b.first; });
+
+        if (!value_list.empty()) {
+            bool matched = false;
+            for (int i = 0; i < (int)value_list.size(); i++) {
+                if (value_list[i].first == value) {
+                    value_index = i;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+
+                value_index = 0;
+                value = value_list[0].first;
+            }
+            value_text = std::make_unique<OutlinedText>(value_list[value_index].second,
+                                          option_font_size(), ray::WHITE, ray::BLACK, false, 4, -4);
+        } else {
+            value_text = std::make_unique<OutlinedText>(int_display(value),
+                                          option_font_size(), ray::WHITE, ray::BLACK, false, 4, -4);
+        }
     } else {
         value_text = std::make_unique<OutlinedText>(int_display(value),
                                       option_font_size(), ray::WHITE, ray::BLACK, false, 4, -4);
@@ -185,11 +205,17 @@ StrOptionBox::StrOptionBox(const std::string& name,
         for (auto& [k, v] : values) {
             value_list.emplace_back(k, v);
         }
+        bool matched = false;
         for (int i = 0; i < (int)value_list.size(); i++) {
             if (value_list[i].first == value) {
                 value_index = i;
+                matched = true;
                 break;
             }
+        }
+        if (!matched) {
+            value_index = 0;
+            value = value_list[0].first;
         }
         value_text = std::make_unique<OutlinedText>(value_list[value_index].second,
                                       option_font_size(), ray::WHITE, ray::BLACK, false, 4, -4);

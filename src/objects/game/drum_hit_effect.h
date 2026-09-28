@@ -8,7 +8,7 @@ class DrumHitEffect {
 protected:
     DrumType type;
     Side side;
-    FadeAnimation* fade;
+    FadeAnimation* fade = nullptr;
     TextureObject* t_effect = nullptr;
 
 public:

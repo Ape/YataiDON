@@ -19,7 +19,7 @@ GenreBG::GenreBG(std::string& text_name, std::optional<ray::Color> color, Textur
         int target_loc = ray::GetShaderLocation(shader, "targetColor");
         ray::SetShaderValue(shader, source_loc, src, ray::SHADER_UNIFORM_VEC3);
         ray::SetShaderValue(shader, target_loc, tgt, ray::SHADER_UNIFORM_VEC3);
-        shader_loaded = true;
+        shader_loaded = ray::IsShaderValid(shader);
     }
 
     stretch = std::make_unique<MoveAnimation>(333, 20 * tex.screen_scale, false, false, 0, 0, 0, std::nullopt, EaseType::Cubic);
@@ -45,8 +45,8 @@ void GenreBG::exit(float left_position, float right_position, FolderBox* center_
 
     float boundary_left_exit  = tex.skin_config[SC::GENRE_BG_SELECT_BOUNDARY].x;
     float boundary_right_exit = tex.skin_config[SC::GENRE_BG_SELECT_BOUNDARY].width;
-    int left_distance  = (int)(boundary_left_exit  - left_start)  * tex.screen_scale;
-    int right_distance = (int)(boundary_right_exit - right_start) * tex.screen_scale;
+    int left_distance  = (int)((boundary_left_exit  - left_start)  * tex.screen_scale);
+    int right_distance = (int)((boundary_right_exit - right_start) * tex.screen_scale);
 
     move_left  = std::make_unique<MoveAnimation>(200, left_distance,  false, false, (int)left_start,  166);
     move_right = std::make_unique<MoveAnimation>(200, right_distance, false, false, (int)right_start, 166);

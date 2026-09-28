@@ -52,12 +52,16 @@ public:
 
     void spawn_hit_effects(DrumType drum_type, Side side) override {
         lane_hit_effect = LaneHitEffect(drum_type, Judgments::BAD); //judgment parameter workaround
-        draw_drum_hit_list.push_back(std::make_unique<DrumHitEffect>(drum_type, side));
+        if (draw_drum_hit_list.size() < 4) {
+            draw_drum_hit_list.push_back(std::make_unique<DrumHitEffect>(drum_type, side));
+        }
         spawn_scrobble_effect(drum_type, side, (int)player_num - 1);
     }
 
     void spawn_scrobble_effect(DrumType drum_type, Side side, int player_index) {
-        draw_drum_hit_list.push_back(std::make_unique<PracticeDrumHitEffect>(drum_type, side, player_index));
+        if (draw_drum_hit_list.size() < 4) {
+            draw_drum_hit_list.push_back(std::make_unique<PracticeDrumHitEffect>(drum_type, side, player_index));
+        }
     }
 };
 

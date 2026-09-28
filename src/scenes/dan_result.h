@@ -63,6 +63,7 @@ private:
     int  prev_best_score = 0;
     bool best_score_show = false;
     int  prev_arrival    = 0;
+    int  nameplate_last_dan = -2;
 
     void handle_input(double current_ms);
     void build_page2_timeline();

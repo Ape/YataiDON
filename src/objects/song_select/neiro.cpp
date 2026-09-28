@@ -48,13 +48,12 @@ NeiroSelector::NeiroSelector(PlayerNum player_num, PlayerData* player) : player_
 }
 
 void NeiroSelector::load_sound() {
-    if (selected_sound == (int)sounds.size() - 1) return;
+    if (selected_sound == (int)sounds.size() - 1) { curr_sound.clear(); return; }
     fs::path base = fs::path("Sounds/hit_sounds") / std::to_string(selected_sound);
-    if (selected_sound == 0) {
-        curr_sound = audio.load_sound(resolve_skin_path(base / "don.wav"), "hit_sound");
-    } else {
-        curr_sound = audio.load_sound(resolve_skin_path(base / "don.ogg"), "hit_sound");
-    }
+    fs::path rel = base / (selected_sound == 0 ? "don.wav" : "don.ogg");
+    curr_sound = audio.load_sound(resolve_skin_path(rel), "hit_sound");
+    if (curr_sound.empty())
+        spdlog::error("NeiroSelector: failed to load hit sound {}", rel.string());
 }
 
 void NeiroSelector::left() {

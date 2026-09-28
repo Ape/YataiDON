@@ -1,6 +1,7 @@
 #include "config.h"
 #include "ray.h"
 #include <algorithm>
+#include <spdlog/spdlog.h>
 
 std::string getKeyString(int key_code) {
     // Handle alphanumeric keys
@@ -81,8 +82,12 @@ static int getKeyCode(const std::string& key) {
     // Unambiguous escaped form for round-tripping key codes that have no
     // known string representation (see getKeyStringSafe).
     if (key.rfind("code:", 0) == 0) {
+        std::string num = key.substr(5);
         try {
-            return std::stoi(key.substr(5));
+            std::size_t pos = 0;
+            int code = std::stoi(num, &pos);
+            if (pos != num.size()) throw std::invalid_argument("trailing characters");
+            return code;
         } catch (...) {
             throw std::runtime_error("Invalid key: " + key);
         }
@@ -197,6 +202,8 @@ std::vector<int> parseIntArray(const toml::array& arr) {
     for (const auto& elem : arr) {
         if (auto val = elem.as_integer()) {
             result.push_back(static_cast<int>(val->get()));
+        } else {
+            spdlog::warn("Skipping non-integer gamepad binding element");
         }
     }
     return result;
@@ -551,6 +558,11 @@ void save_config(const Config& config) {
     }
 
     std::error_code ec;
+    // std::filesystem::rename replacing an existing destination is only
+    // guaranteed on POSIX; on Windows it commonly fails when config_path
+    // already exists, so remove it first (best-effort).
+    std::error_code pre_rm_ec;
+    fs::remove(config_path, pre_rm_ec);
     fs::rename(tmp_path, config_path, ec);
     if (ec) {
         spdlog::error("Failed to save config.toml: {}", ec.message());

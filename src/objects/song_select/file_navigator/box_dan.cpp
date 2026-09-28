@@ -251,6 +251,14 @@ static void draw_abs(const std::string& name, float X, float Y, float fade,
                           .fade = fade});
 }
 
+static void draw_abs(TextureObject* t, float X, float Y, float fade, int frame = 0) {
+    if (!t || t->x.empty()) return;
+    tex.draw_texture(t, {.frame = frame,
+                          .x = X - t->x[0],
+                          .y = Y - t->y[0],
+                          .fade = fade});
+}
+
 void DanBox::draw_exam_grid() {
     const float f = open_fade->attribute;
 
@@ -277,17 +285,6 @@ void DanBox::draw_exam_grid() {
     const SkinInfo* pp = tex.skin_entry("dan_exam_label_pill");
     const float pill_x = pp ? pp->x : 26.0f;
     const float pill_y = pp ? pp->y : 2.0f;
-
-    static const std::unordered_map<std::string, std::string> exam_icons = {
-        {"gauge",        "yellow_box/exam_gauge"},
-        {"combo",        "yellow_box/exam_combo"},
-        {"hit",          "yellow_box/exam_hit"},
-        {"judgebad",     "yellow_box/exam_judgebad"},
-        {"judgegood",    "yellow_box/exam_judgegood"},
-        {"judgeperfect", "yellow_box/exam_judgeperfect"},
-        {"score",        "yellow_box/exam_score"},
-        {"renda",        "yellow_box/exam_roll"},
-    };
 
     const float margin = tex.skin_config[SC::EXAM_COUNTER_MARGIN].x;
 
@@ -339,8 +336,8 @@ void DanBox::draw_exam_grid() {
         draw_abs(left ? "yellow_box/exam_gauge_box" : "yellow_box/judge_box",
                  BX - (left ? 0.0f : 3.0f), BY - (left ? 0.0f : 2.0f), f);
 
-        auto ic = exam_icons.find(exam.type);
-        if (ic != exam_icons.end())
+        auto ic = t_exam_icon_by_type.find(exam.type);
+        if (ic != t_exam_icon_by_type.end())
             draw_abs(ic->second, BX + pill_x, BY + pill_y, f);
 
         if (left) {

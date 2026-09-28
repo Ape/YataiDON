@@ -1,6 +1,7 @@
 #pragma once
 #include <SDL3/SDL.h>
 #include "ray.h" // IWYU pragma: keep
+#include <cassert>
 #include <optional>
 
 class WebCamera {
@@ -19,7 +20,10 @@ public:
 
     bool is_open()  const { return m_camera != nullptr; }
     bool is_ready() const { return m_texture.has_value(); }
-    const ray::Texture2D& get_texture() const { return m_texture.value(); }
+    const ray::Texture2D& get_texture() const {
+        assert(m_texture.has_value() && "WebCamera::get_texture() called before is_ready()");
+        return m_texture.value();
+    }
     int width()  const { return m_width; }
     int height() const { return m_height; }
 
@@ -28,6 +32,7 @@ private:
     std::optional<ray::Texture2D> m_texture;
     int m_width  = 0;
     int m_height = 0;
+    bool m_permission_denied_logged = false;
 };
 
 extern WebCamera webcam;

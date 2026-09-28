@@ -17,6 +17,7 @@ private:
     // lifetime) instead of doing string-keyed texture lookups every frame.
     bool has_footer = false;
     float tex_height = 0.0f;
+    float tex_height_2p = 0.0f;
     float shutter_width = 0.0f;
     TextureObject* t_shutter_1p = nullptr;
     TextureObject* t_shutter_2p = nullptr;

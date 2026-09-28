@@ -27,8 +27,8 @@ public:
     float bottom_y;
     float edge_height;
 
-    float left_distance;
-    float right_distance;
+    float left_distance = 0.0f;
+    float right_distance = 0.0f;
 
     YellowBox();
 

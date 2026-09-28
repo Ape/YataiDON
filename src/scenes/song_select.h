@@ -16,11 +16,11 @@ struct ReplayData;
 
 class SongSelectScreen : public Screen {
 protected:
-    FadeAnimation* diff_fade_out;
+    FadeAnimation* diff_fade_out = nullptr;
     std::unique_ptr<SongSelectScript> script;
     TextureObject* t_song_num_bg = nullptr;
 
-    SongSelectState state;
+    SongSelectState state = SongSelectState::BROWSING;
 
     std::optional<Transition> game_transition;
     std::optional<DanTransition> dan_transition;

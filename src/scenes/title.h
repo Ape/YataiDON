@@ -1,8 +1,12 @@
 #pragma once
 
+#include <vector>
+#include <optional>
+#include <memory>
 #include "../libs/screen.h"
 #include "../libs/video.h"
 #include "../libs/text.h"
+#include "../libs/filesystem.h"
 #include "../objects/title/warning_screen.h"
 #include "../objects/title/attract_scene.h"
 #include "../objects/global/allnet_indicator.h"

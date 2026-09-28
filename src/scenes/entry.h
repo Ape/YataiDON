@@ -20,10 +20,10 @@ enum class EntryState {
 
 class EntryScreen : public Screen {
 private:
-    int side;
-    bool is_2p;
+    int side = 1;
+    bool is_2p = false;
     std::unique_ptr<BoxManager> box_manager;
-    EntryState state;
+    EntryState state = EntryState::SELECT_SIDE;
 
     std::unique_ptr<EntryScript> lua_entry;
     Nameplate nameplate;
@@ -33,7 +33,7 @@ private:
     std::unique_ptr<Timer> timer;
 
     std::unique_ptr<Chara3D> chara;
-    bool announce_played;
+    bool announce_played = false;
     std::vector<std::unique_ptr<EntryPlayer>> players;
 
     void reload_preview_chara(int player_id);

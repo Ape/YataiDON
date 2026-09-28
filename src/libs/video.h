@@ -49,8 +49,6 @@ private:
     bool                                    decode_eof = false; // guarded by queue_mutex
     std::atomic<bool>                       decode_stop{false};
 
-    // av:: wrapper objects (frame_generator/current_decoded_frame are
-    // touched only by the decode thread while it runs)
     std::unique_ptr<av::AVContainer>        container;
     std::unique_ptr<av::AVVideoStream>      video_stream;
     std::unique_ptr<av::AVAudioStream>      audio_stream;

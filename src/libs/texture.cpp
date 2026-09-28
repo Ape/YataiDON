@@ -390,13 +390,13 @@ void TextureWrapper::load_animations(const std::string& screen_name) {
                         anim["start_position"].SetDouble(val * screen_scale);
                     }
                 }
-                if (anim.HasMember("waypoint") && !anim["waypoint"].IsObject()) {
-                    if (anim["waypoint"].IsInt()) {
-                        int val = static_cast<int>(json_number(anim["waypoint"]));
-                        anim["waypoint"].SetInt(static_cast<int>(val * screen_scale));
-                    } else if (anim["waypoint"].IsDouble()) {
-                        double val = anim["waypoint"].GetDouble();
-                        anim["waypoint"].SetDouble(val * screen_scale);
+                if (anim.HasMember("waypoints") && anim["waypoints"].IsArray()) {
+                    for (auto& wp : anim["waypoints"].GetArray()) {
+                        if (!wp.IsObject() || !wp.HasMember("value")) continue;
+                        if (wp["value"].IsInt())
+                            wp["value"].SetInt(static_cast<int>(json_number(wp["value"]) * screen_scale));
+                        else if (wp["value"].IsDouble())
+                            wp["value"].SetDouble(wp["value"].GetDouble() * screen_scale);
                     }
                 }
             }
@@ -679,7 +679,7 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     if (child_exists) {
         for (const auto& entry : fs::directory_iterator(screen_path)) {
             if (entry.is_directory()) {
-                load_folder(screen_name, entry.path().stem().string());
+                load_folder(screen_name, entry.path().filename().string());
             }
         }
     }
@@ -688,7 +688,7 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     if (parent_exists) {
         for (const auto& entry : fs::directory_iterator(parent_screen_path)) {
             if (entry.is_directory()) {
-                load_folder(screen_name, entry.path().stem().string());
+                load_folder(screen_name, entry.path().filename().string());
             }
         }
     }
@@ -746,7 +746,8 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
     } else if (tex_obj->crop_data.has_value()) {
         try {
             source_rect = tex_obj->crop_data->at(params.frame);
-            source_rect.height = static_cast<float>(tex_obj->height) * mirror_y;
+            source_rect.width  *= mirror_x;
+            source_rect.height *= mirror_y;
         } catch (const std::out_of_range& e) {
             spdlog::error("Frame index out of range for texture {}", tex_obj->name);
             spdlog::error("Frame index: {}, Number of frames: {}", params.frame, tex_obj->crop_data->size());
@@ -766,21 +767,21 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
     // Calculate destination rectangle with reduced redundant calculations
     const float base_x = tex_obj->x[params.index];
     const float base_y = tex_obj->y[params.index];
-    const float width = static_cast<float>(tex_obj->width);
-    const float height = static_cast<float>(tex_obj->height);
 
     ray::Rectangle dest_rect;
     if (params.center) {
-        const float half_width = width * 0.5f;
-        const float half_height = height * 0.5f;
-        const float scaled_half_width = (width * params.scale) * 0.5f;
-        const float scaled_half_height = (height * params.scale) * 0.5f;
+        const float x2v = tex_obj->x2[params.index];
+        const float y2v = tex_obj->y2[params.index];
+        const float half_width = x2v * 0.5f;
+        const float half_height = y2v * 0.5f;
+        const float scaled_half_width = (x2v * params.scale) * 0.5f;
+        const float scaled_half_height = (y2v * params.scale) * 0.5f;
 
         dest_rect = ray::Rectangle{
             base_x + draw_offset_x + half_width - scaled_half_width + params.x,
             base_y + draw_offset_y + half_height - scaled_half_height + params.y,
-            tex_obj->x2[params.index] * params.scale + params.x2,
-            tex_obj->y2[params.index] * params.scale + params.y2
+            x2v * params.scale + params.x2,
+            y2v * params.scale + params.y2
         };
     } else {
         dest_rect = ray::Rectangle{

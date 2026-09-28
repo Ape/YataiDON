@@ -16,12 +16,6 @@ void ResultCrown::draw() {
 }
 
 bool ResultCrown::is_settled() {
-    auto result = call_r<bool>(fn_is_settled, "ResultCrown:is_settled");
-    if (!result) {
-        // No script / Lua error: never report "still animating", otherwise the
-        // result screen would wait on a signal that can never arrive.
-        spdlog::warn("ResultCrown:is_settled unavailable, treating crown as settled");
-        return true;
-    }
-    return *result;
+    if (!fn_is_settled.valid()) return true;
+    return call_r<bool>(fn_is_settled, "ResultCrown:is_settled").value_or(true);
 }

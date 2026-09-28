@@ -1,5 +1,6 @@
 #include "song_select_2p.h"
 #include "../libs/input.h"
+#include <algorithm>
 #include <filesystem>
 
 void SongSelect2PScreen::on_screen_start() {
@@ -18,6 +19,8 @@ static void init_player_diffs(SongSelectPlayer* p, SongBox* song) {
 
 void SongSelect2PScreen::handle_input_browsing(double current_ms) {
     SongSelectState s1 = player->handle_input_browsing(current_ms);
+    SongSelectState s2 = player_2->handle_input_browsing(current_ms);
+
     if (s1 == SongSelectState::SONG_SELECTED) {
         if (auto* song = dynamic_cast<SongBox*>(navigator.get_current_item())) {
             init_player_diffs(player_2.get(), song);
@@ -25,7 +28,6 @@ void SongSelect2PScreen::handle_input_browsing(double current_ms) {
         }
         return;
     }
-    SongSelectState s2 = player_2->handle_input_browsing(current_ms);
     if (s2 == SongSelectState::SONG_SELECTED) {
         if (auto* song = dynamic_cast<SongBox*>(navigator.get_current_item())) {
             init_player_diffs(player.get(), song);
@@ -59,14 +61,14 @@ void SongSelect2PScreen::select_song(SongBox* song) {
     sd1.selected_song = song->path;
     sd1.selected_difficulty = (int)player->selected_difficulty;
     sd1.song_hash = song->hash_for(sd1.selected_difficulty);
-    sd1.genre_index = (int)song->song_genre_index - 1;
+    sd1.genre_index = std::max(0, (int)song->song_genre_index - 1);
     sd1.genre_label = song->song_genre_label;
 
     auto& sd2 = global_data.session_data[(int)PlayerNum::P2];
     sd2.selected_song = song->path;
     sd2.selected_difficulty = (int)player_2->selected_difficulty;
     sd2.song_hash = song->hash_for(sd2.selected_difficulty);
-    sd2.genre_index = (int)song->song_genre_index - 1;
+    sd2.genre_index = std::max(0, (int)song->song_genre_index - 1);
     sd2.genre_label = song->song_genre_label;
 
     global_data.last_difficulty[(int)PlayerNum::P1] = sd1.selected_difficulty;
@@ -136,7 +138,7 @@ std::optional<Screens> SongSelect2PScreen::update() {
         }
     }
 
-    if (check_key_pressed(global_data.config->keys.back_key)) {
+    if (check_key_pressed(global_data.config->keys.back_key) && !game_transition.has_value()) {
         return on_screen_end(Screens::ENTRY);
     }
 
@@ -188,4 +190,5 @@ void SongSelect2PScreen::draw() {
         coin_overlay.draw();
         global_data.in_transition = false;
     }
+    script->draw_top(-1.0f);
 }

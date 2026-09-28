@@ -17,12 +17,13 @@ std::string ScoreAnimator::next_score() {
         return std::to_string(std::stoi(result));
     }
 
-    auto& [curr_digit, counter] = current_score_list[digit_index];
-
-    if (counter < 9) {
-        counter++;
-        curr_digit = (curr_digit + 1) % 10;
-    } else {
+    while (digit_index != -1) {
+        auto& [curr_digit, counter] = current_score_list[digit_index];
+        if (counter < 9) {
+            counter++;
+            curr_digit = (curr_digit + 1) % 10;
+            break;
+        }
         curr_digit = target_score[digit_index] - '0';
         digit_index--;
     }

@@ -78,7 +78,7 @@ static constexpr uint32_t FUMEN_BIG_RENDA  = 9;
 static constexpr uint32_t FUMEN_BALLOON    = 10;
 static constexpr uint32_t FUMEN_KUSUDAMA   = 12;
 
-static NoteType map_note_type(uint32_t t) {
+static std::optional<NoteType> map_note_type(uint32_t t) {
     switch (t) {
         case FUMEN_DON:
         case FUMEN_DO:        return NoteType::DON;
@@ -91,7 +91,7 @@ static NoteType map_note_type(uint32_t t) {
         case FUMEN_BIG_RENDA: return NoteType::ROLL_HEAD_L;
         case FUMEN_BALLOON:   return NoteType::BALLOON_HEAD;
         case FUMEN_KUSUDAMA:  return NoteType::KUSUDAMA;
-        default:              return NoteType::DON;
+        default:              return std::nullopt;
     }
 }
 
@@ -116,6 +116,31 @@ static void swap16(void* p) {
     *h = (uint16_t)((*h >> 8) | (*h << 8));
 }
 
+// Counts how many independent header fields look plausible when the buffer
+// is interpreted with the given endianness, to break ties instead of relying
+// on a single hard-coded float threshold.
+static int score_endianness(const std::vector<uint8_t>& data, bool as_be) {
+    auto rd_u32 = [&](size_t off) {
+        uint32_t v;
+        memcpy(&v, data.data() + off, 4);
+        return as_be ? bswap32(v) : v;
+    };
+    auto rd_f32 = [&](size_t off) {
+        uint32_t v = rd_u32(off);
+        float f;
+        memcpy(&f, &v, 4);
+        return f;
+    };
+    int score = 0;
+    if (rd_u32(offsetof(FumenHeader, max_hp)) <= 10000000u) score++;
+    if (rd_u32(offsetof(FumenHeader, max_score_value)) <= 10000000u) score++;
+    for (int i = 0; i < 3; i++) {
+        float f = rd_f32(offsetof(FumenHeader, judge_timings) + i * sizeof(FumenJudgeTiming));
+        if (std::isfinite(f) && f > 0.1f && f < 10000.0f) score++;
+    }
+    return score;
+}
+
 static bool chart_is_big_endian(const std::vector<uint8_t>& data) {
     if (data.size() < 520) return false;
     uint32_t le;
@@ -124,6 +149,11 @@ static bool chart_is_big_endian(const std::vector<uint8_t>& data) {
     bool le_ok = le > 0 && le <= 100000;
     bool be_ok = be > 0 && be <= 100000;
     if (le_ok != be_ok) return be_ok;
+
+    int le_score = score_endianness(data, false);
+    int be_score = score_endianness(data, true);
+    if (le_score != be_score) return be_score > le_score;
+
     float f;
     memcpy(&f, data.data(), 4);
     return !(f > 0.1f && f < 10000.0f);
@@ -259,7 +289,7 @@ void FumenParser::build_notes(int diff) {
 
     for (uint32_t m = 0; m < hdr.number_of_measures; m++) {
         FumenMeasureData mdata{};
-        if (!take(&mdata, sizeof(FumenMeasureData))) break;
+        if (!take(&mdata, sizeof(FumenMeasureData))) { truncated = true; break; }
         if (big_endian) swap_measure(mdata);
 
         double bpm        = static_cast<double>(mdata.bpm);
@@ -297,7 +327,7 @@ void FumenParser::build_notes(int diff) {
 
             if (!take(&note_count, sizeof(note_count)) ||
                 !take(&branch_unk, sizeof(branch_unk)) ||
-                !take(&scroll,     sizeof(scroll))) break;
+                !take(&scroll,     sizeof(scroll))) { truncated = true; break; }
             if (big_endian) {
                 swap16(&note_count);
                 swap16(&branch_unk);
@@ -318,8 +348,11 @@ void FumenParser::build_notes(int diff) {
 
                 if (b != 0) continue;
 
+                auto nt_opt = map_note_type(nb.type);
+                if (!nt_opt) continue;  // unknown/invalid note type: skip rather than emit a spurious DON
+                NoteType nt = *nt_opt;
+
                 double hit_ms = measure_ms + static_cast<double>(nb.note_offset);
-                NoteType nt = map_note_type(nb.type);
                 double note_length = std::isfinite(nb.length) && nb.length >= 0.0f ? static_cast<double>(nb.length) : 0.0;
 
                 Note note;
@@ -390,6 +423,10 @@ void FumenParser::build_notes(int diff) {
 
         if (truncated) break;
     }
+
+    if (truncated)
+        spdlog::warn("FumenParser: truncated/corrupt chart in {} difficulty {}",
+                     file_path.string(), diff);
 
     std::stable_sort(cached_notes.notes.begin(), cached_notes.notes.end(),
                      [](const Note& a, const Note& b) { return a.hit_ms < b.hit_ms; });

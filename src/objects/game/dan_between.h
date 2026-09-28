@@ -132,16 +132,18 @@ inline void DanBetween::draw(float lane_y) {
     const double a = text_alpha();
     if (a > 0.0) {
         if (title_text) {
-            const SkinInfo& c = *tex.skin_entry("dan_between_title");
-            title_text->draw({.x = c.x - title_text->width / 2.0f,
-                              .y = c.y - title_text->height / 2.0f + lane_y,
-                              .fade = a});
+            if (const SkinInfo* c = tex.skin_entry("dan_between_title")) {
+                title_text->draw({.x = c->x - title_text->width / 2.0f,
+                                  .y = c->y - title_text->height / 2.0f + lane_y,
+                                  .fade = a});
+            }
         }
         if (subtitle_text) {
-            const SkinInfo& c = *tex.skin_entry("dan_between_sub");
-            subtitle_text->draw({.x = c.x - subtitle_text->width / 2.0f,
-                                 .y = c.y - subtitle_text->height / 2.0f + lane_y,
-                                 .fade = a});
+            if (const SkinInfo* c = tex.skin_entry("dan_between_sub")) {
+                subtitle_text->draw({.x = c->x - subtitle_text->width / 2.0f,
+                                     .y = c->y - subtitle_text->height / 2.0f + lane_y,
+                                     .fade = a});
+            }
         }
     }
 

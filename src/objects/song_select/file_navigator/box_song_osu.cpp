@@ -1,4 +1,5 @@
 #include "box_song_osu.h"
+#include <stdexcept>
 
 SongBoxOsu::SongBoxOsu(const fs::path& path, const BoxDef& box_def, SongParser parser)
     : SongBox(path, box_def, std::move(parser))
@@ -12,7 +13,8 @@ SongBoxOsu::SongBoxOsu(const fs::path& path, const BoxDef& box_def, SongParser p
     text_subtitle = subtitles.count(lang) ? subtitles.at(lang) : subtitles.count("en") ? subtitles.at("en") : subtitles.empty() ? "" : subtitles.begin()->second;
 
     is_favorite = false;
-    diff_fade_in = (FadeAnimation*)tex.get_animation(12);
+    diff_fade_in = dynamic_cast<FadeAnimation*>(tex.get_animation(12));
+    if (!diff_fade_in) throw std::runtime_error("SongBoxOsu: animation 12 is not a FadeAnimation");
     refresh_scores();
 
     load_textures();
@@ -39,6 +41,7 @@ void SongBoxOsu::draw_closed() {
 }
 
 void SongBoxOsu::draw_open() {
+    if (!text_loaded) return;
     float bx = box_x();
     float by = box_y();
     tex.draw_texture(t_shadow_bottom_left,  {.x=bx, .y=by, .fade=open_fade->attribute, .index=1});

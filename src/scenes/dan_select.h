@@ -93,7 +93,7 @@ private:
     std::thread              scan_thread;
     std::atomic<bool>        scan_done{false};
     std::atomic<bool>        scan_abort{false};
-    bool                     scan_published = false;
+    std::atomic<bool>        scan_published{false};
     std::mutex               scan_mutex;
     std::vector<DanBoxData>  scan_result;   // guarded by scan_mutex
 };

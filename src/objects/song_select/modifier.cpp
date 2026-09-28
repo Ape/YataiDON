@@ -102,6 +102,10 @@ ModifierSelector::ModifierSelector(PlayerNum player_num, PlayerData* player) : p
     }
 }
 
+ModifierSelector::~ModifierSelector() {
+    if (!neiro_preview.empty()) audio.unload_sound(neiro_preview);
+}
+
 void ModifierSelector::load_neiro_names() {
     std::filesystem::path neiro_list_path = std::filesystem::path("Skins")
         / global_data.config->paths.skin
@@ -122,6 +126,7 @@ void ModifierSelector::load_neiro_names() {
     neiro_index = player->neiro_index;
     if (neiro_index == -1) neiro_index = (int)neiro_names.size() - 1;
     neiro_index = std::clamp(neiro_index, 0, (int)neiro_names.size() - 1);
+    player->neiro_index = (neiro_index == (int)neiro_names.size() - 1) ? -1 : neiro_index;
 }
 
 void ModifierSelector::step_neiro(int dir) {
@@ -137,7 +142,7 @@ void ModifierSelector::step_neiro(int dir) {
         / global_data.config->paths.skin
         / "Sounds" / "hit_sounds" / std::to_string(neiro_index);
     neiro_preview = audio.load_sound(base / (neiro_index == 0 ? "don.wav" : "don.ogg"), "hit_sound");
-    audio.play_sound(neiro_preview, VolumePreset::HITSOUND);
+    if (!neiro_preview.empty()) audio.play_sound(neiro_preview, VolumePreset::HITSOUND);
 }
 
 void ModifierSelector::update(double current_ms) {
@@ -173,20 +178,20 @@ void ModifierSelector::start_text_animation(int dir) {
         text_neiro = make_text(neiro_names[neiro_index]);
     } else if (mod_name == "random") {
         if (player->modifier_random == 1) {
-            text_kimagure = std::move(text_kimagure_2);
-            text_kimagure_2 = make_text(tex.skin_config[SC::MODIFIER_TEXT_KIMAGURE].text.at(language));
+            text_kimagure_2 = std::move(text_kimagure);
+            text_kimagure = make_text(tex.skin_config[SC::MODIFIER_TEXT_KIMAGURE].text.at(language));
         } else if (player->modifier_random == 2) {
-            text_detarame = std::move(text_detarame_2);
-            text_detarame_2 = make_text(tex.skin_config[SC::MODIFIER_TEXT_DETARAME].text.at(language));
+            text_detarame_2 = std::move(text_detarame);
+            text_detarame = make_text(tex.skin_config[SC::MODIFIER_TEXT_DETARAME].text.at(language));
         }
     } else {
         // bool mod
         if (get_bool(current_mod_index)) {
-            text_true = std::move(text_true_2);
-            text_true_2 = make_text(tex.skin_config[SC::MODIFIER_TEXT_TRUE].text.at(language));
+            text_true_2 = std::move(text_true);
+            text_true = make_text(tex.skin_config[SC::MODIFIER_TEXT_TRUE].text.at(language));
         } else {
-            text_false = std::move(text_false_2);
-            text_false_2 = make_text(tex.skin_config[SC::MODIFIER_TEXT_FALSE].text.at(language));
+            text_false_2 = std::move(text_false);
+            text_false = make_text(tex.skin_config[SC::MODIFIER_TEXT_FALSE].text.at(language));
         }
     }
 }

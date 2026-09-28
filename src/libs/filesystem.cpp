@@ -32,6 +32,10 @@ void set_working_directory_to_executable() {
     std::error_code ec;
     std::filesystem::create_directories(exe_dir, ec);
     std::filesystem::current_path(exe_dir, ec);
+    if (ec) {
+        spdlog::error("Failed to set working directory to {}: {}", exe_dir.string(), ec.message());
+        return;
+    }
     spdlog::info("Working directory set to: {}", exe_dir.string());
 #elif __EMSCRIPTEN__
     spdlog::info("Emscripten: using virtual FS root as working directory");
@@ -47,6 +51,10 @@ void set_working_directory_to_executable() {
     std::filesystem::path exe_dir = exe_path.parent_path();
     std::error_code ec;
     std::filesystem::current_path(exe_dir, ec);
+    if (ec) {
+        spdlog::error("Failed to set working directory to {}: {}", exe_dir.string(), ec.message());
+        return;
+    }
     spdlog::info("Working directory set to: {}", exe_dir.string());
 #elif __APPLE__
     char buffer[PATH_MAX];
@@ -63,6 +71,10 @@ void set_working_directory_to_executable() {
     std::filesystem::path exe_dir = std::filesystem::path(resolved).parent_path();
     std::error_code ec;
     std::filesystem::current_path(exe_dir, ec);
+    if (ec) {
+        spdlog::error("Failed to set working directory to {}: {}", exe_dir.string(), ec.message());
+        return;
+    }
     spdlog::info("Working directory set to: {}", exe_dir.string());
 #else
     char buffer[PATH_MAX];
@@ -75,6 +87,10 @@ void set_working_directory_to_executable() {
     std::filesystem::path exe_dir = std::filesystem::path(buffer).parent_path();
     std::error_code ec;
     std::filesystem::current_path(exe_dir, ec);
+    if (ec) {
+        spdlog::error("Failed to set working directory to {}: {}", exe_dir.string(), ec.message());
+        return;
+    }
     spdlog::info("Working directory set to: {}", exe_dir.string());
 #endif
 }
@@ -143,8 +159,9 @@ void extract_osz(const fs::path& osz_path) {
 
 void ensure_skin_extracted(const std::string& skin_name) {
     fs::path skin_dir = fs::path("Skins") / skin_name;
+    fs::path marker = skin_dir / ".extracted";
     std::error_code ec;
-    if (fs::exists(skin_dir, ec)) return;
+    if (fs::exists(marker, ec)) return;
 
     fs::path zip_path = fs::path("Skins") / (skin_name + ".zip");
     if (!fs::exists(zip_path, ec)) return;
@@ -199,6 +216,10 @@ void ensure_skin_extracted(const std::string& skin_name) {
 
     mz_zip_reader_end(&zip);
     spdlog::info("ensure_skin_extracted: extracted {} to {}", zip_path.string(), skin_dir.string());
+
+    std::ofstream marker_file(marker, std::ios::trunc);
+    if (!marker_file)
+        spdlog::warn("ensure_skin_extracted: failed to write completion marker for {}", skin_name);
 }
 
 std::vector<std::string> list_available_skins() {
@@ -310,7 +331,13 @@ std::vector<fs::path> get_song_files(std::vector<fs::path> root_path) {
             }
         }
     }
-    return songs;
+    std::unordered_set<std::string> seen;
+    std::vector<fs::path> deduped;
+    deduped.reserve(songs.size());
+    for (auto& p : songs) {
+        if (seen.insert(p.string()).second) deduped.push_back(std::move(p));
+    }
+    return deduped;
 }
 
 rapidjson::Document read_json_file(fs::path file_path) {
@@ -409,8 +436,15 @@ fs::path resolve_parent_graphics_path(const fs::path& graphics_path) {
         skin_config_file["screen"].IsObject() && skin_config_file["screen"].HasMember("parent") &&
         skin_config_file["screen"]["parent"].IsString()) {
         std::string parent = skin_config_file["screen"]["parent"].GetString();
+        fs::path skins_root("Skins");
+        fs::path candidate = (skins_root / parent).lexically_normal();
+        fs::path rel = candidate.lexically_relative(skins_root);
+        if (rel.empty() || *rel.begin() == "..") {
+            spdlog::warn("resolve_parent_graphics_path: rejecting unsafe parent skin path '{}'", parent);
+            return graphics_path;
+        }
         ensure_skin_extracted(parent);
-        return fs::path("Skins") / parent / "Graphics";
+        return candidate / "Graphics";
     }
     return graphics_path;
 }

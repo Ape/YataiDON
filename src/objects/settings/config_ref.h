@@ -14,22 +14,24 @@ struct ConfigRef {
     ConfigRef(std::vector<int>* p)  : ptr(p) {}
     ConfigRef(fs::path* p)          : ptr(p) {}
 
-    bool             get_bool()  const { return *std::get<bool*>(ptr); }
-    int              get_int()   const { return *std::get<int*>(ptr); }
-    float            get_float() const { return *std::get<float*>(ptr); }
-    std::vector<int> get_vec()   const { return *std::get<std::vector<int>*>(ptr); }
+    bool             get_bool()  const { if (auto* p = std::get_if<bool*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not a bool"); }
+    int              get_int()   const { if (auto* p = std::get_if<int*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not an int"); }
+    float            get_float() const { if (auto* p = std::get_if<float*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not a float"); }
+    std::vector<int> get_vec()   const { if (auto* p = std::get_if<std::vector<int>*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not a vector<int>"); }
     std::string      get_str()   const {
         if (auto* p = std::get_if<fs::path*>(&ptr)) return (*p)->string();
-        return *std::get<std::string*>(ptr);
+        if (auto* p = std::get_if<std::string*>(&ptr)) return **p;
+        throw std::runtime_error("ConfigRef: not a string/path");
     }
 
-    void set_bool(bool v)                   { *std::get<bool*>(ptr) = v; }
-    void set_int(int v)                     { *std::get<int*>(ptr) = v; }
-    void set_float(float v)                 { *std::get<float*>(ptr) = v; }
-    void set_vec(const std::vector<int>& v) { *std::get<std::vector<int>*>(ptr) = v; }
+    void set_bool(bool v)                   { if (auto* p = std::get_if<bool*>(&ptr)) **p = v; else throw std::runtime_error("ConfigRef: not a bool"); }
+    void set_int(int v)                     { if (auto* p = std::get_if<int*>(&ptr)) **p = v; else throw std::runtime_error("ConfigRef: not an int"); }
+    void set_float(float v)                 { if (auto* p = std::get_if<float*>(&ptr)) **p = v; else throw std::runtime_error("ConfigRef: not a float"); }
+    void set_vec(const std::vector<int>& v) { if (auto* p = std::get_if<std::vector<int>*>(&ptr)) **p = v; else throw std::runtime_error("ConfigRef: not a vector<int>"); }
     void set_str(const std::string& v) {
         if (auto* p = std::get_if<fs::path*>(&ptr)) { **p = v; return; }
-        *std::get<std::string*>(ptr) = v;
+        if (auto* p = std::get_if<std::string*>(&ptr)) { **p = v; return; }
+        throw std::runtime_error("ConfigRef: not a string/path");
     }
 
     bool is_bool()  const { return std::holds_alternative<bool*>(ptr); }

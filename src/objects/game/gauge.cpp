@@ -61,6 +61,7 @@ Gauge Gauge::dan(const std::vector<DanSongEntry>& songs, int total_notes, Player
     auto diff_of  = [](const DanSongEntry& s) { return s.level <= 0 ? (int)Difficulty::ONI : s.difficulty; };
     auto level_of = [](const DanSongEntry& s) { return s.level <= 0 ? 10 : s.level; };
 
+    if (songs.empty()) throw std::runtime_error("Gauge::dan: songs is empty");
     const DanSongEntry& first = songs.at(0);
     Gauge g(total_notes, diff_of(first), level_of(first), player_num);
     g.dan_mode     = true;
@@ -74,7 +75,7 @@ Gauge Gauge::dan(const std::vector<DanSongEntry>& songs, int total_notes, Player
     for (const DanSongEntry& s : songs) {
         const int d = std::clamp(diff_of(s), 0, (int)Difficulty::ONI);
         const GaugeTable& r = g.table[d][std::clamp(level_of(s) - 1, 0, 9)];
-        inv_sum            += 1.0 / r.soul_percent;
+        if (r.soul_percent > 0.0) inv_sum += 1.0 / r.soul_percent;
         row.ok_multiplier  += r.ok_multiplier  / songs.size();
         row.bad_multiplier += r.bad_multiplier / songs.size();
     }
@@ -119,7 +120,9 @@ void Gauge::add_bad() {
 
 void Gauge::update(double current_ms) {
     if (get_is_rainbow() && !rainbow_fade_in.has_value()) {
-        rainbow_fade_in = (FadeAnimation*)tex.get_animation(63);
+        auto* anim = dynamic_cast<FadeAnimation*>(tex.get_animation(63));
+        if (!anim) throw std::runtime_error("Gauge: animation 63 has an unexpected type");
+        rainbow_fade_in = anim;
         rainbow_fade_in.value()->start();
         rainbow_start_ms = current_ms;
     }

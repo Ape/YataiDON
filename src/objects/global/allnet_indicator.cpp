@@ -2,7 +2,7 @@
 #include "../../libs/network.h"
 
 AllNetIcon::AllNetIcon() {
-    if (!load("AllNetIcon", "allnet_indicator", online)) return;
+    if (!load("AllNetIcon", "allnet_indicator", network.is_online())) return;
     fn_update = lua_object["update"];
     fn_draw   = lua_object["draw"];
 }

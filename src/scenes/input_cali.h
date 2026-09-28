@@ -13,6 +13,6 @@ public:
     void draw() override;
 
     std::vector<double> latencies;
-    double average_latency;
+    double average_latency = 0.0;
     std::optional<OutlinedText> average_latency_text;
 };

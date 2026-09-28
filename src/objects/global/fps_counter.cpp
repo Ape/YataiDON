@@ -1,6 +1,7 @@
 #include "fps_counter.h"
 #include "../../libs/texture.h"
 #include "../../libs/text.h"
+#include <algorithm>
 
 FPSCounter::FPSCounter() {
     lastTime = get_current_ms();
@@ -14,7 +15,7 @@ void FPSCounter::update() {
     double deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
-    frameTimes[currentFrame] = (float)deltaTime;
+    frameTimes[currentFrame] = (float)std::clamp(deltaTime, 0.0, 1000.0);
     currentFrame = (currentFrame + 1) % SAMPLE_SIZE;
 }
 

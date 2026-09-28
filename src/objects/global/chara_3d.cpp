@@ -81,8 +81,11 @@ static void reindex_animations(ray::Model& model, ray::Model& glb_model,
             (ray::ModelAnimPose*)std::malloc(anim.keyframeCount * sizeof(ray::ModelAnimPose));
         if (!new_poses) continue;
 
-        for (int f = 0; f < anim.keyframeCount; f++) {
+        bool alloc_ok = true;
+        int f = 0;
+        for (; f < anim.keyframeCount; f++) {
             new_poses[f] = (ray::Transform*)std::malloc(n * sizeof(ray::Transform));
+            if (!new_poses[f]) { alloc_ok = false; break; }
             for (int b = 0; b < n; b++) {
                 auto it = glb_bone_idx.find(model.skeleton.bones[b].name);
                 if (it != glb_bone_idx.end() && it->second < anim.boneCount)
@@ -90,8 +93,13 @@ static void reindex_animations(ray::Model& model, ray::Model& glb_model,
                 else
                     new_poses[f][b] = model.skeleton.bindPose[b];
             }
-            std::free(anim.keyframePoses[f]);
         }
+        if (!alloc_ok) {
+            for (int i = 0; i < f; i++) std::free(new_poses[i]);
+            std::free(new_poses);
+            continue;
+        }
+        for (int i = 0; i < anim.keyframeCount; i++) std::free(anim.keyframePoses[i]);
         std::free(anim.keyframePoses);
         anim.keyframePoses = new_poses;
         anim.boneCount = n;
@@ -481,8 +489,10 @@ static void apply_don_colors(ray::Model& model, int mat_idx,
                               ray::Color body, ray::Color face, ray::Color rim) {
     auto& map = model.materials[mat_idx].maps[ray::MATERIAL_MAP_DIFFUSE];
     ray::Image img = ray::LoadImageFromTexture(map.texture);
+    if (!img.data) return;
     ray::Texture2D new_tex = recolor_texture(img, body, face, rim);
     ray::UnloadImage(img);
+    if (new_tex.id == 0) return;
     ray::UnloadTexture(map.texture);
     map.texture = new_tex;
 }

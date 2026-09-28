@@ -260,7 +260,10 @@ public:
     bool scroll_disabled = false;
 
     void get_metadata();
-    std::string get_difficulty_name() { return ""; }
+    std::string get_difficulty_name() {
+        auto it = DIFFS.find(last_diff);
+        return it != DIFFS.end() ? it->second : "";
+    }
 
     using CommandHandler = std::function<void(const std::string&, ParserState&)>;
 
@@ -272,6 +275,7 @@ public:
 private:
     double start_ms;
     double current_ms;
+    int last_diff = -1;
     NoteList master_notes;
     int player_num;
     std::string encoding;

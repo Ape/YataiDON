@@ -2,6 +2,7 @@
 #include "../libs/input.h"
 
 static const fs::path CALI_TJA_PATH = "Songs/Calibration.tja";
+static constexpr double NO_AUTOPLAY_HIT_YET = -1e18;
 
 Modifiers InputCaliScreen::get_player_modifiers(PlayerNum pn) {
     Modifiers mods = GameScreen::get_player_modifiers(pn);
@@ -19,6 +20,7 @@ void InputCaliScreen::on_screen_start() {
     background.emplace(global_data.player_num, 150, "TUTORIAL");
     latencies.clear();
     average_latency = 0.0;
+    if (!players.empty() && players[0]) players[0]->last_note_hit = NO_AUTOPLAY_HIT_YET;
 }
 
 Screens InputCaliScreen::on_screen_end(Screens next_screen) {
@@ -41,7 +43,9 @@ std::optional<Screens> InputCaliScreen::update() {
         return Screens::SETTINGS;
     }
 
-    if (is_l_don_pressed() || is_r_don_pressed()) {
+    if ((is_l_don_pressed() || is_r_don_pressed()) &&
+        !players.empty() && players[0] &&
+        players[0]->last_note_hit != NO_AUTOPLAY_HIT_YET) {
         double current_ms = get_current_ms();
         double latency = players[0]->last_note_hit - current_ms;
         latencies.push_back(latency);

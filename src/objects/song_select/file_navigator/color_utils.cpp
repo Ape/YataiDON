@@ -40,10 +40,10 @@ float calculate_hue_shift(const ray::Color& source_rgb, const ray::Color& target
 ray::Color darken_color(const ray::Color& rgb) {
     constexpr float darkening_factor = 0.63f;
     return ray::Color(
-        (rgb.r * darkening_factor),
-        (rgb.g * darkening_factor),
-        (rgb.b * darkening_factor),
-        255
+        (unsigned char)std::round(rgb.r * darkening_factor),
+        (unsigned char)std::round(rgb.g * darkening_factor),
+        (unsigned char)std::round(rgb.b * darkening_factor),
+        rgb.a
     );
 }
 
@@ -55,7 +55,7 @@ BoxColors resolve_box_colors(const std::optional<ray::Color>& box_color,
     ray::Color default_outline = result.box.has_value() ? darken_color(result.box.value())
                                                           : ray::Color(101, 0, 82, 255);
     if (box_color.has_value()) {
-        result.outline = back_color.value_or(default_outline);
+        result.outline = fore_color.value_or(default_outline);
         result.text = fore_color.value_or(ray::WHITE);
     } else {
         result.outline = fore_color.value_or(default_outline);

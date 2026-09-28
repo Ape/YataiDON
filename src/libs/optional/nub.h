@@ -1,6 +1,9 @@
 #pragma once
 
+#include <filesystem>
 #include "nus3bank.h"
+
+namespace fs = std::filesystem;
 
 namespace gen3 {
 

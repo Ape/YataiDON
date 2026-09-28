@@ -2,6 +2,7 @@
 #include "../../libs/global_data.h"
 #include "../enums.h"
 #include "../song_select/file_navigator/color_utils.h"
+#include <stdexcept>
 
 static const ray::Color GENRE_PLATE_TEMPLATE_COLOR{60, 103, 0, 255};
 
@@ -21,6 +22,7 @@ SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bo
     if (song_total > 0 && tex.skin_entry("song_num_max_game"))
         song_max = std::make_unique<SongNum>(song_total, "song_num_max_game");
     fade = dynamic_cast<FadeAnimation*>(tex.get_animation(3));
+    if (!fade) throw std::runtime_error("SongInfo: animation 3 has an unexpected type");
 
     t_genre = tex.get_texture("song_info/genre");
     t_song_num_plate = tex.has_texture("song_info/song_num_plate") ? tex.get_texture("song_info/song_num_plate") : nullptr;
@@ -41,6 +43,39 @@ SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bo
         ray::SetShaderValue(genre_shader, ray::GetShaderLocation(genre_shader, "sourceColor"), src, ray::SHADER_UNIFORM_VEC3);
         ray::SetShaderValue(genre_shader, ray::GetShaderLocation(genre_shader, "targetColor"), tgt, ray::SHADER_UNIFORM_VEC3);
     }
+}
+
+SongInfo::SongInfo(SongInfo&& other) noexcept
+    : song_name(std::move(other.song_name)), genre(other.genre), fade(other.fade),
+      song_title(std::move(other.song_title)), song_subtitle(std::move(other.song_subtitle)),
+      genre_text(std::move(other.genre_text)), song_num(std::move(other.song_num)),
+      song_max(std::move(other.song_max)), t_genre(other.t_genre), t_song_num_plate(other.t_song_num_plate),
+      genre_shader(other.genre_shader), genre_shader_loaded(other.genre_shader_loaded) {
+    other.genre_shader_loaded = false;
+}
+
+SongInfo& SongInfo::operator=(SongInfo&& other) noexcept {
+    if (this != &other) {
+        if (genre_shader_loaded) ray::UnloadShader(genre_shader);
+        song_name = std::move(other.song_name);
+        genre = other.genre;
+        fade = other.fade;
+        song_title = std::move(other.song_title);
+        song_subtitle = std::move(other.song_subtitle);
+        genre_text = std::move(other.genre_text);
+        song_num = std::move(other.song_num);
+        song_max = std::move(other.song_max);
+        t_genre = other.t_genre;
+        t_song_num_plate = other.t_song_num_plate;
+        genre_shader = other.genre_shader;
+        genre_shader_loaded = other.genre_shader_loaded;
+        other.genre_shader_loaded = false;
+    }
+    return *this;
+}
+
+SongInfo::~SongInfo() {
+    if (genre_shader_loaded) ray::UnloadShader(genre_shader);
 }
 
 void SongInfo::update(double current_ms) {
@@ -69,7 +104,7 @@ void SongInfo::draw() {
 
     if (const SkinInfo* plate = tex.skin_entry("song_num_game")) {
         song_title->draw({.x=title_x, .y=text_y, .x2=title_x2, .fade=1 - fade->attribute});
-        if (genre_text) {
+        if (genre_text && t_genre) {
             if (genre_shader_loaded) ray::BeginShaderMode(genre_shader);
             tex.draw_texture(t_genre, {.fade = 1 - fade->attribute});
             if (genre_shader_loaded) ray::EndShaderMode();
@@ -98,7 +133,7 @@ void SongInfo::draw() {
         song_subtitle->draw({.x=text_x - song_subtitle->width, .y=sub_y, .fade=1 - fade->attribute});
     }
 
-    if (genre_text) {
+    if (genre_text && t_genre) {
         float genre_y_offset = song_subtitle ? song_subtitle->height : 0;
         if (genre_shader_loaded) ray::BeginShaderMode(genre_shader);
         tex.draw_texture(t_genre, {.y = genre_y_offset, .fade = 1 - fade->attribute});

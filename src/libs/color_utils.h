@@ -12,12 +12,18 @@ inline ray::Color parse_hex_color(const std::string& input) {
         color = std::string{color[0], color[0], color[1], color[1], color[2], color[2]};
     if (color.size() != 6)
         throw std::invalid_argument("Invalid hex color: " + input);
-    return ray::Color(
-        std::stoi(color.substr(0, 2), nullptr, 16),
-        std::stoi(color.substr(2, 2), nullptr, 16),
-        std::stoi(color.substr(4, 2), nullptr, 16),
-        255
-    );
+
+    auto nibble = [&](char c) -> int {
+        if (c >= '0' && c <= '9') return c - '0';
+        if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+        if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+        throw std::invalid_argument("Invalid hex color: " + input);
+    };
+    auto byte = [&](std::size_t i) -> unsigned char {
+        return static_cast<unsigned char>(nibble(color[i]) * 16 + nibble(color[i + 1]));
+    };
+
+    return ray::Color(byte(0), byte(2), byte(4), 255);
 }
 
 inline std::string color_to_hex(ray::Color c) {

@@ -51,7 +51,9 @@ inline std::string branch_diff_to_string(BranchDifficulty difficulty) {
         "expert",   // 1
         "master"    // 2
     };
-    return names[static_cast<int>(difficulty)];
+    int index = static_cast<int>(difficulty);
+    if (index < 0 || index >= (int)names.size()) return names[0];
+    return names[index];
 }
 
 enum class TextureIndex : int {

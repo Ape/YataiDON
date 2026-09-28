@@ -6,6 +6,7 @@
 #include <spdlog/spdlog.h>
 
 inline int virtual_to_screen_x(float virtual_x) {
+    if (tex.screen_width <= 0 || tex.screen_height <= 0) return 0;
     int win_w = ray::GetScreenWidth();
     int win_h = ray::GetScreenHeight();
     float scale = std::min((float)win_w / tex.screen_width, (float)win_h / tex.screen_height);
@@ -18,6 +19,7 @@ inline int virtual_to_screen_x(float virtual_x) {
 }
 
 inline int virtual_to_screen_y(float virtual_y) {
+    if (tex.screen_width <= 0 || tex.screen_height <= 0) return 0;
     int win_w = ray::GetScreenWidth();
     int win_h = ray::GetScreenHeight();
     float scale = std::min((float)win_w / tex.screen_width, (float)win_h / tex.screen_height);
@@ -75,7 +77,9 @@ inline std::string screens_to_string(Screens screen) {
         "GAME_OVER",
         "INPUT_TEST"
     };
-    return names[static_cast<int>(screen)];
+    int idx = static_cast<int>(screen);
+    if (idx < 0 || static_cast<size_t>(idx) >= names.size()) return "UNKNOWN";
+    return names[idx];
 }
 
 template <>
@@ -140,10 +144,16 @@ protected:
             } catch (const std::exception& e) {
                 spdlog::critical("{} failed to initialize: {}", screen_name, e.what());
                 screen_init = false;
+                audio.unload_all_sounds();
+                audio.unload_all_music();
+                tex.unload_textures();
                 return Screens::SONG_SELECT;
             } catch (...) {
                 spdlog::critical("{} failed to initialize: unknown exception", screen_name);
                 screen_init = false;
+                audio.unload_all_sounds();
+                audio.unload_all_music();
+                tex.unload_textures();
                 return Screens::SONG_SELECT;
             }
         }
