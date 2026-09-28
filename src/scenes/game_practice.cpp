@@ -4,6 +4,9 @@
 #include <algorithm>
 #include <cmath>
 
+// Forward declaration for set_touch_drum_enabled from input.cpp
+extern void set_touch_drum_enabled(bool enabled);
+
 void PracticeGameScreen::init_practice_textures() {
     for (int t = 0; t <= 9; ++t) {
         std::string name = "notes/" + std::to_string(t);
@@ -61,6 +64,8 @@ void PracticeGameScreen::on_screen_start() {
     speed_r_kat_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
     mark_action_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
     mark_finish_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
+    ray::HideCursor();  // Hide cursor when entering practice mode
+    set_touch_drum_enabled(true);      // Enable touch drum (input + drawing) when entering practice mode
     init_tja_practice(global_data.session_data[(int)global_data.player_num].selected_song);
 }
 
@@ -73,6 +78,8 @@ Screens PracticeGameScreen::on_screen_end(Screens next_screen) {
     bars.clear();
     scrobble_note_list.clear();
     markers.clear();
+    ray::HideCursor();  // Hide cursor when leaving practice mode
+    set_touch_drum_enabled(true);      // Re-enable touch drum (input + drawing) when leaving practice mode
     return GameScreen::on_screen_end(next_screen);
 }
 
@@ -175,6 +182,10 @@ void PracticeGameScreen::sync_branch_display() {
 void PracticeGameScreen::pause_song_practice() {
     paused = !paused;
     if (practice_player) practice_player->paused = paused;
+    set_touch_drum_enabled(!paused);   // Enable/disable touch drum (input + drawing)
+
+    // Show/hide mouse cursor when pausing/unpausing
+    if (paused) ray::ShowCursor(); else ray::HideCursor();
 
     if (paused) {
         if (song_music.has_value()) {
@@ -235,6 +246,8 @@ void PracticeGameScreen::restart_practice() {
     audio.play_sound("restart", VolumePreset::SOUND);
     song_started = false;
     paused       = false;
+    ray::HideCursor();  // Hide cursor on restart
+    set_touch_drum_enabled(true);      // Re-enable touch drum (input + drawing) on restart
     menu.close();
     last_resync_ms = 0;
     start_ms = get_current_ms() - parser->metadata.offset * 1000
@@ -300,6 +313,156 @@ void PracticeGameScreen::scrobble_step_bar(bool right) {
     int new_index = right ? (scrobble_index + 1) % (int)bars.size()
                           : ((scrobble_index > 0) ? scrobble_index - 1 : (int)bars.size() - 1);
     animate_scrobble_to(new_index);
+}
+
+// Check if a point is inside a rectangle
+static bool point_in_rect(float x, float y, float rect_x, float rect_y, float rect_w, float rect_h) {
+    return x >= rect_x && x <= rect_x + rect_w && y >= rect_y && y <= rect_y + rect_h;
+}
+
+// Get the screen-space rectangle for a practice mode UI element
+static ray::Rectangle get_practice_button_rect(TextureObject* tex_obj, int index, float scale = 1.0f) {
+    if (!tex_obj || index < 0 || static_cast<size_t>(index) >= tex_obj->x.size())
+        return {0, 0, 0, 0};
+
+    float x = tex_obj->x[index];
+    float y = tex_obj->y[index];
+    float w = tex_obj->x2[index] * scale;
+    float h = tex_obj->y2[index] * scale;
+
+    // Convert from virtual coordinates to screen coordinates
+    int screen_x = virtual_to_screen_x(x);
+    int screen_y = virtual_to_screen_y(y);
+    int screen_w = static_cast<int>(w * std::min((float)ray::GetScreenWidth() / tex.screen_width,
+                                                  (float)ray::GetScreenHeight() / tex.screen_height));
+    int screen_h = static_cast<int>(h * std::min((float)ray::GetScreenWidth() / tex.screen_width,
+                                                  (float)ray::GetScreenHeight() / tex.screen_height));
+
+    return {static_cast<float>(screen_x), static_cast<float>(screen_y),
+            static_cast<float>(screen_w), static_cast<float>(screen_h)};
+}
+
+// Handle mouse/touch input for practice mode UI buttons
+std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
+    if (!paused) return std::nullopt;
+
+    // Get mouse/touch position
+    ray::Vector2 mouse_pos = ray::GetMousePosition();
+    bool mouse_pressed = ray::IsMouseButtonPressed(ray::MOUSE_BUTTON_LEFT);
+    ray::Camera2D camera = {0, 0, 0, 1.0f};
+
+    int player_idx = (global_data.player_num == PlayerNum::P1) ? 0 : 1;
+    int other_idx = (global_data.player_num == PlayerNum::P1) ? 1 : 0;
+
+    // If menu is open, let the menu handle mouse input
+    if (menu.open) {
+        auto action = menu.handle_mouse_input(camera, mouse_pos, mouse_pressed, practice_player && practice_player->is_auto_play());
+        auto next = handle_menu_action(action);
+        if (next.has_value()) return next;
+        return std::nullopt;
+    }
+
+    // Also check for touch input (raylib handles touch as mouse on mobile)
+    // Note: touch input is already converted to virtual keys in input.cpp,
+    // but we also want to allow direct clicking on the practice drums when paused
+
+    // Check resume_don (index = player_idx)
+    auto resume_rect = get_practice_button_rect(t_resume_don, player_idx,
+        resume_don_anim ? (float)resume_don_anim->attribute : 1.0f);
+    if (point_in_rect(mouse_pos.x, mouse_pos.y, resume_rect.x, resume_rect.y, resume_rect.width, resume_rect.height)) {
+        if (mouse_pressed) {
+            pause_song_practice();
+            resume_don_anim->start();
+            if (practice_player) practice_player->spawn_scrobble_effect(DrumType::DON, Side::LEFT, player_idx);
+            audio.play_sound("don", VolumePreset::SOUND);
+        }
+        return std::nullopt;
+    }
+
+    // Check skip_l_kat (index = player_idx * 2)
+    auto skip_l_rect = get_practice_button_rect(t_skip_l_kat, player_idx * 2,
+        skip_l_kat_anim ? (float)skip_l_kat_anim->attribute : 1.0f);
+    if (point_in_rect(mouse_pos.x, mouse_pos.y, skip_l_rect.x, skip_l_rect.y, skip_l_rect.width, skip_l_rect.height)) {
+        if (mouse_pressed && !bars.empty()) {
+            scrobble_step_bar(false);
+        }
+        return std::nullopt;
+    }
+
+    // Check skip_r_kat (index = player_idx * 2 + 1)
+    auto skip_r_rect = get_practice_button_rect(t_skip_r_kat, player_idx * 2 + 1,
+        skip_r_kat_anim ? (float)skip_r_kat_anim->attribute : 1.0f);
+    if (point_in_rect(mouse_pos.x, mouse_pos.y, skip_r_rect.x, skip_r_rect.y, skip_r_rect.width, skip_r_rect.height)) {
+        if (mouse_pressed && !bars.empty()) {
+            scrobble_step_bar(true);
+        }
+        return std::nullopt;
+    }
+
+    // Check menu_don (index = other_idx)
+    auto menu_rect = get_practice_button_rect(t_menu_don, other_idx,
+        menu_don_anim ? (float)menu_don_anim->attribute : 1.0f);
+    if (point_in_rect(mouse_pos.x, mouse_pos.y, menu_rect.x, menu_rect.y, menu_rect.width, menu_rect.height)) {
+        if (mouse_pressed) {
+            menu_don_anim->start();
+            menu.open_menu();
+            audio.play_sound("don", VolumePreset::SOUND);
+        }
+        return std::nullopt;
+    }
+
+    // Check speed_l_kat (index = other_idx * 2 + 1)
+    auto speed_l_rect = get_practice_button_rect(t_speed_l_kat, other_idx * 2 + 1,
+        speed_l_kat_anim ? (float)speed_l_kat_anim->attribute : 1.0f);
+    if (point_in_rect(mouse_pos.x, mouse_pos.y, speed_l_rect.x, speed_l_rect.y, speed_l_rect.width, speed_l_rect.height)) {
+        if (mouse_pressed) {
+            song_speed = std::max(1, song_speed - 1);
+            speed_l_kat_anim->start();
+            if (song_music.has_value())
+                audio.set_sound_pitch(song_music.value(), song_speed / 10.0f);
+            audio.play_sound("kat", VolumePreset::SOUND);
+        }
+        return std::nullopt;
+    }
+
+    // Check speed_r_kat (index = other_idx * 2)
+    auto speed_r_rect = get_practice_button_rect(t_speed_r_kat, other_idx * 2,
+        speed_r_kat_anim ? (float)speed_r_kat_anim->attribute : 1.0f);
+    if (point_in_rect(mouse_pos.x, mouse_pos.y, speed_r_rect.x, speed_r_rect.y, speed_r_rect.width, speed_r_rect.height)) {
+        if (mouse_pressed) {
+            song_speed = std::min(99, song_speed + 1);
+            speed_r_kat_anim->start();
+            if (song_music.has_value())
+                audio.set_sound_pitch(song_music.value(), song_speed / 10.0f);
+            audio.play_sound("kat", VolumePreset::SOUND);
+        }
+        return std::nullopt;
+    }
+
+    // Also allow clicking on the large drums (index 0 and 1 for player)
+    // Left drum (index = player_idx * 2) - DON
+    auto drum_l_rect = get_practice_button_rect(t_large_drum, player_idx * 2);
+    if (point_in_rect(mouse_pos.x, mouse_pos.y, drum_l_rect.x, drum_l_rect.y, drum_l_rect.width, drum_l_rect.height)) {
+        if (mouse_pressed && practice_player) {
+            practice_player->spawn_hit_effects(DrumType::DON, Side::LEFT);
+            practice_player->spawn_scrobble_effect(DrumType::DON, Side::LEFT, player_idx);
+            audio.play_sound("don", VolumePreset::SOUND);
+        }
+        return std::nullopt;
+    }
+
+    // Right drum (index = player_idx * 2 + 1) - DON
+    auto drum_r_rect = get_practice_button_rect(t_large_drum, player_idx * 2 + 1);
+    if (point_in_rect(mouse_pos.x, mouse_pos.y, drum_r_rect.x, drum_r_rect.y, drum_r_rect.width, drum_r_rect.height)) {
+        if (mouse_pressed && practice_player) {
+            practice_player->spawn_hit_effects(DrumType::DON, Side::RIGHT);
+            practice_player->spawn_scrobble_effect(DrumType::DON, Side::RIGHT, player_idx);
+            audio.play_sound("don", VolumePreset::SOUND);
+        }
+        return std::nullopt;
+    }
+
+    return std::nullopt;
 }
 
 std::optional<Screens> PracticeGameScreen::global_keys_practice() {
@@ -491,6 +654,10 @@ std::optional<Screens> PracticeGameScreen::update() {
 
     // Process practice input before player update so events aren't consumed by handle_input
     auto next_screen = global_keys_practice();
+    if (next_screen.has_value()) return next_screen;
+
+    // Handle mouse/touch input for practice mode UI buttons
+    next_screen = handle_mouse_input();
     if (next_screen.has_value()) return next_screen;
 
     for (auto& player : players)

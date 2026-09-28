@@ -370,21 +370,7 @@ static void run_frame() {
         reset_input_lock();
     }
 
-    if (global_data.config->general.touch_input) {
-        auto* touch_drum_resize = static_cast<TextureResizeAnimation*>(global_tex.get_animation(66));
-        if (touch_drum_resize) {
-        if (!touch_drum_resize->isStarted()) touch_drum_resize->start();
-        if (touch_drum_pressed.exchange(false, std::memory_order_relaxed))
-            touch_drum_resize->restart();
-        touch_drum_resize->update(get_current_ms());
-        const float scale = (float)touch_drum_resize->attribute;
-        float y_fix = 0.0f;
-        auto drum_it = global_tex.textures.find("overlay/touch_drum");
-        if (drum_it != global_tex.textures.end())
-            y_fix = drum_it->second->height * 0.5f * (1.0f - scale);
-        global_tex.draw_texture(global_tex.get_texture("overlay/touch_drum"), {.scale=scale, .center=true, .y=y_fix, .fade=0.5f});
-        }
-    }
+    draw_touch_drum();
 
     if (global_data.config->general.fps_counter) {
         L.fps_counter.update();
@@ -397,20 +383,6 @@ static void run_frame() {
 
     ray::EndBlendMode();
     ray::EndMode2D();
-#ifdef YATAIDON_PLATFORM_IOS
-    if (global_data.config->general.touch_input) {
-        float sw = static_cast<float>(ray::GetScreenWidth());
-        float sh = static_cast<float>(ray::GetScreenHeight());
-        int font_size = std::max(16, static_cast<int>(sh * 0.04f));
-        const char* labels[] = {"Back", "Pause"};
-        for (int i = 0; i < 2; ++i) {
-            float x = sw * (0.36f + i * 0.15f);
-            ray::DrawRectangleRec({x, sh * 0.025f, sw * 0.13f, sh * 0.10f}, ray::Fade(ray::BLACK, 0.6f));
-            ray::DrawText(labels[i], static_cast<int>(x + (sw * 0.13f - ray::MeasureText(labels[i], font_size)) / 2),
-                static_cast<int>(sh * 0.075f - font_size / 2), font_size, ray::WHITE);
-        }
-    }
-#endif
     ray::EndDrawing();
 
     if (!next_screen.has_value()) {

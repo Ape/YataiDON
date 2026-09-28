@@ -2,6 +2,7 @@
 #include "animation.h"
 #include "spdlog/spdlog.h"
 #include "texture.h"
+#include "time.h"
 #include <array>
 #include <unordered_set>
 
@@ -81,6 +82,13 @@ static const int TOUCH_R_DON = 40004;
 static std::unordered_map<SDL_FingerID, int> touch_id_to_vkey;
 
 std::atomic<bool> touch_drum_pressed{false};
+
+// Track if touch drum is enabled (drawing + input, controlled by screens)
+static std::atomic<bool> touch_drum_enabled{true};
+
+void set_touch_drum_enabled(bool enabled) {
+    touch_drum_enabled.store(enabled, std::memory_order_relaxed);
+}
 
 static std::array<bool, 349> previous_key_states{};
 static std::array<std::array<bool, 18>, 4> previous_gamepad_states{};
@@ -369,6 +377,7 @@ static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
 
     if (event->type == SDL_EVENT_FINGER_DOWN) {
         if (!global_data.config || !global_data.config->general.touch_input) return 1;
+        if (!touch_drum_enabled.load(std::memory_order_relaxed)) return 1;
         SDL_FingerID id = event->tfinger.fingerID;
         std::lock_guard<std::mutex> lock(input_mutex);
         if (!touch_id_to_vkey.count(id)) {
@@ -401,6 +410,38 @@ static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
         touch_drum_pressed.store(!touch_id_to_vkey.empty(), std::memory_order_relaxed);
     }
     return 1;
+}
+
+bool draw_touch_drum() {
+    if (!touch_drum_enabled.load(std::memory_order_relaxed)) return false;
+    if (!global_data.config || !global_data.config->general.touch_input) return false;
+
+    auto* touch_drum_resize = static_cast<TextureResizeAnimation*>(global_tex.get_animation(66));
+    if (!touch_drum_resize) return false;
+
+    if (!touch_drum_resize->isStarted()) touch_drum_resize->start();
+    if (touch_drum_pressed.exchange(false, std::memory_order_relaxed))
+        touch_drum_resize->restart();
+    touch_drum_resize->update(get_current_ms());
+    const float scale = (float)touch_drum_resize->attribute;
+    float y_fix = 0.0f;
+    auto drum_it = global_tex.textures.find("overlay/touch_drum");
+    if (drum_it != global_tex.textures.end())
+        y_fix = drum_it->second->height * 0.5f * (1.0f - scale);
+    global_tex.draw_texture(global_tex.get_texture("overlay/touch_drum"), {.scale=scale, .center=true, .y=y_fix, .fade=0.5f});
+#ifdef YATAIDON_PLATFORM_IOS
+    float sw = static_cast<float>(ray::GetScreenWidth());
+    float sh = static_cast<float>(ray::GetScreenHeight());
+    int font_size = std::max(16, static_cast<int>(sh * 0.04f));
+    const char* labels[] = {"Back", "Pause"};
+    for (int i = 0; i < 2; ++i) {
+        float x = sw * (0.36f + i * 0.15f);
+        ray::DrawRectangleRec({x, sh * 0.025f, sw * 0.13f, sh * 0.10f}, ray::Fade(ray::BLACK, 0.6f));
+        ray::DrawText(labels[i], static_cast<int>(x + (sw * 0.13f - ray::MeasureText(labels[i], font_size)) / 2),
+            static_cast<int>(sh * 0.075f - font_size / 2), font_size, ray::WHITE);
+    }
+#endif
+    return true;
 }
 
 void poll_touch_once() {

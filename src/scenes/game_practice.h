@@ -76,6 +76,12 @@ public:
     std::optional<Screens> update() override;
     void draw() override;
 
+    // Check if practice mode is currently paused
+    bool is_paused() const { return paused; }
+
+    // Handle mouse/touch input for practice mode UI buttons
+    std::optional<Screens> handle_mouse_input();
+
 private:
     PracticePlayer* practice_player = nullptr; // non-owning, points into players[0]
 

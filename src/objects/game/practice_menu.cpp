@@ -175,6 +175,83 @@ PracticeMenu::Action PracticeMenu::confirm() {
     }
 }
 
+// Handle mouse/touch input for menu navigation and selection
+PracticeMenu::Action PracticeMenu::handle_mouse_input(const ray::Camera2D& camera, ray::Vector2 mouse_pos, bool clicked, bool auto_on) {
+    if (!open) return Action::NONE;
+
+    int n = (int)menu_text.size();
+    if (n == 0) return Action::NONE;
+
+    float bar_w   = tex.skin_config[SC::PRACTICE_MENU_BAR].width;
+    float bar_h   = tex.skin_config[SC::PRACTICE_MENU_BAR].height;
+    float gap     = tex.skin_config[SC::PRACTICE_MENU_BAR].x;
+    float panel_w = tex.skin_config[SC::PRACTICE_MENU_PANEL].width;
+    float panel_h = tex.skin_config[SC::PRACTICE_MENU_PANEL].height;
+    float panel_x = (tex.screen_width - panel_w) / 2.0f;
+    float panel_y = tex.skin_config[SC::PRACTICE_MENU_PANEL].y;
+    float pad     = (panel_w - n * bar_w - (n - 1) * gap) / 2.0f;
+
+    // Convert mouse position from screen coordinates to virtual coordinates
+    ray::Vector2 virtual_mouse = ray::GetScreenToWorld2D(mouse_pos, camera);
+
+    if (dialog != Dialog::NONE) {
+        // Handle dialog buttons
+        float btn_w = tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].width;
+        float btn_h = tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].height;
+        float left_x, right_x, row_y;
+
+        if (dialog == Dialog::AUTO) {
+            float tog_w = tex.skin_config[SC::PRACTICE_MENU_AUTO_TOGGLE].width;
+            float gap_d = tex.skin_config[SC::PRACTICE_MENU_AUTO_TOGGLE].x;
+            float total = btn_w * 2 + tog_w + gap_d * 2;
+            left_x  = panel_x + (panel_w - total) / 2.0f;
+            right_x = left_x + btn_w + gap_d + tog_w + gap_d;
+            row_y   = panel_y + tex.skin_config[SC::PRACTICE_MENU_AUTO_TOGGLE].y;
+        } else {
+            left_x  = panel_x + tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].x;
+            right_x = panel_x + panel_w - tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].x - btn_w;
+            row_y   = panel_y + tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].y;
+        }
+
+        // Check left button (Yes/ON)
+        if (virtual_mouse.x >= left_x && virtual_mouse.x <= left_x + btn_w &&
+            virtual_mouse.y >= row_y && virtual_mouse.y <= row_y + btn_h) {
+            if (clicked) {
+                dialog_sel = 0;
+                return confirm();
+            }
+        }
+        // Check right button (No/OFF)
+        else if (virtual_mouse.x >= right_x && virtual_mouse.x <= right_x + btn_w &&
+                 virtual_mouse.y >= row_y && virtual_mouse.y <= row_y + btn_h) {
+            if (clicked) {
+                dialog_sel = 1;
+                return confirm();
+            }
+        }
+        return Action::NONE;
+    }
+
+    // Handle main menu items
+    for (int i = 0; i < n; i++) {
+        float x = panel_x + pad + i * (bar_w + gap);
+        float y = panel_y + (panel_h - bar_h) / 2.0f;
+
+        if (virtual_mouse.x >= x && virtual_mouse.x <= x + bar_w &&
+            virtual_mouse.y >= y && virtual_mouse.y <= y + bar_h) {
+            if (clicked) {
+                index = i;
+                return activate(auto_on);
+            }
+            // Hover effect - update index
+            index = i;
+            break;
+        }
+    }
+
+    return Action::NONE;
+}
+
 void PracticeMenu::draw() const {
     int n = (int)menu_text.size();
     if (n == 0) return;
