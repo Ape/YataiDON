@@ -447,7 +447,7 @@ void Player::update(double ms_from_start, double current_ms, std::optional<Backg
             bool is_big = it->is_big;
             it = draw_arc_list.erase(it);
             gauge_hit_effect.clear();
-            gauge_hit_effect.push_back(GaugeHitEffect(note_type, is_big, player_num == PlayerNum::P2));
+            gauge_hit_effect.push_back(GaugeHitEffect(note_type, is_big, arc_player() == PlayerNum::P2));
         } else {
             ++it;
         }
