@@ -1,10 +1,10 @@
 #include "audio.h"
 #include "spdlog/spdlog.h"
 #ifdef YATAIDON_PLATFORM_IOS
-#include "platform/platform_ios.h"
+#include "../platform/platform_ios.h"
 #endif
 #ifdef _WIN32
-#include "platform/platform_windows.h"
+#include "../platform/platform_windows.h"
 #endif
 
 // Global iOS audio stream for platform access

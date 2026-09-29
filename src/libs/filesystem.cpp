@@ -27,18 +27,19 @@
 #endif
 
 void set_working_directory_to_executable() {
+    std::filesystem::path exe_dir;
 #ifdef YATAIDON_PLATFORM_IOS
     ios_prepare_filesystem();
 #elif defined(__ANDROID__)
-    android_get_working_directory();
+    exe_dir = android_get_working_directory();
 #elif defined(__EMSCRIPTEN__)
-    emscripten_get_working_directory();
+    exe_dir = emscripten_get_working_directory();
 #elif _WIN32
-    std::filesystem::path exe_dir = win32_get_executable_dir();
+    exe_dir = win32_get_executable_dir();
 #elif defined(__APPLE__) && !defined(YATAIDON_PLATFORM_IOS)
-    std::filesystem::path exe_dir = macos_get_executable_dir();
+    exe_dir = macos_get_executable_dir();
 #else
-    std::filesystem::path exe_dir = unix_get_executable_dir();
+    exe_dir = unix_get_executable_dir();
 #endif
     if (exe_dir.empty()) {
         return;

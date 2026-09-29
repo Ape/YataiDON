@@ -231,9 +231,11 @@ static int char_to_raylib_key(unsigned char c) {
 static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
     if (is_input_locked()) return 1;
 
+    #ifdef __linux__
     if (linux_handle_text_input(event, is_input_locked(), input_mutex, pressed_keys, released_keys)) {
         return 1;
     }
+    #endif
 
     if (event->type == SDL_EVENT_KEY_DOWN &&
         event->key.scancode == SDL_SCANCODE_AC_BACK) {
