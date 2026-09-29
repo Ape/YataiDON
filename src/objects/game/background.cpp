@@ -54,6 +54,7 @@ Background::Background(PlayerNum player_num, float bpm, const std::string& scene
         fn_draw_back     = lua_object["draw_back"];
         fn_draw_fore     = lua_object["draw_fore"];
         fn_draw_gauge    = lua_object["draw_gauge"];
+        fn_handle_balloon_end = lua_object["handle_balloon_end"];
     }
 }
 
@@ -176,6 +177,15 @@ void Background::draw_ending(PlayerNum player_num) {
     if (!result.valid()) {
         sol::error err = result;
         spdlog::error("Error calling draw_ending: {}", err.what());
+    }
+}
+
+void Background::handle_balloon_end(PlayerNum player_num) {
+    if (!fn_handle_balloon_end.valid()) return;
+    auto result = fn_handle_balloon_end(lua_object, static_cast<int>(player_num));
+    if (!result.valid()) {
+        sol::error err = result;
+        spdlog::error("Error calling handle_balloon_end: {}", err.what());
     }
 }
 

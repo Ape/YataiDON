@@ -20,6 +20,7 @@ private:
     sol::protected_function fn_draw_back;
     sol::protected_function fn_draw_fore;
     sol::protected_function fn_draw_gauge;
+    sol::protected_function fn_handle_balloon_end;
 
 public:
     Background(PlayerNum player_num, float bpm, const std::string& scene_preset);
@@ -45,6 +46,8 @@ public:
     void draw_ending(PlayerNum player_num);
     bool wants_ending() const { return fn_handle_ending.valid() && fn_draw_ending.valid(); }
     bool wants_handle_ending() const { return fn_handle_ending.valid(); }
+    // Optional: a balloon reached its end without bursting (a burst plays "balloon_pop")
+    void handle_balloon_end(PlayerNum player_num);
     bool wants_draw_ending() const { return fn_draw_ending.valid(); }
     void draw_back();
     void draw_fore();
