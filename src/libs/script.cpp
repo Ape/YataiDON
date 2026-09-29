@@ -202,7 +202,10 @@ void ScriptManager::shutdown() {
 
 void ScriptManager::register_lua_bindings() {
     sol::state& lua = *this->lua;
+    // Calling an animation returns it: box:fade() and box.fade (a property) are the same object,
+    // for skins written against either binding of the box animations.
     lua.new_usertype<BaseAnimation>("BaseAnimation",
+        sol::meta_function::call, [](BaseAnimation& self, sol::variadic_args) { return &self; },
         "update", [](BaseAnimation& self, double t) { self.update(t); return self.attribute; },
         "restart", &BaseAnimation::restart,
         "start", &BaseAnimation::start,
@@ -220,6 +223,7 @@ void ScriptManager::register_lua_bindings() {
     // Fade animation bindings
     lua.new_usertype<FadeAnimation>("FadeAnimation",
         sol::base_classes, sol::bases<BaseAnimation>(),
+        sol::meta_function::call, [](FadeAnimation& self, sol::variadic_args) { return &self; },
         "update", [](FadeAnimation& self, double t) { self.update(t); return self.attribute; },
         "restart", &FadeAnimation::restart
     );
@@ -227,6 +231,7 @@ void ScriptManager::register_lua_bindings() {
     // Move animation bindings
     lua.new_usertype<MoveAnimation>("MoveAnimation",
         sol::base_classes, sol::bases<BaseAnimation>(),
+        sol::meta_function::call, [](MoveAnimation& self, sol::variadic_args) { return &self; },
         "update", [](MoveAnimation& self, double t) { self.update(t); return self.attribute; },
         "restart", &MoveAnimation::restart
     );
@@ -234,6 +239,7 @@ void ScriptManager::register_lua_bindings() {
     // Texture change animation bindings
     lua.new_usertype<TextureChangeAnimation>("TextureChangeAnimation",
         sol::base_classes, sol::bases<BaseAnimation>(),
+        sol::meta_function::call, [](TextureChangeAnimation& self, sol::variadic_args) { return &self; },
         "update", [](TextureChangeAnimation& self, double t) { self.update(t); return self.attribute; },
         "reset", &TextureChangeAnimation::reset
     );
@@ -241,12 +247,14 @@ void ScriptManager::register_lua_bindings() {
     // Text stretch animation bindings
     lua.new_usertype<TextStretchAnimation>("TextStretchAnimation",
         sol::base_classes, sol::bases<BaseAnimation>(),
+        sol::meta_function::call, [](TextStretchAnimation& self, sol::variadic_args) { return &self; },
         "update", [](TextStretchAnimation& self, double t) { self.update(t); return self.attribute; }
     );
 
     // Texture resize animation bindings
     lua.new_usertype<TextureResizeAnimation>("TextureResizeAnimation",
         sol::base_classes, sol::bases<BaseAnimation>(),
+        sol::meta_function::call, [](TextureResizeAnimation& self, sol::variadic_args) { return &self; },
         "update", [](TextureResizeAnimation& self, double t) { self.update(t); return self.attribute; },
         "restart", &TextureResizeAnimation::restart
     );
