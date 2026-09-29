@@ -17,6 +17,7 @@ std::mutex clock_mutex;
 bool suspended = false;
 double paused_at = 0;
 double paused_duration = 0;
+void (*g_ios_frame_callback)() = nullptr;
 
 double monotonic_ms() {
     return std::chrono::duration<double, std::milli>(
@@ -120,6 +121,7 @@ void ios_initialize_after_window() {
 
 int ios_run_main_loop(void (*run_frame)()) {
     poll_touch_once();
+    g_ios_frame_callback = run_frame;
     
     int window_count = 0;
     SDL_Window** windows = SDL_GetWindows(&window_count);
@@ -129,7 +131,7 @@ int ios_run_main_loop(void (*run_frame)()) {
     }
     
     bool registered = SDL_SetiOSAnimationCallback(windows[0], 1,
-        [](void*) { run_frame(); }, nullptr);
+        [](void*) { g_ios_frame_callback(); }, nullptr);
     SDL_free(windows);
     
     if (!registered) return 1;
