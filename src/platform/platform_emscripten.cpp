@@ -62,16 +62,6 @@ void emscripten_shutdown() {
 #endif
 }
 
-void emscripten_set_keyboard_visible(bool visible) {
-#ifdef __EMSCRIPTEN__
-    // On Emscripten, keyboard is handled by the browser
-    // We can use emscripten APIs if needed
-    (void)visible;
-#else
-    (void)visible;
-#endif
-}
-
 void emscripten_sync_filesystem() {
 #ifdef __EMSCRIPTEN__
     EM_ASM({

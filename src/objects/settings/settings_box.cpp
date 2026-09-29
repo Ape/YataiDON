@@ -178,7 +178,7 @@ void SettingsBox::select_option() {
     if (options.empty()) return;
     options[option_index]->is_highlighted = !options[option_index]->is_highlighted;
     if (options[option_index]->needs_text_input())
-        android_set_keyboard_visible(options[option_index]->is_highlighted);
+        set_keyboard_visible(options[option_index]->is_highlighted);
     options[option_index]->confirm();
 }
 

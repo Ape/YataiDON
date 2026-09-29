@@ -18,9 +18,6 @@ std::filesystem::path android_get_working_directory();
 // Initializes Android-specific crash handlers.
 void android_install_crash_handlers();
 
-// Android keyboard visibility control.
-void android_set_keyboard_visible(bool visible);
-
 // Android-specific network services.
 
 // Checks for app updates and installs them if available.

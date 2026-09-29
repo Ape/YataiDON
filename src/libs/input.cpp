@@ -6,12 +6,15 @@
 #include <array>
 #include <unordered_set>
 
+// Only Windows and iOS have platform-specific keyboard helpers that input.cpp
+// still calls directly: win32_is_key_down_native (native key state) on Windows,
+// and the iOS screen-keyboard/touch-navigation functions. The Linux text-input
+// handling used to live in platform_linux.cpp and has been folded into this
+// file (handle_linux_text_input below).
 #ifdef _WIN32
 #include "../platform/platform_windows.h"
-#elif defined(__ANDROID__)
-#include "../platform/platform_android.h"
-#else
-#include "../platform/platform_linux.h"
+#elif defined(YATAIDON_PLATFORM_IOS)
+#include "../platform/platform_ios.h"
 #endif
 
 
@@ -228,11 +231,33 @@ static int char_to_raylib_key(unsigned char c) {
     return 0;
 }
 
+#if defined(__linux__) && !defined(__ANDROID__)
+static bool handle_linux_text_input(SDL_Event* event) {
+    if (is_input_locked()) return false;
+    if (event->type != SDL_EVENT_TEXT_INPUT || !event->text.text) return false;
+
+    const bool* key_state = SDL_GetKeyboardState(nullptr);
+    std::lock_guard<std::mutex> lock(input_mutex);
+    for (const char* p = event->text.text; *p; p++) {
+        unsigned char c = (unsigned char)*p;
+        int key = char_to_raylib_key(c);
+        if (!key) continue;
+        SDL_Keycode keycode = (c >= 'A' && c <= 'Z') ? (c + 32) : c;
+        SDL_Keymod mod = SDL_KMOD_NONE;
+        SDL_Scancode sc = SDL_GetScancodeFromKey(keycode, &mod);
+        if (sc != SDL_SCANCODE_UNKNOWN && key_state && key_state[sc]) continue;
+        pressed_keys.insert(key);
+        released_keys.insert(key);
+    }
+    return true;
+}
+#endif
+
 static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
     if (is_input_locked()) return 1;
 
     #if defined(__linux__) && !defined(__ANDROID__)
-    if (linux_handle_text_input(event, is_input_locked(), input_mutex, pressed_keys, released_keys)) {
+    if (handle_linux_text_input(event)) {
         return 1;
     }
     #endif
@@ -461,4 +486,67 @@ void shutdown_sdl_joysticks() {
     sdl_prev_axis.clear();
     SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
     sdl_joysticks_init_done = false;
+}
+
+void set_keyboard_visible(bool visible) {
+    #if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
+        int count = 0;
+        SDL_Window** windows = SDL_GetWindows(&count);
+        if (!windows || count == 0) return;
+        SDL_Window* win = windows[0];
+        SDL_free(windows);
+        if (visible) {
+            SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "1");
+            SDL_StartTextInput(win);
+        } else {
+            SDL_StopTextInput(win);
+            SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "0");
+        }
+    #else
+        (void)visible;
+    #endif
+}
+
+// Unified keyboard text-field editing. See the declaration in input.h.
+TextEditAction poll_text_edit(std::string& text, const std::function<bool(int)>& accept) {
+    // Ctrl+V pastes the clipboard (first line only, UTF-8 as raylib hands it over).
+    if ((ray::IsKeyDown(ray::KEY_LEFT_CONTROL) || ray::IsKeyDown(ray::KEY_RIGHT_CONTROL)) &&
+        ray::IsKeyPressed(ray::KEY_V)) {
+        const char* clip = ray::GetClipboardText();
+        if (clip) {
+            std::string s(clip);
+            const size_t eol = s.find_first_of("\r\n");
+            if (eol != std::string::npos) s.resize(eol);
+            text += s;
+        }
+        while (ray::GetCharPressed() > 0) {}   // the 'v' itself is not typed
+        return TextEditAction::None;
+    }
+
+    TextEditAction action = TextEditAction::None;
+    if (ray::IsKeyPressed(ray::KEY_BACKSPACE)) {
+        // Remove one whole UTF-8 code point (continuation bytes first).
+        while (!text.empty() && ((unsigned char)text.back() & 0xC0) == 0x80)
+            text.pop_back();
+        if (!text.empty()) text.pop_back();
+    } else if (ray::IsKeyPressed(ray::KEY_ESCAPE)) {
+        action = TextEditAction::Cancel;
+    } else if (ray::IsKeyPressed(ray::KEY_ENTER)) {
+        action = TextEditAction::Confirm;
+    }
+
+    int key = ray::GetCharPressed();
+    while (key > 0) {
+        if (key == '\n' || key == '\r') {
+            if (action == TextEditAction::None) action = TextEditAction::Confirm;
+        } else if (key >= 0x20 && (!accept || accept(key))) {
+            // GetCharPressed yields a Unicode code point (IME-composed CJK
+            // included); store it as UTF-8.
+            int n = 0;
+            const char* utf8 = ray::CodepointToUTF8(key, &n);
+            text.append(utf8, n);
+        }
+        key = ray::GetCharPressed();
+    }
+    return action;
 }

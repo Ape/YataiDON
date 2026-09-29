@@ -146,15 +146,6 @@ void android_install_crash_handlers() {
     signal(SIGINT, [](int) { _exit(0); });
 }
 
-void android_set_keyboard_visible(bool visible) {
-#if defined(__ANDROID__)
-    // This will be called from Java/JNI side typically
-    // The actual implementation is in the Android Java code
-    // This is a placeholder for the C++ side
-    (void)visible;
-#endif
-}
-
 void android_check_and_install_update() {
     if (g_android_update_checked) return;
     g_android_update_checked = true;

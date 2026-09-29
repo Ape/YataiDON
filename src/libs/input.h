@@ -1,7 +1,9 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
 #include <mutex>
+#include <string>
 #include <thread>
 #include <unordered_set>
 #include <vector>
@@ -39,7 +41,9 @@ double get_last_input_ms();
 // Useful when changing screens or locking input
 void clear_input_buffers();
 void shutdown_sdl_joysticks();
-void android_set_keyboard_visible(bool visible);
+
+// Platform-independent keyboard visibility control
+void set_keyboard_visible(bool visible);
 
 // Enable/disable touch drum
 void set_touch_drum_enabled(bool enabled);
@@ -52,6 +56,21 @@ bool is_l_don_pressed(PlayerNum player_num = PlayerNum::ALL);
 bool is_r_don_pressed(PlayerNum player_num = PlayerNum::ALL);
 bool is_l_kat_pressed(PlayerNum player_num = PlayerNum::ALL);
 bool is_r_kat_pressed(PlayerNum player_num = PlayerNum::ALL);
+
+// --- Unified keyboard text editing ---------------------------------------
+// Result of one frame of keyboard-driven text-field editing.
+enum class TextEditAction { None, Confirm, Cancel };
+
+// Polls the keyboard for text-field editing and applies the edits to `text`:
+//   * Backspace removes one UTF-8 code point.
+//   * Ctrl+V pastes the clipboard (first line only, UTF-8).
+//   * Typed characters (GetCharPressed) are appended as UTF-8; `accept` may
+//     reject a code point (return false to skip it).
+//   * Enter / Escape (IsKeyPressed) and a typed '\n'/'\r' map to
+//     Confirm / Cancel, which are returned so the caller can finalize or
+//     abort its edit session.
+TextEditAction poll_text_edit(std::string& text,
+                              const std::function<bool(int)>& accept = nullptr);
 
 namespace ray {
 inline bool operator==(const Color& a, const Color& b)

@@ -5,6 +5,7 @@
 #include "../../libs/script.h"
 #include "../../libs/filesystem.h"
 #include "../../libs/animation.h"
+#include "../../libs/input.h"
 #include <algorithm>
 #include <cmath>
 #include <fstream>
@@ -321,20 +322,17 @@ public:
             }
 
             if (editing_data_ptr) {
-                if (ray::IsKeyPressed(ray::KEY_ESCAPE)) {
+                TextEditAction action = poll_text_edit(edit_data_buffer, [&](int ch) {
+                    if (editing_data_kind == DataField::Kind::STRING)
+                        return ch >= 32 && ch < 127 && edit_data_buffer.size() < 64;
+                    return ((ch >= '0' && ch <= '9') || (ch == '-' && edit_data_buffer.empty())) &&
+                           edit_data_buffer.size() < 64;
+                });
+                if (action == TextEditAction::Cancel) {
                     editing_data_ptr = nullptr;
                     edit_data_buffer.clear();
-                } else if (ray::IsKeyPressed(ray::KEY_ENTER)) {
+                } else if (action == TextEditAction::Confirm) {
                     commit_data_edit();
-                } else {
-                    if (ray::IsKeyPressed(ray::KEY_BACKSPACE) && !edit_data_buffer.empty()) edit_data_buffer.pop_back();
-                    int ch;
-                    while ((ch = ray::GetCharPressed()) > 0) {
-                        bool ok = (editing_data_kind == DataField::Kind::STRING)
-                            ? (ch >= 32 && ch < 127)
-                            : ((ch >= '0' && ch <= '9') || (ch == '-' && edit_data_buffer.empty()));
-                        if (ok && edit_data_buffer.size() < 64) edit_data_buffer += (char)ch;
-                    }
                 }
             }
             return;
@@ -442,19 +440,16 @@ public:
         }
 
         if (editing_field >= 0) {
-            if (ray::IsKeyPressed(ray::KEY_ESCAPE)) {
+            TextEditAction action = poll_text_edit(edit_buffer, [&](int ch) {
+                bool is_digit = ch >= '0' && ch <= '9';
+                bool is_sign  = ch == '-' && edit_buffer.empty();
+                return (is_digit || is_sign) && edit_buffer.size() < 8;
+            });
+            if (action == TextEditAction::Cancel) {
                 editing_field = -1;
                 edit_buffer.clear();
-            } else if (ray::IsKeyPressed(ray::KEY_ENTER)) {
+            } else if (action == TextEditAction::Confirm) {
                 commit_edit();
-            } else {
-                if (ray::IsKeyPressed(ray::KEY_BACKSPACE) && !edit_buffer.empty()) edit_buffer.pop_back();
-                int ch;
-                while ((ch = ray::GetCharPressed()) > 0) {
-                    bool is_digit = ch >= '0' && ch <= '9';
-                    bool is_sign  = ch == '-' && edit_buffer.empty();
-                    if ((is_digit || is_sign) && edit_buffer.size() < 8) edit_buffer += (char)ch;
-                }
             }
         }
     }

@@ -311,7 +311,7 @@ std::optional<Screens> SongSelectScreen::update() {
     if (state != prev_state) {
         script->restart_text_fade();
         if (prev_state == SongSelectState::SEARCHING)
-            android_set_keyboard_visible(false);
+            set_keyboard_visible(false);
         if (state == SongSelectState::SONG_SELECTED) {
             diff_select_timer = std::make_unique<Timer>(60, current_time, [this]() {
                 if (auto* item = dynamic_cast<SongBox*>(navigator.get_current_item())) {
@@ -323,7 +323,7 @@ std::optional<Screens> SongSelectScreen::update() {
             // The don key that opened the search (F/J) is also a typed character still
             // queued in raylib's char buffer; drop it so it does not land in the query.
             while (ray::GetCharPressed() > 0) {}
-            android_set_keyboard_visible(true);
+            set_keyboard_visible(true);
         } else if (state == SongSelectState::DAN_SELECTED) {
             dan_transition.emplace();
             dan_transition->start();
