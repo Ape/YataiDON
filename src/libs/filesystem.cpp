@@ -11,7 +11,7 @@
 #include <spdlog/spdlog.h>
 
 #ifdef YATAIDON_PLATFORM_IOS
-    #include "../platform/ios.h"
+    #include "../platform/platform_ios.h"
 #endif
 
 #ifdef _WIN32

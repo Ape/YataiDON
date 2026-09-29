@@ -5,6 +5,7 @@
 #include <portaudio.h>
 #include <spdlog/spdlog.h>
 #include <atomic>
+#include <csignal>
 #include <string>
 #include <filesystem>
 #include <cstdint>
