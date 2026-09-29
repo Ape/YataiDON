@@ -718,6 +718,10 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
         return audio.is_sound_playing(name);
     });
 
+    audio_tbl.set_function("play_count", [](const std::string& name) -> double {
+        return (double)audio.sound_play_count(name);
+    });
+
     lua["audio"] = audio_tbl;
 
     sol::table camera_tbl = lua.create_table();

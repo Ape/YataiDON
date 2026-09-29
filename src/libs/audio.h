@@ -16,6 +16,8 @@
 #include <memory>
 #include <atomic>
 #include <shared_mutex>
+#include <mutex>
+#include <cstdint>
 #include <vector>
 #include <string>
 #include <unordered_map>
@@ -130,6 +132,9 @@ public:
     void stop_sound(const std::string& name);
     void set_sound_loop(const std::string& name, bool loop);
     bool is_sound_playing(const std::string& name);
+    // times play_sound(name) has been called (a skin can count hits even while the sound
+    // is still playing from the previous one)
+    uint64_t sound_play_count(const std::string& name);
     void  set_sound_volume(const std::string& name, float volume);
     void  set_sound_pan(const std::string& name,   float pan);
     void  set_sound_pitch(const std::string& name, float pitch);
@@ -174,6 +179,8 @@ private:
     VolumeConfig volume_presets;
     bool is_ready;
     mutable std::shared_mutex rw_lock;
+    std::mutex play_count_lock;
+    std::unordered_map<std::string, uint64_t> play_counts;
     std::atomic<float> master_volume;
 
     SDL_AudioStream*   sdl_stream = nullptr;
