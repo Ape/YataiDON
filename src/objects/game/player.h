@@ -100,6 +100,7 @@ public:
         was_gauge_full = false;
         note_judgments.clear();
         last_reported_score = -1;
+        last_reported_gogo = -1;
         arc_points = 25;
         if (judge_counter) judge_counter = JudgeCounter();
     }
@@ -154,6 +155,7 @@ private:
     int combo;
     int score;
     int last_reported_score = -1;   // last value sent to Background::handle_score
+    int last_reported_gogo = -1;   // background handle_gogo edge detection
     int max_combo;
     int total_drumroll;
     std::unordered_map<int, Judgments> note_judgments;

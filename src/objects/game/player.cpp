@@ -484,6 +484,10 @@ void Player::update(double ms_from_start, double current_ms, std::optional<Backg
         gauge->update(current_ms);
         if (background.has_value()) {
             background->handle_gauge(player_num, gauge->get_length() / 100.0f, gauge->get_is_clear(), gauge->get_is_rainbow());
+            if ((int)is_gogo_time != last_reported_gogo) {
+                last_reported_gogo = (int)is_gogo_time;
+                background->handle_gogo(player_num, is_gogo_time);
+            }
             if (score != last_reported_score) {
                 last_reported_score = score;
                 background->handle_score(player_num, score);
