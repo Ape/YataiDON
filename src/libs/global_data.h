@@ -250,12 +250,10 @@ void reset_session();
 int get_player_id(PlayerNum player_num);
 void load_skin();
 void unload_skin();
-// Pair of calls around a skin reload (unload_skin()+load_skin()): every
-// screen except the caller holds sol::table/sol::protected_function members
-// tied to the current lua_State. Call drop_... before unload_skin() while
-// that state is still open (destroying them after close use-after-frees
-// the registry -- SIGSEGV in lua_rawgeti/luaL_unref), and reload_... after
-// load_skin() to rebuild them against the new state.
+
+void queue_window_resize(int width, int height);
+bool apply_queued_window_resize();
+
 void drop_other_screens_for_skin_reload();
 void reload_skin_screens();
 

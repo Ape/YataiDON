@@ -257,6 +257,8 @@ static void run_frame() {
 #endif
     poll_touch_once();
 
+    apply_queued_window_resize();
+
     if (check_key_pressed(global_data.config->keys.fullscreen_key)) {
         ray::ToggleFullscreen();
         spdlog::info("Toggled fullscreen");
@@ -402,6 +404,7 @@ int main(int argc, char* argv[]) {
 
     ray::InitWindow(1280, 720, "YataiDON");
     load_skin();
+    apply_queued_window_resize();
 
     scores_manager.player_1 = global_data.config->general.player_1_id;
     scores_manager.player_2 = global_data.config->general.player_2_id;

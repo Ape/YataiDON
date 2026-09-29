@@ -1,6 +1,7 @@
 #include "global_data.h"
 #include <unordered_map>
 #include <stdexcept>
+#include <utility>
 #include "filesystem.h"
 #include "texture.h"
 #include "script.h"
@@ -10,6 +11,32 @@
 #include <spdlog/spdlog.h>
 
 GlobalData global_data;
+
+namespace {
+    std::optional<std::pair<int, int>> queued_window_resize;
+}
+
+void queue_window_resize(int width, int height) {
+    queued_window_resize = std::make_pair(width, height);
+}
+
+bool apply_queued_window_resize() {
+#ifndef YATAIDON_PLATFORM_IOS
+    if (!queued_window_resize) return false;
+    const int width  = queued_window_resize->first;
+    const int height = queued_window_resize->second;
+    queued_window_resize.reset();
+
+    const bool was_fullscreen = ray::IsWindowFullscreen();
+    if (was_fullscreen) ray::ToggleFullscreen();
+    ray::SetWindowSize(width, height);
+    if (was_fullscreen) ray::ToggleFullscreen();
+    return true;
+#else
+    queued_window_resize.reset();
+    return false;
+#endif
+}
 
 void load_skin() {
     if (!global_data.config) {
@@ -36,12 +63,8 @@ void load_skin() {
         }
 
         tex.init(root_skin_path / "Graphics");
-#ifndef YATAIDON_PLATFORM_IOS
-        const bool was_fullscreen = ray::IsWindowFullscreen();
-        if (was_fullscreen) ray::ToggleFullscreen();
-        ray::SetWindowSize(tex.screen_width, tex.screen_height);
-        if (was_fullscreen) ray::ToggleFullscreen();
-#endif
+        // Resize is deferred so it never happens mid-frame; see queue_window_resize.
+        queue_window_resize(tex.screen_width, tex.screen_height);
 
         global_tex.init(root_skin_path / "Graphics");
         global_tex.load_screen_textures("global");
