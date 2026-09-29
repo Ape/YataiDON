@@ -150,8 +150,16 @@ private:
     std::vector<std::unique_ptr<BaseAnimation>> copied_animations;
     std::unordered_map<std::string, std::unordered_map<int, std::unique_ptr<BaseAnimation>>> screen_animations;
     fs::path graphics_path;
-    fs::path parent_graphics_path;
+    fs::path parent_graphics_path;               // the nearest ancestor (graphics_path without one)
+    // every ancestor's Graphics path (parent, its parent, ...), nearest first, and the factor that
+    // maps its pixels to this skin's (this skin's width / that skin's width)
+    std::vector<fs::path> ancestor_graphics_paths;
+    std::vector<float> ancestor_scales;
     std::unordered_set<std::string> loaded_subsets;
+
+    // <screen>/animation.json: this skin's, else the nearest ancestor's with its move distances
+    // scaled; false when neither exists
+    bool read_screen_animations(const std::string& screen_name, rapidjson::Document& out);
 
 public:
     std::unordered_map<std::string, std::shared_ptr<TextureObject>> textures;
@@ -191,6 +199,12 @@ public:
     fs::path skin_root()   const { return graphics_path.parent_path(); }
     fs::path parent_root() const { return parent_graphics_path.parent_path(); }
     bool has_parent_skin() const { return parent_graphics_path != graphics_path; }
+    // Graphics dirs of the skin and all its ancestors, nearest first
+    std::vector<fs::path> all_graphics_roots() const {
+        std::vector<fs::path> r{graphics_path};
+        r.insert(r.end(), ancestor_graphics_paths.begin(), ancestor_graphics_paths.end());
+        return r;
+    }
 
     fs::path resolve_skin_path(const fs::path& relative_path) const {
         if (relative_path.is_absolute()) return {};
@@ -198,9 +212,9 @@ public:
             if (part == "..") return {};
         fs::path child = skin_root() / relative_path;
         if (fs::exists(child)) return child;
-        if (has_parent_skin()) {
-            fs::path parent = parent_root() / relative_path;
-            if (fs::exists(parent)) return parent;
+        for (const fs::path& ancestor : ancestor_graphics_paths) {
+            fs::path p = ancestor.parent_path() / relative_path;
+            if (fs::exists(p)) return p;
         }
         return child;
     }
