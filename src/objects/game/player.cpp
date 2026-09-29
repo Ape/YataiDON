@@ -1044,8 +1044,10 @@ void Player::play_note_manager(double current_ms, std::optional<Background>& bac
         if (other_notes.size() < 2) return;
         Note& tail = other_notes[1];
         if (tail.hit_ms <= current_ms) {
+            const bool balloon_missed = note.type == NoteType::BALLOON_HEAD;   // a burst one is gone already
             other_notes.pop_front();
             other_notes.pop_front();
+            if (balloon_missed && background.has_value()) background->handle_balloon_end(PlayerNum(is_2p + 1));
             is_drumroll = false;
             is_balloon = false;
             curr_drumroll_count = 0;
