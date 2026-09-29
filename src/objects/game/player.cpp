@@ -1200,7 +1200,8 @@ void Player::check_balloon(double current_ms, DrumType drum_type, const Note& ba
         balloon_counter = BalloonCounter(balloon.count.value(), is_2p);
         chara->set_anim(AnimIndex::DON_BALLOON_LOOP);
     }
-    if (background.has_value()) background->handle_balloon(PlayerNum(is_2p + 1));
+    if (background.has_value())
+        background->handle_balloon(PlayerNum(is_2p + 1), balloon.count.value() - curr_balloon_count - 1);
     curr_balloon_count++;
     total_drumroll++;
     score += 100;

@@ -32,7 +32,8 @@ public:
     void handle_ok(PlayerNum player_num);
     void handle_bad(PlayerNum player_num);
     void handle_drumroll(PlayerNum player_num);
-    void handle_balloon(PlayerNum player_num);
+    // remaining: hits left after this one (-1 = not known, e.g. a kusudama)
+    void handle_balloon(PlayerNum player_num, int remaining = -1);
     void handle_gauge(PlayerNum player_num, float progress, bool is_clear, bool is_rainbow,
                       float clear_progress = 1.0f, float flash = 0.0f);
     void handle_song_end(PlayerNum player_num, int good, int ok, int bad, int total_notes);
