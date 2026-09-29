@@ -29,7 +29,11 @@ void LoadingScreen::on_screen_start() {
     allnet_indicator = AllNetIcon();
     t_warning = tex.get_texture("kidou/warning");
 
+    countdown_ms = tex.skin_config[SC::LOADING_COUNTDOWN].height * 1000.0;
+    t_countdown = (countdown_ms > 0.0) ? tex.get_texture("kidou/countdown") : nullptr;
+
     songs = get_song_files(global_data.config->paths.tja_path);
+    start_ms = get_current_ms();   // after the (blocking) song scan: the countdown starts on screen
 #ifdef __EMSCRIPTEN__
     load_song_hashes();
 #else
@@ -131,7 +135,7 @@ std::optional<Screens> LoadingScreen::update() {
     Screen::update();
     allnet_indicator.update(get_current_ms());
 
-    if (loading_complete && !fade_in->isStarted()) {
+    if (loading_complete && !fade_in->isStarted() && get_current_ms() - start_ms >= countdown_ms) {
         fade_in->start();
     }
 
@@ -158,6 +162,20 @@ void LoadingScreen::draw() {
         ray::DrawRectangle(progress_bar_x, progress_bar_y, fill_width, progress_bar_height, ray::RED);
     }
     tex.draw_texture(t_warning);
+
+    if (t_countdown) {
+        const SkinInfo& cd = tex.skin_config[SC::LOADING_COUNTDOWN];
+        const double left = std::max(0.0, countdown_ms - (get_current_ms() - start_ms));
+        const int secs = static_cast<int>(left / 1000.0);
+        const int hundredths = static_cast<int>(left / 10.0) % 100;
+        std::vector<int> frames;
+        for (char c : std::to_string(secs)) frames.push_back(c - '0');
+        frames.insert(frames.end(), {10, hundredths / 10, hundredths % 10});
+        const float x0 = cd.x - cd.width * frames.size() / 2.0f;
+        for (size_t i = 0; i < frames.size(); i++) {
+            tex.draw_texture(t_countdown, {.frame = frames[i], .x = x0 + cd.width * i, .y = cd.y});
+        }
+    }
 
     ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::WHITE, fade_in->attribute));
     allnet_indicator.draw();
