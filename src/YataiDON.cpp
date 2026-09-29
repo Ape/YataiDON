@@ -22,6 +22,13 @@
 #include "platform/platform_emscripten.h"
 #endif
 
+#ifdef PLATFORM_ANDROID
+// SDL3's Android launcher (SDLActivity.nativeRunMain) looks up the "SDL_main"
+// symbol via dlsym(). Including this renames our main() -> SDL_main with C
+// linkage and default visibility, which is required for the app to start.
+#include <SDL3/SDL_main.h>
+#endif
+
 #include "scenes/dan_result.h"
 #include "scenes/dan_select.h"
 #include "scenes/entry.h"

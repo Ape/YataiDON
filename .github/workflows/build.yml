@@ -149,6 +149,7 @@ jobs:
         with:
           name: YataiDON-Linux
           path: release/YataiDON-Linux/
+          include-hidden-files: true
           if-no-files-found: error
 
   build-windows:
@@ -249,6 +250,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: YataiDON-Windows
+          include-hidden-files: true
           path: release/YataiDON-Windows/
           if-no-files-found: error
 
@@ -353,6 +355,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: YataiDON-macOS
+          include-hidden-files: true
           path: release/YataiDON-macOS/
           if-no-files-found: error
 
@@ -453,6 +456,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: YataiDON-Android
+          include-hidden-files: true
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
@@ -467,6 +471,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: YataiDON-Android-Update
+          include-hidden-files: true
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
 
@@ -571,6 +576,7 @@ jobs:
             release/YataiDON-iOS-unsigned.ipa
             release/checksums-ios.sha256
           compression-level: 0
+          include-hidden-files: true
           if-no-files-found: error
 
   build-summary:
