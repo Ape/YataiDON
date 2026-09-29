@@ -1613,7 +1613,8 @@ void Player::draw_notes(double current_ms, float y) {
     }
 
     auto skip_note = [&](const Note& note) {
-        if (balloon_counter.has_value() && note.type == NoteType::BALLOON_HEAD && !other_notes.empty() && note.index == other_notes[0].index) {
+        // only the balloon being hit: after a pop the counter plays on while other_notes[0] is already the next balloon
+        if (is_balloon && balloon_counter.has_value() && note.type == NoteType::BALLOON_HEAD && !other_notes.empty() && note.index == other_notes[0].index) {
             return true;
         }
         if (kusudama_owner()->kusudama_counter.has_value() && note.type == NoteType::KUSUDAMA && !other_notes.empty() && note.index == other_notes[0].index) {
