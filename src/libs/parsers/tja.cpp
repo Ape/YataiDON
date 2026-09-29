@@ -87,7 +87,7 @@ inline std::filesystem::path get_proper_path(const std::string& path, const std:
     #ifdef _WIN32
     return win32_path_from_encoded(path, encoding, base_path);
     #else
-    return path;
+    return base_path / path;
     #endif
 }
 
