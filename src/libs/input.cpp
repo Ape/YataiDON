@@ -231,7 +231,7 @@ static int char_to_raylib_key(unsigned char c) {
 static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
     if (is_input_locked()) return 1;
 
-    #ifdef __linux__
+    #ifdef defined(__linux__) && !defined(__ANDROID__)
     if (linux_handle_text_input(event, is_input_locked(), input_mutex, pressed_keys, released_keys)) {
         return 1;
     }
