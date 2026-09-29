@@ -13,9 +13,11 @@ void register_song_select_lua_bindings(sol::state& lua) {
     lua.new_usertype<BaseBox>("BaseBox",
         "box_x",           &BaseBox::box_x,
         "box_y",           &BaseBox::box_y,
-        "fade",            [](BaseBox& self) { return self.fade.get(); },
-        "open_fade",       [](BaseBox& self) { return self.open_fade.get(); },
-        "open_anim",       [](BaseBox& self) { return self.open_anim.get(); },
+        // read-only properties: box.fade / box.open_fade / box.open_anim stay the animation
+        // objects Lua skins index (box.fade.attribute) now that the box owns them by unique_ptr
+        "fade",            sol::property([](BaseBox& self) { return self.fade.get(); }),
+        "open_fade",       sol::property([](BaseBox& self) { return self.open_fade.get(); }),
+        "open_anim",       sol::property([](BaseBox& self) { return self.open_anim.get(); }),
         "bar_anime_count", &BaseBox::bar_anime_count,
         "draw_state",      &BaseBox::draw_state,
         "lua_kind",        &BaseBox::lua_kind,
