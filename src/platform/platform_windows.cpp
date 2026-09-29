@@ -1,4 +1,4 @@
-#include "win32_win32.h"
+#include "platform_windows.h"
 
 #include <windows.h>
 #include <dbghelp.h>
