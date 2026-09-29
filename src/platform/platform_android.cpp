@@ -16,7 +16,7 @@
 
 #include <cpr/cpr.h>
 
-#include "crypto.h"
+#include <openssl/crypto.h>
 #include "filesystem.h"
 
 namespace {
