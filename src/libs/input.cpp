@@ -231,7 +231,7 @@ static int char_to_raylib_key(unsigned char c) {
 static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
     if (is_input_locked()) return 1;
 
-    #ifdef defined(__linux__) && !defined(__ANDROID__)
+    #if defined(__linux__) && !defined(__ANDROID__)
     if (linux_handle_text_input(event, is_input_locked(), input_mutex, pressed_keys, released_keys)) {
         return 1;
     }
@@ -461,26 +461,4 @@ void shutdown_sdl_joysticks() {
     sdl_prev_axis.clear();
     SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
     sdl_joysticks_init_done = false;
-}
-
-void android_set_keyboard_visible(bool visible) {
-#if defined(__ANDROID__)
-    // On Android, this is handled by the platform-specific Java code
-    // The C++ side just signals the intent
-    (void)visible;
-#else
-    // On iOS and other platforms, use SDL directly
-    int count = 0;
-    SDL_Window** windows = SDL_GetWindows(&count);
-    if (!windows || count == 0) return;
-    SDL_Window* win = windows[0];
-    SDL_free(windows);
-    if (visible) {
-        SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "1");
-        SDL_StartTextInput(win);
-    } else {
-        SDL_StopTextInput(win);
-        SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "0");
-    }
-#endif
 }

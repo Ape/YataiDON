@@ -164,8 +164,14 @@ endif()
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_BINARY_DIR}/generated
 )
+if(ANDROID AND DEFINED ANDROID_OPENSSL_PREFIX)
+    target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
+        ${ANDROID_OPENSSL_PREFIX}/include
+    )
+endif()
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
     ${raylib_SOURCE_DIR}/src/external
     ${rapidjson_SOURCE_DIR}/include

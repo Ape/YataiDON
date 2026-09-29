@@ -13,11 +13,13 @@
 #include <algorithm>
 #include <cctype>
 #include <mutex>
+#include <csignal>
 
 #include <cpr/cpr.h>
 
 #include <openssl/crypto.h>
-#include "filesystem.h"
+#include "libs/filesystem.h"
+#include "libs/sha256.h"
 
 namespace {
 
@@ -141,7 +143,7 @@ std::filesystem::path android_get_working_directory() {
 void android_install_crash_handlers() {
     // Android uses its own crash handling (tombstones, logcat)
     // We just set up basic signal handlers
-    std::signal(SIGINT, [](int) { _exit(0); });
+    signal(SIGINT, [](int) { _exit(0); });
 }
 
 void android_set_keyboard_visible(bool visible) {
@@ -195,7 +197,7 @@ struct AndroidSSLOptions android_get_ssl_options() {
         // Android CA certificate bundle path
         const char* ca_bundle_path = "/system/etc/security/cacerts";
         if (std::filesystem::exists(ca_bundle_path)) {
-            impl.options.SetCaPath(ca_bundle_path);
+            impl.options = cpr::Ssl(cpr::ssl::CaPath(ca_bundle_path));
         }
         initialized = true;
     }
