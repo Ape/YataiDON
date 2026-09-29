@@ -10,6 +10,7 @@ private:
     sol::protected_function fn_handle_bad;
     sol::protected_function fn_handle_drumroll;
     sol::protected_function fn_handle_balloon;
+    sol::protected_function fn_handle_kusudama;
     sol::protected_function fn_handle_gauge;
     sol::protected_function fn_handle_song_end;
     sol::protected_function fn_handle_dan;
@@ -35,6 +36,7 @@ public:
     void handle_gauge(PlayerNum player_num, float progress, bool is_clear, bool is_rainbow,
                       float clear_progress = 1.0f, float flash = 0.0f);
     void handle_song_end(PlayerNum player_num, int good, int ok, int bad, int total_notes);
+    void handle_kusudama(PlayerNum player_num);
 
     void handle_dan(PlayerNum player_num, const sol::table& state);
     bool wants_dan() const { return fn_handle_dan.valid(); }

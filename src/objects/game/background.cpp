@@ -44,6 +44,7 @@ Background::Background(PlayerNum player_num, float bpm, const std::string& scene
         fn_handle_bad    = lua_object["handle_bad"];
         fn_handle_drumroll = lua_object["handle_drumroll"];
         fn_handle_balloon  = lua_object["handle_balloon"];
+        fn_handle_kusudama = lua_object["handle_kusudama"];
         fn_handle_gauge  = lua_object["handle_gauge"];
         fn_handle_song_end = lua_object["handle_song_end"];
         fn_handle_dan      = lua_object["handle_dan"];
@@ -120,6 +121,16 @@ void Background::handle_balloon(PlayerNum player_num) {
     if (!result.valid()) {
         sol::error err = result;
         spdlog::error("Error calling handle_balloon: {}", err.what());
+    }
+}
+
+// A kusudama hit: skins without handle_kusudama get handle_balloon, as before.
+void Background::handle_kusudama(PlayerNum player_num) {
+    if (!fn_handle_kusudama.valid()) { handle_balloon(player_num); return; }
+    auto result = fn_handle_kusudama(lua_object, static_cast<int>(player_num));
+    if (!result.valid()) {
+        sol::error err = result;
+        spdlog::error("Error calling handle_kusudama: {}", err.what());
     }
 }
 
