@@ -656,6 +656,7 @@ void Chara3D::draw_3d(float x, float y) {
 }
 
 void Chara3D::draw(float x, float y, float scale_mul) {
+    if (tex.options[SCO::DISABLE_CHARA_3D]) return;
 
     int rw = ray::GetRenderWidth();
     int rh = ray::GetRenderHeight();

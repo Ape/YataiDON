@@ -189,7 +189,6 @@ std::optional<Screens> SongSelectScreen::poll_second_player_join(double current_
     }
 
     if (!allows_second_player_join()) return std::nullopt;
-    if (!tex.options[SCO::SONGSELECT_2P_JOIN]) return std::nullopt;
     if (global_data.songs_played >= 2) return std::nullopt;
     if (game_transition.has_value() || dan_transition.has_value()) return std::nullopt;
     if (navigator.is_processing || navigator.inline_streaming) return std::nullopt;
