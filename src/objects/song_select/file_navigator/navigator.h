@@ -62,10 +62,7 @@ private:
     MoveAnimation* background_move;
 
     std::thread              loader_thread;
-    // Folder open: the song-file scan and the TJA header parse for the folder start on
-    // their own thread the moment the open begins, so that work overlaps the genre
-    // board's ~1.1 s slide instead of starting after it (load_songs_inline_async picks
-    // the result up when it starts, or redoes the work if the path no longer matches).
+
     struct InlinePrefetch {
         fs::path path;
         std::vector<fs::path> song_paths;
@@ -118,8 +115,7 @@ private:
     bool load_gen4_genre_songs(const fs::path& genre_path, const BoxDef& box_def);
     bool has_def_file(const std::filesystem::path& path);
     fs::path find_box_def_folder(const fs::path& song_path);
-    // `from`: the box that opened the folder, when the caller still has it; otherwise the
-    // matching FolderBox is looked up in `items` before they are cleared.
+
     void setup_back_box(const fs::path& path, bool has_children, const BaseBox* from = nullptr);
     bool has_child_folders(const fs::path& path);
 
@@ -157,12 +153,7 @@ public:
     void join_loader();
     void preload(std::vector<fs::path> songs_paths);
     void init(std::vector<fs::path> songs_paths);
-    // navigator is a global, not owned by any Screen, so the skin-reload
-    // screen rebuild never touches it. Its boxes and genre_bg hold raw
-    // Animation*/Shader handles into tex/global_tex, which unload_skin()
-    // frees out from under them. Call before a skin reload (song files
-    // themselves are skin-independent, so is_preloaded is left alone); the
-    // next init() then takes its already-existing full-rebuild path.
+
     void reset_for_skin_reload();
     void add_to_recent(const SongBox* song);
     void toggle_favorite(SongBox* song);
@@ -207,48 +198,22 @@ public:
     int bg_genre_frame() const { return genre_to_ref_frame(bg_genre_index); }
     int last_bg_genre_frame() const { return genre_to_ref_frame(last_bg_genre_index); }
 
-    // ---------------------------------------------------------------- ROUND 85
-    // The song-select state-machine transitions, as REAL events instead of the
-    // change-detection + TTL heuristics ROUNDs 51/56/61 had to use (R51 said so
-    // itself: "behavioural approximations of state-machine transitions the
-    // engine does not expose to Lua ... if the engine ever exposes real
-    // OpenFolder/CloseFolder events, route the modes off those instead").
-    //
-    // Each id names the 39.06 script transition it stands for; the two SWAP ids
-    // are the cabinet's own content-swap frames, which is what makes the board
-    // animation's start deterministic instead of loader-latency dependent:
-    //
-    //   OPEN_BEGIN  SelectGenreFolder -> GotoAndPlay("genre_deceide")   clip f45
-    //   OPEN_SWAP   OpenFolderState's SetSongDataAll()                  clip f114
-    //   CLOSE_BEGIN CloseFolderState  -> GotoAndPlay("return")          clip f150
-    //   CLOSE_SWAP  CloseFolderState's restore                          clip f219
-    //
-    // Lua polls `wheel_event_seq`; when it changes, `wheel_event` is the new id.
-    // A counter rather than a queue keeps this allocation-free and race-free on
-    // the render thread, and a skin that misses a frame still sees the latest
-    // transition (the legs are hundreds of ms long).
     enum WheelEvent {
         WHEEL_EVENT_NONE        = 0,
-        WHEEL_EVENT_SCENE_ENTRY = 1,  // SecondLoading: select_on immediately
-        WHEEL_EVENT_CURSOR_MOVE = 2,  // MoveCursor -> Scroll (508 ms hold, then grow)
+        WHEEL_EVENT_SCENE_ENTRY = 1,
+        WHEEL_EVENT_CURSOR_MOVE = 2,
         WHEEL_EVENT_OPEN_BEGIN  = 3,
         WHEEL_EVENT_OPEN_SWAP   = 4,
         WHEEL_EVENT_CLOSE_BEGIN = 5,
         WHEEL_EVENT_CLOSE_SWAP  = 6,
-        WHEEL_EVENT_COURSE_BACK = 7,  // ReLoading + CourseBackFlag
+        WHEEL_EVENT_COURSE_BACK = 7,
     };
     int wheel_event     = WHEEL_EVENT_NONE;
     int wheel_event_seq = 0;
-    double wheel_leg_ms = 0.0;   // ms the current leg's *_BEGIN was emitted
+    double wheel_leg_ms = 0.0;
     void emit_wheel_event(int id);
 
-    // The cabinet's pre-swap window on both legs: genre_deceide f45 -> the swap
-    // at f114, and `return` f150 -> the swap at f219.  69 clip frames at 60 fps.
-    // Both boards and the wheel share these frames, so this is the interval the
-    // whole transition is choreographed over.
-    static constexpr double kSwapDelayMs = (114.0 - 45.0) / 60.0 * 1000.0;  // 1150
-    // True while the leg is still inside that window, i.e. the swap must wait.
-    // `begin_id` is WHEEL_EVENT_OPEN_BEGIN or WHEEL_EVENT_CLOSE_BEGIN.
+    static constexpr double kSwapDelayMs = (114.0 - 45.0) / 60.0 * 1000.0;
     bool swap_is_early(int begin_id) const;
 };
 
