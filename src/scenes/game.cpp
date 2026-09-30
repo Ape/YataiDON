@@ -25,8 +25,8 @@ void GameScreen::on_screen_start() {
     auto rainbow_mask = std::dynamic_pointer_cast<SingleTexture>(tex.textures["balloon/rainbow_mask"]);
     auto rainbow = std::dynamic_pointer_cast<SingleTexture>(tex.textures["balloon/rainbow"]);
     if (rainbow_mask && rainbow) {
-        SetShaderValueTexture(mask_shader, GetShaderLocation(mask_shader, "texture0"), rainbow_mask->texture);
-        SetShaderValueTexture(mask_shader, GetShaderLocation(mask_shader, "texture1"), rainbow->texture);
+        SetShaderValueTexture(mask_shader, GetShaderLocation(mask_shader, "texture0"), *rainbow_mask->texture);
+        SetShaderValueTexture(mask_shader, GetShaderLocation(mask_shader, "texture1"), *rainbow->texture);
     }
     SessionData& session_data = global_data.session_data[(int)global_data.player_num];
     if (session_data.selected_song.empty() || !exists(session_data.selected_song)) {

@@ -1139,7 +1139,7 @@ private:
             ray::Rectangle thumb_bg = {cell_x + (FRAME_CELL_WIDTH - FRAME_THUMB_SIZE) * 0.5f, row_y,
                                         FRAME_THUMB_SIZE, FRAME_THUMB_SIZE};
             ray::DrawRectangleRec(thumb_bg, ray::Fade(ray::BLACK, 0.5f));
-            const ray::Texture2D& t = framed->textures[idx];
+            const ray::Texture2D& t = *framed->textures[idx];
             ray::Rectangle src = {0, 0, (float)t.width, (float)t.height};
             ray::DrawTexturePro(t, src, thumb_bg, {0, 0}, 0, ray::WHITE);
             ray::DrawRectangleLinesEx(thumb_bg, 1.0f, ray::Fade(ray::WHITE, 0.4f));

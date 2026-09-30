@@ -90,34 +90,24 @@ struct TextureObject {
 };
 
 struct SingleTexture : public TextureObject {
-    ray::Texture2D texture;
+    std::shared_ptr<ray::Texture2D> texture;
 
-    SingleTexture(const std::string& name, const ray::Texture2D& tex)
-        : TextureObject(name, tex.width, tex.height), texture(tex) {
-        SetTextureWrap(texture, ray::TEXTURE_WRAP_CLAMP);
+    SingleTexture(const std::string& name, std::shared_ptr<ray::Texture2D> tex)
+        : TextureObject(name, tex->width, tex->height), texture(std::move(tex)) {
+        SetTextureWrap(*texture, ray::TEXTURE_WRAP_CLAMP);
     }
 
-    ~SingleTexture() override {
-        UnloadTexture(texture);
-    }
-
-    const ray::Texture2D* frame_texture(int) const override { return &texture; }
+    const ray::Texture2D* frame_texture(int) const override { return texture.get(); }
 };
 
 struct FramedTexture : public TextureObject {
-    std::vector<ray::Texture2D> textures;
+    std::vector<std::shared_ptr<ray::Texture2D>> textures;
 
-    FramedTexture(const std::string& name, const std::vector<ray::Texture2D>& texs)
-        : TextureObject(name, texs.empty() ? 0 : texs[0].width,
-                       texs.empty() ? 0 : texs[0].height), textures(texs) {
+    FramedTexture(const std::string& name, std::vector<std::shared_ptr<ray::Texture2D>> texs)
+        : TextureObject(name, texs.empty() ? 0 : texs[0]->width,
+                       texs.empty() ? 0 : texs[0]->height), textures(std::move(texs)) {
         for (auto& tex : textures) {
-            SetTextureWrap(tex, ray::TEXTURE_WRAP_CLAMP);
-        }
-    }
-
-    ~FramedTexture() override {
-        for (auto& tex : textures) {
-            UnloadTexture(tex);
+            SetTextureWrap(*tex, ray::TEXTURE_WRAP_CLAMP);
         }
     }
 
@@ -128,7 +118,7 @@ struct FramedTexture : public TextureObject {
             throw std::runtime_error("Frame " + std::to_string(frame) +
                 " not available in framed texture " + name);
         }
-        return &textures[frame];
+        return textures[frame].get();
     }
 };
 

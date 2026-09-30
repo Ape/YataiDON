@@ -278,7 +278,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
             if (mapping.HasMember("frame_order") && mapping["frame_order"].IsArray()) {
                 auto* framed = dynamic_cast<FramedTexture*>(tex_obj);
                 if (framed) {
-                    std::vector<ray::Texture2D> reordered;
+                    std::vector<std::shared_ptr<ray::Texture2D>> reordered;
                     for (SizeType j = 0; j < mapping["frame_order"].Size(); j++) {
                         int idx = static_cast<int>(json_number(mapping["frame_order"][j]));
                         if (idx < 0 || idx >= static_cast<int>(framed->textures.size())) {
@@ -327,7 +327,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
         if (tex_mapping.HasMember("frame_order") && tex_mapping["frame_order"].IsArray()) {
             auto* framed = dynamic_cast<FramedTexture*>(tex_obj);
             if (framed) {
-                std::vector<ray::Texture2D> reordered;
+                std::vector<std::shared_ptr<ray::Texture2D>> reordered;
                 for (SizeType j = 0; j < tex_mapping["frame_order"].Size(); j++) {
                     int idx = static_cast<int>(json_number(tex_mapping["frame_order"][j]));
                     if (idx < 0 || idx >= static_cast<int>(framed->textures.size())) {
@@ -407,6 +407,15 @@ void TextureWrapper::load_animations(const std::string& screen_name) {
 std::unordered_map<std::string, std::weak_ptr<TextureObject>>& tex_object_cache() {
     static std::unordered_map<std::string, std::weak_ptr<TextureObject>> cache;
     return cache;
+}
+
+std::shared_ptr<ray::Texture2D> shared_texture(ray::Texture2D tex) {
+    return std::shared_ptr<ray::Texture2D>(
+        new ray::Texture2D(tex),
+        [](ray::Texture2D* p) {
+            if (p->id != 0) ray::UnloadTexture(*p);
+            delete p;
+        });
 }
 
 void decode_images_parallel(const std::vector<fs::path>& files, std::vector<ray::Image>& out) {
@@ -505,6 +514,16 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
 
             std::vector<PendingTex> pending;
             std::vector<fs::path> files;
+            std::unordered_map<std::string, size_t> file_index;
+            auto push_file = [&](const fs::path& path) -> size_t {
+                std::string key = path.string();
+                auto it = file_index.find(key);
+                if (it != file_index.end()) return it->second;
+                size_t idx = files.size();
+                files.push_back(path);
+                file_index.emplace(std::move(key), idx);
+                return idx;
+            };
 
             for (auto& m : tex_config.GetObject()) {
                 std::string tex_name = m.name.GetString();
@@ -533,13 +552,14 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
 
                 if (!file_override && fs::is_directory(tex_dir)) {
                     auto frames = sorted_frames(tex_dir);
+                    size_t first = files.size();
+                    for (const auto& frame : frames) push_file(frame);
                     pending.push_back({tex_id, tex_name, &m.value, cache_key,
-                                       files.size(), frames.size(), true});
-                    files.insert(files.end(), frames.begin(), frames.end());
+                                       first, frames.size(), true});
                 } else if (fs::exists(tex_file)) {
+                    size_t first = push_file(tex_file);
                     pending.push_back({tex_id, tex_name, &m.value, cache_key,
-                                       files.size(), size_t{1}, false});
-                    files.push_back(tex_file);
+                                       first, size_t{1}, false});
                 } else {
                     auto existing = textures.find(tex_id);
                     if (existing != textures.end()) {
@@ -557,31 +577,38 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
             decode_images_parallel(files, images);
 
             try {
+                // GPU textures indexed by file, so keys that share one atlas PNG
+                // (via "file" + "crop") upload it once and share the texture.
+                std::vector<std::shared_ptr<ray::Texture2D>> gpu(files.size());
                 for (const auto& p : pending) {
                     bool ok = true;
-                    std::vector<ray::Texture2D> texs;
+                    std::vector<std::shared_ptr<ray::Texture2D>> texs;
                     texs.reserve(p.file_count);
                     for (size_t i = 0; i < p.file_count; ++i) {
-                        const ray::Image& img = images[p.first_file + i];
-                        if (!img.data) {
-                            spdlog::error("Failed to decode image for texture {}: Frame {}", p.name, i);
-                            ok = false;
-                            continue;
+                        size_t fi = p.first_file + i;
+                        std::shared_ptr<ray::Texture2D> tex = gpu[fi];
+                        if (!tex) {
+                            const ray::Image& img = images[fi];
+                            if (!img.data) {
+                                spdlog::error("Failed to decode image for texture {}: Frame {}", p.name, i);
+                                ok = false;
+                            } else {
+                                ray::Texture2D t = ray::LoadTextureFromImage(img);
+                                if (!ray::IsTextureValid(t)) {
+                                    spdlog::error("Failed to load texture {}: Frame {}", p.name, i);
+                                    ok = false;
+                                } else {
+                                    tex = shared_texture(t);
+                                    gpu[fi] = tex;
+                                }
+                            }
                         }
-                        ray::Texture2D t = ray::LoadTextureFromImage(img);
-                        if (!ray::IsTextureValid(t)) {
-                            spdlog::error("Failed to load texture {}: Frame {}", p.name, i);
-                            ok = false;
-                        }
-                        texs.push_back(t);
+                        texs.push_back(std::move(tex));
                     }
-                    if (!ok) {
-                        for (auto& t : texs) if (ray::IsTextureValid(t)) ray::UnloadTexture(t);
-                        continue;
-                    }
+                    if (!ok) continue;
 
                     std::shared_ptr<TextureObject> obj;
-                    if (p.framed) obj = std::make_shared<FramedTexture>(p.id, texs);
+                    if (p.framed) obj = std::make_shared<FramedTexture>(p.id, std::move(texs));
                     else          obj = std::make_shared<SingleTexture>(p.id, texs[0]);
 
                     read_tex_obj_data(*p.mapping, obj.get(), tex_scale);
