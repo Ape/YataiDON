@@ -185,13 +185,6 @@ std::string ca_bundle_path() {
     return path;
 }
 
-cpr::SslOptions android_ca() {
-    const std::string& path = ca_bundle_path();
-    if (path.empty()) {
-        spdlog::error("No CA bundle available; TLS verification cannot be configured");
-    }
-    return cpr::Ssl(cpr::ssl::CaInfo{path}, cpr::ssl::VerifyPeer{true}, cpr::ssl::VerifyHost{true});
-}
 #define NETWORK_CA_OPT , android_ca()
 
 void install_apk(const std::string& path) {
@@ -221,6 +214,16 @@ void install_apk(const std::string& path) {
 #endif
 
 }  // namespace
+
+#if defined(__ANDROID__)
+cpr::SslOptions android_ca() {
+    const std::string& path = ca_bundle_path();
+    if (path.empty()) {
+        spdlog::error("No CA bundle available; TLS verification cannot be configured");
+    }
+    return cpr::Ssl(cpr::ssl::CaInfo{path}, cpr::ssl::VerifyPeer{true}, cpr::ssl::VerifyHost{true});
+}
+#endif
 
 static bool network_enabled() {
     return global_data.config && global_data.config->network.online_play;

@@ -20,11 +20,9 @@
 #include <openssl/crypto.h>
 #include "libs/filesystem.h"
 #include "libs/sha256.h"
+#include "libs/network.h"
 
 namespace {
-
-// Android-specific SSL options
-cpr::SslOptions g_android_ssl_options;
 
 std::string strip_dot_git(std::string url) {
     if (url.size() >= 4 && url.compare(url.size() - 4, 4, ".git") == 0) url.resize(url.size() - 4);
@@ -40,7 +38,7 @@ cpr::Response get_classical_tls(const std::string& url, int32_t timeout_ms, int3
     session.SetUrl(cpr::Url{url});
     session.SetTimeout(cpr::Timeout{timeout_ms});
     session.SetConnectTimeout(cpr::ConnectTimeout{connect_timeout_ms});
-    session.SetOption(g_android_ssl_options);
+    session.SetOption(android_ca());
     curl_easy_setopt(session.GetCurlHolder()->handle, CURLOPT_SSL_EC_CURVES, "X25519:P-256:P-384");
     return session.Get();
 }
@@ -173,29 +171,6 @@ bool android_is_skin_update_in_progress() {
     std::lock_guard<std::mutex> lock(g_skin_update_mutex);
     if (!g_skin_update_done) return false;
     return !g_skin_update_done->load();
-}
-
-struct AndroidSSLOptionsImpl {
-    cpr::SslOptions options;
-};
-
-struct AndroidSSLOptions android_get_ssl_options() {
-    // Initialize Android CA bundle
-    static AndroidSSLOptionsImpl impl;
-    static bool initialized = false;
-
-    if (!initialized) {
-        // Android CA certificate bundle path
-        const char* ca_bundle_path = "/system/etc/security/cacerts";
-        if (std::filesystem::exists(ca_bundle_path)) {
-            impl.options = cpr::Ssl(cpr::ssl::CaPath(ca_bundle_path));
-        }
-        initialized = true;
-    }
-
-    AndroidSSLOptions result;
-    result.options = &impl.options;
-    return result;
 }
 
 void android_cleanup() {

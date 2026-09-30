@@ -31,15 +31,6 @@ void android_check_skin_updates();
 // Returns true if a skin update check is currently in progress.
 bool android_is_skin_update_in_progress();
 
-// Android TLS/SSL configuration.
-// Returns SSL options configured for Android's CA store.
-struct AndroidSSLOptions {
-    // cpr::SslOptions object configured for Android
-    void* options;  // Opaque pointer to cpr::SslOptions
-};
-
-AndroidSSLOptions android_get_ssl_options();
-
 // Clean up any Android-specific resources.
 void android_cleanup();
 

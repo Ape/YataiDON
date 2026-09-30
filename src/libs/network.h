@@ -46,6 +46,12 @@ struct ReplayData {
 
 std::string modifiers_to_json(const Modifiers& modifiers);
 
+#if defined(NETWORK_ENABLED) && defined(__ANDROID__)
+// Android CA bundle (bundled Mozilla cacert.pem) as cpr SSL options. Exposed
+// so the platform skin updater trusts the same roots as the rest of the client.
+cpr::SslOptions android_ca();
+#endif
+
 class NetworkClient {
 public:
     void update(double current_ms);
