@@ -17,12 +17,6 @@ Transition::Transition(const std::string& title, const std::string& subtitle, bo
     this->subtitle = std::make_unique<OutlinedText>(subtitle, global_tex.skin_config[SC::TRANSITION_SUBTITLE].font_size, ray::WHITE, ray::BLACK, false, 5);
 
     t_rainbow_text_bg = global_tex.get_texture("rainbow_transition/text_bg");
-    t_rainbow_bg_bottom = global_tex.get_texture("rainbow_transition/rainbow_bg_bottom");
-    t_rainbow_bg_top = global_tex.get_texture("rainbow_transition/rainbow_bg_top");
-    t_rainbow_bg = global_tex.get_texture("rainbow_transition/rainbow_bg");
-    t_chara_left = global_tex.get_texture("rainbow_transition/chara_left");
-    t_chara_right = global_tex.get_texture("rainbow_transition/chara_right");
-    t_chara_center = global_tex.get_texture("rainbow_transition/chara_center");
 
     if (!load("SongTransition", "transition", title, subtitle, is_second)) return;
     fn_update    = lua_object["update"];
@@ -132,21 +126,6 @@ void Transition::draw_song_info() {
     subtitle->draw({.x = x, .y = y, .fade = fade_1});
 }
 
-void Transition::draw_default(float total_offset) {
-    global_tex.draw_texture(t_rainbow_bg_bottom, {.y=(float)-rainbow_up->attribute - total_offset});
-    global_tex.draw_texture(t_rainbow_bg_top, {.y=(float)-rainbow_up->attribute - total_offset});
-    global_tex.draw_texture(t_rainbow_bg, {.y=(float)-rainbow_up->attribute - total_offset});
-    float offset = chara_down->attribute;
-    float chara_offset = 0;
-    if (is_second) {
-        offset = chara_down->attribute - mini_up->attribute/3;
-        chara_offset = global_tex.skin_config[SC::TRANSITION_CHARA_OFFSET].y;
-    }
-    global_tex.draw_texture(t_chara_left, {.x=(float)-mini_up->attribute/2 - chara_offset, .y=(float)-mini_up->attribute + offset - total_offset});
-    global_tex.draw_texture(t_chara_right, {.x=(float)mini_up->attribute/2 + chara_offset, .y=(float)-mini_up->attribute + offset - total_offset});
-    global_tex.draw_texture(t_chara_center, {.y=(float)-rainbow_up->attribute + offset - total_offset});
-}
-
 void Transition::draw() {
     float total_offset = 0;
     if (is_second) total_offset = global_tex.skin_config[SC::TRANSITION_OFFSET].y;
@@ -157,28 +136,23 @@ void Transition::draw() {
         return;
     }
 
-    const bool scripted_bg = fn_draw_bg.valid();
-    if (scripted_bg) {
-        call(fn_draw_bg, "SongTransition:draw_bg", total_offset,
-             (double)rainbow_up->attribute, (double)mini_up->attribute,
-             (double)chara_down->attribute);
-        if (!loading_graphic.has_value()) {
-            if (fn_draw_info.valid()) {
-                call(fn_draw_info, "SongTransition:draw_info", total_offset,
-                     (double)rainbow_up->attribute, (double)song_info_fade->attribute,
-                     (double)song_info_fade_out->attribute);
-            } else {
-                draw_song_info();
-            }
-            return;
+    call(fn_draw_bg, "SongTransition:draw_bg", total_offset,
+         (double)rainbow_up->attribute, (double)mini_up->attribute,
+         (double)chara_down->attribute);
+    if (!loading_graphic.has_value()) {
+        if (fn_draw_info.valid()) {
+            call(fn_draw_info, "SongTransition:draw_info", total_offset,
+                 (double)rainbow_up->attribute, (double)song_info_fade->attribute,
+                 (double)song_info_fade_out->attribute);
+        } else {
+            draw_song_info();
         }
+        return;
     }
     if (loading_graphic.has_value()) {
         ray::Rectangle src = {0, 0, (float)loading_graphic.value().width, (float)loading_graphic.value().height};
         ray::Rectangle dst = {0, global_tex.screen_height + (global_tex.skin_config[SC::TRANSITION_OFFSET].y - global_tex.screen_height) - (float)rainbow_up->attribute - total_offset, (float)global_tex.screen_width, (float)global_tex.screen_height};
         ray::DrawTexturePro(loading_graphic.value(), src, dst, {0,0}, 0, ray::WHITE);
-    } else {
-        draw_default(total_offset);
     }
 
     if (fn_draw_info.valid()) {
