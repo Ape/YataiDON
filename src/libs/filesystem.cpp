@@ -371,6 +371,7 @@ void write_song_list(const fs::path& path, const std::vector<SongListEntry>& ent
 namespace {
 fs::path g_skin_graphics_path;
 fs::path g_parent_skin_graphics_path;
+std::vector<fs::path> g_skin_chain;   // Graphics paths: the skin, its parent, the parent's parent ...
 std::mutex g_skin_path_mutex;
 
 fs::path skin_root(const fs::path& graphics_path) {
@@ -407,11 +408,33 @@ fs::path resolve_parent_graphics_path(const fs::path& graphics_path) {
     return graphics_path;
 }
 
+std::vector<fs::path> resolve_skin_chain(const fs::path& graphics_path) {
+    std::vector<fs::path> chain{graphics_path};
+    for (int depth = 0; depth < 8; depth++) {
+        fs::path parent = resolve_parent_graphics_path(chain.back());
+        if (parent == chain.back()) break;
+        if (std::find(chain.begin(), chain.end(), parent) != chain.end()) {
+            spdlog::warn("resolve_skin_chain: parent cycle at '{}'", parent.string());
+            break;
+        }
+        chain.push_back(parent);
+    }
+    return chain;
+}
+
 void set_skin_graphics_path(const fs::path& graphics_path) {
-    fs::path parent_graphics_path = resolve_parent_graphics_path(graphics_path);
+    std::vector<fs::path> chain = resolve_skin_chain(graphics_path);
     std::lock_guard<std::mutex> lock(g_skin_path_mutex);
     g_skin_graphics_path = graphics_path;
-    g_parent_skin_graphics_path = parent_graphics_path;
+    g_parent_skin_graphics_path = chain.size() > 1 ? chain[1] : graphics_path;
+    g_skin_chain = chain;
+}
+
+std::vector<fs::path> skin_ancestor_roots() {
+    std::lock_guard<std::mutex> lock(g_skin_path_mutex);
+    std::vector<fs::path> roots;
+    for (size_t i = 1; i < g_skin_chain.size(); i++) roots.push_back(skin_root(g_skin_chain[i]));
+    return roots;
 }
 
 bool skin_has_parent() {
@@ -425,19 +448,18 @@ fs::path parent_skin_root() {
 }
 
 fs::path resolve_skin_path(const fs::path& relative_path) {
-    fs::path child_root, parent_root;
-    bool has_parent;
+    fs::path child_root;
+    std::vector<fs::path> chain;
     {
         std::lock_guard<std::mutex> lock(g_skin_path_mutex);
         child_root = skin_root(g_skin_graphics_path);
-        has_parent = skin_has_parent_locked();
-        if (has_parent) parent_root = skin_root(g_parent_skin_graphics_path);
+        chain = g_skin_chain;
     }
     fs::path child = child_root / relative_path;
     if (fs::exists(child)) return child;
-    if (has_parent) {
-        fs::path parent = parent_root / relative_path;
-        if (fs::exists(parent)) return parent;
+    for (size_t i = 1; i < chain.size(); i++) {
+        fs::path ancestor = skin_root(chain[i]) / relative_path;
+        if (fs::exists(ancestor)) return ancestor;
     }
     return child;
 }

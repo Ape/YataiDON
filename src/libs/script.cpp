@@ -154,22 +154,22 @@ void ScriptManager::init(fs::path script_path) {
     scripts.clear();
     executed_scripts.clear();
 
-    fs::path parent_scripts;
-    if (skin_has_parent())
-        parent_scripts = parent_skin_root() / "Scripts";
+    // the parent's Scripts, and its parent's ..., nearest first
+    std::vector<fs::path> ancestor_scripts;
+    for (const fs::path& root : skin_ancestor_roots()) ancestor_scripts.push_back(root / "Scripts");
 
     std::string skin_scripts_dir = script_path.string();
     std::string package_path = skin_scripts_dir + "/?.lua;" +
                                skin_scripts_dir + "/?/init.lua";
-    if (!parent_scripts.empty()) {
-        package_path += ";" + parent_scripts.string() + "/?.lua;" +
-                        parent_scripts.string() + "/?/init.lua";
+    for (const fs::path& dir : ancestor_scripts) {
+        package_path += ";" + dir.string() + "/?.lua;" +
+                        dir.string() + "/?/init.lua";
     }
     std::string default_path = (*lua)["package"]["path"];
     (*lua)["package"]["path"] = package_path + ";" + default_path;
 
     index_scripts(script_path);
-    if (!parent_scripts.empty()) index_scripts(parent_scripts);
+    for (const fs::path& dir : ancestor_scripts) index_scripts(dir);
 
     spdlog::debug("Loaded scripts:");
     for (const auto& [name, path] : scripts) {

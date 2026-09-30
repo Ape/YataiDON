@@ -990,31 +990,32 @@ void AudioEngine::load_screen_sounds(const std::string& screen_name) {
         }
     };
 
-    bool has_parent = skin_has_parent();
-    fs::path parent_sounds = parent_skin_root() / "Sounds";
+    // the ancestors' Sounds (parent, its parent, ...), nearest first: the first file claims a name
+    std::vector<fs::path> ancestor_sounds;
+    for (const fs::path& root : skin_ancestor_roots()) ancestor_sounds.push_back(root / "Sounds");
 
     fs::path path = sounds_path / screen_name;
     // A screen without its own sound folder still gets don/kat and the
     // global folder - those are screen-independent. Returning here also
     // took those away, leaving such screens (input_test, loading) silent.
-    bool has_screen_sounds = fs::exists(path) ||
-                             (has_parent && fs::exists(parent_sounds / screen_name));
+    bool has_screen_sounds = fs::exists(path);
+    for (const fs::path& dir : ancestor_sounds) has_screen_sounds = has_screen_sounds || fs::exists(dir / screen_name);
     if (!has_screen_sounds) {
         spdlog::warn("Sounds for screen {} not found", screen_name);
     }
 
     want(sounds_path / "don.wav", "don");
-    if (has_parent) want(parent_sounds / "don.wav", "don");
+    for (const fs::path& dir : ancestor_sounds) want(dir / "don.wav", "don");
     want(sounds_path / "ka.wav", "kat");
-    if (has_parent) want(parent_sounds / "ka.wav", "kat");
+    for (const fs::path& dir : ancestor_sounds) want(dir / "ka.wav", "kat");
 
     if (has_screen_sounds) {
         scan(path);
-        if (has_parent) scan(parent_sounds / screen_name);
+        for (const fs::path& dir : ancestor_sounds) scan(dir / screen_name);
     }
 
     scan(sounds_path / "global");
-    if (has_parent) scan(parent_sounds / "global");
+    for (const fs::path& dir : ancestor_sounds) scan(dir / "global");
 
     unsigned hw = std::thread::hardware_concurrency();
     size_t workers = std::min<size_t>(queue.size(), hw ? hw : 4);
