@@ -22,6 +22,7 @@ private:
     sol::protected_function fn_draw_fore;
     sol::protected_function fn_draw_gauge;
     sol::protected_function fn_handle_balloon_end;
+    sol::protected_function fn_handle_gogo;
 
 public:
     Background(PlayerNum player_num, float bpm, const std::string& scene_preset);
@@ -51,6 +52,8 @@ public:
     bool wants_handle_ending() const { return fn_handle_ending.valid(); }
     // Optional: a balloon reached its end without bursting (a burst plays "balloon_pop")
     void handle_balloon_end(PlayerNum player_num);
+    // GOGO time started (true) / ended (false) for that player
+    void handle_gogo(PlayerNum player_num, bool on);
     bool wants_draw_ending() const { return fn_draw_ending.valid(); }
     void draw_back();
     void draw_fore();
