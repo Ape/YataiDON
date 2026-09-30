@@ -28,6 +28,9 @@ private:
     TextureObject* t_countdown = nullptr;
     double countdown_ms = 0.0;
     double start_ms = 0.0;
+    // a don (1P / 2P: F J / X C by default) skips the rest of the countdown; the song scan still
+    // has to finish, so a press during it is kept until then
+    bool skip_requested = false;
 
     std::thread loading_thread;
 

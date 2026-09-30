@@ -2,6 +2,7 @@
 #include "../libs/global_data.h"
 #include "../libs/scores.h"
 #include "../libs/filesystem.h"
+#include "../libs/input.h"
 #include "../libs/song_parser.h"
 #include "../objects/song_select/file_navigator/navigator.h"
 
@@ -135,7 +136,10 @@ std::optional<Screens> LoadingScreen::update() {
     Screen::update();
     allnet_indicator.update(get_current_ms());
 
-    if (loading_complete && !fade_in->isStarted() && get_current_ms() - start_ms >= countdown_ms) {
+    if (is_l_don_pressed() || is_r_don_pressed()) skip_requested = true;
+
+    if (loading_complete && !fade_in->isStarted() &&
+        (skip_requested || get_current_ms() - start_ms >= countdown_ms)) {
         fade_in->start();
     }
 
