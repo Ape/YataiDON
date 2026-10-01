@@ -729,15 +729,10 @@ void NetworkClient::submit_score(const std::string& hash, int difficulty, const 
         {"chara_cos_index", std::to_string(chara_cos_index)},
     };
     if (pending_score_submit.has_value()) {
-        if (pending_score_submit->wait_for(std::chrono::seconds(0)) == std::future_status::ready) {
-            cpr::Response response = pending_score_submit->get();
-            pending_score_submit.reset();
-            if (response.status_code != 200) {
-                spdlog::error("Failed to submit score: HTTP {} - {}", response.status_code, response.text);
-            }
-        } else {
-            spdlog::warn("Score submission still in flight; dropping this submission");
-            return;
+        cpr::Response response = pending_score_submit->get();
+        pending_score_submit.reset();
+        if (response.status_code != 200) {
+            spdlog::error("Failed to submit score: HTTP {} - {}", response.status_code, response.text);
         }
     }
     pending_score_submit = cpr::PostAsync(
