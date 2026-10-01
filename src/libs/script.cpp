@@ -177,7 +177,8 @@ void ScriptManager::init(fs::path script_path) {
     }
     spdlog::debug("Total scripts: {}", scripts.size());
 
-    tex.init(script_path.parent_path() / "Graphics");
+    // script_manager.tex aliases the global ::tex, already initialized by
+    // load_skin() just before ScriptManager::init is called.
 
     register_lua_bindings();
 }
@@ -194,7 +195,8 @@ std::string ScriptManager::get_lua_script_path(const std::string& script_name) {
 }
 
 void ScriptManager::shutdown() {
-    tex.unload_textures();
+    // Don't unload textures here: tex aliases the global ::tex, whose lifetime
+    // is managed by load_skin()/unload_skin() and main().
     scripts.clear();
     executed_scripts.clear();
     lua.reset();
@@ -209,15 +211,11 @@ void ScriptManager::register_lua_bindings() {
         "update", [](BaseAnimation& self, double t) { self.update(t); return self.attribute; },
         "restart", &BaseAnimation::restart,
         "start", &BaseAnimation::start,
-        "pause", &BaseAnimation::pause,
-        "unpause", &BaseAnimation::unpause,
         "reset", &BaseAnimation::reset,
         "attribute", &BaseAnimation::attribute,
         "duration", &BaseAnimation::duration,
         "is_finished", &BaseAnimation::is_finished,
         "is_started", &BaseAnimation::is_started,
-        "isFinished", &BaseAnimation::isFinished,
-        "isStarted", &BaseAnimation::isStarted,
         // tex.get_animation() returns BaseAnimation*, so a MoveAnimation's start_position
         // must be reachable here (the C++ YellowBox does the same C-style cast).
         "start_position", sol::property([](BaseAnimation& self) -> int {
@@ -371,47 +369,11 @@ void ScriptManager::register_lua_bindings() {
         return std::make_unique<TextStretchAnimation>(duration, delay, loop, lock_input);
     });
 
-    anim.set_function("texture_resize", [](double duration, sol::optional<sol::table> params) -> std::unique_ptr<TextureResizeAnimation> {
-        double initial_size = 1.0;
-        double final_size = 0.0;
-        double delay = 0.0;
-        bool loop = false;
-        bool lock_input = false;
-        std::optional<double> reverse_delay = std::nullopt;
-        std::optional<EaseType> ease_in = std::nullopt;
-        std::optional<EaseType> ease_out = std::nullopt;
-
-        if (params) {
-            sol::table t = params.value();
-            initial_size = t["initial_size"].get_or(initial_size);
-            final_size = t["final_size"].get_or(final_size);
-            delay = t["delay"].get_or(delay);
-            loop = t["loop"].get_or(loop);
-            lock_input = t["lock_input"].get_or(lock_input);
-
-            sol::optional<double> reverse_delay_opt = t["reverse_delay"];
-            if (reverse_delay_opt) reverse_delay = reverse_delay_opt.value();
-
-            ease_in = parse_ease_type(t["ease_in"]);
-            ease_out = parse_ease_type(t["ease_out"]);
-        }
-
-        return std::make_unique<TextureResizeAnimation>(duration, initial_size, loop, lock_input, final_size, delay, reverse_delay, ease_in, ease_out);
-    });
-
     lua["anim"] = anim;
 
     sol::table tex = lua.create_table();
 
-    tex.set_function("load_animations", [](const std::string& screen_name) {
-        script_manager.tex.load_animations(screen_name);
-    });
-
     tex.set_function("get_animation", [](int anim_id, sol::object second_arg) -> BaseAnimation* {
-        // Resolve against the engine's global TextureWrapper (not script_manager.tex) so
-        // Lua reads the exact animation instances the C++ objects drive — the YellowBox and
-        // friends advance ::tex's animations, and this is also what lets the box draw code
-        // move fully into Lua later.
         if (second_arg.get_type() == sol::type::string)
             return ::tex.get_animation(anim_id, second_arg.as<std::string>());
         return ::tex.get_animation(anim_id, false);
@@ -601,9 +563,6 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
     lua.new_usertype<OutlinedText>("OutlinedText",
         "width",          &OutlinedText::width,
         "height",         &OutlinedText::height,
-        "is_ready",       &OutlinedText::is_ready,
-        "upload_pending", &OutlinedText::upload_pending,
-        "finish",         &OutlinedText::finish,
         "draw",           [](OutlinedText& self, sol::optional<sol::table> params_table) {
             DrawTextureParams params = parse_draw_params(params_table, false);
             self.draw(params);
@@ -676,16 +635,8 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
         return current_session().song_subtitle;
     });
 
-    tex.set_function("song_genre", []() -> int {
-        return current_session().genre_index;
-    });
-
     tex.set_function("genre_frame", [](int genre_index) -> int {
         return genre_to_ref_frame((GenreIndex)genre_index);
-    });
-
-    tex.set_function("song_number", []() -> int {
-        return global_data.songs_played + 1;
     });
 
     tex.set_function("songs_played", []() -> int {
@@ -752,10 +703,6 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
 
     camera_tbl.set_function("update", []() {
         webcam.update();
-    });
-
-    camera_tbl.set_function("is_ready", []() -> bool {
-        return webcam.is_ready();
     });
 
     camera_tbl.set_function("draw", [](float x, float y, float w, float h) {

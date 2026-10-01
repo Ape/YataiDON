@@ -51,8 +51,13 @@ private:
     std::map<std::string, std::string> scripts;
     std::set<std::string> executed_scripts;
 public:
-    TextureWrapper tex;
+    // Alias to the engine's global TextureWrapper (::tex) rather than a separate
+    // copy, so C++ screens and Lua scripts share one texture/animation store and
+    // each asset is only decoded and uploaded once per screen change.
+    TextureWrapper& tex;
     std::unique_ptr<sol::state> lua;
+
+    ScriptManager() : tex(::tex) {}
 
     void init(fs::path script_path);
     bool has_lua_script(const std::string& script_name) const;
