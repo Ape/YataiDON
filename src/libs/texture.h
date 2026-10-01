@@ -150,15 +150,11 @@ private:
     std::vector<std::unique_ptr<BaseAnimation>> copied_animations;
     std::unordered_map<std::string, std::unordered_map<int, std::unique_ptr<BaseAnimation>>> screen_animations;
     fs::path graphics_path;
-    fs::path parent_graphics_path;               // the nearest ancestor (graphics_path without one)
-    // every ancestor's Graphics path (parent, its parent, ...), nearest first, and the factor that
-    // maps its pixels to this skin's (this skin's width / that skin's width)
+    fs::path parent_graphics_path;
     std::vector<fs::path> ancestor_graphics_paths;
     std::vector<float> ancestor_scales;
     std::unordered_set<std::string> loaded_subsets;
 
-    // <screen>/animation.json: this skin's, else the nearest ancestor's with its move distances
-    // scaled; false when neither exists
     bool read_screen_animations(const std::string& screen_name, rapidjson::Document& out);
 
 public:
@@ -240,6 +236,8 @@ public:
     void clear_screen(const ray::Color& color);
 
     TextureObject* get_texture(const std::string& name);
+
+    std::shared_ptr<TextureObject> get_texture_shared(const std::string& name);
     std::vector<std::string> language_variants(const std::string& name) const;
 
     bool has_texture(const std::string& name);

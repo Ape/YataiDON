@@ -503,7 +503,7 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
         return info;
     });
 
-    tex.set_function("draw_texture", [](TextureObject* id, sol::optional<sol::table> params_table, sol::this_state state) {
+    tex.set_function("draw_texture", [](std::shared_ptr<TextureObject> id, sol::optional<sol::table> params_table, sol::this_state state) {
         if (!id) {
             DrawLogEntry entry{"null_texture", {}};
             log_lua_site(entry, state);
@@ -515,10 +515,10 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
             }
             return;
         }
-        script_manager.tex.draw_texture(id, parse_draw_params(params_table));
+        script_manager.tex.draw_texture(id.get(), parse_draw_params(params_table));
     });
 
-    tex.set_function("get_texture", [](const std::string& path) -> sol::optional<TextureObject*> {
+    tex.set_function("get_texture", [](const std::string& path) -> sol::optional<std::shared_ptr<TextureObject>> {
         auto first_slash = path.find('/');
         auto last_slash = path.rfind('/');
         if (first_slash == std::string::npos || last_slash == first_slash) return sol::nullopt;
@@ -531,16 +531,16 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
         std::string base = subset_key + "/" + texture_name;
 
         for (const auto& v : script_manager.tex.language_variants(base + "_" + global_data.config->general.language)) {
-            if (script_manager.tex.has_texture(v)) return script_manager.tex.get_texture(v);
+            if (script_manager.tex.has_texture(v)) return script_manager.tex.get_texture_shared(v);
         }
-        if (script_manager.tex.has_texture(base)) return script_manager.tex.get_texture(base);
+        if (script_manager.tex.has_texture(base)) return script_manager.tex.get_texture_shared(base);
 
         script_manager.tex.load_folder(screen_name, subset);
 
         for (const auto& v : script_manager.tex.language_variants(base + "_" + global_data.config->general.language)) {
-            if (script_manager.tex.has_texture(v)) return script_manager.tex.get_texture(v);
+            if (script_manager.tex.has_texture(v)) return script_manager.tex.get_texture_shared(v);
         }
-        if (script_manager.tex.has_texture(base)) return script_manager.tex.get_texture(base);
+        if (script_manager.tex.has_texture(base)) return script_manager.tex.get_texture_shared(base);
         return sol::nullopt;
     });
 

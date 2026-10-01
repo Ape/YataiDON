@@ -706,14 +706,18 @@ std::vector<std::string> TextureWrapper::language_variants(const std::string& na
 }
 
 TextureObject* TextureWrapper::get_texture(const std::string& name) {
+    return get_texture_shared(name).get();
+}
+
+std::shared_ptr<TextureObject> TextureWrapper::get_texture_shared(const std::string& name) {
     // first variant that is actually loaded, else fall back to the warning placeholder
     for (const auto& v : language_variants(name)) {
         auto it = textures.find(v);
-        if (it != textures.end()) return it->second.get();
+        if (it != textures.end()) return it->second;
     }
     spdlog::warn("Texture not found: {}", name);
     auto it = textures.find("kidou/warning");
-    return it != textures.end() ? it->second.get() : nullptr;
+    return it != textures.end() ? it->second : nullptr;
 }
 
 bool TextureWrapper::has_texture(const std::string& name) {
