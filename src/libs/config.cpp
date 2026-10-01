@@ -221,10 +221,53 @@ static std::vector<fs::path> parsePathArray(const toml::array& arr) {
     return result;
 }
 
+static fs::path config_file_path() {
+    return fs::path("config.toml");
+}
+
+// Touch input is enabled by default on the mobile platforms (where the touch
+// drums are the primary control) and disabled on desktop.
+#if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
+static constexpr bool kDefaultTouchInput = true;
+#else
+static constexpr bool kDefaultTouchInput = false;
+#endif
+
+// iOS drives the display from UIKit's animation callback, so vsync must stay on.
+#ifdef YATAIDON_PLATFORM_IOS
+static constexpr bool kDefaultVsync = true;
+#else
+static constexpr bool kDefaultVsync = false;
+#endif
+
+static std::vector<int> parseKeyArrayOrDefault(const toml::table& t, const char* section,
+                                               const char* key, std::vector<int> def) {
+    if (auto arr = t[section][key].as_array()) {
+        return parseKeyArray(*arr);
+    }
+    return def;
+}
+
+static std::vector<int> parseIntArrayOrDefault(const toml::table* section, const char* key,
+                                               std::vector<int> def) {
+    if (section) {
+        if (auto arr = (*section)[key].as_array()) {
+            return parseIntArray(*arr);
+        }
+    }
+    return def;
+}
+
+static std::vector<fs::path> parsePathArrayOrDefault(const toml::table& t, const char* section,
+                                                     const char* key, std::vector<fs::path> def) {
+    if (auto arr = t[section][key].as_array()) {
+        return parsePathArray(*arr);
+    }
+    return def;
+}
+
 Config get_config() {
-    fs::path config_path = fs::exists("dev-config.toml") ?
-                            fs::path("dev-config.toml") :
-                            fs::path("config.toml");
+    fs::path config_path = config_file_path();
 
     toml::table config_file;
     try {
@@ -260,18 +303,18 @@ Config get_config() {
     config.general.audio_offset = config_file["general"]["audio_offset"].value_or(0);
     config.general.visual_offset = config_file["general"]["visual_offset"].value_or(0);
     config.general.language = config_file["general"]["language"].value_or("en");
-    config.general.timer_frozen = config_file["general"]["timer_frozen"].value_or(false);
+    config.general.timer_frozen = config_file["general"]["timer_frozen"].value_or(true);
     config.general.song_timer = config_file["general"]["song_timer"].value_or(false);
     config.general.judge_counter = config_file["general"]["judge_counter"].value_or(false);
     config.general.log_level = config_file["general"]["log_level"].value_or("info");
-    config.general.practice_mode_bar_delay = config_file["general"]["practice_mode_bar_delay"].value_or(0);
-    config.general.score_method = config_file["general"]["score_method"].value_or("standard");
+    config.general.practice_mode_bar_delay = config_file["general"]["practice_mode_bar_delay"].value_or(1);
+    config.general.score_method = config_file["general"]["score_method"].value_or("shinuchi");
     config.general.display_bpm = config_file["general"]["display_bpm"].value_or(false);
     config.general.song_limit = config_file["general"]["song_limit"].value_or(0);
     config.general.webcam_number = config_file["general"]["webcam_number"].value_or(-1);
     config.general.player_1_id = config_file["general"]["player_1_id"].value_or(1);
-    config.general.player_2_id = config_file["general"]["player_2_id"].value_or(1);
-    config.general.touch_input = config_file["general"]["touch_input"].value_or(false);
+    config.general.player_2_id = config_file["general"]["player_2_id"].value_or(2);
+    config.general.touch_input = config_file["general"]["touch_input"].value_or(kDefaultTouchInput);
 
     config.network.access_code = config_file["network"]["access_code"].value_or(
         config_file["general"]["access_code"].value_or(""));
@@ -281,100 +324,48 @@ Config get_config() {
         config_file["general"]["sync_scores_on_launch"].value_or(false));
 
     // Parse paths
-    if (auto tja_path = config_file["paths"]["tja_path"].as_array()) {
-        config.paths.tja_path = parsePathArray(*tja_path);
-    }
+    config.paths.tja_path = parsePathArrayOrDefault(config_file, "paths", "tja_path", {fs::path("Songs")});
     config.paths.skin = fs::path(config_file["paths"]["skin"].value_or("PyTaikoGreen"));
 
     // Parse keys (converting from strings to key codes)
-    config.keys.exit_key = getKeyCodeOrDefault(config_file["keys"]["exit_key"].value_or("escape"), "escape");
+    config.keys.exit_key = getKeyCodeOrDefault(config_file["keys"]["exit_key"].value_or("Q"), "Q");
     config.keys.fullscreen_key = getKeyCodeOrDefault(config_file["keys"]["fullscreen_key"].value_or("f11"), "f11");
     config.keys.borderless_key = getKeyCodeOrDefault(config_file["keys"]["borderless_key"].value_or("f10"), "f10");
-    config.keys.pause_key = getKeyCodeOrDefault(config_file["keys"]["pause_key"].value_or("p"), "p");
+    config.keys.pause_key = getKeyCodeOrDefault(config_file["keys"]["pause_key"].value_or("space"), "space");
     config.keys.back_key = getKeyCodeOrDefault(config_file["keys"]["back_key"].value_or("escape"), "escape");
-    config.keys.restart_key = getKeyCodeOrDefault(config_file["keys"]["restart_key"].value_or("r"), "r");
+    config.keys.restart_key = getKeyCodeOrDefault(config_file["keys"]["restart_key"].value_or("f1"), "f1");
 
     // Parse keys_1p
-    if (auto left_kat = config_file["keys_1p"]["left_kat"].as_array()) {
-        auto parsed = parseKeyArray(*left_kat);
-        if (!parsed.empty()) config.keys_1p.left_kat = std::move(parsed);
-    }
-    if (auto left_don = config_file["keys_1p"]["left_don"].as_array()) {
-        auto parsed = parseKeyArray(*left_don);
-        if (!parsed.empty()) config.keys_1p.left_don = std::move(parsed);
-    }
-    if (auto right_don = config_file["keys_1p"]["right_don"].as_array()) {
-        auto parsed = parseKeyArray(*right_don);
-        if (!parsed.empty()) config.keys_1p.right_don = std::move(parsed);
-    }
-    if (auto right_kat = config_file["keys_1p"]["right_kat"].as_array()) {
-        auto parsed = parseKeyArray(*right_kat);
-        if (!parsed.empty()) config.keys_1p.right_kat = std::move(parsed);
-    }
+    config.keys_1p.left_kat  = parseKeyArrayOrDefault(config_file, "keys_1p", "left_kat",  {ray::KEY_D});
+    config.keys_1p.left_don  = parseKeyArrayOrDefault(config_file, "keys_1p", "left_don",  {ray::KEY_F});
+    config.keys_1p.right_don = parseKeyArrayOrDefault(config_file, "keys_1p", "right_don", {ray::KEY_J});
+    config.keys_1p.right_kat = parseKeyArrayOrDefault(config_file, "keys_1p", "right_kat", {ray::KEY_K});
 
     // Parse keys_2p
-    if (auto left_kat = config_file["keys_2p"]["left_kat"].as_array()) {
-        auto parsed = parseKeyArray(*left_kat);
-        if (!parsed.empty()) config.keys_2p.left_kat = std::move(parsed);
-    }
-    if (auto left_don = config_file["keys_2p"]["left_don"].as_array()) {
-        auto parsed = parseKeyArray(*left_don);
-        if (!parsed.empty()) config.keys_2p.left_don = std::move(parsed);
-    }
-    if (auto right_don = config_file["keys_2p"]["right_don"].as_array()) {
-        auto parsed = parseKeyArray(*right_don);
-        if (!parsed.empty()) config.keys_2p.right_don = std::move(parsed);
-    }
-    if (auto right_kat = config_file["keys_2p"]["right_kat"].as_array()) {
-        auto parsed = parseKeyArray(*right_kat);
-        if (!parsed.empty()) config.keys_2p.right_kat = std::move(parsed);
-    }
+    config.keys_2p.left_kat  = parseKeyArrayOrDefault(config_file, "keys_2p", "left_kat",  {ray::KEY_Z});
+    config.keys_2p.left_don  = parseKeyArrayOrDefault(config_file, "keys_2p", "left_don",  {ray::KEY_X});
+    config.keys_2p.right_don = parseKeyArrayOrDefault(config_file, "keys_2p", "right_don", {ray::KEY_C});
+    config.keys_2p.right_kat = parseKeyArrayOrDefault(config_file, "keys_2p", "right_kat", {ray::KEY_V});
 
     // Parse gamepad_1p (fallback to legacy [gamepad] if missing)
-    auto gamepad_1p_node = config_file["gamepad_1p"].as_table()
-                         ? config_file["gamepad_1p"].as_table()
-                         : config_file["gamepad"].as_table();
-    if (gamepad_1p_node) {
-        if (auto left_kat = (*gamepad_1p_node)["left_kat"].as_array()) {
-            auto parsed = parseIntArray(*left_kat);
-            if (!parsed.empty()) config.gamepad_1p.left_kat = std::move(parsed);
-        }
-        if (auto left_don = (*gamepad_1p_node)["left_don"].as_array()) {
-            auto parsed = parseIntArray(*left_don);
-            if (!parsed.empty()) config.gamepad_1p.left_don = std::move(parsed);
-        }
-        if (auto right_don = (*gamepad_1p_node)["right_don"].as_array()) {
-            auto parsed = parseIntArray(*right_don);
-            if (!parsed.empty()) config.gamepad_1p.right_don = std::move(parsed);
-        }
-        if (auto right_kat = (*gamepad_1p_node)["right_kat"].as_array()) {
-            auto parsed = parseIntArray(*right_kat);
-            if (!parsed.empty()) config.gamepad_1p.right_kat = std::move(parsed);
-        }
-    }
+    const toml::table* gamepad_1p_node = config_file["gamepad_1p"].as_table();
+    if (!gamepad_1p_node) gamepad_1p_node = config_file["gamepad"].as_table();
+    config.gamepad_1p.left_kat  = parseIntArrayOrDefault(gamepad_1p_node, "left_kat",  {10});
+    config.gamepad_1p.left_don  = parseIntArrayOrDefault(gamepad_1p_node, "left_don",  {16});
+    config.gamepad_1p.right_don = parseIntArrayOrDefault(gamepad_1p_node, "right_don", {17});
+    config.gamepad_1p.right_kat = parseIntArrayOrDefault(gamepad_1p_node, "right_kat", {12});
 
     // Parse gamepad_2p
-    if (auto left_kat = config_file["gamepad_2p"]["left_kat"].as_array()) {
-        auto parsed = parseIntArray(*left_kat);
-        if (!parsed.empty()) config.gamepad_2p.left_kat = std::move(parsed);
-    }
-    if (auto left_don = config_file["gamepad_2p"]["left_don"].as_array()) {
-        auto parsed = parseIntArray(*left_don);
-        if (!parsed.empty()) config.gamepad_2p.left_don = std::move(parsed);
-    }
-    if (auto right_don = config_file["gamepad_2p"]["right_don"].as_array()) {
-        auto parsed = parseIntArray(*right_don);
-        if (!parsed.empty()) config.gamepad_2p.right_don = std::move(parsed);
-    }
-    if (auto right_kat = config_file["gamepad_2p"]["right_kat"].as_array()) {
-        auto parsed = parseIntArray(*right_kat);
-        if (!parsed.empty()) config.gamepad_2p.right_kat = std::move(parsed);
-    }
+    const toml::table* gamepad_2p_node = config_file["gamepad_2p"].as_table();
+    config.gamepad_2p.left_kat  = parseIntArrayOrDefault(gamepad_2p_node, "left_kat",  {});
+    config.gamepad_2p.left_don  = parseIntArrayOrDefault(gamepad_2p_node, "left_don",  {});
+    config.gamepad_2p.right_don = parseIntArrayOrDefault(gamepad_2p_node, "right_don", {});
+    config.gamepad_2p.right_kat = parseIntArrayOrDefault(gamepad_2p_node, "right_kat", {});
 
     // Parse audio
     config.audio.device_type = config_file["audio"]["device_type"].value_or(0);
     config.audio.sample_rate = config_file["audio"]["sample_rate"].value_or(44100);
-    config.audio.buffer_size = config_file["audio"]["buffer_size"].value_or(512);
+    config.audio.buffer_size = config_file["audio"]["buffer_size"].value_or(128);
     if (auto asio_channel = config_file["audio"]["asio_channel"].as_array())
         config.audio.asio_channel = parseIntArray(*asio_channel);
     if (config.audio.asio_channel.empty())
@@ -382,7 +373,7 @@ Config get_config() {
 
     // Parse volume
     config.volume.sound = config_file["volume"]["sound"].value_or(1.0);
-    config.volume.music = config_file["volume"]["music"].value_or(1.0);
+    config.volume.music = config_file["volume"]["music"].value_or(0.8);
     config.volume.voice = config_file["volume"]["voice"].value_or(1.0);
     config.volume.hitsound = config_file["volume"]["hitsound"].value_or(1.0);
     config.volume.attract_mode = config_file["volume"]["attract_mode"].value_or(1.0);
@@ -390,8 +381,8 @@ Config get_config() {
     // Parse video
     config.video.fullscreen = config_file["video"]["fullscreen"].value_or(false);
     config.video.borderless = config_file["video"]["borderless"].value_or(false);
-    config.video.target_fps = config_file["video"]["target_fps"].value_or(60);
-    config.video.vsync = config_file["video"]["vsync"].value_or(true);
+    config.video.target_fps = config_file["video"]["target_fps"].value_or(-1);
+    config.video.vsync = config_file["video"]["vsync"].value_or(kDefaultVsync);
 
     return config;
 }
@@ -406,9 +397,7 @@ static std::string getKeyStringSafe(int key_code) {
 }
 
 void save_config(const Config& config) {
-    fs::path config_path = fs::exists("dev-config.toml") ?
-                            fs::path("dev-config.toml") :
-                            fs::path("config.toml");
+    fs::path config_path = config_file_path();
 
     toml::table config_table;
 
@@ -571,4 +560,13 @@ void save_config(const Config& config) {
         std::error_code rm_ec;
         fs::remove(tmp_path, rm_ec);
     }
-};
+}
+
+void ensure_config_file(const Config& config) {
+    std::error_code ec;
+    if (fs::exists("config.toml", ec)) {
+        return;
+    }
+    spdlog::info("No config file found -- writing defaults to {}", config_file_path().string());
+    save_config(config);
+}

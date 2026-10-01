@@ -93,8 +93,6 @@ elseif(EMSCRIPTEN)
     -sINITIAL_MEMORY=134217728
     -sASSERTIONS=1
     -sNO_DISABLE_EXCEPTION_CATCHING
-    "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/config.toml@/dev-config.toml"
-    "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/config.toml@/config.toml"
     "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/shader@/shader"
     "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/Songs@/Songs"
     "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/Skins/PyTaikoGreen@/Skins/PyTaikoGreen"

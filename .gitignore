@@ -1,7 +1,7 @@
 cache
 .cache
 .env
-dev-config.toml
+config.toml
 latest.log
 scores.db
 scores_gen3.db

@@ -60,16 +60,7 @@ android {
     task copyGameDataAssets(type: Copy) {
         from(rootProject.file('../Skins')) { into 'Skins' }
         from(rootProject.file('../Songs')) { into 'Songs' }
-        from(rootProject.file('../config.toml')) {
-            filter { String line -> line.replaceFirst(/^(\s*)touch_input(\s*=\s*)false\b/, '$1touch_input$2true') }
-        }
         into gameDataOutDir
-    }
-    copyGameDataAssets.doLast {
-        def patched = new File(gameDataOutDir.get().asFile, 'config.toml').text
-        if (!(patched =~ /(?m)^\s*touch_input\s*=\s*true\s*$/)) {
-            throw new GradleException("config.toml no longer contains an overridable 'touch_input = false' entry; update copyGameDataAssets")
-        }
     }
 
     sourceSets {

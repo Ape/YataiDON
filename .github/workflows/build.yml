@@ -105,7 +105,6 @@ jobs:
           cp -r Skins release/YataiDON-Linux/
           cp -r shader release/YataiDON-Linux/
           cp -r Songs release/YataiDON-Linux/
-          cp config.toml release/YataiDON-Linux/
           cp update.sh release/YataiDON-Linux/
           chmod +x release/YataiDON-Linux/YataiDON release/YataiDON-Linux/update.sh
 
@@ -235,7 +234,6 @@ jobs:
           cp -r Skins release/YataiDON-Windows/
           cp -r shader release/YataiDON-Windows/
           cp -r Songs release/YataiDON-Windows/
-          cp config.toml release/YataiDON-Windows/
           cp update.ps1 update.bat release/YataiDON-Windows/
 
           # Checksums — binary + updater + dlls + shader
@@ -332,7 +330,6 @@ jobs:
           cp -r Skins release/YataiDON-macOS/
           cp -r shader release/YataiDON-macOS/
           cp -r Songs release/YataiDON-macOS/
-          cp config.toml release/YataiDON-macOS/
           cp update.sh release/YataiDON-macOS/
           chmod +x release/YataiDON-macOS/YataiDON release/YataiDON-macOS/update.sh
 

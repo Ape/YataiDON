@@ -111,3 +111,7 @@ std::vector<int> parseIntArray(const toml::array& arr);
 Config get_config();
 
 void save_config(const Config& config);
+
+// Writes a default config.toml (or dev-config.toml) when none exists yet, so
+// the game ships without a bundled config and generates one on first boot.
+void ensure_config_file(const Config& config);
