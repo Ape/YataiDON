@@ -582,6 +582,18 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                     else          obj = std::make_shared<SingleTexture>(p.id, texs[0]);
 
                     read_tex_obj_data(*p.mapping, obj.get(), tex_scale);
+
+                    if (!p.framed && !obj->crop_data.has_value() &&
+                        p.mapping->IsObject() && !p.mapping->HasMember("x2")) {
+                        const ray::Image& img = images[p.first_file];
+                        if (img.data) {
+                            const ray::Rectangle border = ray::GetImageAlphaBorder(img, 0.0f);
+                            if (border.width > 0.0f) {
+                                obj->opaque_right = (border.x + border.width) * tex_scale;
+                            }
+                        }
+                    }
+
                     textures[p.id] = obj;
                     cache[p.cache_key] = obj;
                     ids_this_call.insert(p.id);
@@ -741,6 +753,10 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
     } else if (tex_obj->crop_data.has_value()) {
         try {
             source_rect = tex_obj->crop_data->at(params.frame);
+            source_rect.width  -= 1.0f;
+            source_rect.height -= 1.0f;
+            source_rect.x += mirror_x < 0 ? -0.5f : 0.5f;
+            source_rect.y += mirror_y < 0 ? -0.5f : 0.5f;
             source_rect.width  *= mirror_x;
             source_rect.height *= mirror_y;
         } catch (const std::out_of_range& e) {

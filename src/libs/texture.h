@@ -80,9 +80,16 @@ struct TextureObject {
     std::vector<int> x2;
     std::vector<int> y2;
     std::optional<std::vector<ray::Rectangle>> crop_data;
+
+    float opaque_right = 0.0f;
     TextureObject(const std::string& name, int width, int height)
         : name(name), width(width), height(height), x{0}, y{0}, x2{width}, y2{height} {}
     virtual ~TextureObject() = default;
+
+    float scissor_right() const {
+        if (opaque_right > 0.0f) return opaque_right;
+        return x2.empty() ? 0.0f : static_cast<float>(x2[0]);
+    }
 
     virtual const ray::Texture2D* frame_texture(int frame) const { return nullptr; }
 

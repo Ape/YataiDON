@@ -546,7 +546,7 @@ void Player::draw(double ms_from_start, float x, float y, ray::Shader& mask_shad
         anim.draw_effect(judge_x, y + judge_y);
     }
     {
-        int scissor_x = virtual_to_screen_x(static_cast<float>(lane_cover_tex_id->x2[0]));
+        int scissor_x = virtual_to_screen_x(lane_cover_tex_id->scissor_right());
         int win_w = ray::GetRenderWidth();
         ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, ray::GetRenderHeight());
         draw_notes(ms_from_start, y);
@@ -592,7 +592,7 @@ void Player::draw_practice(double ms_from_start, float x, float y, ray::Shader& 
     }
 
     if (draw_notes_on) {
-        int scissor_x = virtual_to_screen_x(static_cast<float>(lane_cover_tex_id->x2[0]));
+        int scissor_x = virtual_to_screen_x(lane_cover_tex_id->scissor_right());
         int win_w = ray::GetRenderWidth();
         ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, ray::GetRenderHeight());
         draw_notes(ms_from_start, y);
