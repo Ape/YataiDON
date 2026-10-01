@@ -3,6 +3,7 @@
 #include "file_navigator/box_folder.h"
 #include "file_navigator/box_back.h"
 #include "file_navigator/navigator.h"
+#include "file_navigator/genre_bg.h"
 #include "player.h"
 #include "diff_sort.h"
 
@@ -16,6 +17,7 @@ SongSelectScript::SongSelectScript() {
     fn_draw_box          = lua_object["draw_box"];
     fn_draw_box_bg       = lua_object["draw_box_bg"];
     fn_draw_background   = lua_object["draw_background"];
+    fn_draw_genre_bg     = lua_object["draw_genre_bg"];
     fn_draw_selector     = lua_object["draw_selector"];
     fn_draw_option_panel = lua_object["draw_option_panel"];
     fn_draw_sort_window  = lua_object["draw_sort_window"];
@@ -54,6 +56,12 @@ bool SongSelectScript::draw_box_bg(BaseBox* box) {
 bool SongSelectScript::draw_background(Navigator* nav) {
     if (!fn_draw_background.valid()) return false;
     call(fn_draw_background, "SongSelect:draw_background", nav);
+    return true;
+}
+
+bool SongSelectScript::draw_genre_bg(GenreBG* genre_bg, float start_pos, float end_pos, BaseBox* folder) {
+    if (!fn_draw_genre_bg.valid()) return false;
+    call(fn_draw_genre_bg, "SongSelect:draw_genre_bg", genre_bg, start_pos, end_pos, box_to_lua(folder));
     return true;
 }
 

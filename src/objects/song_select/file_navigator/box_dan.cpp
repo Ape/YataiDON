@@ -144,8 +144,8 @@ void DanBox::load_text() {
 
 void DanBox::update(double current_ms) {
     BaseBox::update(current_ms);
-    if (yellow_box.has_value() && yellow_box_opened && !yellow_box->is_diff_select)
-        yellow_box->create_anim_2();
+    if (yellow_box_active && yellow_box_opened && !is_diff_select)
+        is_diff_select = true;
 }
 
 void DanBox::draw_chip() {
@@ -172,9 +172,8 @@ void DanBox::draw_chip() {
 void DanBox::draw_closed() { draw_chip(); }
 
 void DanBox::draw_open() {
-    if (!yellow_box.has_value()) return;
+    if (!yellow_box_active) return;
     draw_chip();
-    yellow_box->draw();
 
     if (!text_loaded) return;
     float f = open_fade->attribute;

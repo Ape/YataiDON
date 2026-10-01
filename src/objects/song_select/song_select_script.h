@@ -5,6 +5,7 @@ class BaseBox;
 class SongSelectPlayer;
 class Navigator;
 class DiffSortSelect;
+class GenreBG;
 
 class SongSelectScript : public LuaScript {
 private:
@@ -16,6 +17,7 @@ private:
     sol::protected_function fn_draw_box;
     sol::protected_function fn_draw_box_bg;
     sol::protected_function fn_draw_background;
+    sol::protected_function fn_draw_genre_bg;
     sol::protected_function fn_draw_selector;
     sol::protected_function fn_draw_option_panel;
     sol::protected_function fn_draw_sort_window;
@@ -35,6 +37,7 @@ public:
     bool draw_box_bg(BaseBox* box);
     bool has_box_bg() const { return fn_draw_box_bg.valid(); }
     bool draw_background(Navigator* nav);
+    bool draw_genre_bg(GenreBG* genre_bg, float start_pos, float end_pos, BaseBox* folder);
     bool draw_selector(SongSelectPlayer* player, bool is_half, float fade_in, int pass);
     bool draw_option_panel(SongSelectPlayer* player, int kind);
 

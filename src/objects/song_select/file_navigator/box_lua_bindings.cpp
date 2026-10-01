@@ -2,10 +2,12 @@
 #include "box_song.h"
 #include "box_folder.h"
 #include "box_back.h"
+#include "genre_bg.h"
 #include "navigator.h"
 #include "../player.h"
 #include "../diff_sort.h"
 #include "../../../libs/script.h"
+#include "text_layout.h"
 
 #include <algorithm>
 
@@ -13,6 +15,8 @@ void register_song_select_lua_bindings(sol::state& lua) {
     lua.new_usertype<BaseBox>("BaseBox",
         "box_x",           &BaseBox::box_x,
         "box_y",           &BaseBox::box_y,
+        "left_bound",      &BaseBox::left_bound,
+        "right_bound",     &BaseBox::right_bound,
         // read-only properties: box.fade / box.open_fade / box.open_anim stay the animation
         // objects Lua skins index (box.fade.attribute) now that the box owns them by unique_ptr
         "fade",            sol::property([](BaseBox& self) { return self.fade.get(); }),
@@ -35,7 +39,11 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "name",       &BaseBox::horizontal_name,
         "name_large", &BaseBox::horizontal_name_large,
         "collection", &BaseBox::collection,
-        "genre_index", [](BaseBox& self) { return (int)self.genre_index; }
+        "genre_index", [](BaseBox& self) { return (int)self.genre_index; },
+        "texture_index", [](BaseBox& self) { return (int)self.texture_index; },
+        "has_recolor",   &BaseBox::has_recolor,
+        "begin_recolor", &BaseBox::begin_recolor,
+        "end_recolor",   &BaseBox::end_recolor
     );
 
     lua.new_usertype<SongBox>("SongBox",
@@ -51,19 +59,68 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "ex_data_flag", &SongBox::ex_data_flag,
         "course_info", [](SongBox& self, int diff) {
             auto info = self.course_info(diff);
-            sol::table t = script_manager.lua->create_table(0, 5);
+            sol::table t = script_manager.lua->create_table(0, 6);
             t["has_course"]   = info.has_course;
             t["level"]        = info.level;
             t["is_branching"] = info.is_branching;
             t["crown"]        = info.crown;
             t["rank"]         = info.rank;
+            t["has_score"]    = (diff >= 0 && diff < (int)self.scores.size() && self.scores[diff].has_value());
             return t;
+        },
+        "course_info_p2", [](SongBox& self, int diff) {
+            auto info = self.course_info(diff);
+            info.crown = 0;   // Crown::NONE
+            info.rank  = 0;   // Rank::_NONE
+            if (diff >= 0 && diff < (int)self.scores_p2.size() && self.scores_p2[diff].has_value()) {
+                info.crown = (int)self.scores_p2[diff]->crown;
+                info.rank  = (int)self.scores_p2[diff]->rank;
+            }
+            sol::table t = script_manager.lua->create_table(0, 6);
+            t["has_course"]   = info.has_course;
+            t["level"]        = info.level;
+            t["is_branching"] = info.is_branching;
+            t["crown"]        = info.crown;
+            t["rank"]         = info.rank;
+            t["has_score"]    = (diff >= 0 && diff < (int)self.scores_p2.size() && self.scores_p2[diff].has_value());
+            return t;
+        },
+        "has_preimage", [](SongBox& self) { return self.preimage.has_value(); },
+        "draw_preimage", [](SongBox& self, float bx, float by, float fade) {
+            if (!self.preimage.has_value()) return;
+            const SkinInfo& cfg = tex.skin_config[SC::PREIMAGE];
+            ray::Rectangle src{0, 0, (float)self.preimage->width, (float)self.preimage->height};
+            ray::Rectangle dest{bx + cfg.x, cfg.y + by, cfg.width, cfg.height};
+            ray::DrawTexturePro(self.preimage.value(), src, dest, ray::Vector2{0, 0}, 0, ray::Fade(ray::WHITE, fade));
         }
     );
 
     lua.new_usertype<FolderBox>("FolderBox",
         sol::base_classes, sol::bases<BaseBox>(),
         "tja_count",      sol::readonly(&FolderBox::tja_count),
+        "entered",        sol::readonly(&FolderBox::entered),
+        "enter_fade", [](FolderBox& self) { return self.enter_fade.get(); },
+        "highest_crown", [](FolderBox& self) -> sol::object {
+            if (self.crown.empty()) return sol::lua_nil;
+            auto it = self.crown.rbegin();   // std::map is sorted -> highest diff
+            sol::table t = script_manager.lua->create_table(0, 2);
+            t["crown"] = (int)it->second;
+            t["frame"] = std::min((int)Difficulty::URA, it->first);
+            return t;
+        },
+        "highest_crown_p2", [](FolderBox& self) -> sol::object {
+            if (self.crown_p2.empty()) return sol::lua_nil;
+            auto it = self.crown_p2.rbegin();
+            sol::table t = script_manager.lua->create_table(0, 2);
+            t["crown"] = (int)it->second;
+            t["frame"] = std::min((int)Difficulty::URA, it->first);
+            return t;
+        },
+        "explanation", [](FolderBox& self) {
+            sol::table t = script_manager.lua->create_table(3, 0);
+            for (int i = 0; i < 3; i++) t[i + 1] = self.explanation[i];
+            return t;
+        },
         "kind", [](FolderBox& self) -> std::string {
             if (self.genre_index == GenreIndex::DAN) return "dan";
             if (!self.collection.empty())            return "sort";
@@ -190,4 +247,29 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "wheel_event",     sol::readonly(&Navigator::wheel_event),
         "wheel_event_seq", sol::readonly(&Navigator::wheel_event_seq)
     );
+
+    lua.new_usertype<GenreBG>("GenreBG",
+        "texture_frame", &GenreBG::texture_frame,
+        "name",          &GenreBG::name_text,
+        "has_recolor",   &GenreBG::has_recolor,
+        "begin_recolor", &GenreBG::begin_recolor,
+        "end_recolor",   &GenreBG::end_recolor,
+        "stretch",       sol::property([](GenreBG& self) { return self.stretch.get(); }),
+        "scale",         sol::property([](GenreBG& self) { return self.scale.get(); }),
+        "move",          sol::property([](GenreBG& self) { return self.move.get(); }),
+        "fade",          sol::property([](GenreBG& self) { return self.fade.get(); }),
+        "move_left",     sol::property([](GenreBG& self) { return self.move_left.get(); }),
+        "move_right",    sol::property([](GenreBG& self) { return self.move_right.get(); }),
+        "is_finished",   &GenreBG::is_finished,
+        "is_complete",   &GenreBG::is_complete
+    );
+
+    // Text-measurement helpers the Lua port needs to lay out folder explanations the way
+    // the C++ FolderBox does (word_wrap needs ray::MeasureTextEx, unavailable in Lua).
+    lua["text"]["word_wrap"] = [](const std::string& s, int font_size, float spacing, float max_width) {
+        return word_wrap(s, font_size, spacing, max_width);
+    };
+    lua["text"]["language_is_cjk"] = [](const std::string& lang) {
+        return language_is_cjk(lang);
+    };
 }

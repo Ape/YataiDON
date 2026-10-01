@@ -778,8 +778,8 @@ void PracticeGameScreen::draw_balloon_scrobble(const Note& head, double current_
 
 void PracticeGameScreen::draw_notes_scrobble(double current_ms) const {
     int scissor_x = players[0]->get_scissor_x();
-    int win_w = ray::GetScreenWidth();
-    ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, ray::GetScreenHeight());
+    int win_w = ray::GetRenderWidth();
+    ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, ray::GetRenderHeight());
 
     // Draw bars
     for (auto it = bars.rbegin(); it != bars.rend(); ++it) {
