@@ -46,6 +46,11 @@ cpr::Response get_url(const std::string& url, int32_t timeout_ms, int32_t connec
     return session.Get();
 }
 
+bool is_lfs_pointer(const std::string& body) {
+    static const std::string kLfsMarker = "version https://git-lfs.github.com/spec/v1";
+    return body.compare(0, kLfsMarker.size(), kLfsMarker) == 0;
+}
+
 }  // namespace
 
 void SkinUpdater::set_current_skin(const std::string& name) {
@@ -69,6 +74,10 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
 
     auto raw_url = [&](const std::string& rel_path) {
         return repo_url + "/raw/branch/" + branch + "/" + rel_path;
+    };
+
+    auto media_url = [&](const std::string& rel_path) {
+        return repo_url + "/media/branch/" + branch + "/" + rel_path;
     };
 
     cpr::Response checksums = get_url(raw_url("checksums.sha256"), 10000, 5000);
@@ -109,6 +118,19 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
             spdlog::warn("Skin update ({}): failed to download {} (HTTP {})", skin_dir.filename().string(), rel_path, file_resp.status_code);
             continue;
         }
+
+        if (is_lfs_pointer(file_resp.text)) {
+            spdlog::debug("Skin update ({}): {} is an LFS pointer; fetching content from media endpoint",
+                          skin_dir.filename().string(), rel_path);
+            cpr::Response lfs_resp = get_url(media_url(rel_path), 60000, 5000);
+            if (lfs_resp.status_code != 200) {
+                spdlog::warn("Skin update ({}): failed to download LFS content {} (HTTP {})",
+                             skin_dir.filename().string(), rel_path, lfs_resp.status_code);
+                continue;
+            }
+            file_resp = std::move(lfs_resp);
+        }
+
         std::error_code mkdir_ec;
         fs::create_directories(local_file.parent_path(), mkdir_ec);
         std::ofstream out(local_file, std::ios::binary | std::ios::trunc);
