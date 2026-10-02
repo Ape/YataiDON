@@ -158,22 +158,3 @@ void BaseBox::update(double current_time) {
         right_bound = position + folder_texture_left_width + folder_texture_right_width + (tex.skin_config[SC::SONG_BOX_BG].width);
     }
 }
-
-void BaseBox::load_textures() {
-    t_shadow_bottom_left  = tex.get_texture("yellow_box/shadow_bottom_left");
-    t_shadow_bottom       = tex.get_texture("yellow_box/shadow_bottom");
-    t_shadow_bottom_right = tex.get_texture("yellow_box/shadow_bottom_right");
-    t_shadow_right        = tex.get_texture("yellow_box/shadow_right");
-    t_shadow_top_right    = tex.get_texture("yellow_box/shadow_top_right");
-}
-
-void BaseBox::draw() {
-    std::string_view state = draw_state();
-    if (state == "diff_select") {
-        draw_diff_select();
-    } else if (state == "open") {
-        draw_open();
-    } else {
-        draw_closed();
-    }
-}

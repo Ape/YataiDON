@@ -2,11 +2,13 @@
 #include "box_song.h"
 #include "box_folder.h"
 #include "box_back.h"
+#include "box_dan.h"
 #include "genre_bg.h"
 #include "navigator.h"
 #include "../player.h"
 #include "../diff_sort.h"
 #include "../../../libs/script.h"
+#include "../../game/exam_caption.h"
 #include "text_layout.h"
 
 #include <algorithm>
@@ -157,6 +159,47 @@ void register_song_select_lua_bindings(sol::state& lua) {
     );
 
     lua.new_usertype<BackBox>("BackBox", sol::base_classes, sol::bases<BaseBox>());
+
+    lua.new_usertype<DanBox>("DanBox",
+        sol::base_classes, sol::bases<BaseBox>(),
+        "dan_title",      sol::readonly(&DanBox::dan_title),
+        "dan_color",      sol::readonly(&DanBox::dan_color),
+        "dan_rank",       sol::readonly(&DanBox::dan_rank),
+        "dan_index",      sol::readonly(&DanBox::dan_index),
+        "gaiden",         sol::readonly(&DanBox::gaiden),
+        "total_notes",    sol::readonly(&DanBox::total_notes),
+        "song_count",     [](DanBox& self) { return (int)self.songs.size(); },
+        "song_genre",     [](DanBox& self, int i) { return self.songs[i].genre_index; },
+        "song_difficulty",[](DanBox& self, int i) { return self.songs[i].difficulty; },
+        "song_level",     [](DanBox& self, int i) { return self.songs[i].level; },
+        "chip_name",      [](DanBox& self) { return self.name_text(); },
+        "hori_name",      [](DanBox& self) { return self.hori_name.get(); },
+        "song_title_text", [](DanBox& self, int i) {
+            return (i >= 0 && i < (int)self.song_texts.size()) ? self.song_texts[i].first.get() : nullptr;
+        },
+        "song_subtitle_text", [](DanBox& self, int i) {
+            return (i >= 0 && i < (int)self.song_texts.size()) ? self.song_texts[i].second.get() : nullptr;
+        },
+        "exam_count",     [](DanBox& self) { return (int)self.exams.size(); },
+        "exam_type",      [](DanBox& self, int i) { return self.exams[i].type; },
+        "exam_red",       [](DanBox& self, int i) { return self.exams[i].red; },
+        "exam_gold",      [](DanBox& self, int i) { return self.exams[i].gold; },
+        "exam_range",     [](DanBox& self, int i) { return self.exams[i].range; },
+        "exam_gothrough", [](DanBox& self, int i) { return self.exams[i].gothrough; },
+        "exam_per_song",  [](DanBox& self, int i) { return self.exams[i].per_song(); },
+        "exam_song_count",[](DanBox& self, int i) { return (int)self.exams[i].song_red.size(); },
+        "exam_song_red",  [](DanBox& self, int i, int j) { return self.exams[i].song_red[j]; },
+        "exam_song_gold", [](DanBox& self, int i, int j) {
+            const Exam& e = self.exams[i];
+            return j < (int)e.song_gold.size() ? e.song_gold[j] : e.song_red[j];
+        },
+        "exam_caption", [](DanBox& self, int i) {
+            return exam_border_text(tex, self.exams[i], global_data.config->general.language);
+        },
+        "exam_song_caption", [](DanBox& self, int i, int j) {
+            return exam_border_text(tex, self.exams[i].for_song(j), global_data.config->general.language);
+        }
+    );
 
     lua.new_usertype<DiffSortSelect>("SortWindow",
         "session",      [](DiffSortSelect& s) { return s.lua_session(); },

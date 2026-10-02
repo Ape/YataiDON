@@ -440,6 +440,10 @@ DanBox* DanNavigator::get_current() {
 }
 
 void DanNavigator::update(double current_ms) {
+    if (!paint_tried) load_paint_surface();
+    if (fn_update.valid())
+        fn_update(lua_paint, current_ms);
+
     bool built_one = false;
     for (auto& b : boxes) {
         bool on_screen = b->position > -156 * tex.screen_scale && b->position < tex.screen_width + 144 * tex.screen_scale;
@@ -487,14 +491,19 @@ void DanNavigator::load_paint_surface() {
     }
     lua_paint      = res;
     fn_draw_cursor = lua_paint["draw_cursor"];
+    fn_draw_box    = lua_paint["draw_box"];
+    fn_update      = lua_paint["update"];
     paint_ok       = fn_draw_cursor.valid();
 }
 
 void DanNavigator::draw() {
+    if (!paint_tried) load_paint_surface();
+
     for (auto& b : boxes) {
         float pos = b->position;
         if (pos >= -156 * tex.screen_scale && pos <= tex.screen_width + 144 * tex.screen_scale) {
-            b->draw();
+            if (fn_draw_box.valid())
+                fn_draw_box(lua_paint, b.get());
         }
     }
 
@@ -504,7 +513,6 @@ void DanNavigator::draw() {
     const float pos = cur->position;
     const double now = get_current_ms();
 
-    if (!paint_tried) load_paint_surface();
     if (paint_ok) {
         auto r = fn_draw_cursor(lua_paint, pos, now,
                                 last_moved > 0 ? now - last_moved : -1.0);

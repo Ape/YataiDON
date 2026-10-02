@@ -42,6 +42,8 @@ public:
     bool paint_ok    = false;
     sol::table lua_paint;
     sol::protected_function fn_draw_cursor;
+    sol::protected_function fn_draw_box;
+    sol::protected_function fn_update;
     void load_paint_surface();
 
     double last_moved = 0;

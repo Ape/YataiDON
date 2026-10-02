@@ -69,12 +69,6 @@ public:
     virtual void preregister_text();
     virtual void get_scores() {}
     virtual void draw_score_history() {}
-    // Native box rendering is gone from the song-select wheel (Lua draws it); the virtual
-    // draw() and friends remain only for the dan_select scene, which still draws DanBox in
-    // C++. The base implementations are no-ops.
-    virtual void draw();
-    virtual void draw_diff_select() {}
-    virtual void load_textures();
 
     virtual void reset();
 
@@ -134,13 +128,6 @@ public:
     }
 
 protected:
-    // Shadow strips still used by DanBox (dan_select draws in C++).
-    TextureObject* t_shadow_bottom_left = nullptr;
-    TextureObject* t_shadow_bottom = nullptr;
-    TextureObject* t_shadow_bottom_right = nullptr;
-    TextureObject* t_shadow_right = nullptr;
-    TextureObject* t_shadow_top_right = nullptr;
-
     std::unique_ptr<MoveAnimation> move;
 
     ray::Shader shader;
@@ -159,9 +146,6 @@ protected:
     float yellow_right_width = 0.0f;   // yellow_box_right texture width (non-diff right bound)
     float folder_texture_left_width = 0.0f;   // closed-box left/right bounds
     float folder_texture_right_width = 0.0f;
-
-    virtual void draw_closed() {}
-    virtual void draw_open() {}
 
     float target_position;
     double bar_open_started_at = 0.0;
