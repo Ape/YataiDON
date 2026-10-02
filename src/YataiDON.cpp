@@ -13,6 +13,8 @@
 #include "libs/screen.h"
 #include "libs/script.h"
 #include "libs/song_parser.h"
+#include "libs/skin_updater.h"
+#include "libs/text.h"
 
 #ifdef _WIN32
 #include "platform/platform_windows.h"
@@ -53,6 +55,27 @@ void draw_outer_border(int screen_width, int screen_height, ray::Color last_colo
     DrawRectangle(screen_width, 0, screen_width, screen_height, last_color);
     DrawRectangle(0, -screen_height, screen_width, screen_height, last_color);
     DrawRectangle(0, screen_height, screen_width, screen_height, last_color);
+}
+
+static void draw_skin_update_status() {
+    const SkinUpdater::Status st = skin_updater.snapshot();
+    if (!st.running) return;
+
+    const int size = static_cast<int>(20.0f * global_tex.screen_scale);
+    const float x = static_cast<float>(size);
+    float y = static_cast<float>(size) * 2.0f;
+
+    const std::string skin_line = st.current_skin.empty()
+                                      ? "Checking for skin updates..."
+                                      : "Updating skin: " + st.current_skin;
+    ray::Font skin_font = font_manager.get_font(skin_line, size);
+    ray::DrawTextEx(skin_font, skin_line.c_str(), ray::Vector2{x, y}, static_cast<float>(size), 1.0f, ray::YELLOW);
+
+    if (!st.current_file.empty()) {
+        y += static_cast<float>(size);
+        ray::Font file_font = font_manager.get_font(st.current_file, size);
+        ray::DrawTextEx(file_font, st.current_file.c_str(), ray::Vector2{x, y}, static_cast<float>(size), 1.0f, ray::WHITE);
+    }
 }
 
 [[noreturn]] static void exit_now(int code) {
@@ -344,6 +367,8 @@ static void run_frame() {
         L.fps_counter.draw();
     }
 
+    draw_skin_update_status();
+
     debug_menu.draw();
 
     draw_outer_border(tex.screen_width, tex.screen_height, L.last_color);
@@ -416,8 +441,8 @@ int main(int argc, char* argv[]) {
 
 #ifdef PLATFORM_ANDROID
     android_check_and_install_update();
-    android_check_skin_updates();
 #endif
+    skin_updater.start();
 
 #ifdef YATAIDON_PLATFORM_IOS
     ios_initialize_after_window();
@@ -544,6 +569,7 @@ int main(int argc, char* argv[]) {
         input_thread.join();
     }
     network.shutdown();
+    skin_updater.shutdown();
     shutdown_sdl_joysticks();
     delete g_loop;
     delete global_data.config;

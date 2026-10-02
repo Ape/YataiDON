@@ -78,8 +78,6 @@ public:
 
     void check_and_install_android_update();
 
-    void check_android_skin_updates();
-
     bool probe_online();
     void update_costume(const std::string& access_code, int head_index, int body_index, int cos_index, bool is_costume);
 
@@ -121,8 +119,6 @@ private:
     std::optional<cpr::AsyncResponse> pending_update_apk;
     std::string pending_update_expected_sha256;
     bool android_update_checked = false;
-    std::thread skin_update_thread;
-    std::shared_ptr<std::atomic<bool>> skin_update_done = std::make_shared<std::atomic<bool>>(false);
 #endif
 #endif
 };

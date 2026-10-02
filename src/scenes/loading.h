@@ -35,7 +35,11 @@ private:
     std::thread loading_thread;
 
     std::unique_ptr<FadeAnimation> fade_in;
-    AllNetIcon allnet_indicator;
+    std::optional<AllNetIcon> allnet_indicator;
+
+    bool skin_reloaded = false;
+
+    void init_visuals();
 
     void load_song_hashes();
 

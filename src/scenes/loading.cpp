@@ -3,11 +3,29 @@
 #include "../libs/scores.h"
 #include "../libs/filesystem.h"
 #include "../libs/input.h"
+#include "../libs/skin_updater.h"
 #include "../libs/song_parser.h"
 #include "../objects/song_select/file_navigator/navigator.h"
 
 void LoadingScreen::on_screen_start() {
-    Screen::on_screen_start();
+    init_visuals();
+
+    songs = get_song_files(global_data.config->paths.tja_path);
+    start_ms = get_current_ms();   // after the (blocking) song scan: the countdown starts on screen
+#ifdef __EMSCRIPTEN__
+    load_song_hashes();
+#else
+    loading_thread = std::thread(&LoadingScreen::load_song_hashes, this);
+#endif
+}
+
+// Loads this screen's textures/sounds and (re)grabs the texture pointers and
+// geometry from the current skin. Split out of on_screen_start() so it can be
+// run again after a skin update forces a skin reload.
+void LoadingScreen::init_visuals() {
+    tex.load_screen_textures("loading");
+    audio.load_screen_sounds("loading");
+
     progress_bar_width = tex.screen_width * 0.43;
     progress_bar_height = 50 * tex.screen_scale;
     progress_bar_x = (tex.screen_width - progress_bar_width) / 2;
@@ -27,19 +45,11 @@ void LoadingScreen::on_screen_start() {
         if (f->x > 0) fade_ms = f->x;
     }
     fade_in = std::make_unique<FadeAnimation>(fade_ms, 0.0, false, false, 1.0);
-    allnet_indicator = AllNetIcon();
+    allnet_indicator.emplace();
     t_warning = tex.get_texture("kidou/warning");
 
     countdown_ms = tex.skin_config[SC::LOADING_COUNTDOWN].height * 1000.0;
     t_countdown = (countdown_ms > 0.0) ? tex.get_texture("kidou/countdown") : nullptr;
-
-    songs = get_song_files(global_data.config->paths.tja_path);
-    start_ms = get_current_ms();   // after the (blocking) song scan: the countdown starts on screen
-#ifdef __EMSCRIPTEN__
-    load_song_hashes();
-#else
-    loading_thread = std::thread(&LoadingScreen::load_song_hashes, this);
-#endif
 }
 
 void LoadingScreen::load_song_hashes() {
@@ -134,11 +144,32 @@ Screens LoadingScreen::on_screen_end(Screens next_screen) {
 
 std::optional<Screens> LoadingScreen::update() {
     Screen::update();
-    allnet_indicator.update(get_current_ms());
+    if (allnet_indicator) allnet_indicator->update(get_current_ms());
 
     if (is_l_don_pressed() || is_r_don_pressed()) skip_requested = true;
 
-    if (loading_complete && !fade_in->isStarted() &&
+    if (!skin_reloaded && loading_complete &&
+        skin_updater.finished() && skin_updater.updated_this_pass()) {
+        skin_reloaded = true;
+        spdlog::info("Skin update applied; reloading skin before leaving the loading screen");
+        try {
+            allnet_indicator.reset();
+            t_warning = nullptr;
+            t_countdown = nullptr;
+            drop_other_screens_for_skin_reload();
+            navigator.reset_for_skin_reload();
+            unload_skin();
+            load_skin();
+            reload_skin_screens();
+        } catch (const std::exception& e) {
+            spdlog::error("Skin reload after update failed: {}", e.what());
+        }
+        init_visuals();
+    }
+
+    const bool skin_updater_blocking = skin_updater.applying_updates();
+
+    if (loading_complete && !fade_in->isStarted() && !skin_updater_blocking &&
         (skip_requested || get_current_ms() - start_ms >= countdown_ms)) {
         fade_in->start();
     }
@@ -182,5 +213,5 @@ void LoadingScreen::draw() {
     }
 
     ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::WHITE, fade_in->attribute));
-    allnet_indicator.draw();
+    if (allnet_indicator) allnet_indicator->draw();
 }
