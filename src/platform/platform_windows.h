@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <string>
 #include <optional>
+#include <vector>
 
 // Win32-specific platform services.
 
@@ -33,8 +34,13 @@ std::string win32_path_to_string(const std::filesystem::path& path);
 
 // Windows audio backend initialization functions.
 // Returns true if initialization succeeded.
-bool win32_init_portaudio_wdmks(double target_sample_rate, unsigned long buffer_size);
-bool win32_init_portaudio_mme(double target_sample_rate, unsigned long buffer_size);
+// device_name: output device to open (empty = host API default).
+bool win32_init_portaudio_wdmks(double target_sample_rate, unsigned long buffer_size, const std::string& device_name);
+bool win32_init_portaudio_mme(double target_sample_rate, unsigned long buffer_size, const std::string& device_name);
 void win32_close_portaudio();
+
+// Enumerates PortAudio output device names for the given host API type
+// (a PaHostApiTypeId, e.g. paWDMKS or paMME).
+std::vector<std::string> win32_enumerate_portaudio_devices(int host_api_type);
 
 #endif // YATAIDON_PLATFORM_WIN32_H

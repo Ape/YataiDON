@@ -1,6 +1,7 @@
 #include "settings_box.h"
 #include "../../libs/input.h"
 #include "../../libs/filesystem.h"
+#include "../../libs/audio.h"
 #include <stdexcept>
 
 std::unique_ptr<BaseOptionBox> SettingsBox::make_option_box(const rapidjson::Value& opt) {
@@ -46,6 +47,13 @@ std::unique_ptr<BaseOptionBox> SettingsBox::make_option_box(const rapidjson::Val
         // template -- it can't know that ahead of time.
         values_map.clear();
         for (const auto& skin : list_available_skins()) values_map[skin] = skin;
+        return std::make_unique<StrOptionBox>(name, desc, path, values_map);
+    }
+    if (type == "audiodevice") {
+        const int device_type = global_data.config->audio.device_type;
+        for (const auto& device : enumerate_audio_devices(device_type)) {
+            if (!device.empty()) values_map[device] = device;
+        }
         return std::make_unique<StrOptionBox>(name, desc, path, values_map);
     }
     if (type == "keybind") {

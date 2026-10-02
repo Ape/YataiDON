@@ -69,6 +69,7 @@ struct GamepadConfig {
 
 struct AudioConfig {
     int device_type = 0;
+    std::string device;   // Output device name (empty = system default)
     int sample_rate = 44100;
     int buffer_size = 512;
     std::vector<int> asio_channel;

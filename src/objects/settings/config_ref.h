@@ -107,6 +107,7 @@ inline ConfigRef get_config_ref(const std::string& path) {
     if (path == "gamepad_2p/right_kat")  return &c->gamepad_2p.right_kat;
     // audio
     if (path == "audio/device_type")     return &c->audio.device_type;
+    if (path == "audio/device")          return &c->audio.device;
     if (path == "audio/sample_rate")     return &c->audio.sample_rate;
     if (path == "audio/buffer_size")     return &c->audio.buffer_size;
     // volume

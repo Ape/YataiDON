@@ -231,6 +231,66 @@ AudioEngine::AudioEngine()
 {
 }
 
+std::vector<std::string> enumerate_audio_devices(int device_type) {
+    std::vector<std::string> names;
+
+#if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
+    RtAudio::Api api = RtAudio::UNSPECIFIED;
+    switch (device_type) {
+        case 1:  api = RtAudio::LINUX_ALSA;     break;
+        case 2:  api = RtAudio::LINUX_PULSE;    break;
+        case 3:  api = RtAudio::UNIX_JACK;      break;
+        case 4:  api = RtAudio::LINUX_OSS;      break;
+        case 5:  api = RtAudio::MACOSX_CORE;    break;
+        case 6:  api = RtAudio::WINDOWS_DS;     break;
+        case 7:  api = RtAudio::WINDOWS_WASAPI; break;
+        case 8:  api = RtAudio::WINDOWS_ASIO;   break;
+        default: break;
+    }
+    if (api != RtAudio::UNSPECIFIED) {
+        try {
+            RtAudio rt(api, [](RtAudioErrorType type, const std::string& errorText) {
+                if (type == RTAUDIO_WARNING) spdlog::warn("RtAudio: {}", errorText);
+                else                         spdlog::error("RtAudio: {}", errorText);
+            });
+            for (unsigned int id : rt.getDeviceIds()) {
+                RtAudio::DeviceInfo info = rt.getDeviceInfo(id);
+                if (info.outputChannels > 0 && !info.name.empty())
+                    names.push_back(info.name);
+            }
+        } catch (const std::exception& e) {
+            spdlog::warn("Failed to enumerate RtAudio devices: {}", e.what());
+        }
+        return names;
+    }
+#endif
+
+#ifdef _WIN32
+    switch (device_type) {
+        case 9:  return win32_enumerate_portaudio_devices(paWDMKS);
+        case 10: return win32_enumerate_portaudio_devices(paMME);
+        default: break;
+    }
+#endif
+
+    // Default (SDL3) backend and any unrecognized type: enumerate SDL3 devices.
+    bool init_here = false;
+    if (!(SDL_WasInit(SDL_INIT_AUDIO) & SDL_INIT_AUDIO)) {
+        if (SDL_InitSubSystem(SDL_INIT_AUDIO)) init_here = true;
+    }
+    int count = 0;
+    SDL_AudioDeviceID* devices = SDL_GetAudioPlaybackDevices(&count);
+    if (devices) {
+        for (int i = 0; i < count; i++) {
+            const char* name = SDL_GetAudioDeviceName(devices[i]);
+            if (name && *name) names.emplace_back(name);
+        }
+        SDL_free(devices);
+    }
+    if (init_here) SDL_QuitSubSystem(SDL_INIT_AUDIO);
+    return names;
+}
+
 AudioEngine::~AudioEngine() {
     close_audio_device();
 }
@@ -552,6 +612,20 @@ bool AudioEngine::init_rtaudio_device(RtAudio::Api api, const char* label) {
     params.nChannels    = rt_total_channels;
     params.firstChannel = 0;
 
+    if (!device_name.empty()) {
+        bool found = false;
+        for (unsigned int id : rt_audio->getDeviceIds()) {
+            RtAudio::DeviceInfo info = rt_audio->getDeviceInfo(id);
+            if (info.outputChannels > 0 && info.name == device_name) {
+                params.deviceId = id;
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            spdlog::warn("Requested audio device '{}' not found; using default", device_name);
+    }
+
     unsigned int bufferFrames = static_cast<unsigned int>(buffer_size);
 
     RtAudio::StreamOptions options;
@@ -617,7 +691,25 @@ bool AudioEngine::init_sdl3_device() {
     spec.channels = 2;
     spec.freq     = static_cast<int>(target_sample_rate);
 
-    sdl_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec,
+    SDL_AudioDeviceID device_id = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
+    if (!device_name.empty()) {
+        int count = 0;
+        SDL_AudioDeviceID* devices = SDL_GetAudioPlaybackDevices(&count);
+        if (devices) {
+            for (int i = 0; i < count; i++) {
+                const char* name = SDL_GetAudioDeviceName(devices[i]);
+                if (name && device_name == name) {
+                    device_id = devices[i];
+                    break;
+                }
+            }
+            SDL_free(devices);
+        }
+        if (device_id == SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK)
+            spdlog::warn("Requested audio device '{}' not found; using default", device_name);
+    }
+
+    sdl_stream = SDL_OpenAudioDeviceStream(device_id, &spec,
                                             AudioEngine::sdl_audio_callback, this);
     if (!sdl_stream) {
         spdlog::error("Failed to open SDL audio device stream: {}", SDL_GetError());
@@ -664,6 +756,7 @@ bool AudioEngine::init_audio_device(const fs::path& sounds_path, const AudioConf
     this->sounds_path = sounds_path;
     this->target_sample_rate = audio_config.sample_rate <= 0 ? 44100.0 : audio_config.sample_rate;
     this->buffer_size = audio_config.buffer_size;
+    this->device_name = audio_config.device;
     this->channel_offsets = audio_config.asio_channel.empty() ? std::vector<int>{0} : audio_config.asio_channel;
     this->volume_presets = volume_presets;
     this->is_ready = false;
@@ -684,8 +777,8 @@ bool AudioEngine::init_audio_device(const fs::path& sounds_path, const AudioConf
 #endif
 #ifdef _WIN32
         switch (audio_config.device_type) {
-            case 9:  return win32_init_portaudio_wdmks(target_sample_rate, buffer_size);
-            case 10: return win32_init_portaudio_mme(target_sample_rate, buffer_size);
+            case 9:  return win32_init_portaudio_wdmks(target_sample_rate, buffer_size, device_name);
+            case 10: return win32_init_portaudio_mme(target_sample_rate, buffer_size, device_name);
             default: break;
         }
 #endif

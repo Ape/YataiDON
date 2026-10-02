@@ -108,6 +108,10 @@ struct music {
     sf_count_t pcm_total_frames = 0;
 };
 
+// Enumerates output device names for the given backend (device_type).
+// Returns an empty list on platforms without device enumeration support.
+std::vector<std::string> enumerate_audio_devices(int device_type);
+
 class AudioEngine {
 public:
     fs::path sounds_path;
@@ -174,6 +178,7 @@ public:
 private:
     double target_sample_rate;
     unsigned long buffer_size;
+    std::string device_name;            // Output device to open (empty = system default)
     std::vector<int> channel_offsets{0};
     unsigned int rt_total_channels = 2;
     VolumeConfig volume_presets;
