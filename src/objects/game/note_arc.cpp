@@ -112,6 +112,12 @@ void NoteArc::draw(float y, ray::Shader mask_shader) {
                     y_pos = 0;
                 }
                 ray::BeginShaderMode(mask_shader);
+                // rlgl clears the extra sampler slots after every batch, so GameScreen's one-time
+                // binding of texture1 (the rainbow's colours) only lasted for the first batch; after
+                // that the shader sampled an empty unit and the trail came out opaque black
+                if (const ray::Texture2D* rt = rainbow->frame_texture(0)) {
+                    ray::SetShaderValueTexture(mask_shader, ray::GetShaderLocation(mask_shader, "texture1"), *rt);
+                }
                 tex.draw_texture(t_rainbow_mask, {.mirror=mirror, .x=crop_start_x, .y=y + y_pos, .x2=-t_rainbow_mask->width + crop_width, .src=src});
                 ray::EndShaderMode();
             }
