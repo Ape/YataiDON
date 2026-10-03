@@ -247,7 +247,7 @@ struct GlobalData {
 };
 
 void reset_session();
-int get_player_id(PlayerNum player_num);
+std::string get_player_id(PlayerNum player_num);
 void load_skin();
 void unload_skin();
 

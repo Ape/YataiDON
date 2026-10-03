@@ -413,6 +413,8 @@ int main(int argc, char* argv[]) {
     spdlog::info("Starting YataiDON");
     set_working_directory_to_executable();
     global_data.config = new Config(get_config());
+    // Save config after loading in case migration occurred (old fields -> new fields)
+    save_config(*global_data.config);
     ensure_config_file(*global_data.config);
     Screens initial_screen = check_args(argc, argv);
     init_scores_manager(global_data.config->general.score_method == ScoreMethod::GEN3);
@@ -432,8 +434,18 @@ int main(int argc, char* argv[]) {
     load_skin();
     apply_queued_window_resize();
 
-    scores_manager.player_1 = global_data.config->general.player_1_id;
-    scores_manager.player_2 = global_data.config->general.player_2_id;
+    // Apply config defaults for empty access codes
+    if (global_data.config->network.access_code_1.empty()) {
+        global_data.config->network.access_code_1 = "0";
+    }
+    if (global_data.config->network.access_code_2.empty()) {
+        global_data.config->network.access_code_2 = "1";
+    }
+
+    scores_manager.player_1 = global_data.config->network.access_code_1;
+    scores_manager.player_2 = global_data.config->network.access_code_2;
+
+    // Load player data for both players
     if (auto pd = scores_manager.get_player_data(scores_manager.player_1))
         scores_manager.player_1_data = *pd;
     if (auto pd = scores_manager.get_player_data(scores_manager.player_2))
@@ -449,24 +461,38 @@ int main(int argc, char* argv[]) {
 #endif
 
     const bool net_ok = network.probe_online();
-    if (net_ok && global_data.config->network.access_code.empty()) {
-        std::string access_code = network.register_user(scores_manager.player_1_data.username);
-        if (!access_code.empty()) {
-            global_data.config->network.access_code = access_code;
-            save_config(*global_data.config);
+    if (net_ok) {
+        if (global_data.config->network.access_code_1 == "0") {
+            std::string access_code = network.register_user(scores_manager.player_1_data.username);
+            if (!access_code.empty()) {
+                // Migrate player data from "0" to new access code in database
+                scores_manager.migrate_player_id("0", access_code);
+                
+                global_data.config->network.access_code_1 = access_code;
+                scores_manager.player_1 = access_code;
+                scores_manager.player_1_data.player_id = access_code;
+                save_config(*global_data.config);
+            }
         }
     }
 
-    if (net_ok && !global_data.config->network.access_code.empty() &&
-        network.check_import_requested(global_data.config->network.access_code)) {
+    if (net_ok && !global_data.config->network.access_code_1.empty() &&
+        network.check_import_requested(global_data.config->network.access_code_1)) {
         spdlog::info("hiroba requested a score import, exporting scores.db");
-        scores_manager.export_to_hiroba(global_data.config->network.access_code, scores_manager.player_1);
-        network.clear_import_flag(global_data.config->network.access_code);
+        scores_manager.export_to_hiroba(global_data.config->network.access_code_1, scores_manager.player_1);
+        network.clear_import_flag(global_data.config->network.access_code_1);
+    }
+    if (net_ok && !global_data.config->network.access_code_2.empty() &&
+        network.check_import_requested(global_data.config->network.access_code_2)) {
+        spdlog::info("hiroba requested a score import for player 2, exporting scores.db");
+        scores_manager.export_to_hiroba(global_data.config->network.access_code_2, scores_manager.player_2);
+        network.clear_import_flag(global_data.config->network.access_code_2);
     }
 
-    if (net_ok && !global_data.config->network.access_code.empty()) {
+    if (net_ok && !global_data.config->network.access_code_1.empty()) {
+        const std::string& ac1 = global_data.config->network.access_code_1;
         ray::Color chara_color_1, chara_color_2, chara_color_3;
-        if (network.fetch_chara_colors(global_data.config->network.access_code, chara_color_1, chara_color_2, chara_color_3)) {
+        if (network.fetch_chara_colors(ac1, chara_color_1, chara_color_2, chara_color_3)) {
             scores_manager.player_1_data.chara_color_1 = chara_color_1;
             scores_manager.player_1_data.chara_color_2 = chara_color_2;
             scores_manager.player_1_data.chara_color_3 = chara_color_3;
@@ -474,21 +500,21 @@ int main(int argc, char* argv[]) {
         }
 
         std::string server_username;
-        if (network.fetch_username(global_data.config->network.access_code, server_username) &&
+        if (network.fetch_username(ac1, server_username) &&
             !server_username.empty() && server_username != scores_manager.player_1_data.username) {
             scores_manager.player_1_data.username = server_username;
             scores_manager.save_player_data(scores_manager.player_1_data);
         }
 
         std::string server_title;
-        if (network.fetch_title(global_data.config->network.access_code, server_title) &&
+        if (network.fetch_title(ac1, server_title) &&
             !server_title.empty() && server_title != scores_manager.player_1_data.title) {
             scores_manager.player_1_data.title = server_title;
             scores_manager.save_player_data(scores_manager.player_1_data);
         }
 
         int server_title_bg;
-        if (network.fetch_title_bg(global_data.config->network.access_code, server_title_bg) &&
+        if (network.fetch_title_bg(ac1, server_title_bg) &&
             server_title_bg != scores_manager.player_1_data.title_bg) {
             scores_manager.player_1_data.title_bg = server_title_bg;
             scores_manager.save_player_data(scores_manager.player_1_data);
@@ -498,7 +524,7 @@ int main(int argc, char* argv[]) {
         int body_index = scores_manager.player_1_data.chara_body_index;
         int cos_index = scores_manager.player_1_data.chara_cos_index;
         bool is_costume = scores_manager.player_1_data.chara_is_costume;
-        if (network.fetch_costume(global_data.config->network.access_code, head_index, body_index, cos_index, is_costume) &&
+        if (network.fetch_costume(ac1, head_index, body_index, cos_index, is_costume) &&
             (head_index != scores_manager.player_1_data.chara_head_index ||
              body_index != scores_manager.player_1_data.chara_body_index ||
              cos_index != scores_manager.player_1_data.chara_cos_index ||
@@ -511,7 +537,59 @@ int main(int argc, char* argv[]) {
         }
 
         if (global_data.config->network.sync_scores) {
-            scores_manager.sync_from_server(global_data.config->network.access_code);
+            scores_manager.sync_from_server(ac1, scores_manager.player_1);
+        }
+    }
+
+    if (net_ok && !global_data.config->network.access_code_2.empty()) {
+        const std::string& ac2 = global_data.config->network.access_code_2;
+        ray::Color chara_color_1, chara_color_2, chara_color_3;
+        if (network.fetch_chara_colors(ac2, chara_color_1, chara_color_2, chara_color_3)) {
+            scores_manager.player_2_data.chara_color_1 = chara_color_1;
+            scores_manager.player_2_data.chara_color_2 = chara_color_2;
+            scores_manager.player_2_data.chara_color_3 = chara_color_3;
+            scores_manager.save_player_data(scores_manager.player_2_data);
+        }
+
+        std::string server_username;
+        if (network.fetch_username(ac2, server_username) &&
+            !server_username.empty() && server_username != scores_manager.player_2_data.username) {
+            scores_manager.player_2_data.username = server_username;
+            scores_manager.save_player_data(scores_manager.player_2_data);
+        }
+
+        std::string server_title;
+        if (network.fetch_title(ac2, server_title) &&
+            !server_title.empty() && server_title != scores_manager.player_2_data.title) {
+            scores_manager.player_2_data.title = server_title;
+            scores_manager.save_player_data(scores_manager.player_2_data);
+        }
+
+        int server_title_bg;
+        if (network.fetch_title_bg(ac2, server_title_bg) &&
+            server_title_bg != scores_manager.player_2_data.title_bg) {
+            scores_manager.player_2_data.title_bg = server_title_bg;
+            scores_manager.save_player_data(scores_manager.player_2_data);
+        }
+
+        int head_index = scores_manager.player_2_data.chara_head_index;
+        int body_index = scores_manager.player_2_data.chara_body_index;
+        int cos_index = scores_manager.player_2_data.chara_cos_index;
+        bool is_costume = scores_manager.player_2_data.chara_is_costume;
+        if (network.fetch_costume(ac2, head_index, body_index, cos_index, is_costume) &&
+            (head_index != scores_manager.player_2_data.chara_head_index ||
+             body_index != scores_manager.player_2_data.chara_body_index ||
+             cos_index != scores_manager.player_2_data.chara_cos_index ||
+             is_costume != scores_manager.player_2_data.chara_is_costume)) {
+            scores_manager.player_2_data.chara_head_index = head_index;
+            scores_manager.player_2_data.chara_body_index = body_index;
+            scores_manager.player_2_data.chara_cos_index = cos_index;
+            scores_manager.player_2_data.chara_is_costume = is_costume;
+            scores_manager.save_player_data(scores_manager.player_2_data);
+        }
+
+        if (global_data.config->network.sync_scores) {
+            scores_manager.sync_from_server(ac2, scores_manager.player_2);
         }
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <toml++/toml.h>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -21,13 +22,12 @@ struct GeneralConfig {
     bool display_bpm = false;
     int song_limit = 0;
     int webcam_number = -1;
-    int player_1_id = 1;
-    int player_2_id = 1;
     bool touch_input = false;
 };
 
 struct NetworkConfig {
-    std::string access_code;
+    std::string access_code_1;
+    std::string access_code_2;
     bool online_play = false;
     bool sync_scores = false;
 };

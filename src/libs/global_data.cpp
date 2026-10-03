@@ -96,16 +96,16 @@ void reset_session() {
     global_data.session_data[(int)PlayerNum::P2] = SessionData();
 }
 
-int get_player_id(PlayerNum player_num) {
+std::string get_player_id(PlayerNum player_num) {
     if (!global_data.config) {
         spdlog::error("get_player_id() called before config was initialized");
-        return -1;
+        return "";
     }
     if (player_num != PlayerNum::P1 && player_num != PlayerNum::P2) {
         spdlog::error("get_player_id() called with invalid player_num: {}", (int)player_num);
-        return -1;
+        return "";
     }
     return (player_num == global_data.first_login_player)
-        ? global_data.config->general.player_1_id
-        : global_data.config->general.player_2_id;
+        ? global_data.config->network.access_code_1
+        : global_data.config->network.access_code_2;
 }

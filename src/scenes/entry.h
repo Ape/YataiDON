@@ -36,7 +36,7 @@ private:
     bool announce_played = false;
     std::vector<std::unique_ptr<EntryPlayer>> players;
 
-    void reload_preview_chara(int player_id);
+    void reload_preview_chara(PlayerNum player_num);
     bool arcade_credit() const;
     bool seat_joined(PlayerNum player_num) const;
     void join_player(PlayerNum player_num);

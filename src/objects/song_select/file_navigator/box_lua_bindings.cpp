@@ -57,8 +57,8 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "diff_fade_in", &SongBox::diff_fade_in,
         "has_ura",      &SongBox::has_ura,
         "ex_data_flag", &SongBox::ex_data_flag,
-        "course_info", [](SongBox& self, int diff) {
-            auto info = self.course_info(diff);
+        "course_info", [](SongBox& self, double diff) {
+            auto info = self.course_info(static_cast<int>(diff));
             sol::table t = script_manager.lua->create_table(0, 6);
             t["has_course"]   = info.has_course;
             t["level"]        = info.level;
@@ -68,8 +68,8 @@ void register_song_select_lua_bindings(sol::state& lua) {
             t["has_score"]    = (diff >= 0 && diff < (int)self.scores.size() && self.scores[diff].has_value());
             return t;
         },
-        "course_info_p2", [](SongBox& self, int diff) {
-            auto info = self.course_info(diff);
+        "course_info_p2", [](SongBox& self, double diff) {
+            auto info = self.course_info(static_cast<int>(diff));
             info.crown = 0;   // Crown::NONE
             info.rank  = 0;   // Rank::_NONE
             if (diff >= 0 && diff < (int)self.scores_p2.size() && self.scores_p2[diff].has_value()) {
@@ -169,35 +169,38 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "gaiden",         sol::readonly(&DanBox::gaiden),
         "total_notes",    sol::readonly(&DanBox::total_notes),
         "song_count",     [](DanBox& self) { return (int)self.songs.size(); },
-        "song_genre",     [](DanBox& self, int i) { return self.songs[i].genre_index; },
-        "song_difficulty",[](DanBox& self, int i) { return self.songs[i].difficulty; },
-        "song_level",     [](DanBox& self, int i) { return self.songs[i].level; },
+        "song_genre",     [](DanBox& self, double i) { return self.songs[static_cast<int>(i)].genre_index; },
+        "song_difficulty",[](DanBox& self, double i) { return self.songs[static_cast<int>(i)].difficulty; },
+        "song_level",     [](DanBox& self, double i) { return self.songs[static_cast<int>(i)].level; },
         "chip_name",      [](DanBox& self) { return self.name_text(); },
         "hori_name",      [](DanBox& self) { return self.hori_name.get(); },
-        "song_title_text", [](DanBox& self, int i) {
-            return (i >= 0 && i < (int)self.song_texts.size()) ? self.song_texts[i].first.get() : nullptr;
+        "song_title_text", [](DanBox& self, double i) {
+            int idx = static_cast<int>(i);
+            return (idx >= 0 && idx < (int)self.song_texts.size()) ? self.song_texts[idx].first.get() : nullptr;
         },
-        "song_subtitle_text", [](DanBox& self, int i) {
-            return (i >= 0 && i < (int)self.song_texts.size()) ? self.song_texts[i].second.get() : nullptr;
+        "song_subtitle_text", [](DanBox& self, double i) {
+            int idx = static_cast<int>(i);
+            return (idx >= 0 && idx < (int)self.song_texts.size()) ? self.song_texts[idx].second.get() : nullptr;
         },
         "exam_count",     [](DanBox& self) { return (int)self.exams.size(); },
-        "exam_type",      [](DanBox& self, int i) { return self.exams[i].type; },
-        "exam_red",       [](DanBox& self, int i) { return self.exams[i].red; },
-        "exam_gold",      [](DanBox& self, int i) { return self.exams[i].gold; },
-        "exam_range",     [](DanBox& self, int i) { return self.exams[i].range; },
-        "exam_gothrough", [](DanBox& self, int i) { return self.exams[i].gothrough; },
-        "exam_per_song",  [](DanBox& self, int i) { return self.exams[i].per_song(); },
-        "exam_song_count",[](DanBox& self, int i) { return (int)self.exams[i].song_red.size(); },
-        "exam_song_red",  [](DanBox& self, int i, int j) { return self.exams[i].song_red[j]; },
-        "exam_song_gold", [](DanBox& self, int i, int j) {
-            const Exam& e = self.exams[i];
-            return j < (int)e.song_gold.size() ? e.song_gold[j] : e.song_red[j];
+        "exam_type",      [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].type; },
+        "exam_red",       [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].red; },
+        "exam_gold",      [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].gold; },
+        "exam_range",     [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].range; },
+        "exam_gothrough", [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].gothrough; },
+        "exam_per_song",  [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].per_song(); },
+        "exam_song_count",[](DanBox& self, double i) { return (int)self.exams[static_cast<int>(i)].song_red.size(); },
+        "exam_song_red",  [](DanBox& self, double i, double j) { return self.exams[static_cast<int>(i)].song_red[static_cast<int>(j)]; },
+        "exam_song_gold", [](DanBox& self, double i, double j) {
+            const Exam& e = self.exams[static_cast<int>(i)];
+            int idx = static_cast<int>(j);
+            return idx < (int)e.song_gold.size() ? e.song_gold[idx] : e.song_red[idx];
         },
-        "exam_caption", [](DanBox& self, int i) {
-            return exam_border_text(tex, self.exams[i], global_data.config->general.language);
+        "exam_caption", [](DanBox& self, double i) {
+            return exam_border_text(tex, self.exams[static_cast<int>(i)], global_data.config->general.language);
         },
-        "exam_song_caption", [](DanBox& self, int i, int j) {
-            return exam_border_text(tex, self.exams[i].for_song(j), global_data.config->general.language);
+        "exam_song_caption", [](DanBox& self, double i, double j) {
+            return exam_border_text(tex, self.exams[static_cast<int>(i)].for_song(static_cast<int>(j)), global_data.config->general.language);
         }
     );
 
@@ -209,7 +212,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "song_num",     [](DiffSortSelect& s) { return s.lua_song_num(); },
         "phase",        [](DiffSortSelect& s) { return s.lua_phase(); },
         "alpha",        [](DiffSortSelect& s) { return s.lua_alpha(); },
-        "arrow_offset", [](DiffSortSelect& s, int row) { return s.lua_arrow_offset(row); }
+        "arrow_offset", [](DiffSortSelect& s, double row) { return s.lua_arrow_offset(static_cast<int>(row)); }
     );
 
     lua.new_usertype<SongSelectPlayer>("SongSelectPlayer",
@@ -305,8 +308,8 @@ void register_song_select_lua_bindings(sol::state& lua) {
 
     // Text-measurement helpers the Lua port needs to lay out folder explanations the way
     // the C++ FolderBox does (word_wrap needs ray::MeasureTextEx, unavailable in Lua).
-    lua["text"]["word_wrap"] = [](const std::string& s, int font_size, float spacing, float max_width) {
-        return word_wrap(s, font_size, spacing, max_width);
+    lua["text"]["word_wrap"] = [](const std::string& s, double font_size, float spacing, float max_width) {
+        return word_wrap(s, static_cast<int>(font_size), spacing, max_width);
     };
     lua["text"]["language_is_cjk"] = [](const std::string& lang) {
         return language_is_cjk(lang);

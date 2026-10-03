@@ -31,10 +31,10 @@ void scan_folder_now(const fs::path& path) {
     std::set<int> disqualified_p1;
     std::set<int> disqualified_p2;
 
-    int player_1_id = global_data.config->general.player_1_id;
-    int player_2_id = global_data.config->general.player_2_id;
+    const std::string& player_1_id = global_data.config->network.access_code_1;
+    const std::string& player_2_id = global_data.config->network.access_code_2;
 
-    auto update_crown = [&](const fs::path& file_path, int player_id, std::map<int, Crown>& out_crown, std::set<int>& disqualified) {
+    auto update_crown = [&](const fs::path& file_path, const std::string& player_id, std::map<int, Crown>& out_crown, std::set<int>& disqualified) {
         const auto& hashes = scores_manager.get_hashes(file_path);
         for (int diff = 0; diff < 5; diff++) {
             if (hashes[diff].empty()) continue;

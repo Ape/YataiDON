@@ -116,8 +116,7 @@ void SongSelectScreen::handle_input_search() {
 
 void SongSelectScreen::poll_song_jump(double current_ms) {
     static constexpr double SONG_JUMP_POLL_INTERVAL_MS = 3000.0;
-    const std::string& access_code = global_data.config->network.access_code;
-
+    const std::string& access_code = global_data.config->network.access_code_1;
     if (!access_code.empty() && state == SongSelectState::BROWSING &&
         current_ms - last_song_jump_poll_ms >= SONG_JUMP_POLL_INTERVAL_MS) {
         last_song_jump_poll_ms = current_ms;
@@ -131,8 +130,7 @@ void SongSelectScreen::poll_song_jump(double current_ms) {
 
 std::optional<Screens> SongSelectScreen::poll_replay_jump(double current_ms) {
     static constexpr double REPLAY_JUMP_POLL_INTERVAL_MS = 3000.0;
-    const std::string& access_code = global_data.config->network.access_code;
-
+    const std::string& access_code = global_data.config->network.access_code_1;
     if (!access_code.empty() && state == SongSelectState::BROWSING &&
         current_ms - last_replay_jump_poll_ms >= REPLAY_JUMP_POLL_INTERVAL_MS) {
         last_replay_jump_poll_ms = current_ms;

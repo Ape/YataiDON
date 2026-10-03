@@ -10,7 +10,7 @@ void EntryScreen::on_screen_start() {
     state = EntryState::SELECT_SIDE;
 
     {
-        auto pd = scores_manager.get_player_data(global_data.config->general.player_1_id);
+        auto pd = scores_manager.get_player_data(global_data.config->network.access_code_1);
         nameplate = Nameplate(
             pd ? pd->username : "", pd ? pd->title : "",
             PlayerNum::ALL,
@@ -28,7 +28,7 @@ void EntryScreen::on_screen_start() {
 
     lua_entry = std::make_unique<EntryScript>();
     lua_entry->start_side_select();
-    reload_preview_chara(global_data.config->general.player_1_id);
+    reload_preview_chara(PlayerNum::P1);
     announce_played = false;
     players.clear();
     players.resize(2);
@@ -64,14 +64,15 @@ void EntryScreen::start_second_player_join() {
                  (int)first, (int)global_data.first_login_player, (int)second);
 }
 
-void EntryScreen::reload_preview_chara(int player_id) {
+void EntryScreen::reload_preview_chara(PlayerNum player_num) {
+    std::string player_id = get_player_id(player_num);
     auto pd = scores_manager.get_player_data(player_id);
     chara = make_chara_from_player_data(pd ? &*pd : nullptr);
     if (pd) {
         chara->set_don_colors(pd->chara_color_1, pd->chara_color_2, pd->chara_color_3);
         chara->apply_face(pd->chara_face_index);
     } else {
-        chara->set_don_colors(chara_default_color_1(player_id), chara_default_color_2(player_id), {249, 240, 225, 255});
+        chara->set_don_colors(chara_default_color_1(player_num), chara_default_color_2(player_num), {249, 240, 225, 255});
     }
 }
 
@@ -184,7 +185,7 @@ std::optional<Screens> EntryScreen::handle_input() {
             audio.play_sound("don", VolumePreset::SOUND);
             state = EntryState::SELECT_SIDE;
             {
-                auto pd = scores_manager.get_player_data(global_data.config->general.player_2_id);
+                auto pd = scores_manager.get_player_data(global_data.config->network.access_code_2);
                 nameplate = Nameplate(
                     pd ? pd->username : "", pd ? pd->title : "",
                     PlayerNum::ALL,
@@ -192,12 +193,12 @@ std::optional<Screens> EntryScreen::handle_input() {
             }
             lua_entry->restart_side_select();
             side = 1;
-            reload_preview_chara(global_data.config->general.player_2_id);
+            reload_preview_chara(PlayerNum::P2);
         } else if (players[0] && players[0]->player_num == PlayerNum::P2 && (is_l_don_pressed(PlayerNum::P1) || is_r_don_pressed(PlayerNum::P1))) {
             audio.play_sound("don", VolumePreset::SOUND);
             state = EntryState::SELECT_SIDE;
             {
-                auto pd = scores_manager.get_player_data(global_data.config->general.player_1_id);
+                auto pd = scores_manager.get_player_data(global_data.config->network.access_code_1);
                 nameplate = Nameplate(
                     pd ? pd->username : "", pd ? pd->title : "",
                     PlayerNum::ALL,
@@ -205,7 +206,7 @@ std::optional<Screens> EntryScreen::handle_input() {
             }
             lua_entry->restart_side_select();
             side = 1;
-            reload_preview_chara(global_data.config->general.player_1_id);
+            reload_preview_chara(PlayerNum::P1);
         }
     }
     return std::nullopt;

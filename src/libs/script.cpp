@@ -373,10 +373,10 @@ void ScriptManager::register_lua_bindings() {
 
     sol::table tex = lua.create_table();
 
-    tex.set_function("get_animation", [](int anim_id, sol::object second_arg) -> BaseAnimation* {
+    tex.set_function("get_animation", [](double anim_id, sol::object second_arg) -> BaseAnimation* {
         if (second_arg.get_type() == sol::type::string)
-            return ::tex.get_animation(anim_id, second_arg.as<std::string>());
-        return ::tex.get_animation(anim_id, false);
+            return ::tex.get_animation(static_cast<int>(anim_id), second_arg.as<std::string>());
+        return ::tex.get_animation(static_cast<int>(anim_id), false);
     });
 
     tex.set_function("load_folder", [](const std::string& screen_name, const std::string& subset) {
@@ -411,8 +411,8 @@ void ScriptManager::register_lua_bindings() {
         return {script_manager.tex.draw_offset_x, script_manager.tex.draw_offset_y};
     });
 
-    tex.set_function("draw_rect", [](float x, float y, float w, float h, int r, int g, int b, int a, sol::this_state state) {
-        auto to_u8 = [](int v) { return static_cast<uint8_t>(std::clamp(v, 0, 255)); };
+    tex.set_function("draw_rect", [](float x, float y, float w, float h, double r, double g, double b, double a, sol::this_state state) {
+        auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
         if (debug_log_draws) {
             debug_draw_log.push_back({"rect", {x, y, w, h}});
             log_lua_site(debug_draw_log.back(), state);
@@ -570,8 +570,8 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
     );
 
     sol::table text = lua.create_table();
-    text.set_function("create_text", [](const std::string& skin_config_key, std::array<int, 4> color,
-        std::array<int, 4> outline_color, bool is_vertical, float outline_thickness, float spacing) -> std::unique_ptr<OutlinedText> {
+    text.set_function("create_text", [](const std::string& skin_config_key, std::array<double, 4> color,
+        std::array<double, 4> outline_color, bool is_vertical, float outline_thickness, float spacing) -> std::unique_ptr<OutlinedText> {
             auto config_it = script_manager.tex.skin_config_by_name.find(skin_config_key);
             if (config_it == script_manager.tex.skin_config_by_name.end()) {
                 spdlog::error("Skin config key not found: {}", skin_config_key);
@@ -584,7 +584,7 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
                 auto t = text_map.find(l);
                 if (t != text_map.end() && !t->second.empty()) { text = t->second; break; }
             }
-            auto to_u8 = [](int v) { return static_cast<uint8_t>(std::clamp(v, 0, 255)); };
+            auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
             ray::Color color_val;
             color_val.r = to_u8(color[0]);
             color_val.g = to_u8(color[1]);
@@ -601,15 +601,15 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
             return ptr;
     });
 
-    text.set_function("create_raw_text", [](const std::string& content, int font_size,
-        std::array<int, 4> color, std::array<int, 4> outline_color,
+    text.set_function("create_raw_text", [](const std::string& content, double font_size,
+        std::array<double, 4> color, std::array<double, 4> outline_color,
         bool is_vertical, sol::optional<float> thickness, sol::optional<float> spacing,
         sol::optional<float> v_advance)
         -> std::unique_ptr<OutlinedText> {
-            auto to_u8 = [](int v) { return static_cast<uint8_t>(std::clamp(v, 0, 255)); };
+            auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
             ray::Color c  = { to_u8(color[0]),         to_u8(color[1]),         to_u8(color[2]),         to_u8(color[3]) };
             ray::Color oc = { to_u8(outline_color[0]), to_u8(outline_color[1]), to_u8(outline_color[2]), to_u8(outline_color[3]) };
-            return std::make_unique<OutlinedText>(content, font_size, c, oc, is_vertical,
+            return std::make_unique<OutlinedText>(content, static_cast<int>(font_size), c, oc, is_vertical,
                 thickness.value_or(5.0f), spacing.value_or(2.0f), v_advance.value_or(1.0f));
     });
 
@@ -635,8 +635,8 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
         return current_session().song_subtitle;
     });
 
-    tex.set_function("genre_frame", [](int genre_index) -> int {
-        return genre_to_ref_frame((GenreIndex)genre_index);
+    tex.set_function("genre_frame", [](double genre_index) -> int {
+        return genre_to_ref_frame((GenreIndex)static_cast<int>(genre_index));
     });
 
     tex.set_function("songs_played", []() -> int {

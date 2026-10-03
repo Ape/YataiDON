@@ -51,9 +51,11 @@ Screens SettingsScreen::on_screen_end(Screens next_screen) {
     scores_manager.save_player_data(scores_manager.player_2_data);
     spdlog::info("Settings saved");
 
-    const std::string& access_code = global_data.config->network.access_code;
-    if (!access_code.empty() && scores_manager.player_1_data.username != username_on_entry) {
-        network.update_username(access_code, scores_manager.player_1_data.username);
+    if (!global_data.config->network.access_code_1.empty() && scores_manager.player_1_data.username != username_on_entry) {
+        network.update_username(global_data.config->network.access_code_1, scores_manager.player_1_data.username);
+    }
+    if (!global_data.config->network.access_code_2.empty() && scores_manager.player_2_data.username != username_on_entry) {
+        network.update_username(global_data.config->network.access_code_2, scores_manager.player_2_data.username);
     }
     username_on_entry.clear();
 

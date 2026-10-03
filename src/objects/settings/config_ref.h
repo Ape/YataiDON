@@ -14,11 +14,11 @@ struct ConfigRef {
     ConfigRef(std::vector<int>* p)  : ptr(p) {}
     ConfigRef(fs::path* p)          : ptr(p) {}
 
-    bool             get_bool()  const { if (auto* p = std::get_if<bool*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not a bool"); }
-    int              get_int()   const { if (auto* p = std::get_if<int*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not an int"); }
-    float            get_float() const { if (auto* p = std::get_if<float*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not a float"); }
-    std::vector<int> get_vec()   const { if (auto* p = std::get_if<std::vector<int>*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not a vector<int>"); }
-    std::string      get_str()   const {
+    bool             get_bool()   const { if (auto* p = std::get_if<bool*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not a bool"); }
+    int              get_int()    const { if (auto* p = std::get_if<int*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not an int"); }
+    float            get_float()  const { if (auto* p = std::get_if<float*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not a float"); }
+    std::vector<int> get_vec()    const { if (auto* p = std::get_if<std::vector<int>*>(&ptr)) return **p; throw std::runtime_error("ConfigRef: not a vector<int>"); }
+    std::string      get_str()    const {
         if (auto* p = std::get_if<fs::path*>(&ptr)) return (*p)->string();
         if (auto* p = std::get_if<std::string*>(&ptr)) return **p;
         throw std::runtime_error("ConfigRef: not a string/path");
@@ -63,7 +63,8 @@ inline ConfigRef get_config_ref(const std::string& path) {
     if (path == "paths/skin")                        return &c->paths.skin;
     // network
     if (path == "network/online_play")              return &c->network.online_play;
-    if (path == "network/access_code")              return &c->network.access_code;
+    if (path == "network/access_code_1")            return &c->network.access_code_1;
+    if (path == "network/access_code_2")            return &c->network.access_code_2;
     if (path == "network/sync_scores")              return &c->network.sync_scores;
     // nameplate_1p → player 1 data cache
     if (path.rfind("nameplate_", 0) == 0 && !_scores_manager_ptr)

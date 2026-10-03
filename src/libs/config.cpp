@@ -312,12 +312,41 @@ Config get_config() {
     config.general.display_bpm = config_file["general"]["display_bpm"].value_or(false);
     config.general.song_limit = config_file["general"]["song_limit"].value_or(0);
     config.general.webcam_number = config_file["general"]["webcam_number"].value_or(-1);
-    config.general.player_1_id = config_file["general"]["player_1_id"].value_or(1);
-    config.general.player_2_id = config_file["general"]["player_2_id"].value_or(2);
     config.general.touch_input = config_file["general"]["touch_input"].value_or(kDefaultTouchInput);
 
-    config.network.access_code = config_file["network"]["access_code"].value_or(
+    // Migrate old config: access_code -> access_code_1, player_1_id -> access_code_1, player_2_id -> access_code_2
+    std::string old_access_code = config_file["network"]["access_code"].value_or(
         config_file["general"]["access_code"].value_or(""));
+    int old_player_1_id = config_file["general"]["player_1_id"].value_or(-1);
+    int old_player_2_id = config_file["general"]["player_2_id"].value_or(-1);
+
+    // access_code_1: prefer new field, then old access_code, then convert old player_1_id, else default "0"
+    if (auto ac1 = config_file["network"]["access_code_1"].value<std::string>()) {
+        config.network.access_code_1 = *ac1;
+    } else if (!old_access_code.empty()) {
+        config.network.access_code_1 = old_access_code;
+    } else if (old_player_1_id > 0) {
+        // Map old integer IDs to new string access codes (matching DB migration: 1->"0", 2->"1")
+        if (old_player_1_id == 1) config.network.access_code_1 = "0";
+        else if (old_player_1_id == 2) config.network.access_code_1 = "1";
+        else config.network.access_code_1 = std::to_string(old_player_1_id);
+    } else {
+        // Completely new config: use "0" as default (matches default player "0" in DB)
+        config.network.access_code_1 = "0";
+    }
+
+    // access_code_2: prefer new field, then convert old player_2_id, else default "1"
+    if (auto ac2 = config_file["network"]["access_code_2"].value<std::string>()) {
+        config.network.access_code_2 = *ac2;
+    } else if (old_player_2_id > 0) {
+        // Map old player_2_id to new string access code (old default was 2, maps to "1")
+        if (old_player_2_id == 2) config.network.access_code_2 = "1";
+        else config.network.access_code_2 = std::to_string(old_player_2_id);
+    } else {
+        // Completely new config: use "1" as default (matches default player "1" in DB)
+        config.network.access_code_2 = "1";
+    }
+
     config.network.online_play = config_file["network"]["online_play"].value_or(
         config_file["general"]["online_play"].value_or(false));
     config.network.sync_scores = config_file["network"]["sync_scores"].value_or(
@@ -417,14 +446,13 @@ void save_config(const Config& config) {
         {"display_bpm", config.general.display_bpm},
         {"song_limit", config.general.song_limit},
         {"webcam_number", config.general.webcam_number},
-        {"player_1_id", config.general.player_1_id},
-        {"player_2_id", config.general.player_2_id},
         {"touch_input", config.general.touch_input}
     });
 
     // Network
     config_table.insert("network", toml::table{
-        {"access_code", config.network.access_code},
+        {"access_code_1", config.network.access_code_1},
+        {"access_code_2", config.network.access_code_2},
         {"online_play", config.network.online_play},
         {"sync_scores", config.network.sync_scores}
     });

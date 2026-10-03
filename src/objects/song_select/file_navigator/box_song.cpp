@@ -57,9 +57,11 @@ void SongBox::refresh_scores() {
             hashes[course] = parser.get_diff_hash(course);
     }
     for (int i = 0; i < 5; i++) {
-        scores[i] = scores_manager.get_score(hashes[i], i, global_data.config->general.player_1_id);
+        const std::string& p1_id = global_data.config->network.access_code_1;
+        const std::string& p2_id = global_data.config->network.access_code_2;
+        scores[i] = scores_manager.get_score(hashes[i], i, p1_id);
         scores_p2[i] = navigator.is_2p
-            ? scores_manager.get_score(hashes[i], i, global_data.config->general.player_2_id)
+            ? scores_manager.get_score(hashes[i], i, p2_id)
             : std::nullopt;
     }
     score_history.reset();

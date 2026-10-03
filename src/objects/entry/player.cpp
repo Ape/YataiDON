@@ -6,12 +6,12 @@
 #include <spdlog/spdlog.h>
 
 static void apply_pd_look(Chara3D& chara, PlayerData* pd, PlayerNum player_num) {
-    int player_id = get_player_id(player_num);
+    std::string player_id = get_player_id(player_num);
     if (pd) {
         chara.set_don_colors(pd->chara_color_1, pd->chara_color_2, pd->chara_color_3);
         chara.apply_face(pd->chara_face_index);
     } else {
-        chara.set_don_colors(chara_default_color_1(player_id), chara_default_color_2(player_id), {249, 240, 225, 255});
+        chara.set_don_colors(chara_default_color_1(player_num), chara_default_color_2(player_num), {249, 240, 225, 255});
     }
 }
 
@@ -19,7 +19,7 @@ EntryPlayer::EntryPlayer(PlayerNum player_num, int side, BoxManager* box_manager
     : player_num(player_num), side(side), box_manager(box_manager) {
     indicator = std::make_unique<Indicator>(Indicator::State::SELECT);
 
-    int player_id = get_player_id(player_num);
+    std::string player_id = get_player_id(player_num);
     auto pd = scores_manager.get_player_data(player_id);
     nameplate = std::make_unique<Nameplate>(
         pd ? pd->username : "", pd ? pd->title : "",
@@ -96,7 +96,7 @@ void EntryPlayer::handle_input() {
         if (int seq = costume_menu->get_preset_seq(); seq != preset_seq_applied) {
             preset_seq_applied = seq;
             bool mirror = player_num == PlayerNum::P2;
-            int player_id = get_player_id(player_num);
+            std::string player_id = get_player_id(player_num);
             auto pd = scores_manager.get_player_data(player_id);
             PlayerData* pd_ptr = pd ? &*pd : nullptr;
             if (auto cos = costume_menu->get_preset_cos_id()) {
@@ -114,7 +114,7 @@ void EntryPlayer::handle_input() {
                 chara_index = selected_index;
                 chara_pick_stage = stage;
                 bool mirror = player_num == PlayerNum::P2;
-                int player_id = get_player_id(player_num);
+                std::string player_id = get_player_id(player_num);
                 auto pd = scores_manager.get_player_data(player_id);
 
                 if (stage == CostumePickStage::NONE) {
@@ -133,7 +133,7 @@ void EntryPlayer::handle_input() {
             }
         }
         if (costume_menu->confirmed) {
-            int player_id = get_player_id(player_num);
+            std::string player_id = get_player_id(player_num);
             bool parsed = false;
             if (auto pd = scores_manager.get_player_data(player_id)) {
                 parsed = true;
@@ -155,10 +155,12 @@ void EntryPlayer::handle_input() {
                     spdlog::info("costume_save: player_id={} is_costume={} head={} body={} cos={}",
                         pd->player_id, pd->chara_is_costume, pd->chara_head_index, pd->chara_body_index, pd->chara_cos_index);
 
-                    const std::string& access_code = global_data.config->network.access_code;
-                    if (pd->player_id == scores_manager.player_1 && !access_code.empty()) {
-                        network.update_costume(access_code, pd->chara_head_index, pd->chara_body_index,
-                                                pd->chara_cos_index, pd->chara_is_costume);
+                    if (pd->player_id == scores_manager.player_1 && !global_data.config->network.access_code_1.empty()) {
+                        network.update_costume(global_data.config->network.access_code_1, pd->chara_head_index, pd->chara_body_index,
+                                    pd->chara_cos_index, pd->chara_is_costume);
+                    } else if (pd->player_id == scores_manager.player_2 && !global_data.config->network.access_code_2.empty()) {
+                        network.update_costume(global_data.config->network.access_code_2, pd->chara_head_index, pd->chara_body_index,
+                                    pd->chara_cos_index, pd->chara_is_costume);
                     }
                 }
             }

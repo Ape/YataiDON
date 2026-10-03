@@ -52,7 +52,7 @@ Player::Player(std::optional<SongParser>& parser_ref, PlayerNum player_num_param
         branch_indicator = BranchIndicator();
         }
     }
-    int player_id = get_player_id(player_num);
+    std::string player_id = get_player_id(player_num);
     auto pd = scores_manager.get_player_data(player_id);
     nameplate = Nameplate(
         pd ? pd->username : "", pd ? pd->title : "",
@@ -63,7 +63,7 @@ Player::Player(std::optional<SongParser>& parser_ref, PlayerNum player_num_param
         chara->set_don_colors(pd->chara_color_1, pd->chara_color_2, pd->chara_color_3);
         chara->apply_face(pd->chara_face_index);
     } else {
-        chara->set_don_colors(chara_default_color_1(player_id), chara_default_color_2(player_id), {249, 240, 225, 255});
+        chara->set_don_colors(chara_default_color_1(player_num), chara_default_color_2(player_num), {249, 240, 225, 255});
     }
     chara->set_anim(AnimIndex::DON_NORMAL);
     if (global_data.config->general.judge_counter && !is_2p) {

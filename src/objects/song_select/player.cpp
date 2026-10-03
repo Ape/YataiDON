@@ -39,7 +39,9 @@ void SongSelectPlayer::try_lua_selector(bool is_half, float fade_in, int pass) {
 SongSelectPlayer::SongSelectPlayer(PlayerNum player_num)
     : player_num(player_num)
 {
-    int player_id = (player_num == global_data.first_login_player) ? global_data.config->general.player_1_id : global_data.config->general.player_2_id;
+    std::string player_id = (player_num == global_data.first_login_player)
+        ? global_data.config->network.access_code_1
+        : global_data.config->network.access_code_2;
     if (auto p = scores_manager.get_player_data(player_id))
         player_data = *p;
 
@@ -56,11 +58,11 @@ SongSelectPlayer::SongSelectPlayer(PlayerNum player_num)
     last_moved = 0;
 
     chara = make_chara_from_player_data(&player_data, player_num == PlayerNum::P2);
-    if (player_data.player_id > 0) {
+    if (!player_data.player_id.empty()) {
         chara->set_don_colors(player_data.chara_color_1, player_data.chara_color_2, player_data.chara_color_3);
         chara->apply_face(player_data.chara_face_index);
     } else {
-        chara->set_don_colors(chara_default_color_1(player_id), chara_default_color_2(player_id), {249, 240, 225, 255});
+        chara->set_don_colors(chara_default_color_1(player_num), chara_default_color_2(player_num), {249, 240, 225, 255});
     }
     chara->set_anim(AnimIndex::DON_SELECT_LOOP);
 

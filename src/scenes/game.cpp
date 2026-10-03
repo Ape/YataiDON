@@ -260,7 +260,7 @@ void GameScreen::update_background(double current_ms) {
     }
 }
 
-void GameScreen::save_score(int player_id, PlayerNum player_num) {
+void GameScreen::save_score(const std::string& player_id, PlayerNum player_num) {
     Player* target = nullptr;
     for (const auto& player : players) {
         if (player && player->player_num == player_num) {
@@ -319,7 +319,14 @@ void GameScreen::save_score(int player_id, PlayerNum player_num) {
         scores_manager.save_score(hash, session_data.selected_difficulty, player_id, score, played_at, modifiers_json);
         PlayerData pd = scores_manager.get_player_data(player_id).value_or(PlayerData{});
         if (global_data.config->general.score_method != ScoreMethod::GEN3) {
-            network.submit_score(hash, session_data.selected_difficulty, global_data.config->network.access_code, score, target->input_log, played_at, modifiers_json, pd.chara_is_costume, pd.chara_cos_index);
+            std::string access_code;
+            if (player_id == scores_manager.player_1 && !global_data.config->network.access_code_1.empty())
+                access_code = global_data.config->network.access_code_1;
+            else if (player_id == scores_manager.player_2 && !global_data.config->network.access_code_2.empty())
+                access_code = global_data.config->network.access_code_2;
+            if (!access_code.empty()) {
+                network.submit_score(hash, session_data.selected_difficulty, access_code, score, target->input_log, played_at, modifiers_json, pd.chara_is_costume, pd.chara_cos_index);
+            }
         }
     } catch (const std::exception& e) {
         spdlog::error("GameScreen::save_score failed for player {}: {}", player_id, e.what());
