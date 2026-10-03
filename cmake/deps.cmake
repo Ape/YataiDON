@@ -467,14 +467,15 @@ if(NETWORK_ENABLED)
     set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
   endif()
-  FetchContent_Declare(
-      cpr
-      GIT_REPOSITORY https://github.com/libcpr/cpr.git
-      GIT_TAG        1.11.2
-      GIT_SHALLOW    TRUE
-  )
-  FetchContent_MakeAvailable(cpr)
 endif()
+
+FetchContent_Declare(
+    cpr
+    GIT_REPOSITORY https://github.com/libcpr/cpr.git
+    GIT_TAG        1.11.2
+    GIT_SHALLOW    TRUE
+)
+FetchContent_MakeAvailable(cpr)
 
 # miniz (ZIP reading, used for .osz extraction)
 message(STATUS "Fetching miniz...")
