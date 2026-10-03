@@ -188,8 +188,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     miniz
 )
 
+target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
+
 if(NETWORK_ENABLED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
   target_compile_definitions(${PROJECT_NAME} PRIVATE
     NETWORK_URL="${NETWORK_URL}"
     NETWORK_AUTH_KEY="${NETWORK_AUTH_KEY}"
