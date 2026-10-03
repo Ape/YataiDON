@@ -28,7 +28,7 @@ struct GeneralConfig {
 struct CardReaderConfig {
     std::string port = "/dev/ttyUSB0";
     int baudrate = 38400;
-    int poll_interval_ms = 100;
+    int poll_interval_ms = 1000;
 };
 
 struct NetworkConfig {
