@@ -559,12 +559,16 @@ void NetworkClient::clear_import_flag(const std::string& access_code) {
     }
 }
 
-std::string NetworkClient::register_user(const std::string& username) {
+std::string NetworkClient::register_user(const std::string& username, const std::string& idm) {
     if (!network_enabled()) return "";
+    cpr::Payload payload{{"username", username}};
+    if (!idm.empty()) {
+        payload.Add({"idm", idm});
+    }
     cpr::Response response = cpr::Post(
         cpr::Url{network_url("/register_user")},
-        signed_headers("POST", "/register_user", {{"username", username}}),
-        cpr::Payload{{"username", username}},
+        signed_headers("POST", "/register_user", {{"username", username}, {"idm", idm}}),
+        payload,
         cpr::Timeout{5000}
         NETWORK_CA_OPT
     );
@@ -861,7 +865,7 @@ void NetworkClient::shutdown() {
 #else
 
 bool NetworkClient::probe_online() { return false; }
-std::string NetworkClient::register_user(const std::string&) { return ""; }
+std::string NetworkClient::register_user(const std::string&, const std::string&) { return ""; }
 void NetworkClient::submit_score(const std::string&, int, const std::string&, const Score&, const std::map<double, InputLogType>&, int64_t, const std::string&, bool, int) {}
 bool NetworkClient::check_import_requested(const std::string&) { return false; }
 void NetworkClient::clear_import_flag(const std::string&) {}

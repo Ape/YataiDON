@@ -97,6 +97,32 @@ static std::filesystem::path path_from_arg(const std::string& arg) {
 #endif
 }
 
+// Consumes --card-port/--card-baud/--card-poll-ms (and removes them from argv) so check_args never sees them.
+static void parse_card_reader_args(int& argc, char* argv[], CardReaderConfig& cr) {
+    int out = 1;
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        const bool known = arg == "--card-port" || arg == "--card-baud" || arg == "--card-poll-ms";
+        if (!known) { argv[out++] = argv[i]; continue; }
+        if (i + 1 >= argc) {
+            std::cerr << "Error: " << arg << " requires a value\n";
+            exit_now(1);
+        }
+        std::string val = argv[++i];
+        if (arg == "--card-port") { cr.port = val; continue; }
+        try {
+            size_t pos = 0;
+            int n = std::stoi(val, &pos);
+            if (pos != val.size() || n <= 0) throw std::invalid_argument(val);
+            (arg == "--card-baud" ? cr.baudrate : cr.poll_interval_ms) = n;
+        } catch (const std::exception&) {
+            std::cerr << "Error: Invalid value for " << arg << ": " << val << "\n";
+            exit_now(1);
+        }
+    }
+    argc = out;
+}
+
 Screens check_args(int argc, char* argv[]) {
     if (argc == 1) {
         return Screens::LOADING;
@@ -120,6 +146,10 @@ Screens check_args(int argc, char* argv[]) {
             std::cout << "  difficulty  : Difficulty level (optional, defaults to max difficulty)\n";
             std::cout << "  --auto      : Enable auto mode\n";
             std::cout << "  --practice  : Start in practice mode\n";
+            std::cout << "Card reader (valid with or without song_path):\n";
+            std::cout << "  --card-port <path>   : Serial port (default /dev/ttyUSB0)\n";
+            std::cout << "  --card-baud <rate>   : Baud rate (default 38400)\n";
+            std::cout << "  --card-poll-ms <ms>  : Poll interval (default 100)\n";
             exit_now(0);
         } else if (!arg.empty() && arg[0] == '-') {
             std::cerr << "Error: Unknown option: " << arg << "\n";
@@ -416,6 +446,7 @@ int main(int argc, char* argv[]) {
     // Save config after loading in case migration occurred (old fields -> new fields)
     save_config(*global_data.config);
     ensure_config_file(*global_data.config);
+    parse_card_reader_args(argc, argv, global_data.config->card_reader);
     Screens initial_screen = check_args(argc, argv);
     init_scores_manager(global_data.config->general.score_method == ScoreMethod::GEN3);
     unsigned int flags = ray::FLAG_WINDOW_RESIZABLE;
@@ -444,8 +475,6 @@ int main(int argc, char* argv[]) {
 
     scores_manager.player_1 = global_data.config->network.access_code_1;
     scores_manager.player_2 = global_data.config->network.access_code_2;
-
-    // Load player data for both players
     if (auto pd = scores_manager.get_player_data(scores_manager.player_1))
         scores_manager.player_1_data = *pd;
     if (auto pd = scores_manager.get_player_data(scores_manager.player_2))
@@ -459,139 +488,6 @@ int main(int argc, char* argv[]) {
 #ifdef YATAIDON_PLATFORM_IOS
     ios_initialize_after_window();
 #endif
-
-    const bool net_ok = network.probe_online();
-    if (net_ok) {
-        if (global_data.config->network.access_code_1 == "0") {
-            std::string access_code = network.register_user(scores_manager.player_1_data.username);
-            if (!access_code.empty()) {
-                // Migrate player data from "0" to new access code in database
-                scores_manager.migrate_player_id("0", access_code);
-                
-                global_data.config->network.access_code_1 = access_code;
-                scores_manager.player_1 = access_code;
-                scores_manager.player_1_data.player_id = access_code;
-                save_config(*global_data.config);
-            }
-        }
-    }
-
-    if (net_ok && !global_data.config->network.access_code_1.empty() &&
-        network.check_import_requested(global_data.config->network.access_code_1)) {
-        spdlog::info("hiroba requested a score import, exporting scores.db");
-        scores_manager.export_to_hiroba(global_data.config->network.access_code_1, scores_manager.player_1);
-        network.clear_import_flag(global_data.config->network.access_code_1);
-    }
-    if (net_ok && !global_data.config->network.access_code_2.empty() &&
-        network.check_import_requested(global_data.config->network.access_code_2)) {
-        spdlog::info("hiroba requested a score import for player 2, exporting scores.db");
-        scores_manager.export_to_hiroba(global_data.config->network.access_code_2, scores_manager.player_2);
-        network.clear_import_flag(global_data.config->network.access_code_2);
-    }
-
-    if (net_ok && !global_data.config->network.access_code_1.empty()) {
-        const std::string& ac1 = global_data.config->network.access_code_1;
-        ray::Color chara_color_1, chara_color_2, chara_color_3;
-        if (network.fetch_chara_colors(ac1, chara_color_1, chara_color_2, chara_color_3)) {
-            scores_manager.player_1_data.chara_color_1 = chara_color_1;
-            scores_manager.player_1_data.chara_color_2 = chara_color_2;
-            scores_manager.player_1_data.chara_color_3 = chara_color_3;
-            scores_manager.save_player_data(scores_manager.player_1_data);
-        }
-
-        std::string server_username;
-        if (network.fetch_username(ac1, server_username) &&
-            !server_username.empty() && server_username != scores_manager.player_1_data.username) {
-            scores_manager.player_1_data.username = server_username;
-            scores_manager.save_player_data(scores_manager.player_1_data);
-        }
-
-        std::string server_title;
-        if (network.fetch_title(ac1, server_title) &&
-            !server_title.empty() && server_title != scores_manager.player_1_data.title) {
-            scores_manager.player_1_data.title = server_title;
-            scores_manager.save_player_data(scores_manager.player_1_data);
-        }
-
-        int server_title_bg;
-        if (network.fetch_title_bg(ac1, server_title_bg) &&
-            server_title_bg != scores_manager.player_1_data.title_bg) {
-            scores_manager.player_1_data.title_bg = server_title_bg;
-            scores_manager.save_player_data(scores_manager.player_1_data);
-        }
-
-        int head_index = scores_manager.player_1_data.chara_head_index;
-        int body_index = scores_manager.player_1_data.chara_body_index;
-        int cos_index = scores_manager.player_1_data.chara_cos_index;
-        bool is_costume = scores_manager.player_1_data.chara_is_costume;
-        if (network.fetch_costume(ac1, head_index, body_index, cos_index, is_costume) &&
-            (head_index != scores_manager.player_1_data.chara_head_index ||
-             body_index != scores_manager.player_1_data.chara_body_index ||
-             cos_index != scores_manager.player_1_data.chara_cos_index ||
-             is_costume != scores_manager.player_1_data.chara_is_costume)) {
-            scores_manager.player_1_data.chara_head_index = head_index;
-            scores_manager.player_1_data.chara_body_index = body_index;
-            scores_manager.player_1_data.chara_cos_index = cos_index;
-            scores_manager.player_1_data.chara_is_costume = is_costume;
-            scores_manager.save_player_data(scores_manager.player_1_data);
-        }
-
-        if (global_data.config->network.sync_scores) {
-            scores_manager.sync_from_server(ac1, scores_manager.player_1);
-        }
-    }
-
-    if (net_ok && !global_data.config->network.access_code_2.empty()) {
-        const std::string& ac2 = global_data.config->network.access_code_2;
-        ray::Color chara_color_1, chara_color_2, chara_color_3;
-        if (network.fetch_chara_colors(ac2, chara_color_1, chara_color_2, chara_color_3)) {
-            scores_manager.player_2_data.chara_color_1 = chara_color_1;
-            scores_manager.player_2_data.chara_color_2 = chara_color_2;
-            scores_manager.player_2_data.chara_color_3 = chara_color_3;
-            scores_manager.save_player_data(scores_manager.player_2_data);
-        }
-
-        std::string server_username;
-        if (network.fetch_username(ac2, server_username) &&
-            !server_username.empty() && server_username != scores_manager.player_2_data.username) {
-            scores_manager.player_2_data.username = server_username;
-            scores_manager.save_player_data(scores_manager.player_2_data);
-        }
-
-        std::string server_title;
-        if (network.fetch_title(ac2, server_title) &&
-            !server_title.empty() && server_title != scores_manager.player_2_data.title) {
-            scores_manager.player_2_data.title = server_title;
-            scores_manager.save_player_data(scores_manager.player_2_data);
-        }
-
-        int server_title_bg;
-        if (network.fetch_title_bg(ac2, server_title_bg) &&
-            server_title_bg != scores_manager.player_2_data.title_bg) {
-            scores_manager.player_2_data.title_bg = server_title_bg;
-            scores_manager.save_player_data(scores_manager.player_2_data);
-        }
-
-        int head_index = scores_manager.player_2_data.chara_head_index;
-        int body_index = scores_manager.player_2_data.chara_body_index;
-        int cos_index = scores_manager.player_2_data.chara_cos_index;
-        bool is_costume = scores_manager.player_2_data.chara_is_costume;
-        if (network.fetch_costume(ac2, head_index, body_index, cos_index, is_costume) &&
-            (head_index != scores_manager.player_2_data.chara_head_index ||
-             body_index != scores_manager.player_2_data.chara_body_index ||
-             cos_index != scores_manager.player_2_data.chara_cos_index ||
-             is_costume != scores_manager.player_2_data.chara_is_costume)) {
-            scores_manager.player_2_data.chara_head_index = head_index;
-            scores_manager.player_2_data.chara_body_index = body_index;
-            scores_manager.player_2_data.chara_cos_index = cos_index;
-            scores_manager.player_2_data.chara_is_costume = is_costume;
-            scores_manager.save_player_data(scores_manager.player_2_data);
-        }
-
-        if (global_data.config->network.sync_scores) {
-            scores_manager.sync_from_server(ac2, scores_manager.player_2);
-        }
-    }
 
     double target_fps = global_data.config->video.target_fps;
     if (target_fps != -1) {

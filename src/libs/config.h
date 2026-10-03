@@ -25,11 +25,18 @@ struct GeneralConfig {
     bool touch_input = false;
 };
 
+struct CardReaderConfig {
+    std::string port = "/dev/ttyUSB0";
+    int baudrate = 38400;
+    int poll_interval_ms = 100;
+};
+
 struct NetworkConfig {
     std::string access_code_1;
     std::string access_code_2;
     bool online_play = false;
     bool sync_scores = false;
+    bool auto_login = false;
 };
 
 struct PathsConfig {
@@ -93,6 +100,7 @@ struct VideoConfig {
 
 struct Config {
     GeneralConfig general;
+    CardReaderConfig card_reader;
     NetworkConfig network;
     PathsConfig paths;
     KeysConfig keys;

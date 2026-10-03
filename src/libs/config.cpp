@@ -1,5 +1,6 @@
 #include "config.h"
 #include "ray.h"
+#include "global_data.h"
 #include <algorithm>
 #include <spdlog/spdlog.h>
 
@@ -351,6 +352,7 @@ Config get_config() {
         config_file["general"]["online_play"].value_or(false));
     config.network.sync_scores = config_file["network"]["sync_scores"].value_or(
         config_file["general"]["sync_scores_on_launch"].value_or(false));
+    config.network.auto_login = config_file["network"]["auto_login"].value_or(true);
 
     // Parse paths
     config.paths.tja_path = parsePathArrayOrDefault(config_file, "paths", "tja_path", {fs::path("Songs")});
@@ -451,10 +453,11 @@ void save_config(const Config& config) {
 
     // Network
     config_table.insert("network", toml::table{
-        {"access_code_1", config.network.access_code_1},
-        {"access_code_2", config.network.access_code_2},
+        {"access_code_1", global_data.card_override[0] ? global_data.card_prev_code[0] : config.network.access_code_1},
+        {"access_code_2", global_data.card_override[1] ? global_data.card_prev_code[1] : config.network.access_code_2},
         {"online_play", config.network.online_play},
-        {"sync_scores", config.network.sync_scores}
+        {"sync_scores", config.network.sync_scores},
+        {"auto_login", config.network.auto_login}
     });
 
     // Paths

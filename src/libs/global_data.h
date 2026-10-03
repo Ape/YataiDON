@@ -231,6 +231,11 @@ struct GlobalData {
     bool returned_from_result = false;
     bool entry_join_pending = false;
     PlayerNum entry_joined_seat = PlayerNum::P1;
+    // Card reader
+    std::string card_reader_card_id_hex;  // 16-char hex card ID
+    bool card_reader_card_valid = false;
+    std::string card_prev_code[2];
+    bool card_override[2] = {false, false};
     CameraConfig camera;
     Config* config = nullptr;  // Using pointer, initialize appropriately
     int total_songs = 0;

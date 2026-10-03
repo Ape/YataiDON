@@ -135,13 +135,10 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
             migrations_ok = false;
     }
 
-    if (migrations_ok) sqlite3_exec(db_fsd, "PRAGMA user_version = 4;", nullptr, nullptr, nullptr);
-    else spdlog::error("ScoresManager: one or more migrations failed, not raising user_version");
-
     // Migration v5: Convert integer player_ids to string access codes
     if (version < 5) {
         spdlog::info("Running migration v5: Converting integer player_ids to string access codes");
-        
+
         // First, check if there are integer player_ids that need conversion
         // Use GLOB for pattern matching (SQLite doesn't support [^...] in LIKE)
         // Also exclude very long numeric IDs (24-digit access codes from server)
@@ -154,10 +151,10 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
             }
             sqlite3_finalize(stmt);
         }
-        
+
         if (has_integer_ids > 0) {
             spdlog::info("Found {} integer player_ids to migrate", has_integer_ids);
-            
+
             // Get all integer player_ids and their usernames
             // Only process IDs with length <= 10 (excludes 24-digit server access codes)
             const char* select_query = "SELECT player_id, username FROM players WHERE player_id NOT GLOB '*[^0-9]*' AND player_id != '' AND player_id NOT IN ('0') AND LENGTH(player_id) <= 10;";
@@ -165,7 +162,7 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
                 while (sqlite3_step(stmt) == SQLITE_ROW) {
                     const char* old_id_text = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
                     const char* username = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 1));
-                    
+
                     // Use strtoll with overflow checking instead of atoi
                     long long old_id = 0;
                     if (old_id_text) {
@@ -178,21 +175,21 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
                         }
                     }
                     std::string new_id;
-                    
+
                     // Map old integer IDs to new string access codes
                     if (old_id == 1) new_id = "0";
                     else if (old_id == 2) new_id = "1";
                     else new_id = std::to_string(old_id);
-                    
+
                     spdlog::info("Migrating player {} (username: {}) to access code {}", old_id, username ? username : "unknown", new_id);
-                    
+
                     // Check if new_id already exists
                     sqlite3_stmt* check_stmt;
                     const char* check_exist = "SELECT 1 FROM players WHERE player_id = ?;";
                     if (sqlite3_prepare_v2(db_fsd, check_exist, -1, &check_stmt, nullptr) == SQLITE_OK) {
                         sqlite3_bind_text(check_stmt, 1, new_id.c_str(), -1, SQLITE_TRANSIENT);
                         if (sqlite3_step(check_stmt) != SQLITE_ROW) {
-                            
+
                             // Update players table - use old_id_text for WHERE clause
                             const char* update_player = "UPDATE players SET player_id = ? WHERE player_id = ?;";
                             sqlite3_stmt* update_stmt;
@@ -202,7 +199,7 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
                                 sqlite3_step(update_stmt);
                                 sqlite3_finalize(update_stmt);
                             }
-                            
+
                             // Update scores table
                             const char* update_scores = "UPDATE scores SET player_id = ? WHERE player_id = ?;";
                             if (sqlite3_prepare_v2(db_fsd, update_scores, -1, &update_stmt, nullptr) == SQLITE_OK) {
@@ -211,7 +208,7 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
                                 sqlite3_step(update_stmt);
                                 sqlite3_finalize(update_stmt);
                             }
-                            
+
                             // Update dan_results table
                             const char* update_dan = "UPDATE dan_results SET player_id = ? WHERE player_id = ?;";
                             if (sqlite3_prepare_v2(db_fsd, update_dan, -1, &update_stmt, nullptr) == SQLITE_OK) {
@@ -226,19 +223,26 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
                 }
                 sqlite3_finalize(stmt);
             }
-            
+
             // Also ensure "0" and "1" exist for default players if they don't
-            const char* ensure_defaults = 
+            const char* ensure_defaults =
                 "INSERT OR IGNORE INTO players (player_id, username, title) VALUES ('0', 'Don-chan', 'Donder Debut!');"
-                "INSERT OR IGNORE INTO players (player_id, username, title) VALUES ('1', 'Player 2', 'Donder Debut!');";
+                "INSERT OR IGNORE INTO players (player_id, username, title) VALUES ('1', 'Kat-chan', 'Donder Debut!');"
+                "UPDATE players SET title_bg = 2, chara_color_1 = '#F94728', chara_color_2 = '#68BFC0' WHERE player_id = '1' AND username = 'Kat-chan';";
             run_migration(ensure_defaults);
         }
-        
+
         if (migrations_ok) sqlite3_exec(db_fsd, "PRAGMA user_version = 5;", nullptr, nullptr, nullptr);
         else spdlog::error("ScoresManager: migration v5 failed, not raising user_version");
     }
 
     run_migration("ALTER TABLE players ADD COLUMN modifier_skip BOOL NOT NULL DEFAULT 0;");
+
+    // Default player "1" (2P placeholder): Kat-chan, 2P chara colors, 2P title color. Only touches the untouched default row.
+    sqlite3_exec(db_fsd,
+        "UPDATE players SET username = 'Kat-chan', title_bg = 1, chara_color_1 = '#F94728', chara_color_2 = '#68BFC0' "
+        "WHERE player_id = '1' AND username = 'Player 2' AND NOT EXISTS (SELECT 1 FROM players WHERE username = 'Kat-chan');",
+        nullptr, nullptr, nullptr);
 
     load_score_cache();
 }
@@ -704,12 +708,20 @@ std::optional<PlayerData> ScoresManager::get_player_data(const std::string& play
         // Player not found — insert a default row with the requested player_id
         sqlite3_stmt* ins;
         const char* ins_query =
-            "INSERT OR IGNORE INTO players (player_id, username, title) VALUES (?, ?, 'Donder Debut!');";
+            "INSERT OR IGNORE INTO players (player_id, username, title, title_bg, chara_color_1, chara_color_2) "
+            "VALUES (?, ?, 'Donder Debut!', CASE WHEN ?1 = '1' THEN 2 ELSE 0 END, "
+            "CASE WHEN ?1 = '1' THEN '#F94728' ELSE '#68BFC0' END, CASE WHEN ?1 = '1' THEN '#68BFC0' ELSE '#F94728' END);";
         if (sqlite3_prepare_v2(db_fsd, ins_query, -1, &ins, nullptr) == SQLITE_OK) {
-            std::string default_name = "Player " + player_id;
-            sqlite3_bind_text(ins, 1, player_id.c_str(), -1, SQLITE_TRANSIENT);
-            sqlite3_bind_text(ins, 2, default_name.c_str(), -1, SQLITE_TRANSIENT);
-            sqlite3_step(ins);
+            std::string default_name = player_id == "0" ? "Don-chan" : player_id == "1" ? "Kat-chan" : "Player " + player_id;
+            // username is UNIQUE: a migrated account may already own "Don-chan"/"Kat-chan", so suffix on collision
+            for (int n = 1; n <= 50; n++) {
+                std::string name = n == 1 ? default_name : default_name + " " + std::to_string(n);
+                sqlite3_reset(ins);
+                sqlite3_bind_text(ins, 1, player_id.c_str(), -1, SQLITE_TRANSIENT);
+                sqlite3_bind_text(ins, 2, name.c_str(), -1, SQLITE_TRANSIENT);
+                sqlite3_step(ins);
+                if (sqlite3_changes(db_fsd) > 0) break;
+            }
             sqlite3_finalize(ins);
         } else {
             spdlog::error("get_player: failed to insert default player {}: {}", player_id, sqlite3_errmsg(db_fsd));
@@ -879,9 +891,9 @@ void ScoresManager::save_dan_record(const std::string& player_id, const std::str
 
 void ScoresManager::migrate_player_id(const std::string& old_id, const std::string& new_id) {
     if (old_id == new_id) return;
-    
+
     spdlog::info("Migrating player ID from {} to {}", old_id, new_id);
-    
+
     // Check if new_id already exists
     sqlite3_stmt* stmt;
     const char* check_query = "SELECT 1 FROM players WHERE player_id = ?;";
@@ -894,7 +906,7 @@ void ScoresManager::migrate_player_id(const std::string& old_id, const std::stri
         }
         sqlite3_finalize(stmt);
     }
-    
+
     // Update players table
     const char* update_player = "UPDATE players SET player_id = ? WHERE player_id = ?;";
     if (sqlite3_prepare_v2(db_fsd, update_player, -1, &stmt, nullptr) == SQLITE_OK) {
@@ -903,7 +915,7 @@ void ScoresManager::migrate_player_id(const std::string& old_id, const std::stri
         sqlite3_step(stmt);
         sqlite3_finalize(stmt);
     }
-    
+
     // Update scores table
     const char* update_scores = "UPDATE scores SET player_id = ? WHERE player_id = ?;";
     if (sqlite3_prepare_v2(db_fsd, update_scores, -1, &stmt, nullptr) == SQLITE_OK) {
@@ -912,7 +924,7 @@ void ScoresManager::migrate_player_id(const std::string& old_id, const std::stri
         sqlite3_step(stmt);
         sqlite3_finalize(stmt);
     }
-    
+
     // Update dan_results table
     const char* update_dan = "UPDATE dan_results SET player_id = ? WHERE player_id = ?;";
     if (sqlite3_prepare_v2(db_fsd, update_dan, -1, &stmt, nullptr) == SQLITE_OK) {

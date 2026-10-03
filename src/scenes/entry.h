@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../libs/screen.h"
+#include "../libs/scores.h"
 #include "../objects/entry/box_manager.h"
 #include "../objects/entry/entry_script.h"
 #include "../objects/entry/player.h"
@@ -11,11 +12,16 @@
 #include "../objects/global/timer.h"
 #include "../objects/global/chara_3d.h"
 
+#ifdef NETWORK_ENABLED
+#include "../libs/optional/card_reader.h"
+#endif
+
 
 enum class EntryState {
     SELECT_SIDE = 0,
     SELECT_MODE = 1,
-    SELECT_COSTUME = 2
+    SELECT_COSTUME = 2,
+    WAITING = 3  // online, auto_login off: side select hidden until Enter (online) or Don (local)
 };
 
 class EntryScreen : public Screen {
@@ -36,10 +42,20 @@ private:
     bool announce_played = false;
     std::vector<std::unique_ptr<EntryPlayer>> players;
 
+#ifdef NETWORK_ENABLED
+    std::unique_ptr<card_reader::CardReader> card_reader_;
+    double last_card_poll_ms_ = 0;
+    bool card_reader_initialized_ = false;
+#endif
+    std::vector<std::string> used_cards_;  // held card must not log in twice
+    std::string pending_card_hex_;         // scanned on title, consumed on first update
+    bool local_login_ = false;   // Don pressed: scores.db only, never register
+    bool login_ready_ = false;   // next join_player already logged in (Enter / auto login)
+
     void reload_preview_chara(PlayerNum player_num);
     bool arcade_credit() const;
     bool seat_joined(PlayerNum player_num) const;
-    void join_player(PlayerNum player_num);
+    void join_player(PlayerNum player_num, bool do_login = true);
     void start_second_player_join();
     void draw_background();
     void draw_side_select(float fade);
@@ -47,6 +63,10 @@ private:
     void draw_mode_select();
     bool mode_select_ready();
     std::optional<Screens> handle_input();
+
+    PlayerData sync_profile_from_server(const std::string& access_code);
+    bool login_slot(const std::string& card_hex);
+    void join_with_card(const std::string& card_hex);
 
 public:
     EntryScreen() : Screen("entry") {

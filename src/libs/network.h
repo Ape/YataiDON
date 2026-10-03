@@ -59,7 +59,7 @@ public:
     bool is_online() const { return online; }
     bool is_outdated() const { return outdated; }
 
-    std::string register_user(const std::string& username);
+    std::string register_user(const std::string& username, const std::string& idm = "");
     std::string map_to_json(const std::map<double, InputLogType>& my_map);
     void submit_score(const std::string& hash, int difficulty, const std::string& access_code, const Score& score, const std::map<double, InputLogType>& input_log, int64_t played_at, const std::string& modifiers_json, bool chara_is_costume, int chara_cos_index);
 

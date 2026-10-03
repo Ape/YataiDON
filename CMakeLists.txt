@@ -118,6 +118,15 @@ if(SUPPORT_FUMEN)
   list(APPEND CppFiles ${Gen4CppFiles})
 endif()
 
+# Card reader
+if(NETWORK_ENABLED AND (UNIX AND NOT ANDROID AND NOT APPLE_IOS AND NOT EMSCRIPTEN))
+  file(GLOB CARD_READER_SOURCES src/libs/optional/card_reader.cpp)
+  list(APPEND CppFiles ${CARD_READER_SOURCES})
+  message(STATUS "Card reader enabled (POSIX)")
+elseif(NETWORK_ENABLED)
+  message(STATUS "Card reader not available on this platform (requires POSIX)")
+endif()
+
 list(APPEND CppFiles ${PLATFORM_SOURCES})
 
 message(STATUS "C++ files found: ${CppFiles}")
@@ -192,6 +201,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
 
 if(NETWORK_ENABLED)
   target_compile_definitions(${PROJECT_NAME} PRIVATE
+    NETWORK_ENABLED
     NETWORK_URL="${NETWORK_URL}"
     NETWORK_AUTH_KEY="${NETWORK_AUTH_KEY}"
     CLIENT_VERSION="${PROJECT_VERSION}"

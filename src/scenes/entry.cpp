@@ -1,14 +1,52 @@
 ﻿#include "entry.h"
 #include "../libs/input.h"
 #include "../libs/scores.h"
+#include "../libs/global_data.h"
+#include "../libs/config.h"
+#include "../libs/network.h"
+#include <algorithm>
 
 void EntryScreen::on_screen_start() {
     Screen::on_screen_start();
     side = 1;
     is_2p = false;
     box_manager = std::make_unique<BoxManager>(global_data.entry_join_pending);
-    state = EntryState::SELECT_SIDE;
+    if (global_data.config->network.auto_login) {
+        state = EntryState::SELECT_SIDE;
+    } else {
+        state = EntryState::WAITING;
+    }
 
+    const bool online = global_data.config->network.online_play;
+    pending_card_hex_.clear();
+    used_cards_.clear();
+    local_login_ = false;
+    login_ready_ = false;
+    if (online) network.probe_online();
+
+    // Card scanned on title (case 5) or auto login (case 3): join on first update
+    if (global_data.card_reader_card_valid && !global_data.card_reader_card_id_hex.empty()) {
+        pending_card_hex_ = global_data.card_reader_card_id_hex;
+        used_cards_.push_back(pending_card_hex_);
+    }
+    global_data.card_reader_card_valid = false;
+    global_data.card_reader_card_id_hex.clear();
+
+#ifdef NETWORK_ENABLED
+    if (online) {
+        card_reader_ = std::make_unique<card_reader::CardReader>();
+        if (card_reader_->initialize(global_data.config->card_reader.port, global_data.config->card_reader.baudrate)) {
+            card_reader_->start_polling();
+            card_reader_->set_led_color(255, 255, 255);
+            last_card_poll_ms_ = get_current_ms();
+            card_reader_initialized_ = true;
+        } else {
+            card_reader_.reset();
+        }
+    }
+#endif
+
+    // Preview only: local DB, no network until someone actually logs in
     {
         auto pd = scores_manager.get_player_data(global_data.config->network.access_code_1);
         nameplate = Nameplate(
@@ -34,10 +72,108 @@ void EntryScreen::on_screen_start() {
     players.resize(2);
     audio.play_sound("bgm", VolumePreset::MUSIC);
 
+    // Online: auto_login shows side select right away, otherwise wait for Enter/Don
+    if (online && !global_data.config->network.auto_login && !global_data.entry_join_pending)
+        state = EntryState::WAITING;
+
     if (global_data.entry_join_pending) {
         global_data.entry_join_pending = false;
         start_second_player_join();
     }
+}
+
+// Local row (modifiers, dan, ...) overlaid with whatever the server knows.
+PlayerData EntryScreen::sync_profile_from_server(const std::string& access_code) {
+    PlayerData data = scores_manager.get_player_data(access_code).value_or(PlayerData{});
+    data.player_id = access_code;
+
+    network.fetch_chara_colors(access_code, data.chara_color_1, data.chara_color_2, data.chara_color_3);
+
+    std::string s;
+    if (network.fetch_username(access_code, s) && !s.empty()) data.username = s;
+    if (data.username.empty()) data.username = "Player " + access_code.substr(0, 8);
+    if (network.fetch_title(access_code, s) && !s.empty()) data.title = s;
+    network.fetch_title_bg(access_code, data.title_bg);
+    network.fetch_costume(access_code, data.chara_head_index, data.chara_body_index,
+                          data.chara_cos_index, data.chara_is_costume);
+    return data;
+}
+
+// Resolve + load the account for the next free login slot (1st login -> access_code_1, 2nd -> access_code_2).
+// card_hex empty: key/auto login. Returns false if login impossible.
+bool EntryScreen::login_slot(const std::string& card_hex) {
+    const int slot = players[0] ? 1 : 0;
+    auto& cfg = global_data.config->network;
+    std::string& code = slot == 0 ? cfg.access_code_1 : cfg.access_code_2;
+    std::string& sm_id = slot == 0 ? scores_manager.player_1 : scores_manager.player_2;
+    PlayerData& sm_data = slot == 0 ? scores_manager.player_1_data : scores_manager.player_2_data;
+    const bool net = cfg.online_play && network.is_online() && !local_login_;
+
+    // Don after this slot was migrated to a server code: use a fresh local "0"/"1" account instead.
+    // In-memory only (restored on title), so the migrated code stays in the config for Enter logins.
+    if (cfg.online_play && local_login_ && code != "0" && code != "1") {
+        if (!global_data.card_override[slot]) global_data.card_prev_code[slot] = code;
+        global_data.card_override[slot] = true;
+        code = slot == 0 ? "0" : "1";
+    }
+
+    PlayerData pd;
+    if (!net) {
+        // Case 1 / offline: scores.db keyed by config code. Cards can't resolve without server (case 4).
+        if (!card_hex.empty()) return false;
+        pd = scores_manager.get_player_data(code).value_or(PlayerData{});
+        pd.player_id = code;
+    } else {
+        if (!card_hex.empty()) {
+            std::string new_code = network.register_user("Player " + card_hex.substr(0, 8), card_hex);
+            if (new_code.empty()) return false;
+            if (!global_data.card_override[slot]) global_data.card_prev_code[slot] = code;
+            global_data.card_override[slot] = true;
+            code = new_code;
+        } else if (code.empty() || code == "0" || code == "1") {
+            // Cases 2/3, never registered: get a code from server, replace the placeholder
+            std::string old_code = code;
+            std::string name = sm_data.username.empty() ? "Player" : sm_data.username;
+            std::string new_code = network.register_user(name);
+            if (!new_code.empty()) {
+                scores_manager.migrate_player_id(old_code, new_code);
+                code = new_code;
+                save_config(*global_data.config);
+            }
+        }
+        pd = sync_profile_from_server(code);
+
+        if (network.check_import_requested(code)) {
+            scores_manager.export_to_hiroba(code, code);
+            network.clear_import_flag(code);
+        }
+        if (cfg.sync_scores) scores_manager.sync_from_server(code, code);
+    }
+
+    sm_id = code;
+    sm_data = pd;
+    scores_manager.save_player_data(pd);
+    if (slot == 0) {
+        nameplate = Nameplate(pd.username, pd.title, PlayerNum::ALL, pd.dan, pd.gold, pd.rainbow, pd.title_bg);
+    }
+    return true;
+}
+
+// Card scan: log in, then show side select. The player still picks the side.
+void EntryScreen::join_with_card(const std::string& card_hex) {
+    if (login_ready_ || !login_slot(card_hex)) return;
+    login_ready_ = true;
+    audio.play_sound("don", VolumePreset::SOUND);
+    if (players[0]) {
+        // Second player: same screen as pressing Don for the free seat
+        const PlayerNum free_seat = (players[0]->player_num == PlayerNum::P1) ? PlayerNum::P2 : PlayerNum::P1;
+        const PlayerData& pd = scores_manager.player_2_data;
+        nameplate = Nameplate(pd.username, pd.title, PlayerNum::ALL, pd.dan, pd.gold, pd.rainbow, pd.title_bg);
+        reload_preview_chara(free_seat);
+    }
+    state = EntryState::SELECT_SIDE;
+    side = 1;
+    lua_entry->restart_side_select();
 }
 
 void EntryScreen::start_second_player_join() {
@@ -78,6 +214,17 @@ void EntryScreen::reload_preview_chara(PlayerNum player_num) {
 
 Screens EntryScreen::on_screen_end(Screens next_screen) {
     audio.stop_sound("bgm");
+
+    // Clean up card reader
+#ifdef NETWORK_ENABLED
+    if (card_reader_) {
+        card_reader_->stop_polling();
+        card_reader_->led_reset();
+        card_reader_.reset();
+        card_reader_initialized_ = false;
+    }
+#endif
+
     return Screen::on_screen_end(next_screen);
 }
 
@@ -92,7 +239,9 @@ bool EntryScreen::seat_joined(PlayerNum player_num) const {
     return false;
 }
 
-void EntryScreen::join_player(PlayerNum player_num) {
+void EntryScreen::join_player(PlayerNum player_num, bool do_login) {
+    if (do_login && !login_ready_ && !login_slot("")) return;
+    login_ready_ = false;
     side = (player_num == PlayerNum::P1) ? 0 : 2;
     global_data.player_num = player_num;
 
@@ -115,6 +264,27 @@ void EntryScreen::join_player(PlayerNum player_num) {
 }
 
 std::optional<Screens> EntryScreen::handle_input() {
+    if (state == EntryState::WAITING) {
+        const bool enter = ray::IsKeyPressed(ray::KEY_ENTER);
+        const bool don = is_l_don_pressed() || is_r_don_pressed();
+        if (!enter && !don) return std::nullopt;
+        local_login_ = !enter;  // Enter: register/fetch online; Don: local db only
+        if (login_slot("")) {
+            login_ready_ = true;
+            audio.play_sound("don", VolumePreset::SOUND);
+            state = EntryState::SELECT_SIDE;
+            lua_entry->restart_side_select();
+        }
+        return std::nullopt;
+    }
+    // Enter again with one player in: online login (registers placeholder "1") for the free seat
+    if (global_data.config->network.online_play && ray::IsKeyPressed(ray::KEY_ENTER) &&
+        (state == EntryState::SELECT_SIDE || state == EntryState::SELECT_MODE) &&
+        seat_joined(PlayerNum::P1) != seat_joined(PlayerNum::P2)) {
+        local_login_ = false;
+        join_player(seat_joined(PlayerNum::P1) ? PlayerNum::P2 : PlayerNum::P1);
+        return std::nullopt;
+    }
     if (arcade_credit() && state == EntryState::SELECT_SIDE) {
         if (!seat_joined(PlayerNum::P1) &&
             (is_l_don_pressed(PlayerNum::P1) || is_r_don_pressed(PlayerNum::P1))) {
@@ -215,11 +385,37 @@ std::optional<Screens> EntryScreen::handle_input() {
 std::optional<Screens> EntryScreen::update() {
     Screen::update();
     double current_time = get_current_ms();
+
+    if (!players.empty() && !pending_card_hex_.empty()) {
+        std::string hex = std::move(pending_card_hex_);
+        pending_card_hex_.clear();
+        join_with_card(hex);
+    }
+
+#ifdef NETWORK_ENABLED
+    // Case 6: any card while a seat is free (P1 first, then P2)
+    if (card_reader_ && card_reader_->is_polling() && !login_ready_ && state != EntryState::SELECT_COSTUME &&
+        !(seat_joined(PlayerNum::P1) && seat_joined(PlayerNum::P2))) {
+        if (current_time - last_card_poll_ms_ >= global_data.config->card_reader.poll_interval_ms) {
+            last_card_poll_ms_ = current_time;
+            if (card_reader_->poll_once()) {
+                const auto& ci = card_reader_->get_card_info();
+                if (ci.valid && !ci.card_id_hex.empty() &&
+                    std::find(used_cards_.begin(), used_cards_.end(), ci.card_id_hex) == used_cards_.end()) {
+                    used_cards_.push_back(ci.card_id_hex);
+                    card_reader_->set_led_color(0, 255, 0);
+                    join_with_card(ci.card_id_hex);
+                }
+            }
+        }
+    }
+#endif
+
     allnet_indicator.update(current_time);
     entry_overlay.update(current_time);
     lua_entry->update(current_time);
     box_manager->update(current_time, is_2p);
-    if (!(arcade_credit() && state == EntryState::SELECT_SIDE)) {
+    if (state != EntryState::WAITING && !(arcade_credit() && state == EntryState::SELECT_SIDE)) {
         timer->update(current_time);
     }
     nameplate.update(current_time);
@@ -296,7 +492,9 @@ void EntryScreen::draw() {
     draw_background();
     draw_player_drum();
 
-    if (state == EntryState::SELECT_SIDE) {
+    if (state == EntryState::WAITING) {
+        // nothing: side select hidden
+    } else if (state == EntryState::SELECT_SIDE) {
         draw_side_select(lua_entry->get_side_select_fade());
     } else if (state == EntryState::SELECT_MODE) {
         draw_mode_select();
