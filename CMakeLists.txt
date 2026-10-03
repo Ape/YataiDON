@@ -189,11 +189,14 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-  NETWORK_URL="${NETWORK_URL}"
-  NETWORK_AUTH_KEY="${NETWORK_AUTH_KEY}"
-  CLIENT_VERSION="${PROJECT_VERSION}"
-)
+
+if(NETWORK_ENABLED)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE
+    NETWORK_URL="${NETWORK_URL}"
+    NETWORK_AUTH_KEY="${NETWORK_AUTH_KEY}"
+    CLIENT_VERSION="${PROJECT_VERSION}"
+  )
+endif()
 
 if(NOT ANDROID AND NOT IOS AND NOT EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE cpptrace::cpptrace)
