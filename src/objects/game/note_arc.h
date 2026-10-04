@@ -50,6 +50,7 @@ private:
     int arc_points;
     int arc_duration;
     float current_progress;
+    double elapsed_ms;
     double start_ms;
     PlayerNum player_num;
 
@@ -62,6 +63,7 @@ private:
     float x_i;
     float y_i;
     TextureObject* t_note = nullptr;
+    TextureObject* t_firework = nullptr;
     TextureObject* t_rainbow_mask = nullptr;
 public:
     NoteType note_type;
