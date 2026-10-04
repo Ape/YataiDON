@@ -8,6 +8,10 @@
 #include <atomic>
 #include <mutex>
 
+#ifdef ERROR  // wingdi.h's ERROR macro would clobber CardType::ERROR
+#undef ERROR
+#endif
+
 namespace card_reader {
 
 enum class CardType {
@@ -61,6 +65,9 @@ private:
     bool serial_connect(const std::string& port, int baudrate);
     void serial_disconnect();
     bool serial_write(const std::vector<uint8_t>& data);
+    int port_read(uint8_t* buf, size_t n);  // like read(2): bytes read, 0 on timeout, -1 on error
+    void flush_input();
+    bool finish_initialize(const std::string& port);
     std::optional<std::vector<uint8_t>> serial_read_response();
 
     // Protocol implementation
@@ -77,6 +84,9 @@ private:
 
     // Serial port handle
     int serial_fd_ = -1;
+#ifdef _WIN32
+    void* serial_handle_ = nullptr;
+#endif
     uint8_t sequence_ = 0;
 
     // State
