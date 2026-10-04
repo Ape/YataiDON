@@ -1,9 +1,16 @@
 #include "card_reader.h"
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#define NOGDI
+#include <windows.h>
+#else
 #include <fcntl.h>
 #include <termios.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#endif
 #include <cstring>
 #include <chrono>
 #include <algorithm>
@@ -13,6 +20,10 @@
 
 namespace card_reader {
 
+static void sleep_us(long us) {
+    std::this_thread::sleep_for(std::chrono::microseconds(us));
+}
+
 CardReader::CardReader() = default;
 
 CardReader::~CardReader() {
@@ -21,6 +32,19 @@ CardReader::~CardReader() {
 }
 
 bool CardReader::initialize(const std::string& port, int baudrate) {
+#ifdef _WIN32
+    // The default port is a POSIX path: look for the reader on the COM ports instead
+    if (port.rfind("/dev/", 0) == 0) {
+        for (int i = 1; i <= 32; i++) {
+            std::string com = "COM" + std::to_string(i);
+            if (!serial_connect(com, baudrate)) continue;
+            if (send_command(CMD_RESET)) return finish_initialize(com);
+            serial_disconnect();
+        }
+        spdlog::error("No card reader found on COM1-COM32");
+        return false;
+    }
+#endif
     if (!serial_connect(port, baudrate)) {
         return false;
     }
@@ -30,20 +54,112 @@ bool CardReader::initialize(const std::string& port, int baudrate) {
         spdlog::error("Failed to reset card reader");
         return false;
     }
+    return finish_initialize(port);
+}
 
+bool CardReader::finish_initialize(const std::string& port) {
     // Give device time to reset
-    usleep(500000);
+    sleep_us(500000);
 
     // Reset LEDs
     led_reset();
 
     // Give device time to process LED reset before RADIO_ON
-    usleep(200000);
+    sleep_us(200000);
 
     spdlog::info("Card reader initialized on {}", port);
     return true;
 }
 
+#ifdef _WIN32
+// Windows: serial_fd_ is 0 while serial_handle_ is open, -1 otherwise
+bool CardReader::serial_connect(const std::string& port, int baudrate) {
+    if (baudrate != 38400 && baudrate != 115200) {
+        spdlog::error("Unsupported baudrate: {}", baudrate);
+        return false;
+    }
+    std::string path = port.rfind("\\\\", 0) == 0 ? port : "\\\\.\\" + port;
+    HANDLE h = CreateFileA(path.c_str(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, nullptr);
+    if (h == INVALID_HANDLE_VALUE) {
+        spdlog::debug("Failed to open serial port {}: error {}", port, GetLastError());
+        return false;
+    }
+
+    DCB dcb{};
+    dcb.DCBlength = sizeof(dcb);
+    GetCommState(h, &dcb);
+    dcb.BaudRate = static_cast<DWORD>(baudrate);
+    dcb.ByteSize = 8;
+    dcb.Parity = NOPARITY;
+    dcb.StopBits = ONESTOPBIT;
+    dcb.fBinary = TRUE;
+    dcb.fParity = FALSE;
+    dcb.fOutxCtsFlow = FALSE;
+    dcb.fOutxDsrFlow = FALSE;
+    dcb.fDsrSensitivity = FALSE;
+    dcb.fOutX = FALSE;
+    dcb.fInX = FALSE;
+    dcb.fDtrControl = DTR_CONTROL_DISABLE;
+    dcb.fRtsControl = RTS_CONTROL_DISABLE;
+    if (!SetCommState(h, &dcb)) {
+        spdlog::error("Failed to configure serial port {}: error {}", port, GetLastError());
+        CloseHandle(h);
+        return false;
+    }
+
+    // Same as VMIN=0 / VTIME=2: return as soon as bytes arrive, give up after 200ms
+    COMMTIMEOUTS to{};
+    to.ReadIntervalTimeout = MAXDWORD;
+    to.ReadTotalTimeoutMultiplier = MAXDWORD;
+    to.ReadTotalTimeoutConstant = 200;
+    to.WriteTotalTimeoutConstant = 1000;
+    SetCommTimeouts(h, &to);
+
+    EscapeCommFunction(h, CLRDTR);
+    EscapeCommFunction(h, CLRRTS);
+
+    serial_handle_ = h;
+    serial_fd_ = 0;
+
+    sleep_us(500000);
+    PurgeComm(h, PURGE_RXCLEAR | PURGE_TXCLEAR);
+
+    return true;
+}
+
+void CardReader::serial_disconnect() {
+    if (serial_fd_ >= 0) {
+        CloseHandle(static_cast<HANDLE>(serial_handle_));
+        serial_handle_ = nullptr;
+        serial_fd_ = -1;
+    }
+}
+
+bool CardReader::serial_write(const std::vector<uint8_t>& data) {
+    if (serial_fd_ < 0) return false;
+
+    DWORD written = 0;
+    if (!WriteFile(static_cast<HANDLE>(serial_handle_), data.data(), static_cast<DWORD>(data.size()), &written, nullptr) ||
+        written != data.size()) {
+        spdlog::error("Serial write failed: wrote {} of {} bytes", written, data.size());
+        return false;
+    }
+
+    FlushFileBuffers(static_cast<HANDLE>(serial_handle_));
+    return true;
+}
+
+int CardReader::port_read(uint8_t* buf, size_t n) {
+    DWORD got = 0;
+    if (!ReadFile(static_cast<HANDLE>(serial_handle_), buf, static_cast<DWORD>(n), &got, nullptr)) return -1;
+    return static_cast<int>(got);
+}
+
+void CardReader::flush_input() {
+    PurgeComm(static_cast<HANDLE>(serial_handle_), PURGE_RXCLEAR);
+}
+
+#else
 bool CardReader::serial_connect(const std::string& port, int baudrate) {
     serial_fd_ = open(port.c_str(), O_RDWR | O_NOCTTY | O_SYNC);
     if (serial_fd_ < 0) {
@@ -96,7 +212,7 @@ bool CardReader::serial_connect(const std::string& port, int baudrate) {
     int flags = TIOCM_DTR | TIOCM_RTS;
     ioctl(serial_fd_, TIOCMBIC, &flags);
 
-    usleep(500000);
+    sleep_us(500000);
     tcflush(serial_fd_, TCIOFLUSH);
 
     return true;
@@ -122,17 +238,26 @@ bool CardReader::serial_write(const std::vector<uint8_t>& data) {
     return true;
 }
 
+int CardReader::port_read(uint8_t* buf, size_t n) {
+    return static_cast<int>(read(serial_fd_, buf, n));
+}
+
+void CardReader::flush_input() {
+    tcflush(serial_fd_, TCIFLUSH);
+}
+#endif
+
 std::optional<std::vector<uint8_t>> CardReader::serial_read_response() {
     if (serial_fd_ < 0) return std::nullopt;
 
     uint8_t sync_byte;
-    ssize_t n = read(serial_fd_, &sync_byte, 1);
+    int n = port_read(&sync_byte, 1);
     if (n != 1) {
         return std::nullopt;
     }
 
     if (sync_byte != SYNC_BYTE) {
-        while (read(serial_fd_, &sync_byte, 1) == 1) {
+        while (port_read(&sync_byte, 1) == 1) {
             if (sync_byte == SYNC_BYTE) break;
         }
         if (sync_byte != SYNC_BYTE) {
@@ -141,22 +266,28 @@ std::optional<std::vector<uint8_t>> CardReader::serial_read_response() {
     }
 
     uint8_t len_byte;
-    n = read(serial_fd_, &len_byte, 1);
+    n = port_read(&len_byte, 1);
     if (n != 1) {
         return std::nullopt;
     }
 
     uint8_t packet_len = len_byte;
-    size_t expected_total = 2 + packet_len;
 
-    std::vector<uint8_t> rest(expected_total - 2);
-    size_t total_read = 0;
-    while (total_read < rest.size()) {
-        n = read(serial_fd_, rest.data() + total_read, rest.size() - total_read);
+    // The rest is packet_len - 1 body bytes plus the checksum, counted after unescaping:
+    // a 0xE0/0xD0 byte (checksum included) arrives as two bytes on the wire
+    std::vector<uint8_t> rest;
+    size_t decoded = 0;
+    bool escape = false;
+    while (decoded < packet_len) {
+        uint8_t b;
+        n = port_read(&b, 1);
         if (n <= 0) {
             return std::nullopt;
         }
-        total_read += n;
+        rest.push_back(b);
+        if (escape) { escape = false; decoded++; }
+        else if (b == ESCAPE_BYTE) escape = true;
+        else decoded++;
     }
 
     std::vector<uint8_t> full_packet;
@@ -182,7 +313,12 @@ std::vector<uint8_t> CardReader::encode_packet(const std::vector<uint8_t>& paylo
         }
         checksum += byte;
     }
-    out.push_back(checksum);
+    if (checksum == SYNC_BYTE || checksum == ESCAPE_BYTE) {
+        out.push_back(ESCAPE_BYTE);
+        out.push_back(checksum - 1);
+    } else {
+        out.push_back(checksum);
+    }
     return out;
 }
 
@@ -194,7 +330,7 @@ std::optional<std::vector<uint8_t>> CardReader::decode_packet(const std::vector<
     std::vector<uint8_t> out;
     bool escape = false;
 
-    for (size_t i = 1; i + 1 < data.size(); i++) {
+    for (size_t i = 1; i < data.size(); i++) {
         uint8_t byte = data[i];
         if (escape) {
             byte += 1;
@@ -208,9 +344,11 @@ std::optional<std::vector<uint8_t>> CardReader::decode_packet(const std::vector<
         out.push_back(byte);
     }
 
-    if (out.empty()) return std::nullopt;
+    if (out.size() < 2) return std::nullopt;
 
-    uint8_t received_checksum = data.back();
+    // the last unescaped byte is the checksum (the reader escapes it like any other byte)
+    uint8_t received_checksum = out.back();
+    out.pop_back();
 
     uint8_t calculated_checksum = 0;
     for (uint8_t byte : out) {
@@ -254,25 +392,25 @@ bool CardReader::send_command(uint8_t cmd, const std::vector<uint8_t>& payload, 
         return true;
     }
 
-    usleep(50000);
+    sleep_us(50000);
 
     for (int attempt = 0; attempt < 5; attempt++) {
         auto raw_response = serial_read_response();
         if (!raw_response) {
-            usleep(10000);
+            sleep_us(10000);
             continue;
         }
 
         auto decoded = decode_packet(*raw_response);
         if (!decoded) {
-            tcflush(serial_fd_, TCIFLUSH);
-            usleep(10000);
+            flush_input();
+            sleep_us(10000);
             continue;
         }
 
         if (decoded->size() < 6) {
-            tcflush(serial_fd_, TCIFLUSH);
-            usleep(10000);
+            flush_input();
+            sleep_us(10000);
             continue;
         }
 
@@ -321,25 +459,25 @@ bool CardReader::send_command_with_payload(uint8_t cmd, const std::vector<uint8_
         return true;
     }
 
-    usleep(50000);
+    sleep_us(50000);
 
     for (int attempt = 0; attempt < 5; attempt++) {
         auto raw_response = serial_read_response();
         if (!raw_response) {
-            usleep(10000);
+            sleep_us(10000);
             continue;
         }
 
         auto decoded = decode_packet(*raw_response);
         if (!decoded) {
-            tcflush(serial_fd_, TCIFLUSH);
-            usleep(10000);
+            flush_input();
+            sleep_us(10000);
             continue;
         }
 
         if (decoded->size() < 6) {
-            tcflush(serial_fd_, TCIFLUSH);
-            usleep(10000);
+            flush_input();
+            sleep_us(10000);
             continue;
         }
 
@@ -437,25 +575,25 @@ bool CardReader::poll_blocking() {
         return false;
     }
 
-    usleep(50000);
+    sleep_us(50000);
 
     for (int attempt = 0; attempt < 3; attempt++) {
         auto raw_response = serial_read_response();
         if (!raw_response) {
-            usleep(10000);
+            sleep_us(10000);
             continue;
         }
 
         auto decoded = decode_packet(*raw_response);
         if (!decoded) {
-            tcflush(serial_fd_, TCIFLUSH);
-            usleep(10000);
+            flush_input();
+            sleep_us(10000);
             continue;
         }
 
         if (decoded->size() < 6) {
-            tcflush(serial_fd_, TCIFLUSH);
-            usleep(10000);
+            flush_input();
+            sleep_us(10000);
             continue;
         }
 
@@ -569,6 +707,7 @@ bool CardReader::handle_mifare_card(const std::vector<uint8_t>& uid_bytes) {
         hex += buf;
     }
 
+    if (!card_info_.valid || card_info_.card_id_hex != hex) spdlog::info("Card detected: Aime (MIFARE)");
     card_info_ = CardInfo{
         .type = CardType::MIFARE,
         .card_id_hex = hex,
@@ -590,6 +729,7 @@ bool CardReader::handle_felica_card(const std::vector<uint8_t>& idm_bytes) {
         hex += buf;
     }
 
+    if (!card_info_.valid || card_info_.card_id_hex != hex) spdlog::info("Card detected: FeliCa");
     card_info_ = CardInfo{
         .type = CardType::FELICA,
         .card_id_hex = hex,

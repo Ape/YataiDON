@@ -119,13 +119,13 @@ if(SUPPORT_FUMEN)
 endif()
 
 # Card reader
-if(NETWORK_ENABLED AND (UNIX AND NOT ANDROID AND NOT APPLE_IOS AND NOT EMSCRIPTEN))
+if(NETWORK_ENABLED AND ((UNIX AND NOT ANDROID AND NOT APPLE_IOS AND NOT EMSCRIPTEN) OR WIN32))
   file(GLOB CARD_READER_SOURCES src/libs/optional/card_reader.cpp)
   list(APPEND CppFiles ${CARD_READER_SOURCES})
   set(CARD_READER_ENABLED ON)
-  message(STATUS "Card reader enabled (POSIX)")
+  message(STATUS "Card reader enabled")
 elseif(NETWORK_ENABLED)
-  message(STATUS "Card reader not available on this platform (requires POSIX)")
+  message(STATUS "Card reader not available on this platform (requires POSIX or Windows)")
 endif()
 
 list(APPEND CppFiles ${PLATFORM_SOURCES})
