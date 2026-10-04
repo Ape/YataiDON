@@ -70,16 +70,22 @@ NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bo
     }
     t_note = tex.get_texture("notes/" + std::to_string((int)texture_note_type));
     if (big) {
-        t_firework = tex.get_texture("firework/bignote");
+        t_firework = tex.get_texture("hit_effect/firework");
     }
     t_rainbow_mask = tex.get_texture("balloon/rainbow_mask");
 }
 
+// cropped sheets are a single texture, so frame_count() alone reports 1
+int NoteArc::firework_frames() const {
+    int n = t_firework->frame_count();
+    if (t_firework->crop_data.has_value()) n = std::max(n, (int)t_firework->crop_data->size());
+    return n;
+}
+
 void NoteArc::update(double current_ms) {
-    elapsed_ms = std::max(0.0, std::min(
-        current_ms - start_ms,
-        (double)arc_duration * 16.67));
-    current_progress = elapsed_ms / ((double)arc_duration * 16.67);
+    // elapsed_ms keeps running past the arc so trailing fireworks can finish
+    elapsed_ms = std::max(0.0, current_ms - start_ms);
+    current_progress = std::min(1.0, elapsed_ms / ((double)arc_duration * 16.67));
 
     if (arc_points_cache == nullptr || arc_points_cache->empty()) return;
     const std::size_t point_index = (std::size_t)(current_progress * arc_points);
@@ -134,13 +140,13 @@ void NoteArc::draw(float y, ray::Shader mask_shader) {
                 ray::EndShaderMode();
             }
         }
-    } else if (is_big && !is_balloon && t_firework && t_firework->frame_count() > 0 &&
+    } else if (is_big && !is_balloon && t_firework && firework_frames() > 0 &&
                arc_points_cache && !arc_points_cache->empty()) {
         const double interval = 28.0;
         const double duration = 16.67;
-        const int frame_count = t_firework->frame_count();
+        const int frame_count = firework_frames();
         const int spawn_count = (int)(
-            elapsed_ms / interval) + 1;
+            std::min(elapsed_ms, (double)arc_duration * 16.67) / interval) + 1;
 
         for (int i = 1; i < spawn_count; ++i) {
             const double spawn_ms = i * interval;
@@ -155,14 +161,17 @@ void NoteArc::draw(float y, ray::Shader mask_shader) {
                 .frame=frame,
                 .scale = 0.8,
                 .x=firework_x - (t_note->width*0.6f) / 2.0f,
-                .y=y + firework_y - (t_note->width*0.6f) / 2.0f,
-                .blend=ray::BLEND_ADDITIVE
+                .y=y + firework_y - (t_note->width*0.6f) / 2.0f
             });
         }
     }
-    tex.draw_texture(t_note, {.x=x_i, .y=y + y_i});
+    if (current_progress < 1.0) {
+        tex.draw_texture(t_note, {.x=x_i, .y=y + y_i});
+    }
 }
 
 bool NoteArc::is_finished() const {
-    return current_progress >= 1.0;
+    double end_ms = (double)arc_duration * 16.67;
+    if (t_firework) end_ms += firework_frames() * 16.67;
+    return elapsed_ms >= end_ms;
 }

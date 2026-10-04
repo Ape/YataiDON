@@ -62,6 +62,7 @@ private:
     float control_y;
     float x_i;
     float y_i;
+    int firework_frames() const;
     TextureObject* t_note = nullptr;
     TextureObject* t_firework = nullptr;
     TextureObject* t_rainbow_mask = nullptr;
