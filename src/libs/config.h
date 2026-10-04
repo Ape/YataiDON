@@ -23,6 +23,7 @@ struct GeneralConfig {
     int song_limit = 0;
     int webcam_number = -1;
     bool touch_input = false;
+    bool skin_updater = true;
 };
 
 struct CardReaderConfig {

@@ -314,6 +314,7 @@ Config get_config() {
     config.general.song_limit = config_file["general"]["song_limit"].value_or(0);
     config.general.webcam_number = config_file["general"]["webcam_number"].value_or(-1);
     config.general.touch_input = config_file["general"]["touch_input"].value_or(kDefaultTouchInput);
+    config.general.skin_updater = config_file["general"]["skin_updater"].value_or(true);
 
     // Migrate old config: access_code -> access_code_1, player_1_id -> access_code_1, player_2_id -> access_code_2
     std::string old_access_code = config_file["network"]["access_code"].value_or(
@@ -453,7 +454,8 @@ void save_config(const Config& config) {
         {"display_bpm", config.general.display_bpm},
         {"song_limit", config.general.song_limit},
         {"webcam_number", config.general.webcam_number},
-        {"touch_input", config.general.touch_input}
+        {"touch_input", config.general.touch_input},
+        {"skin_updater", config.general.skin_updater}
     });
 
     // Network

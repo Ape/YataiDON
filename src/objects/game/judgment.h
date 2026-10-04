@@ -16,6 +16,13 @@ private:
     TextureObject* t_effect = nullptr;
     TextureObject* t_outer_effect = nullptr;
     TextureObject* t_text = nullptr;
+    bool big_outer = false;
+    TextureResizeAnimation* outer_scale = nullptr;
+    TextureObject* t_ray = nullptr;
+    TextureResizeAnimation* ray_scale = nullptr;
+    FadeAnimation* ray_fade = nullptr;
+    TextureResizeAnimation* ray2_scale = nullptr;
+    FadeAnimation* ray2_fade = nullptr;
 
 public:
     Judgment(Judgments type, bool big);
@@ -23,6 +30,8 @@ public:
     void update(double current_ms);
 
     void draw_effect(float judge_x, float judge_y);
+
+    void draw_ray_effect(float judge_x, float judge_y);
 
     void draw_outer_effect(float judge_x, float judge_y);
 

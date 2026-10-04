@@ -555,6 +555,7 @@ void Player::draw(double ms_from_start, float x, float y, ray::Shader& mask_shad
 
     for (Judgment& anim : draw_judge_list) {
         anim.draw_outer_effect(judge_x, y + judge_y);
+        anim.draw_ray_effect(judge_x, y + judge_y);
     }
     for (Judgment& anim : draw_judge_list) {
         anim.draw_text(judge_x, y + judge_y);
@@ -601,6 +602,7 @@ void Player::draw_practice(double ms_from_start, float x, float y, ray::Shader& 
 
     for (Judgment& anim : draw_judge_list) {
         anim.draw_outer_effect(judge_x, y + judge_y);
+        anim.draw_ray_effect(judge_x, y + judge_y);
     }
     for (Judgment& anim : draw_judge_list) {
         anim.draw_text(judge_x, y + judge_y);

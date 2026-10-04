@@ -483,7 +483,7 @@ int main(int argc, char* argv[]) {
 #ifdef PLATFORM_ANDROID
     android_check_and_install_update();
 #endif
-    skin_updater.start();
+    if (global_data.config->general.skin_updater) skin_updater.start();
 
 #ifdef YATAIDON_PLATFORM_IOS
     ios_initialize_after_window();

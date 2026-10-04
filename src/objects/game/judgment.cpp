@@ -4,10 +4,11 @@
 Judgment::Judgment(Judgments type, bool big)
     : type(type) {
 
-    fade_animation_1 = dynamic_cast<FadeAnimation*>(tex.get_animation(27, true));
+    big_outer = big && type != Judgments::BAD && tex.has_animation(68) && tex.has_animation(69);
+    fade_animation_1 = dynamic_cast<FadeAnimation*>(tex.get_animation(big_outer ? 69 : 27, true));
     fade_animation_2 = dynamic_cast<FadeAnimation*>(tex.get_animation(28, true));
     move_animation = dynamic_cast<MoveAnimation*>(tex.get_animation(29, true));
-    texture_animation = dynamic_cast<TextureChangeAnimation*>(tex.get_animation(30, true));
+    texture_animation = dynamic_cast<TextureChangeAnimation*>(tex.get_animation(big_outer ? 68 : 30, true));
     if (!fade_animation_1 || !fade_animation_2 || !move_animation || !texture_animation)
         throw std::runtime_error("Judgment: animation 27/28/29/30 has an unexpected type");
 
@@ -15,6 +16,27 @@ Judgment::Judgment(Judgments type, bool big)
     fade_animation_2->start();
     fade_animation_1->start();
     texture_animation->start();
+
+    if (big_outer && tex.has_animation(70)) {
+        outer_scale = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(70, true));
+        if (outer_scale) outer_scale->start();
+    }
+    if (big_outer && tex.has_animation(74) && type != Judgments::BAD) {
+        const char* ray_name = type == Judgments::GOOD ? "hit_effect/outer_effect_good" : "hit_effect/outer_effect_ok";
+        if (tex.has_texture(ray_name)) {
+            t_ray = tex.get_texture(ray_name);
+            ray_scale = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(71, true));
+            ray_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(72, true));
+            ray_scale->start();
+            ray_fade->start();
+            if (type == Judgments::GOOD) {
+                ray2_scale = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(73, true));
+                ray2_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(74, true));
+                ray2_scale->start();
+                ray2_fade->start();
+            }
+        }
+    }
 
     if (type == Judgments::GOOD) {
         t_effect = tex.get_texture(big ? "hit_effect/hit_effect_good_big" : "hit_effect/hit_effect_good");
@@ -40,6 +62,10 @@ void Judgment::update(double current_ms) {
     for (int i = 0; i < 4; i++) {
         animations[i]->update(current_ms);
     }
+    for (BaseAnimation* a : {(BaseAnimation*)outer_scale, (BaseAnimation*)ray_scale, (BaseAnimation*)ray_fade,
+                             (BaseAnimation*)ray2_scale, (BaseAnimation*)ray2_fade}) {
+        if (a) a->update(current_ms);
+    }
 }
 
 void Judgment::draw_effect(float judge_x, float judge_y) {
@@ -50,7 +76,16 @@ void Judgment::draw_effect(float judge_x, float judge_y) {
 void Judgment::draw_outer_effect(float judge_x, float judge_y) {
     int index = static_cast<int>(texture_animation->attribute);
     float hit_fade = fade_animation_1->attribute;
-    tex.draw_texture(t_outer_effect, {.frame=index, .x=judge_x, .y=judge_y, .fade=hit_fade, .blend=ray::BLEND_ADDITIVE});
+    float scale = outer_scale ? outer_scale->attribute : 1.0f;
+    tex.draw_texture(t_outer_effect, {.frame=index, .scale=scale, .center=true, .x=judge_x, .y=judge_y, .fade=hit_fade, .blend=ray::BLEND_ADDITIVE});
+}
+
+void Judgment::draw_ray_effect(float judge_x, float judge_y) {
+    if (!t_ray) return;
+    tex.draw_texture(t_ray, {.scale=(float)ray_scale->attribute, .center=true, .x=judge_x, .y=judge_y, .fade=ray_fade->attribute, .blend=ray::BLEND_ADDITIVE});
+    if (ray2_scale) {
+        tex.draw_texture(t_ray, {.scale=(float)ray2_scale->attribute, .center=true, .x=judge_x, .y=judge_y, .fade=ray2_fade->attribute, .blend=ray::BLEND_ADDITIVE});
+    }
 }
 
 void Judgment::draw_text(float judge_x, float judge_y) {
