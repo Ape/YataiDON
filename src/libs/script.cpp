@@ -1,6 +1,8 @@
 #include "script.h"
 
 #include <cstring>
+#include <string_view>
+#include <cmath>
 #include <algorithm>
 #include "global_data.h"
 #include "text.h"
@@ -57,7 +59,7 @@ static SessionData& current_session() {
     return global_data.session_data[idx];
 }
 
-static DrawTextureParams parse_draw_params_legacy(sol::optional<sol::table> params_table,
+static DrawTextureParams parse_draw_params_legacy(const sol::optional<sol::table>& params_table,
                                                   bool allow_blend) {
     DrawTextureParams params;
     if (!params_table) return params;
@@ -109,9 +111,106 @@ static DrawTextureParams parse_draw_params_legacy(sol::optional<sol::table> para
     return params;
 }
 
-static DrawTextureParams parse_draw_params(sol::optional<sol::table> params_table,
+// One value the way sol's get_or reads it in release builds: anything but a number keeps the
+// default, integers convert directly, other numbers round to the nearest integer for integral T.
+template <typename T>
+static T lua_number_or(lua_State* L, int idx, T def) {
+    if (lua_type(L, idx) != LUA_TNUMBER) return def;
+    if constexpr (std::is_integral_v<T>) {
+        if (lua_isinteger(L, idx)) return static_cast<T>(lua_tointeger(L, idx));
+        return static_cast<T>(llround(lua_tonumber(L, idx)));
+    } else {
+        return static_cast<T>(lua_tonumber(L, idx));
+    }
+}
+
+// t[i] / t.key of the table or userdata at idx, metamethods included (like sol's proxies)
+template <typename T>
+static T lua_index_or(lua_State* L, int idx, lua_Integer i, T def) {
+    lua_geti(L, idx, i);
+    T v = lua_number_or(L, -1, def);
+    lua_pop(L, 1);
+    return v;
+}
+template <typename T>
+static T lua_field_or(lua_State* L, int idx, const char* key, T def) {
+    lua_getfield(L, idx, key);
+    T v = lua_number_or(L, -1, def);
+    lua_pop(L, 1);
+    return v;
+}
+
+static bool lua_is_table_like(lua_State* L, int idx) {
+    const int t = lua_type(L, idx);
+    return t == LUA_TTABLE || t == LUA_TUSERDATA;
+}
+
+// Same result as parse_draw_params_legacy, but walks only the keys the table has (lua_next)
+// instead of looking up all ~17 names through sol proxies: draw_texture is called a few hundred
+// times per frame by Lua skins and the lookups were most of its cost. A table with a metatable
+// (fields could come from __index) or a userdata goes through the legacy path.
+static DrawTextureParams parse_draw_params(const sol::optional<sol::table>& params_table,
                                             bool allow_blend = true) {
-    return parse_draw_params_legacy(params_table, allow_blend);
+    if (!params_table) return DrawTextureParams{};
+    lua_State* L = params_table->lua_state();
+    params_table->push();
+    const int t = lua_gettop(L);
+    if (lua_type(L, t) != LUA_TTABLE || lua_getmetatable(L, t)) {
+        lua_settop(L, t - 1);
+        return parse_draw_params_legacy(params_table, allow_blend);
+    }
+
+    DrawTextureParams params;
+    lua_pushnil(L);
+    while (lua_next(L, t) != 0) {
+        // key at -2, value at -1
+        if (lua_type(L, -2) == LUA_TSTRING) {
+            size_t len = 0;
+            const char* k = lua_tolstring(L, -2, &len);
+            const std::string_view key(k, len);
+            const int v = lua_gettop(L);
+            if      (key == "x")        params.x        = lua_number_or(L, v, params.x);
+            else if (key == "y")        params.y        = lua_number_or(L, v, params.y);
+            else if (key == "x2")       params.x2       = lua_number_or(L, v, params.x2);
+            else if (key == "y2")       params.y2       = lua_number_or(L, v, params.y2);
+            else if (key == "fade")     params.fade     = lua_number_or(L, v, params.fade);
+            else if (key == "frame")    params.frame    = lua_number_or(L, v, params.frame);
+            else if (key == "scale")    params.scale    = lua_number_or(L, v, params.scale);
+            else if (key == "rotation") params.rotation = lua_number_or(L, v, params.rotation);
+            else if (key == "index")    params.index    = lua_number_or(L, v, params.index);
+            else if (key == "center") {
+                if (lua_isboolean(L, v)) params.center = lua_toboolean(L, v) != 0;
+            } else if (key == "color") {
+                if (lua_is_table_like(L, v)) {
+                    params.color.r = lua_index_or(L, v, 1, params.color.r);
+                    params.color.g = lua_index_or(L, v, 2, params.color.g);
+                    params.color.b = lua_index_or(L, v, 3, params.color.b);
+                    params.color.a = lua_index_or(L, v, 4, params.color.a);
+                }
+            } else if (key == "src") {
+                if (lua_is_table_like(L, v)) {
+                    ray::Rectangle rect;
+                    rect.x      = lua_field_or(L, v, "x", 0.0f);
+                    rect.y      = lua_field_or(L, v, "y", 0.0f);
+                    rect.width  = lua_field_or(L, v, "width", 0.0f);
+                    rect.height = lua_field_or(L, v, "height", 0.0f);
+                    params.src  = rect;
+                }
+            } else if (key == "origin") {
+                if (lua_is_table_like(L, v)) {
+                    params.origin.x = lua_index_or(L, v, 1, params.origin.x);
+                    params.origin.y = lua_index_or(L, v, 2, params.origin.y);
+                }
+            } else if (key == "mirror") {
+                if (lua_type(L, v) == LUA_TSTRING) params.mirror = mirror_from_string(lua_tostring(L, v));
+            } else if (key == "blend") {
+                if (allow_blend && lua_type(L, v) == LUA_TSTRING) params.blend = blend_from_string(lua_tostring(L, v));
+            }
+        }
+        lua_pop(L, 1);
+    }
+    lua_settop(L, t - 1);
+    return params;
 }
 
 // Index every script under one Scripts folder. Names already present are
