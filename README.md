@@ -80,6 +80,16 @@ administrator on Windows for call stacks). Nothing is collected until the GUI co
 without the option are unaffected. `tracy-capture -o trace.tracy` records a session to a file that can
 be attached to an issue.
 
+Skin scripts get Tracy's Lua API in the same build, for timing parts of a Lua function:
+
+```lua
+tracy.ZoneBeginN("box frame")
+-- ...
+tracy.ZoneEnd()
+```
+
+Guard these with `if tracy then` in scripts that also run on normal builds.
+
 ## Controls
 
 - Press **F1** during gameplay for quick restart
