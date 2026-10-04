@@ -7,6 +7,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 
 class LuaScript {
@@ -19,7 +20,7 @@ protected:
     bool load(const std::string& class_name, const std::string& script_name, Args&&... args);
 
     template<typename... Args>
-    void call(sol::protected_function& fn, const std::string& context, Args&&... args) {
+    void call(sol::protected_function& fn, std::string_view context, Args&&... args) {
         if (!fn.valid()) return;
         auto result = fn(lua_object, std::forward<Args>(args)...);
         if (!result.valid()) {
@@ -29,7 +30,7 @@ protected:
     }
 
     template<typename Ret, typename... Args>
-    sol::optional<Ret> call_r(sol::protected_function& fn, const std::string& context, Args&&... args) {
+    sol::optional<Ret> call_r(sol::protected_function& fn, std::string_view context, Args&&... args) {
         if (!fn.valid()) return sol::nullopt;
         auto result = fn(lua_object, std::forward<Args>(args)...);
         if (!result.valid()) {

@@ -152,6 +152,7 @@ void TextureWrapper::init(const fs::path& skin_path) {
 }
 
 void TextureWrapper::unload_textures() {
+    lua_texture_lookup.clear();
     textures.clear();
     loaded_subsets.clear();
     animations.clear();
@@ -453,6 +454,7 @@ std::unordered_set<std::string> overridden_names(const fs::path& child_folder) {
 }
 
 void TextureWrapper::load_folder(const std::string& screen_name, const std::string& subset) {
+    lua_texture_lookup.clear();
     // Subset leaf name is the key prefix used in textures[] (e.g. "notes_nijiiro" from "game/notes_nijiiro")
     const std::string subset_key = fs::path(subset).filename().string();
     const std::string dedup_key = screen_name + "/" + subset_key;
@@ -647,6 +649,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
 }
 
 void TextureWrapper::unload_folder(const std::string& screen_name, const std::string& subset) {
+    lua_texture_lookup.clear();
     const std::string subset_key = fs::path(subset).filename().string();
     const std::string dedup_key = screen_name + "/" + subset_key;
 

@@ -127,15 +127,23 @@ void SongBox::update(double current_time) {
     BaseBox::update(current_time);
     diff_fade_in->update(current_time);
 
-    auto wave_ext = parser.metadata.wave.extension();
-    bool is_bank = wave_ext == ".nus3bank" || wave_ext == ".nub";
+    // update() runs every frame for every box of the list: the audio file is looked at once,
+    // when this box is first opened, instead of building paths / stat-ing it every frame
+    if (yellow_box_active && wave_kind == WaveKind::UNKNOWN) {
+        const auto wave_ext = parser.metadata.wave.extension();
+        const bool bank = wave_ext == ".nus3bank" || wave_ext == ".nub";
+        std::error_code ec;
+        const bool exists = !parser.metadata.wave.empty() && fs::exists(parser.metadata.wave, ec);
+        wave_kind = !exists ? WaveKind::MISSING : bank ? WaveKind::BANK : WaveKind::STREAM;
+    }
+    const bool is_bank = wave_kind == WaveKind::BANK;
+    const bool is_stream = wave_kind == WaveKind::STREAM;
     // The yellow-box open animation (slide-in ~133ms + left_out ~217ms) finishes in ~350ms;
     // wait that long rather than polling the animation, which the Lua skin now drives.
     bool box_opened = get_current_ms() - bar_open_started_at > 350;
 
     if (is_bank && yellow_box_active && !music_playing && !preview_load &&
-        !preview_attempted && get_current_ms() - bar_open_started_at > 250 &&
-        fs::exists(parser.metadata.wave)) {
+        !preview_attempted && get_current_ms() - bar_open_started_at > 250) {
         preview_attempted = true;
         preview_load = std::make_shared<PreviewLoad>();
         if (preview_thread.joinable()) preview_thread.join();
@@ -145,7 +153,7 @@ void SongBox::update(double current_time) {
         });
     }
 
-    if (!is_bank && yellow_box_active && box_opened && fs::exists(parser.metadata.wave) && !music_playing) {
+    if (is_stream && yellow_box_active && box_opened && !music_playing) {
         audio.load_music_stream(parser.metadata.wave, "preview");
         if (audio.is_music_stream_valid("preview")) {
             music_playing = true;
