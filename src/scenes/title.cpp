@@ -6,7 +6,7 @@
 #include "../libs/network.h"
 #include <random>
 
-#ifdef NETWORK_ENABLED
+#ifdef CARD_READER_ENABLED
 #include "../libs/optional/card_reader.h"
 static std::unique_ptr<card_reader::CardReader> g_card_reader;
 static double g_last_card_poll_ms = 0;
@@ -33,7 +33,7 @@ void TitleScreen::on_screen_start() {
     global_data.card_reader_card_valid = false;
     global_data.card_reader_card_id_hex.clear();
 
-#ifdef NETWORK_ENABLED
+#ifdef CARD_READER_ENABLED
     // Card reader only matters when online (case 4: offline scan does nothing)
     if (global_data.config && global_data.config->network.online_play) {
         g_card_reader = std::make_unique<card_reader::CardReader>();
@@ -94,7 +94,7 @@ Screens TitleScreen::on_screen_end(Screens next_screen) {
     global_data.title_state = "";
     global_data.title_state_start_ms = 0.0;
 
-#ifdef NETWORK_ENABLED
+#ifdef CARD_READER_ENABLED
     // Clean up card reader
     if (g_card_reader) {
         g_card_reader->stop_polling();
@@ -171,7 +171,7 @@ std::optional<Screens> TitleScreen::update() {
         return on_screen_end(Screens::ENTRY);
     }
 
-#ifdef NETWORK_ENABLED
+#ifdef CARD_READER_ENABLED
     // Poll for cards if card reader is active
     if (g_card_reader && g_card_reader->is_polling()) {
         int poll_interval = global_data.config ? global_data.config->card_reader.poll_interval_ms : 100;

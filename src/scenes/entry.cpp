@@ -32,7 +32,7 @@ void EntryScreen::on_screen_start() {
     global_data.card_reader_card_valid = false;
     global_data.card_reader_card_id_hex.clear();
 
-#ifdef NETWORK_ENABLED
+#ifdef CARD_READER_ENABLED
     if (online) {
         card_reader_ = std::make_unique<card_reader::CardReader>();
         if (card_reader_->initialize(global_data.config->card_reader.port, global_data.config->card_reader.baudrate)) {
@@ -216,7 +216,7 @@ Screens EntryScreen::on_screen_end(Screens next_screen) {
     audio.stop_sound("bgm");
 
     // Clean up card reader
-#ifdef NETWORK_ENABLED
+#ifdef CARD_READER_ENABLED
     if (card_reader_) {
         card_reader_->stop_polling();
         card_reader_->led_reset();
@@ -392,7 +392,7 @@ std::optional<Screens> EntryScreen::update() {
         join_with_card(hex);
     }
 
-#ifdef NETWORK_ENABLED
+#ifdef CARD_READER_ENABLED
     // Case 6: any card while a seat is free (P1 first, then P2)
     if (card_reader_ && card_reader_->is_polling() && !login_ready_ && state != EntryState::SELECT_COSTUME &&
         !(seat_joined(PlayerNum::P1) && seat_joined(PlayerNum::P2))) {

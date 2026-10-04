@@ -12,7 +12,7 @@
 #include "../objects/global/timer.h"
 #include "../objects/global/chara_3d.h"
 
-#ifdef NETWORK_ENABLED
+#ifdef CARD_READER_ENABLED
 #include "../libs/optional/card_reader.h"
 #endif
 
@@ -42,7 +42,7 @@ private:
     bool announce_played = false;
     std::vector<std::unique_ptr<EntryPlayer>> players;
 
-#ifdef NETWORK_ENABLED
+#ifdef CARD_READER_ENABLED
     std::unique_ptr<card_reader::CardReader> card_reader_;
     double last_card_poll_ms_ = 0;
     bool card_reader_initialized_ = false;

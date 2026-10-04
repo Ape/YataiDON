@@ -122,6 +122,7 @@ endif()
 if(NETWORK_ENABLED AND (UNIX AND NOT ANDROID AND NOT APPLE_IOS AND NOT EMSCRIPTEN))
   file(GLOB CARD_READER_SOURCES src/libs/optional/card_reader.cpp)
   list(APPEND CppFiles ${CARD_READER_SOURCES})
+  set(CARD_READER_ENABLED ON)
   message(STATUS "Card reader enabled (POSIX)")
 elseif(NETWORK_ENABLED)
   message(STATUS "Card reader not available on this platform (requires POSIX)")
@@ -198,6 +199,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
+
+if(CARD_READER_ENABLED)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE CARD_READER_ENABLED)
+endif()
 
 if(NETWORK_ENABLED)
   target_compile_definitions(${PROJECT_NAME} PRIVATE

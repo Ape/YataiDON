@@ -5,6 +5,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <cstring>
+#include <chrono>
 #include <algorithm>
 #include <sstream>
 #include <iomanip>
@@ -76,8 +77,8 @@ bool CardReader::serial_connect(const std::string& port, int baudrate) {
     tty.c_iflag &= ~IGNBRK;
     tty.c_lflag = 0;
     tty.c_oflag = 0;
-    tty.c_cc[VMIN] = 1;
-    tty.c_cc[VTIME] = 20;
+    tty.c_cc[VMIN] = 0;
+    tty.c_cc[VTIME] = 2;  // 200ms read timeout, never block forever
 
     tty.c_iflag &= ~(IXON | IXOFF | IXANY);
     tty.c_cflag |= (CLOCAL | CREAD);
@@ -224,6 +225,7 @@ std::optional<std::vector<uint8_t>> CardReader::decode_packet(const std::vector<
 }
 
 bool CardReader::send_command(uint8_t cmd, const std::vector<uint8_t>& payload, bool expect_response) {
+    std::lock_guard<std::recursive_mutex> lk(io_mutex_);
     if (serial_fd_ < 0) return false;
 
     uint8_t payload_len = static_cast<uint8_t>(payload.size());
@@ -290,6 +292,7 @@ bool CardReader::send_command(uint8_t cmd, const std::vector<uint8_t>& payload, 
 }
 
 bool CardReader::send_command_with_payload(uint8_t cmd, const std::vector<uint8_t>& payload, std::vector<uint8_t>* out_payload, bool expect_response) {
+    std::lock_guard<std::recursive_mutex> lk(io_mutex_);
     if (serial_fd_ < 0) return false;
 
     uint8_t payload_len = static_cast<uint8_t>(payload.size());
@@ -372,17 +375,45 @@ bool CardReader::start_polling() {
 
     is_polling_ = true;
     card_info_ = CardInfo{};
+    snapshot_ = CardInfo{};
+    stop_ = false;
+    worker_ = std::thread([this] {
+        while (!stop_) {
+            bool ok;
+            {
+                std::lock_guard<std::recursive_mutex> lk(io_mutex_);
+                ok = poll_blocking();
+            }
+            {
+                std::lock_guard<std::mutex> lk(snap_mutex_);
+                snapshot_ = ok ? card_info_ : CardInfo{};
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        }
+    });
     return true;
 }
 
 void CardReader::stop_polling() {
     if (!is_polling_) return;
 
+    stop_ = true;
+    if (worker_.joinable()) worker_.join();
     send_command(CMD_RADIO_OFF);
     is_polling_ = false;
 }
 
 bool CardReader::poll_once() {
+    std::lock_guard<std::mutex> lk(snap_mutex_);
+    return snapshot_.valid;
+}
+
+CardInfo CardReader::get_card_info() const {
+    std::lock_guard<std::mutex> lk(snap_mutex_);
+    return snapshot_;
+}
+
+bool CardReader::poll_blocking() {
     if (!is_polling_ || serial_fd_ < 0) return false;
 
     uint8_t expected_sequence = sequence_;

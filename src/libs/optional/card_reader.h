@@ -4,6 +4,9 @@
 #include <optional>
 #include <cstdint>
 #include <vector>
+#include <thread>
+#include <atomic>
+#include <mutex>
 
 namespace card_reader {
 
@@ -37,12 +40,12 @@ public:
     // Stop polling (turns off NFC radio)
     void stop_polling();
 
-    // Poll for cards once - call this periodically
-    // Returns true if a new card was detected
+    // Non-blocking: polling runs on a background thread.
+    // Returns true if a card is currently detected
     bool poll_once();
 
-    // Get the last detected card info
-    const CardInfo& get_card_info() const { return card_info_; }
+    // Get the last detected card info (snapshot copy)
+    CardInfo get_card_info() const;
 
     // Check if currently polling
     bool is_polling() const { return is_polling_; }
@@ -66,6 +69,8 @@ private:
     std::vector<uint8_t> encode_packet(const std::vector<uint8_t>& payload);
     std::optional<std::vector<uint8_t>> decode_packet(const std::vector<uint8_t>& data);
 
+    bool poll_blocking();  // does serial I/O, worker thread only
+
     // Card handling
     bool handle_mifare_card(const std::vector<uint8_t>& uid_bytes);
     bool handle_felica_card(const std::vector<uint8_t>& idm_bytes);
@@ -76,7 +81,12 @@ private:
 
     // State
     bool is_polling_ = false;
-    CardInfo card_info_;
+    CardInfo card_info_;      // worker-owned
+    CardInfo snapshot_;       // guarded by snap_mutex_
+    mutable std::mutex snap_mutex_;
+    std::recursive_mutex io_mutex_;  // serializes serial transactions
+    std::thread worker_;
+    std::atomic<bool> stop_{false};
 
     // Protocol constants
     static constexpr uint8_t SYNC_BYTE = 0xE0;
