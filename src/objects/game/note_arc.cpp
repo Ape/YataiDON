@@ -102,7 +102,7 @@ void NoteArc::draw(float y, ray::Shader mask_shader) {
     if (is_balloon) {
         const std::shared_ptr<TextureObject>& rainbow = tex.textures["balloon/rainbow"];
         if (!rainbow || !t_rainbow_mask) {
-            tex.draw_texture(t_note, {.x=x_i, .y=y + y_i});
+            if (current_progress < 1.0) tex.draw_texture(t_note, {.x=x_i, .y=y + y_i});
             return;
         }
         float rainbow_height;
@@ -112,8 +112,9 @@ void NoteArc::draw(float y, ray::Shader mask_shader) {
             rainbow_height = t_rainbow_mask->height;
         }
         float trail_length_ratio = 0.5f;
-        float trail_start_progress = std::max(0.0f, current_progress - trail_length_ratio);
-        float trail_end_progress = current_progress;
+        const float raw_progress = elapsed_ms / ((double)arc_duration * 16.67);
+        float trail_start_progress = std::max(0.0f, raw_progress - trail_length_ratio);
+        float trail_end_progress = std::min(raw_progress, 1.0f);
 
         if (trail_end_progress > trail_start_progress) {
             float crop_start_x = std::round(trail_start_progress * t_rainbow_mask->width);
@@ -172,6 +173,7 @@ void NoteArc::draw(float y, ray::Shader mask_shader) {
 
 bool NoteArc::is_finished() const {
     double end_ms = (double)arc_duration * 16.67;
+    if (is_balloon) end_ms *= 1.5;
     if (t_firework) end_ms += firework_frames() * 16.67;
     return elapsed_ms >= end_ms;
 }
