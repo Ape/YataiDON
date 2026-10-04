@@ -301,6 +301,33 @@ void ScriptManager::shutdown() {
     lua.reset();
 }
 
+// tex.get_texture: "screen/subset/name" -> the texture, loading the subset folder on a miss
+static sol::optional<std::shared_ptr<TextureObject>> resolve_lua_texture(const std::string& path) {
+    auto first_slash = path.find('/');
+    auto last_slash = path.rfind('/');
+    if (first_slash == std::string::npos || last_slash == first_slash) return sol::nullopt;
+
+    std::string screen_name  = path.substr(0, first_slash);
+    std::string subset       = path.substr(first_slash + 1, last_slash - first_slash - 1);
+    std::string texture_name = path.substr(last_slash + 1);
+
+    std::string subset_key = fs::path(subset).filename().string();
+    std::string base = subset_key + "/" + texture_name;
+
+    for (const auto& v : script_manager.tex.language_variants(base + "_" + global_data.config->general.language)) {
+        if (script_manager.tex.has_texture(v)) return script_manager.tex.get_texture_shared(v);
+    }
+    if (script_manager.tex.has_texture(base)) return script_manager.tex.get_texture_shared(base);
+
+    script_manager.tex.load_folder(screen_name, subset);
+
+    for (const auto& v : script_manager.tex.language_variants(base + "_" + global_data.config->general.language)) {
+        if (script_manager.tex.has_texture(v)) return script_manager.tex.get_texture_shared(v);
+    }
+    if (script_manager.tex.has_texture(base)) return script_manager.tex.get_texture_shared(base);
+    return sol::nullopt;
+}
+
 void ScriptManager::register_lua_bindings() {
     sol::state& lua = *this->lua;
     // Calling an animation returns it: box:fade() and box.fade (a property) are the same object,
@@ -618,29 +645,20 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
     });
 
     tex.set_function("get_texture", [](const std::string& path) -> sol::optional<std::shared_ptr<TextureObject>> {
-        auto first_slash = path.find('/');
-        auto last_slash = path.rfind('/');
-        if (first_slash == std::string::npos || last_slash == first_slash) return sol::nullopt;
-
-        std::string screen_name  = path.substr(0, first_slash);
-        std::string subset       = path.substr(first_slash + 1, last_slash - first_slash - 1);
-        std::string texture_name = path.substr(last_slash + 1);
-
-        std::string subset_key = fs::path(subset).filename().string();
-        std::string base = subset_key + "/" + texture_name;
-
-        for (const auto& v : script_manager.tex.language_variants(base + "_" + global_data.config->general.language)) {
-            if (script_manager.tex.has_texture(v)) return script_manager.tex.get_texture_shared(v);
+        TextureWrapper& w = script_manager.tex;
+        const std::string& lang = global_data.config->general.language;
+        if (w.lua_texture_lookup_lang != lang) {
+            w.lua_texture_lookup.clear();
+            w.lua_texture_lookup_lang = lang;
         }
-        if (script_manager.tex.has_texture(base)) return script_manager.tex.get_texture_shared(base);
-
-        script_manager.tex.load_folder(screen_name, subset);
-
-        for (const auto& v : script_manager.tex.language_variants(base + "_" + global_data.config->general.language)) {
-            if (script_manager.tex.has_texture(v)) return script_manager.tex.get_texture_shared(v);
+        if (auto it = w.lua_texture_lookup.find(path); it != w.lua_texture_lookup.end()) {
+            if (it->second) return it->second;
+            return sol::nullopt;
         }
-        if (script_manager.tex.has_texture(base)) return script_manager.tex.get_texture_shared(base);
-        return sol::nullopt;
+        // resolve_lua_texture may load the folder, which empties the lookup: store afterwards
+        sol::optional<std::shared_ptr<TextureObject>> found = resolve_lua_texture(path);
+        w.lua_texture_lookup[path] = found ? *found : nullptr;
+        return found;
     });
 
     tex.set_function("language", []() { return global_data.config->general.language; });

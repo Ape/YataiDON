@@ -28,6 +28,8 @@ public:
     std::shared_ptr<PreviewLoad> preview_load;
     std::thread preview_thread;
     bool preview_attempted = false;
+    // the preview audio file, checked once on the first update()
+    enum class WaveKind { UNKNOWN, MISSING, BANK, STREAM } wave_kind = WaveKind::UNKNOWN;
     std::unique_ptr<ScoreHistory> score_history;
     double box_opened_at = 0.0;
     FadeAnimation* diff_fade_in;

@@ -166,6 +166,10 @@ private:
 
 public:
     std::unordered_map<std::string, std::shared_ptr<TextureObject>> textures;
+    // Lua tex.get_texture(path) results by the exact path string (nullptr = not found): skins call
+    // it every frame. Emptied whenever `textures` changes, and when the language changes.
+    std::unordered_map<std::string, std::shared_ptr<TextureObject>> lua_texture_lookup;
+    std::string lua_texture_lookup_lang;
     std::unordered_map<SC, SkinInfo> skin_config;
     std::unordered_map<std::string, SkinInfo> skin_config_by_name;
     std::unordered_map<SCO, bool> options;
