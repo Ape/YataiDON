@@ -1,4 +1,5 @@
 #include "input.h"
+#include "profiler.h"
 #include "animation.h"
 #include "spdlog/spdlog.h"
 #include "texture.h"
@@ -442,6 +443,7 @@ int take_gamepad_button_pressed() {
 }
 
 void input_polling_thread() {
+    PROFILE_THREAD_NAME("input");
     while (input_thread_running) {
         poll_keyboard_once();
         std::this_thread::sleep_for(std::chrono::microseconds(500));

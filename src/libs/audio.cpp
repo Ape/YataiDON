@@ -1,4 +1,5 @@
 #include "audio.h"
+#include "profiler.h"
 #include "spdlog/spdlog.h"
 #ifdef YATAIDON_PLATFORM_IOS
 #include "../platform/platform_ios.h"
@@ -296,6 +297,7 @@ AudioEngine::~AudioEngine() {
 }
 
 void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* engine) {
+    PROFILE_SCOPE();
 
     const unsigned long buffer_size = framesPerBuffer * 2;
     std::memset(out, 0, buffer_size * sizeof(float));

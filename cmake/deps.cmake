@@ -570,6 +570,20 @@ target_include_directories(g719 PUBLIC
 set_target_properties(g719 PROPERTIES C_STANDARD 99)
 target_compile_definitions(g719 PRIVATE VAR_ARRAYS)
 
+option(YATAIDON_PROFILER "Build with the Tracy profiler client (see src/libs/profiler.h)" OFF)
+if(YATAIDON_PROFILER)
+  # On demand: nothing is collected until the Tracy profiler GUI connects
+  set(TRACY_ENABLE ON CACHE BOOL "" FORCE)
+  set(TRACY_ON_DEMAND ON CACHE BOOL "" FORCE)
+  FetchContent_Declare(
+    tracy
+    GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+    GIT_TAG        v0.14.1
+    GIT_SHALLOW    TRUE
+  )
+  FetchContent_MakeAvailable(tracy)
+endif()
+
 function(_yataidon_collect_targets outvar dir)
   set(_result "")
   get_property(_subdirs DIRECTORY "${dir}" PROPERTY SUBDIRECTORIES)

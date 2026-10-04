@@ -70,6 +70,16 @@ Download the latest release for your operating system from the [releases page](h
 - [Android](https://github.com/Yonokid/YataiDON/wiki/Android)
 - [iOS](ios/README.md)
 
+## Profiling
+
+Build with `-DYATAIDON_PROFILER=ON` to compile in the [Tracy](https://github.com/wolfpld/tracy) client,
+then run the Tracy profiler GUI of the same version (v0.14.1) and connect to the game. Frames, screen
+update / draw, every Lua callback (named after the script function), texture and chart loading and the
+audio mixer show up as zones; Tracy's sampling also covers functions without a zone (run the game as
+administrator on Windows for call stacks). Nothing is collected until the GUI connects, and builds
+without the option are unaffected. `tracy-capture -o trace.tracy` records a session to a file that can
+be attached to an issue.
+
 ## Controls
 
 - Press **F1** during gameplay for quick restart
