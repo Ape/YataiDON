@@ -348,6 +348,11 @@ Config get_config() {
         config.network.access_code_2 = "1";
     }
 
+    // Access codes were 24 digits; the server now uses the last 20.
+    for (std::string* code : {&config.network.access_code_1, &config.network.access_code_2}) {
+        if (code->size() == 24 && std::all_of(code->begin(), code->end(), ::isdigit)) code->erase(0, 4);
+    }
+
     config.network.online_play = config_file["network"]["online_play"].value_or(
         config_file["general"]["online_play"].value_or(false));
     config.network.sync_scores = config_file["network"]["sync_scores"].value_or(

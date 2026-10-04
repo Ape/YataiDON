@@ -4,6 +4,8 @@
 #include "song_parser.h"
 #include <numeric>
 
+static void ensure_dan_table(sqlite3* db);
+
 ScoresManager::ScoresManager(const fs::path& db_path) {
     if (sqlite3_open(db_path.string().c_str(), &db_fsd) != SQLITE_OK) {
         std::string err = sqlite3_errmsg(db_fsd);
@@ -141,7 +143,7 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
 
         // First, check if there are integer player_ids that need conversion
         // Use GLOB for pattern matching (SQLite doesn't support [^...] in LIKE)
-        // Also exclude very long numeric IDs (24-digit access codes from server)
+        // Also exclude very long numeric IDs (long numeric access codes from server)
         sqlite3_stmt* stmt;
         const char* check_query = "SELECT COUNT(*) FROM players WHERE player_id NOT GLOB '*[^0-9]*' AND player_id != '' AND player_id NOT IN ('0') AND LENGTH(player_id) <= 10;";
         int has_integer_ids = 0;
@@ -156,7 +158,7 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
             spdlog::info("Found {} integer player_ids to migrate", has_integer_ids);
 
             // Get all integer player_ids and their usernames
-            // Only process IDs with length <= 10 (excludes 24-digit server access codes)
+            // Only process IDs with length <= 10 (excludes long server access codes)
             const char* select_query = "SELECT player_id, username FROM players WHERE player_id NOT GLOB '*[^0-9]*' AND player_id != '' AND player_id NOT IN ('0') AND LENGTH(player_id) <= 10;";
             if (sqlite3_prepare_v2(db_fsd, select_query, -1, &stmt, nullptr) == SQLITE_OK) {
                 while (sqlite3_step(stmt) == SQLITE_ROW) {
@@ -234,6 +236,22 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
 
         if (migrations_ok) sqlite3_exec(db_fsd, "PRAGMA user_version = 5;", nullptr, nullptr, nullptr);
         else spdlog::error("ScoresManager: migration v5 failed, not raising user_version");
+    }
+
+    // Migration v6: access codes went from 24 to 20 digits (server dropped the 4 leading digits).
+    if (version < 6) {
+        ensure_dan_table(db_fsd);
+        bool ok = run_migration(
+            "BEGIN;"
+            "UPDATE OR IGNORE players SET player_id = substr(player_id, 5) WHERE LENGTH(player_id) = 24 AND player_id NOT GLOB '*[^0-9]*';"
+            "UPDATE scores SET player_id = substr(player_id, 5) WHERE LENGTH(player_id) = 24 AND player_id NOT GLOB '*[^0-9]*';"
+            "UPDATE OR IGNORE dan_results SET player_id = substr(player_id, 5) WHERE LENGTH(player_id) = 24 AND player_id NOT GLOB '*[^0-9]*';"
+            "COMMIT;");
+        if (ok) sqlite3_exec(db_fsd, "PRAGMA user_version = 6;", nullptr, nullptr, nullptr);
+        else {
+            sqlite3_exec(db_fsd, "ROLLBACK;", nullptr, nullptr, nullptr);
+            spdlog::error("ScoresManager: migration v6 failed, not raising user_version");
+        }
     }
 
     run_migration("ALTER TABLE players ADD COLUMN modifier_skip BOOL NOT NULL DEFAULT 0;");
