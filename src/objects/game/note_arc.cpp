@@ -59,7 +59,15 @@ NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bo
 
     arc_points_cache = &_arc_points_cache[cache_key];
 
-    t_note = tex.get_texture("notes/" + std::to_string((int)note_type));
+    NoteType texture_note_type = note_type;
+    if (big) {
+        if (note_type == NoteType::DON) {
+            texture_note_type = NoteType::DON_L;
+        } else if (note_type == NoteType::KAT) {
+            texture_note_type = NoteType::KAT_L;
+        }
+    }
+    t_note = tex.get_texture("notes/" + std::to_string((int)texture_note_type));
     t_rainbow_mask = tex.get_texture("balloon/rainbow_mask");
 }
 

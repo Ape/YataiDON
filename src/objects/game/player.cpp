@@ -1176,7 +1176,8 @@ void Player::note_correct(const Note& note, double current_ms) {
 }
 
 void Player::check_drumroll(double current_ms, DrumType drum_type, std::optional<Background>& background) {
-    draw_arc_list.push_back(NoteArc(NoteType(drum_type), current_ms, arc_player(), (int)drum_type == 3 || (int)drum_type == 4, false));
+    const bool is_big = !other_notes.empty() && other_notes.front().type == NoteType::ROLL_HEAD_L;
+    draw_arc_list.push_back(NoteArc(NoteType(drum_type), current_ms, arc_player(), is_big, false));
     curr_drumroll_count++;
     total_drumroll++;
     branch_r_count++;
