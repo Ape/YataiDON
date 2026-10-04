@@ -266,6 +266,7 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
 }
 
 ScoresManager::~ScoresManager() {
+    if (add_song_stmt) sqlite3_finalize(add_song_stmt);
     if (db_fsd) sqlite3_close(db_fsd);
 }
 
@@ -635,22 +636,94 @@ std::string ScoresManager::get_single_hash(const fs::path& path) {
     return std::accumulate(it->second.begin(), it->second.end(), std::string{});
 }
 
-void ScoresManager::add_song(const std::array<std::string, 5>& hashes, const std::string& title, const std::string& subtitle) {
+static void ensure_song_cache_table(sqlite3* db) {
+    sqlite3_exec(db,
+        "CREATE TABLE IF NOT EXISTS song_cache ("
+        "path TEXT PRIMARY KEY, version INTEGER NOT NULL, mtime INTEGER NOT NULL, size INTEGER NOT NULL, "
+        "hash_0 TEXT, hash_1 TEXT, hash_2 TEXT, hash_3 TEXT, hash_4 TEXT, title TEXT, subtitle TEXT);",
+        nullptr, nullptr, nullptr);
+}
+
+std::unordered_map<std::string, SongCacheEntry> ScoresManager::load_song_cache() {
+    std::unordered_map<std::string, SongCacheEntry> cache;
+    ensure_song_cache_table(db_fsd);
     sqlite3_stmt* stmt;
     const char* query =
-        "INSERT OR IGNORE INTO songs (title, subtitle, hash_0, hash_1, hash_2, hash_3, hash_4) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?);";
+        "SELECT path, mtime, size, hash_0, hash_1, hash_2, hash_3, hash_4, title, subtitle "
+        "FROM song_cache WHERE version = ?;";
     if (sqlite3_prepare_v2(db_fsd, query, -1, &stmt, nullptr) != SQLITE_OK) {
-        spdlog::error("add_song: failed to prepare statement: {}", sqlite3_errmsg(db_fsd));
+        spdlog::error("load_song_cache: failed to prepare statement: {}", sqlite3_errmsg(db_fsd));
+        return cache;
+    }
+    sqlite3_bind_int(stmt, 1, SONG_CACHE_VERSION);
+    auto text = [&](int col) {
+        const unsigned char* t = sqlite3_column_text(stmt, col);
+        return t ? std::string(reinterpret_cast<const char*>(t)) : std::string{};
+    };
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        SongCacheEntry e;
+        e.mtime = sqlite3_column_int64(stmt, 1);
+        e.size  = sqlite3_column_int64(stmt, 2);
+        for (int i = 0; i < 5; i++) e.hashes[i] = text(3 + i);
+        e.title    = text(8);
+        e.subtitle = text(9);
+        cache.emplace(text(0), std::move(e));
+    }
+    sqlite3_finalize(stmt);
+    return cache;
+}
+
+void ScoresManager::store_song_cache(const std::string& path, const SongCacheEntry& entry) {
+    ensure_song_cache_table(db_fsd);
+    sqlite3_stmt* stmt;
+    const char* query =
+        "INSERT OR REPLACE INTO song_cache "
+        "(path, version, mtime, size, hash_0, hash_1, hash_2, hash_3, hash_4, title, subtitle) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+    if (sqlite3_prepare_v2(db_fsd, query, -1, &stmt, nullptr) != SQLITE_OK) {
+        spdlog::error("store_song_cache: failed to prepare statement: {}", sqlite3_errmsg(db_fsd));
         return;
     }
+    sqlite3_bind_text(stmt, 1, path.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_int(stmt, 2, SONG_CACHE_VERSION);
+    sqlite3_bind_int64(stmt, 3, entry.mtime);
+    sqlite3_bind_int64(stmt, 4, entry.size);
+    for (int i = 0; i < 5; i++) sqlite3_bind_text(stmt, 5 + i, entry.hashes[i].c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 10, entry.title.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 11, entry.subtitle.c_str(), -1, SQLITE_STATIC);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+}
+
+void ScoresManager::remove_song_cache(const std::string& path) {
+    sqlite3_stmt* stmt;
+    if (sqlite3_prepare_v2(db_fsd, "DELETE FROM song_cache WHERE path = ?;", -1, &stmt, nullptr) != SQLITE_OK) return;
+    sqlite3_bind_text(stmt, 1, path.c_str(), -1, SQLITE_STATIC);
+    sqlite3_step(stmt);
+    sqlite3_finalize(stmt);
+}
+
+void ScoresManager::add_song(const std::array<std::string, 5>& hashes, const std::string& title, const std::string& subtitle) {
+    // prepared once: the loading screen calls this for every chart in the library
+    if (!add_song_stmt) {
+        const char* query =
+            "INSERT OR IGNORE INTO songs (title, subtitle, hash_0, hash_1, hash_2, hash_3, hash_4) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?);";
+        if (sqlite3_prepare_v2(db_fsd, query, -1, &add_song_stmt, nullptr) != SQLITE_OK) {
+            spdlog::error("add_song: failed to prepare statement: {}", sqlite3_errmsg(db_fsd));
+            add_song_stmt = nullptr;
+            return;
+        }
+    }
+    sqlite3_stmt* stmt = add_song_stmt;
     sqlite3_bind_text(stmt, 1, title.c_str(),    -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 2, subtitle.c_str(), -1, SQLITE_STATIC);
     for (int i = 0; i < 5; i++) {
         sqlite3_bind_text(stmt, 3 + i, hashes[i].c_str(), -1, SQLITE_STATIC);
     }
     sqlite3_step(stmt);
-    sqlite3_finalize(stmt);
+    sqlite3_reset(stmt);
+    sqlite3_clear_bindings(stmt);
 }
 
 void ScoresManager::remap_hashes(const std::unordered_map<std::string, std::string>& old_to_new) {

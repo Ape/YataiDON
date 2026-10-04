@@ -57,9 +57,24 @@ struct Score {
     int max_combo;
 };
 
+// What the loading screen needs from a chart file, cached in song_cache so unchanged files
+// are not parsed again at the next start (see LoadingScreen::load_song_hashes).
+struct SongCacheEntry {
+    int64_t mtime = 0;
+    int64_t size = 0;
+    std::array<std::string, 5> hashes;
+    std::string title;
+    std::string subtitle;
+};
+
+// Bump when get_diff_hash / the parsers produce different hashes for the same file, so every
+// cached hash is computed again.
+constexpr int SONG_CACHE_VERSION = 1;
+
 class ScoresManager {
 private:
     sqlite3* db_fsd;
+    sqlite3_stmt* add_song_stmt = nullptr;
     mutable std::mutex maps_mutex;
     std::unordered_map<fs::path, std::array<std::string, 5>> path_to_hashes;
     std::unordered_map<std::string, fs::path> single_hash_to_path;
@@ -87,6 +102,10 @@ public:
     std::optional<fs::path> get_path_by_diff_hash(const std::string& diff_hash);
     void add_song(const std::array<std::string, 5>& hash, const std::string& title, const std::string& subtitle);
     void remap_hashes(const std::unordered_map<std::string, std::string>& old_to_new);
+    // song_cache: path -> entry, current SONG_CACHE_VERSION only
+    std::unordered_map<std::string, SongCacheEntry> load_song_cache();
+    void store_song_cache(const std::string& path, const SongCacheEntry& entry);
+    void remove_song_cache(const std::string& path);
     std::optional<DanRecord> get_dan_record(const std::string& player_id, const std::string& course_title);
     void save_dan_record(const std::string& player_id, const std::string& course_title, const DanRecord& rec);
     std::optional<PlayerData> get_player_data(const std::string& player_id);

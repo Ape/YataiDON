@@ -1,4 +1,5 @@
 #include "loading.h"
+#include <unordered_set>
 #include "../libs/global_data.h"
 #include "../libs/scores.h"
 #include "../libs/filesystem.h"
@@ -59,22 +60,40 @@ void LoadingScreen::load_song_hashes() {
         std::vector<std::thread> threads;
         std::mutex scores_mutex;
 
+        // Files whose size and modification time match the cache are not parsed again; the
+        // workers only read `cache`, new or changed entries are written after they finish.
+        const std::unordered_map<std::string, SongCacheEntry> cache = scores_manager.load_song_cache();
+        std::vector<std::pair<std::string, SongCacheEntry>> fresh;
+        std::atomic<int> cache_hits = 0;
+
         auto worker = [&](int start, int end) {
             for (int i = start; i < end; i++) {
                 auto u8 = songs[i].u8string();
                 const std::string path(u8.begin(), u8.end());
 
                 std::error_code ec;
-                (void)std::filesystem::last_write_time(songs[i], ec);
+                const auto mtime = std::filesystem::last_write_time(songs[i], ec);
                 if (ec) {
                     spdlog::error("Could not stat {}: {}", path, ec.message());
                     continue;
                 }
+                const auto size = std::filesystem::file_size(songs[i], ec);
+                SongCacheEntry stamp;
+                stamp.mtime = static_cast<int64_t>(mtime.time_since_epoch().count());
+                stamp.size  = ec ? -1 : static_cast<int64_t>(size);
 
                 std::array<std::string, 5> hashes;
                 std::string title, subtitle;
 
-                try {
+                auto cached = cache.find(path);
+                const bool from_cache = cached != cache.end() && cached->second.mtime == stamp.mtime &&
+                                        cached->second.size == stamp.size;
+                if (from_cache) {
+                    hashes   = cached->second.hashes;
+                    title    = cached->second.title;
+                    subtitle = cached->second.subtitle;
+                    cache_hits++;
+                } else try {
                     SongParser parser(songs[i]);
                     spdlog::debug("Parsing song: {}", path);
                     if (songs[i].extension() == ".osu") {
@@ -88,6 +107,11 @@ void LoadingScreen::load_song_hashes() {
                     }
                     title    = parser.metadata.title.count("en") ? parser.metadata.title.at("en") : "";
                     subtitle = parser.metadata.subtitle.count("en") ? parser.metadata.subtitle.at("en") : "";
+                    stamp.hashes   = hashes;
+                    stamp.title    = title;
+                    stamp.subtitle = subtitle;
+                    std::lock_guard<std::mutex> lock(scores_mutex);
+                    fresh.emplace_back(path, std::move(stamp));
                 } catch (const std::exception& e) {
                     spdlog::error("Failed to parse song {}: {}", path, e.what());
                     continue;
@@ -95,7 +119,8 @@ void LoadingScreen::load_song_hashes() {
 
                 try {
                     std::lock_guard<std::mutex> lock(scores_mutex);
-                    scores_manager.add_song(hashes, title, subtitle);
+                    // a cached file's songs row was written when it was parsed
+                    if (!from_cache) scores_manager.add_song(hashes, title, subtitle);
                     scores_manager.add_path_binding(songs[i], hashes);
 
                     progress = (float)++songs_loaded / songs.size();
@@ -117,7 +142,21 @@ void LoadingScreen::load_song_hashes() {
         }
         for (auto& t : threads) t.join();
 #endif
+        for (const auto& [path, entry] : fresh) scores_manager.store_song_cache(path, entry);
+        // forget files that are gone, so the table does not grow with deleted songs
+        if (!cache.empty()) {
+            std::unordered_set<std::string> present;
+            present.reserve(songs.size());
+            for (const auto& song : songs) {
+                auto u8 = song.u8string();
+                present.emplace(u8.begin(), u8.end());
+            }
+            for (const auto& [path, entry] : cache) {
+                if (!present.count(path)) scores_manager.remove_song_cache(path);
+            }
+        }
         scores_manager.commit();
+        spdlog::info("Song scan: {} files, {} from cache, {} parsed", songs.size(), cache_hits.load(), fresh.size());
 
         if (fs::exists(fs::path("scores_pytaiko.db"))) {
             scores_manager.py_taiko_import(fs::path("scores_pytaiko.db"));
