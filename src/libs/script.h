@@ -66,6 +66,7 @@ public:
     std::string get_lua_script_path(const std::string& script_name);
     void index_scripts(const fs::path& script_path);
     void register_lua_bindings();
+    void refresh_method_cache();
 
     bool script_executed(const std::string& script_name) const { return executed_scripts.count(script_name) != 0; }
     void mark_script_executed(const std::string& script_name) { executed_scripts.insert(script_name); }
@@ -113,5 +114,6 @@ bool LuaScript::load(const std::string& class_name, const std::string& script_na
     }
 
     lua_object = call_result;
+    script_manager.refresh_method_cache();
     return true;
 }

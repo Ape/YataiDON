@@ -328,6 +328,48 @@ static sol::optional<std::shared_ptr<TextureObject>> resolve_lua_texture(const s
     return sol::nullopt;
 }
 
+// sol2 gives a usertype that binds member variables (or has base classes) a C __index, and
+// that __index pushes a new C closure every time a method is looked up: each `anim:update(ms)`
+// or `box:lua_kind()` from a skin allocated a GC object before the call. The wrapper below
+// answers keys that resolved to a function from a per-metatable cache (a method is the same
+// closure for every instance of the type: sol's per-type storage); fields still go to sol.
+static int cached_method_index(lua_State* L) {
+    // upvalue 1: cache table (method name -> function), upvalue 2: sol's __index
+    lua_pushvalue(L, 2);
+    if (lua_rawget(L, lua_upvalueindex(1)) != LUA_TNIL) return 1;
+    lua_pop(L, 1);
+    lua_pushvalue(L, lua_upvalueindex(2));
+    lua_pushvalue(L, 1);
+    lua_pushvalue(L, 2);
+    lua_call(L, 2, 1);
+    if (lua_type(L, -1) == LUA_TFUNCTION && lua_type(L, 2) == LUA_TSTRING) {
+        lua_pushvalue(L, 2);
+        lua_pushvalue(L, -2);
+        lua_rawset(L, lua_upvalueindex(1));
+    }
+    return 1;
+}
+
+// Wrap the C __index of every sol usertype metatable (registry keys "sol.*").
+static void cache_usertype_method_lookups(lua_State* L) {
+    lua_pushnil(L);
+    while (lua_next(L, LUA_REGISTRYINDEX) != 0) {
+        if (lua_type(L, -2) == LUA_TSTRING && lua_type(L, -1) == LUA_TTABLE &&
+            std::strncmp(lua_tostring(L, -2), "sol.", 4) == 0) {
+            lua_getfield(L, -1, "__index");
+            if (lua_iscfunction(L, -1) && lua_tocfunction(L, -1) != cached_method_index) {
+                lua_newtable(L);
+                lua_insert(L, -2);
+                lua_pushcclosure(L, cached_method_index, 2);
+                lua_setfield(L, -2, "__index");
+            } else {
+                lua_pop(L, 1);
+            }
+        }
+        lua_pop(L, 1);
+    }
+}
+
 void ScriptManager::register_lua_bindings() {
     sol::state& lua = *this->lua;
     // Calling an animation returns it: box:fade() and box.fade (a property) are the same object,
@@ -832,6 +874,14 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
     lua["camera"] = camera_tbl;
 
     register_song_select_lua_bindings(lua);
+
+    cache_usertype_method_lookups(lua.lua_state());
+}
+
+// sol creates some metatables lazily (e.g. the unique_ptr variant the first time an anim.fade()
+// object is pushed), so new ones are wrapped after script loads and once a second.
+void ScriptManager::refresh_method_cache() {
+    if (lua) cache_usertype_method_lookups(lua->lua_state());
 }
 
 ScriptManager script_manager;

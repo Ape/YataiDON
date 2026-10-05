@@ -355,6 +355,13 @@ static void run_frame() {
     }
 
     network.update(g_frame_ms);
+    {
+        static double last_method_cache_ms = 0.0;
+        if (g_frame_ms - last_method_cache_ms > 1000.0) {
+            last_method_cache_ms = g_frame_ms;
+            script_manager.refresh_method_cache();
+        }
+    }
     std::optional<Screens> next_screen = screen->update();
 
     if (!next_screen.has_value() && debug_menu.requested_screen.has_value()) {
