@@ -347,10 +347,24 @@ void GameScreen::resync_song(double current_ms) {
     if (std::abs(drift) > 100.0) {
         spdlog::debug("Hard resyncing chart from {} to {}", ms_from_start, audio_ms_adjusted);
         ms_from_start = audio_ms_adjusted;
-    } else if (std::abs(drift) > 5.0) {
-        double frame_delta = (last_resync_ms > 0.0) ? (current_ms - last_resync_ms) : 16.667;
-        double correction_rate = std::min(frame_delta / 16.667, 4.0);
-        ms_from_start += drift * 0.5 * correction_rate;
+        resync_drift_ema = 0.0;
+        resync_rate_bias = 0.0;
+    } else {
+        // The audio position advances in device-buffer steps, on some devices in irregular bursts
+        // (several ms of noise), and the audio clock runs slightly off the system clock. Jumping
+        // the chart onto it whenever the drift passed 5 ms moved only the notes (everything else
+        // runs on the frame clock), about a 1.5 ms hitch every second or so. Instead the drift is
+        // smoothed and the chart clock's rate is nudged toward it (a PI loop: the integral learns
+        // the audio clock's rate offset, which is not always small -- 0.1-0.8% on a virtual
+        // output device). At most 2%, 20% while it is more than 20 ms off (after a stall).
+        double dt = (last_resync_ms > 0.0) ? std::clamp(current_ms - last_resync_ms, 0.0, 100.0) : 0.0;
+        if (last_resync_ms <= 0.0) { resync_drift_ema = drift; resync_rate_bias = 0.0; }
+        else resync_drift_ema += (drift - resync_drift_ema) * std::min(1.0, dt / 250.0);
+        resync_rate_bias = std::clamp(resync_rate_bias + resync_drift_ema * dt / (500.0 * 2000.0), -0.02, 0.02);
+        double max_rate = std::abs(resync_drift_ema) > 20.0 ? 0.2 : 0.02;
+        double step = std::clamp((resync_rate_bias + resync_drift_ema / 500.0) * dt, -max_rate * dt, max_rate * dt);
+        ms_from_start += step;
+        resync_drift_ema -= step;
     }
     last_resync_ms = current_ms;
     start_ms = current_ms - ms_from_start;

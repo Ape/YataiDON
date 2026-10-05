@@ -22,6 +22,8 @@ public:
     double ms_from_start;
     double start_delay;
     double last_resync_ms;
+    double resync_drift_ema = 0.0;   // smoothed audio - chart drift (resync_song)
+    double resync_rate_bias = 0.0;   // learned audio clock rate offset (resync_song)
     bool song_started;
     bool paused;
     bool score_saved;
