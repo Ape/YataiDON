@@ -7,7 +7,7 @@ NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bo
     : note_type(note_type), start_ms(current_ms), player_num(player_num), is_big(big), is_balloon(is_balloon)
 {
     arc_points = 100;
-    arc_duration = 22;
+    arc_duration = 28;
     current_progress = 0;
     elapsed_ms = 0;
     note_finished_handled = false;
