@@ -1373,17 +1373,17 @@ void Navigator::begin_inline_load() {
     // songs will take (where set_positions puts them once they are in), not always off screen --
     // a folder of two songs pushed its neighbours out of view and back. They ride the genre
     // background's right edge (same delay, duration and linear motion as its move), so no empty
-    // gap opens ahead of it. Unknown size: off screen, as before.
-    const float off_screen = tex.screen_width + 150.0f;
-    const float edge_delay = (float)(genre_bg->stretch->duration * 1.5);
-    const float edge_duration = (float)genre_bg->move->duration;
-    for (int i = 0; i < (int)items.size(); i++) {
-        if (items[i]->position > items[open_index]->position) {
-            if (approx_items > 0)
+    // gap opens ahead of it. Unknown size (a collection such as NEW counts 0): the background does
+    // not widen, so they stay put and set_positions moves them once the songs are in -- sending
+    // them off screen left the right side empty for the whole wait.
+    if (approx_items > 0) {
+        const float off_screen = tex.screen_width + 150.0f;
+        const float edge_delay = (float)(genre_bg->stretch->duration * 1.5);
+        const float edge_duration = (float)genre_bg->move->duration;
+        for (int i = 0; i < (int)items.size(); i++) {
+            if (items[i]->position > items[open_index]->position)
                 items[i]->move_box(std::min(items[i]->position + approx_items * base_spacing, off_screen),
                                    edge_duration, edge_delay, std::nullopt);
-            else
-                items[i]->move_box(off_screen, 600);
         }
     }
 }
