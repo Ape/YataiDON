@@ -343,6 +343,21 @@ void GameScreen::resync_song(double current_ms) {
     double audio_ms = audio.get_sound_time_played(song_music.value()) * 1000.0f;
     double audio_ms_adjusted = audio_ms + (parser->metadata.offset * 1000 + start_delay - (double)global_data.config->general.audio_offset);
 
+    // Advance the chart by whole display refreshes when the frame took about that long (a fixed
+    // per-frame step): with vsync the frame-start timestamps jitter by a few tenths
+    // of a ms around the refresh period, and only the notes would carry that jitter. Frames far
+    // from a whole number of refreshes (no vsync, a limiter below the refresh rate) keep the
+    // measured time; the loop below absorbs any rate error against the audio.
+    if (last_resync_ms <= 0.0) {
+        int hz = ray::GetMonitorRefreshRate(ray::GetCurrentMonitor());
+        refresh_period_ms = hz > 0 ? 1000.0 / hz : 0.0;
+    } else if (refresh_period_ms > 0.0) {
+        double advance = ms_from_start - resync_chart_ms;
+        double refreshes = std::round(advance / refresh_period_ms);
+        if (refreshes >= 1.0 && std::abs(advance - refreshes * refresh_period_ms) < 0.25 * refresh_period_ms)
+            ms_from_start = resync_chart_ms + refreshes * refresh_period_ms;
+    }
+
     double drift = audio_ms_adjusted - ms_from_start;
     if (std::abs(drift) > 100.0) {
         spdlog::debug("Hard resyncing chart from {} to {}", ms_from_start, audio_ms_adjusted);
@@ -367,6 +382,7 @@ void GameScreen::resync_song(double current_ms) {
         resync_drift_ema -= step;
     }
     last_resync_ms = current_ms;
+    resync_chart_ms = ms_from_start;
     start_ms = current_ms - ms_from_start;
 }
 

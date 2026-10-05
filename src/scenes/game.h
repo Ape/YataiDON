@@ -24,6 +24,8 @@ public:
     double last_resync_ms;
     double resync_drift_ema = 0.0;   // smoothed audio - chart drift (resync_song)
     double resync_rate_bias = 0.0;   // learned audio clock rate offset (resync_song)
+    double resync_chart_ms = 0.0;    // chart time after the previous resync_song
+    double refresh_period_ms = 0.0;  // display refresh period, 0 = unknown (resync_song)
     bool song_started;
     bool paused;
     bool score_saved;
