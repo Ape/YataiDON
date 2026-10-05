@@ -568,10 +568,16 @@ void Navigator::parse_song_list(const fs::path& path, BoxDef box_def, bool inlin
     for (const auto& entry : entries) {
         fs::path final_path;
 
-        if (auto found = scores_manager.get_path_by_hash(entry.hash)) {
+        // Hash is the primary reference. If several songs share it, title and
+        // subtitle disambiguate only among candidates with that same hash.
+        if (auto found = scores_manager.get_path_by_hash(entry.hash))
             final_path = *found;
-            out_entries.push_back(entry);
-        } else {
+        if (!entry.title.empty() || !entry.subtitle.empty()) {
+            if (auto by_title = find_song_by_title(entry.title, entry.subtitle);
+                by_title && scores_manager.get_single_hash(*by_title) == entry.hash)
+                final_path = *by_title;
+        }
+        if (final_path.empty()) {
             auto song_path_opt = find_song_by_title(entry.title, entry.subtitle);
             if (!song_path_opt) {
                 out_entries.push_back(entry);
@@ -579,13 +585,18 @@ void Navigator::parse_song_list(const fs::path& path, BoxDef box_def, bool inlin
                 continue;
             }
             final_path = *song_path_opt;
-            std::string correct_hash = scores_manager.get_single_hash(final_path);
-            out_entries.push_back({correct_hash, entry.title, entry.subtitle});
-            spdlog::info("Found song: {} | {} with hash {}", entry.title, entry.subtitle, correct_hash);
-            needs_rewrite = true;
         }
 
-        auto box = make_song_box(final_path, box_def, SongParser(final_path));
+        SongParser parser(final_path);
+        const auto& titles = parser.metadata.title;
+        const auto& subtitles = parser.metadata.subtitle;
+        const std::string title = titles.count("en") ? titles.at("en") : titles.begin()->second;
+        const std::string subtitle = subtitles.count("en") ? subtitles.at("en") : subtitles.begin()->second;
+        const std::string correct_hash = scores_manager.get_single_hash(final_path);
+        out_entries.push_back({correct_hash, title, subtitle});
+        needs_rewrite |= entry.hash != correct_hash || entry.title != title || entry.subtitle != subtitle;
+
+        auto box = make_song_box(final_path, box_def, std::move(parser));
         box->preserve_order = true;
         if (songs_added > 0 && songs_added % 10 == 0)
             enqueue_inline_box(make_back_box(path.parent_path().parent_path(), &inline_back_def));
@@ -917,11 +928,14 @@ void Navigator::load_from_song_list(const fs::path& path, const BoxDef& box_def,
         fs::path song_path;
         if (auto found = scores_manager.get_path_by_hash(entry.hash)) {
             song_path = *found;
-        } else {
-            auto it = song_files.find({entry.title, entry.subtitle});
-            if (it == song_files.end()) continue;
-            song_path = it->second;
         }
+        if (!entry.title.empty() || !entry.subtitle.empty()) {
+            auto by_title = song_files.find({entry.title, entry.subtitle});
+            if (by_title != song_files.end() &&
+                scores_manager.get_single_hash(by_title->second) == entry.hash)
+                song_path = by_title->second;
+        }
+        if (song_path.empty()) continue;
         if (songs_added > 0 && songs_added % 10 == 0)
             enqueue_inline_box(make_back_box(path.parent_path(), &inline_back_def));
         auto song = make_song_box(song_path, box_def, SongParser(song_path));
