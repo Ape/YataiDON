@@ -597,7 +597,7 @@ void Chara3D::update(double current_ms) {
     }
 }
 
-void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h) {
+void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h, float full_h) {
     std::vector<std::vector<ray::Shader>> saved(parts.size());
     for (size_t p = 0; p < parts.size(); p++) {
         saved[p].resize(parts[p].materialCount);
@@ -619,7 +619,7 @@ void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h) {
     }
 
     {
-        const float thickness_px = 2.5f * (float)rt_h / 720.0f;
+        const float thickness_px = 2.5f * full_h / 720.0f;
         float param[2] = {thickness_px, 0.3f};
         float size[2]  = {(float)rt_w, (float)rt_h};
         if (outline_param_loc < 0) outline_param_loc = ray::GetShaderLocation(outline_shader, "outlineParam");
@@ -655,18 +655,149 @@ void Chara3D::draw_3d(float x, float y) {
         parts[p].transform = saved[p];
 }
 
+// Render at 2x and downscale on blit: bilinear-filtered supersampling ahead of the
+// FXAA pass, since raylib render textures have no MSAA path that stays GLES/Android-safe.
+static constexpr float SUPERSAMPLE = 2.0f;
+
+// Screen rectangle (render pixels) of the posed model: the CPU-skinned vertices (animVertices,
+// see UpdateModelAnimation) through the same transform draw_3d uses, then the orthographic
+// camera of camera2d_to_3d (camera rotation 0).
+bool Chara3D::screen_bounds(float x, float y, const ray::Camera3D& cam3d, float zoom, int rw, int rh,
+                            float& x0, float& y0, float& x1, float& y1) {
+    float y_angle = mirror ? -rot_y : rot_y;
+    ray::Matrix rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
+    const float s = scale * draw_scale * tex.screen_scale;
+    ray::Matrix transform = ray::MatrixMultiply(rot, ray::MatrixMultiply(ray::MatrixScale(s, s, s),
+                                                                         ray::MatrixTranslate(x, y, 400.0f)));
+    x0 = y0 = std::numeric_limits<float>::max();
+    x1 = y1 = std::numeric_limits<float>::lowest();
+    bool any = false;
+    for (const auto& part : parts) {
+        for (int m = 0; m < part.meshCount; m++) {
+            const ray::Mesh& mesh = part.meshes[m];
+            const float* v = mesh.animVertices ? mesh.animVertices : mesh.vertices;
+            if (!v) continue;
+            for (int i = 0; i < mesh.vertexCount; i++) {
+                ray::Vector3 w = ray::Vector3Transform({v[3 * i], v[3 * i + 1], v[3 * i + 2]}, transform);
+                const float px = (w.x - cam3d.position.x) * zoom + rw * 0.5f;
+                const float py = (w.y - cam3d.position.y) * zoom + rh * 0.5f;
+                x0 = std::min(x0, px); x1 = std::max(x1, px);
+                y0 = std::min(y0, py); y1 = std::max(y1, py);
+                any = true;
+            }
+        }
+    }
+    return any;
+}
+
 void Chara3D::draw(float x, float y, float scale_mul) {
     if (tex.options[SCO::DISABLE_CHARA_3D]) return;
 
     int rw = ray::GetRenderWidth();
     int rh = ray::GetRenderHeight();
-    // Render at 2x and downscale on blit: bilinear-filtered supersampling ahead of the
-    // FXAA pass, since raylib render textures have no MSAA path that stays GLES/Android-safe.
-    constexpr float SUPERSAMPLE = 2.0f;
+    ray::Camera2D cam2d = compute_camera2d(tex.screen_width, tex.screen_height);
+
+    // A rotated camera (and no render textures) keep the full-screen path
+    if (!use_render_textures || cam2d.rotation != 0.0f) {
+        draw_full_target(x, y, rw, rh, cam2d);
+        return;
+    }
+
+    ray::Camera3D cam3d = camera2d_to_3d(cam2d);
+    const float zoom = std::max(cam2d.zoom, 0.0001f);
+    if (full_target || x != last_draw_x || y != last_draw_y || zoom != last_zoom ||
+        cam3d.position.x != last_cam_x || cam3d.position.y != last_cam_y || rw != last_rw || rh != last_rh) {
+        last_draw_x = x; last_draw_y = y; last_zoom = zoom;
+        last_cam_x = cam3d.position.x; last_cam_y = cam3d.position.y; last_rw = rw; last_rh = rh;
+        render_dirty = true;
+    }
+
+    if (render_dirty) {
+        float bx0, by0, bx1, by1;
+        if (!screen_bounds(x, y, cam3d, zoom, rw, rh, bx0, by0, bx1, by1)) {
+            draw_full_target(x, y, rw, rh, cam2d);
+            return;
+        }
+        // room for the outline hull (2.5 px at 720 lines, scaled by the vertex colour) and the
+        // FXAA pass's 3-texel dilation, plus a safety pixel
+        const float margin = 2.0f * (2.5f * (float)rh / 720.0f) + 4.0f;
+        const int need_w = (int)std::ceil((bx1 - bx0) + 2.0f * margin);
+        const int need_h = (int)std::ceil((by1 - by0) + 2.0f * margin);
+        // grow-only target, in 128-texel steps, so a changing pose rarely reallocates it
+        auto round_up = [](int v) { return std::max(128, (v + 127) / 128 * 128); };
+        const int aw = round_up((int)(need_w * SUPERSAMPLE));
+        const int ah = round_up((int)(need_h * SUPERSAMPLE));
+        if (scene_target.id == 0 || full_target || aw > scene_target_w || ah > scene_target_h) {
+            const int nw = full_target ? aw : std::max(aw, scene_target_w);
+            const int nh = full_target ? ah : std::max(ah, scene_target_h);
+            if (scene_target.id != 0) ray::UnloadRenderTexture(scene_target);
+            scene_target = ray::LoadRenderTexture(nw, nh);
+            full_target = false;
+            if (scene_target.id == 0) {
+                spdlog::warn("Chara3D: render texture unavailable, using direct render");
+                use_render_textures = false;
+                draw_full_target(x, y, rw, rh, cam2d);
+                return;
+            }
+            ray::SetTextureFilter(scene_target.texture, ray::TEXTURE_FILTER_BILINEAR);
+            scene_target_w = nw;
+            scene_target_h = nh;
+            float ts[2] = {(float)nw, (float)nh};
+            ray::SetShaderValue(outline_fxaa_shader, outline_fxaa_size_loc, ts, ray::SHADER_UNIFORM_VEC2);
+        }
+        // the target's area, centred on the model, on whole render pixels (the supersampled
+        // grid then lines up with the full-screen one)
+        const int region_w = (int)(scene_target_w / SUPERSAMPLE);
+        const int region_h = (int)(scene_target_h / SUPERSAMPLE);
+        region_x = (int)std::floor((bx0 + bx1) * 0.5f - region_w * 0.5f);
+        region_y = (int)std::floor((by0 + by1) * 0.5f - region_h * 0.5f);
+
+        // the full-screen camera narrowed to that rectangle: same centre offset and pixel scale
+        ray::Camera3D rc = cam3d;
+        const float wcx = cam3d.position.x + (region_x + region_w * 0.5f - rw * 0.5f) / zoom;
+        const float wcy = cam3d.position.y + (region_y + region_h * 0.5f - rh * 0.5f) / zoom;
+        rc.position.x = rc.target.x = wcx;
+        rc.position.y = rc.target.y = wcy;
+        rc.fovy = region_h / zoom;
+
+        ray::EndMode2D();
+        ray::EndBlendMode();
+        render_dirty = false;
+        ray::BeginTextureMode(scene_target);
+        ray::ClearBackground(ray::BLANK);
+        ray::BeginBlendMode(ray::BLEND_ALPHA);
+        ray::BeginMode3D(rc);
+        draw_3d(x, y);
+        draw_outline(x, y, scene_target_w, scene_target_h, rh * SUPERSAMPLE);
+        ray::EndMode3D();
+        ray::EndBlendMode();
+        ray::EndTextureMode();
+    } else {
+        ray::EndMode2D();
+        ray::EndBlendMode();
+    }
+
+    {
+        const float region_w = scene_target_w / SUPERSAMPLE;
+        const float region_h = scene_target_h / SUPERSAMPLE;
+        ray::BeginShaderMode(outline_fxaa_shader);
+        ray::DrawTexturePro(scene_target.texture,
+            {0, 0, (float)scene_target_w, -(float)scene_target_h},
+            {(float)region_x, (float)region_y, region_w, region_h},
+            {0, 0}, 0.0f, ray::WHITE);
+        ray::EndShaderMode();
+    }
+
+    ray::BeginBlendMode(ray::BLEND_CUSTOM_SEPARATE);
+    ray::BeginMode2D(cam2d);
+}
+
+// The whole screen at 2x: kept for a rotated camera and as the fallback.
+void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Camera2D& cam2d) {
     int ssw = (int)((float)rw * SUPERSAMPLE);
     int ssh = (int)((float)rh * SUPERSAMPLE);
 
-    if (scene_target.id == 0 || scene_target_w != ssw || scene_target_h != ssh) {
+    if (scene_target.id == 0 || !full_target || scene_target_w != ssw || scene_target_h != ssh) {
         if (scene_target.id != 0) ray::UnloadRenderTexture(scene_target);
         scene_target   = ray::LoadRenderTexture(ssw, ssh);
         if (scene_target.id == 0) {
@@ -677,13 +808,13 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         }
         scene_target_w = ssw;
         scene_target_h = ssh;
+        full_target = true;
         float ts[2] = {(float)ssw, (float)ssh};
         ray::SetShaderValue(outline_fxaa_shader, outline_fxaa_size_loc, ts, ray::SHADER_UNIFORM_VEC2);
         render_dirty = true;
     }
 
     if (!use_render_textures) {
-        ray::Camera2D cam2d = compute_camera2d(tex.screen_width, tex.screen_height);
         ray::Camera3D cam3d = camera2d_to_3d(cam2d);
         ray::EndMode2D();
         ray::EndBlendMode();
@@ -701,8 +832,6 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         render_dirty = true;
     }
 
-    ray::Camera2D cam2d = compute_camera2d(tex.screen_width, tex.screen_height);
-
     ray::EndMode2D();
     ray::EndBlendMode();
 
@@ -715,7 +844,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         ray::BeginBlendMode(ray::BLEND_ALPHA);
         ray::BeginMode3D(cam3d);
         draw_3d(x, y);
-        draw_outline(x, y, ssw, ssh);
+        draw_outline(x, y, ssw, ssh, (float)ssh);
         ray::EndMode3D();
         ray::EndBlendMode();
         ray::EndTextureMode();
