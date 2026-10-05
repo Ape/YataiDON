@@ -154,6 +154,22 @@ std::filesystem::path win32_get_executable_dir() {
     return exe_path.parent_path();
 }
 
+// Plain sleeps (Sleep, std::this_thread::sleep_*) round up to the ~15.6 ms system tick, and on
+// Windows 11 timeBeginPeriod no longer changes that for us; a high-resolution waitable timer wakes
+// within a fraction of a millisecond.
+bool win32_precise_sleep_us(long long us) {
+#ifndef CREATE_WAITABLE_TIMER_HIGH_RESOLUTION
+#define CREATE_WAITABLE_TIMER_HIGH_RESOLUTION 0x00000002
+#endif
+    thread_local HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+    if (!timer) return false;
+    LARGE_INTEGER due;
+    due.QuadPart = -us * 10;   // relative, in 100 ns units
+    if (!SetWaitableTimerEx(timer, &due, 0, nullptr, nullptr, nullptr, 0)) return false;
+    WaitForSingleObject(timer, INFINITE);
+    return true;
+}
+
 void win32_install_crash_handlers() {
     std::signal(SIGINT, [](int) { std::_Exit(0); });
     SetUnhandledExceptionFilter(crash_exception_filter);

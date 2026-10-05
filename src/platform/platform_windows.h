@@ -24,6 +24,10 @@ std::filesystem::path win32_get_executable_dir();
 // Initializes Windows-specific crash handlers (SEH exception filter, dbghelp stack traces).
 void win32_install_crash_handlers();
 
+// Sleeps for about `us` microseconds on a high-resolution waitable timer (Windows 10 1803+).
+// Returns false when that timer is unavailable; the caller then falls back to a normal sleep.
+bool win32_precise_sleep_us(long long us);
+
 // Checks if a key is currently down using GetAsyncKeyState.
 // raylib_key: Raylib key code (KEY_A, KEY_SPACE, etc.)
 // Returns true if the key is currently pressed.
