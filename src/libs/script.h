@@ -1,6 +1,7 @@
 #pragma once
 
 #include "texture.h"
+#include "profiler.h"
 #include <sol/sol.hpp>
 #include <spdlog/spdlog.h>
 #include <set>
@@ -22,6 +23,8 @@ protected:
     template<typename... Args>
     void call(sol::protected_function& fn, std::string_view context, Args&&... args) {
         if (!fn.valid()) return;
+        PROFILE_SCOPE_N("lua");
+        PROFILE_ZONE_NAME(context);
         auto result = fn(lua_object, std::forward<Args>(args)...);
         if (!result.valid()) {
             sol::error err = result;
@@ -32,6 +35,8 @@ protected:
     template<typename Ret, typename... Args>
     sol::optional<Ret> call_r(sol::protected_function& fn, std::string_view context, Args&&... args) {
         if (!fn.valid()) return sol::nullopt;
+        PROFILE_SCOPE_N("lua");
+        PROFILE_ZONE_NAME(context);
         auto result = fn(lua_object, std::forward<Args>(args)...);
         if (!result.valid()) {
             sol::error err = result;
@@ -81,6 +86,8 @@ void log_lua_site(DrawLogEntry& entry, lua_State* state);
 template<typename... Args>
 bool LuaScript::load(const std::string& class_name, const std::string& script_name, Args&&... args) {
     if (!script_manager.lua) return false;
+    PROFILE_SCOPE_N("lua load");
+    PROFILE_ZONE_TEXT(script_name);
     sol::state& lua = *script_manager.lua;
 
     if (!script_manager.script_executed(script_name)) {

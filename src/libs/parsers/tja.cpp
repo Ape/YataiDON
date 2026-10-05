@@ -1,4 +1,5 @@
 #include "tja.h"
+#include "../profiler.h"
 #include "../md5.h"
 #include <algorithm>
 #include <cctype>
@@ -123,6 +124,7 @@ static std::vector<std::string> read_lines_once(const std::filesystem::path& pat
 
 TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int player_num)
     : file_path(path), start_ms(static_cast<double>(start_delay)), current_ms(static_cast<double>(start_delay)), player_num(player_num) {
+    PROFILE_SCOPE();
 
     std::vector<std::string> lines = read_lines_once(file_path, encoding);
 
@@ -416,6 +418,7 @@ void TJAParser::get_metadata() {
 
 std::tuple<NoteList, std::deque<NoteList>, std::deque<NoteList>, std::deque<NoteList>>
 TJAParser::notes_to_position(int diff) {
+    PROFILE_SCOPE();
     if (metadata.course_data.count(diff) == 0) {
         return std::make_tuple(NoteList(), std::deque<NoteList>(), std::deque<NoteList>(), std::deque<NoteList>());
     }

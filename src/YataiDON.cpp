@@ -3,6 +3,7 @@
 #include <rlgl.h>
 
 #include "libs/animation.h"
+#include "libs/profiler.h"
 #include "libs/audio.h"
 #include "libs/global_data.h"
 #include "libs/filesystem.h"
@@ -299,6 +300,8 @@ void reload_skin_screens() {
 }
 
 static void run_frame() {
+    PROFILE_FRAME();
+    PROFILE_SCOPE();
     LoopState& L = *g_loop;
 
     g_frame_ms = get_current_ms();
@@ -363,7 +366,12 @@ static void run_frame() {
     }
 
     network.update(g_frame_ms);
-    std::optional<Screens> next_screen = screen->update();
+    std::optional<Screens> next_screen;
+    {
+        PROFILE_SCOPE_N("screen update");
+        PROFILE_ZONE_TEXT(screen->screen_name);
+        next_screen = screen->update();
+    }
     sync_text_input();
 
     if (!next_screen.has_value() && debug_menu.requested_screen.has_value()) {
@@ -372,6 +380,8 @@ static void run_frame() {
     }
 
     if (screen->screen_init) {
+        PROFILE_SCOPE_N("screen draw");
+        PROFILE_ZONE_TEXT(screen->screen_name);
         screen->_do_draw();
     }
     if (L.screen_fade_start > 0.0) {
@@ -414,10 +424,13 @@ static void run_frame() {
 
     ray::EndBlendMode();
     ray::EndMode2D();
-    ray::EndDrawing();
+    {
+        PROFILE_SCOPE_N("present");
+        ray::EndDrawing();
 
-    if (!next_screen.has_value()) {
-        ray::SwapScreenBuffer();
+        if (!next_screen.has_value()) {
+            ray::SwapScreenBuffer();
+        }
     }
 
     if (ray::IsKeyPressed(ray::KEY_F12)) {

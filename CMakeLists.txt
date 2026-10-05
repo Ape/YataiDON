@@ -200,6 +200,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
 
+if(YATAIDON_PROFILER)
+  target_link_libraries(${PROJECT_NAME} PRIVATE Tracy::TracyClient)
+endif()
+
 if(CARD_READER_ENABLED)
   target_compile_definitions(${PROJECT_NAME} PRIVATE CARD_READER_ENABLED)
 endif()

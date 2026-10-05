@@ -1,4 +1,7 @@
 #include "script.h"
+#ifdef TRACY_ENABLE
+#include <tracy/TracyLua.hpp>
+#endif
 
 #include <cstring>
 #include <string_view>
@@ -249,6 +252,9 @@ void ScriptManager::init(fs::path script_path) {
     lua = std::make_unique<sol::state>();
     lua->open_libraries(sol::lib::base, sol::lib::package, sol::lib::string,
                         sol::lib::math, sol::lib::table);
+#ifdef TRACY_ENABLE
+    tracy::LuaRegister(lua->lua_state());   // tracy.ZoneBeginN / ZoneEnd / ZoneText / Message for skins
+#endif
 
     scripts.clear();
     executed_scripts.clear();

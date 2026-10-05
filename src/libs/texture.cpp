@@ -1,4 +1,5 @@
 #include "texture.h"
+#include "profiler.h"
 #include "global_data.h"
 #include "script.h"
 #include "filesystem.h"
@@ -367,6 +368,8 @@ bool TextureWrapper::read_screen_animations(const std::string& screen_name, Docu
 }
 
 void TextureWrapper::load_animations(const std::string& screen_name) {
+    PROFILE_SCOPE();
+    PROFILE_ZONE_TEXT(screen_name);
     Document anim_config;
     if (read_screen_animations(screen_name, anim_config)) {
         AnimationParser parser;
@@ -677,6 +680,8 @@ void TextureWrapper::unload_folder(const std::string& screen_name, const std::st
 }
 
 void TextureWrapper::load_screen_textures(const std::string& screen_name) {
+    PROFILE_SCOPE();
+    PROFILE_ZONE_TEXT(screen_name);
     std::vector<fs::path> roots{graphics_path};
     roots.insert(roots.end(), ancestor_graphics_paths.begin(), ancestor_graphics_paths.end());
     std::vector<fs::path> screen_dirs;
