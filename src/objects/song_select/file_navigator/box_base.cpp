@@ -102,11 +102,11 @@ void BaseBox::set_position(float target_position) {
     this->target_position = position;
 }
 
-void BaseBox::move_box(float target_position, float duration) {
+void BaseBox::move_box(float target_position, float duration, float delay, std::optional<EaseType> ease) {
     this->target_position = target_position;
     float delta = target_position - position;
     move_delta = delta;
-    move = std::make_unique<MoveAnimation>(duration, delta, false, false, 0, 0.0, std::nullopt, std::nullopt, EaseType::Cubic);
+    move = std::make_unique<MoveAnimation>(duration, delta, false, false, 0, delay, std::nullopt, std::nullopt, ease);
     move->start();
 }
 
