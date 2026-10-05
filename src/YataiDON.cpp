@@ -320,6 +320,14 @@ static void run_frame() {
         spdlog::info("Toggled borderless windowed mode");
     }
 
+    {   // new sol metatables (see ScriptManager::refresh_method_cache)
+        static double last_method_cache_ms = 0.0;
+        if (g_frame_ms - last_method_cache_ms > 1000.0) {
+            last_method_cache_ms = g_frame_ms;
+            script_manager.refresh_method_cache();
+        }
+    }
+
     L.camera = compute_camera2d(tex.screen_width, tex.screen_height);
     debug_menu.update(L.camera);
 
