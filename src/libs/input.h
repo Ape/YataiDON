@@ -72,6 +72,10 @@ enum class TextEditAction { None, Confirm, Cancel };
 TextEditAction poll_text_edit(std::string& text,
                               const std::function<bool(int)>& accept = nullptr);
 
+// Desktop: keeps SDL text input (and with it the OS IME) on only while a text field is being
+// edited, i.e. poll_text_edit ran since the last call. Call once per frame after the screen update.
+void sync_text_input();
+
 namespace ray {
 inline bool operator==(const Color& a, const Color& b)
 {

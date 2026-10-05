@@ -364,6 +364,7 @@ static void run_frame() {
 
     network.update(g_frame_ms);
     std::optional<Screens> next_screen = screen->update();
+    sync_text_input();
 
     if (!next_screen.has_value() && debug_menu.requested_screen.has_value()) {
         next_screen = screen->on_screen_end(debug_menu.requested_screen.value());
