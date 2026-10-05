@@ -640,8 +640,75 @@ static void ensure_song_cache_table(sqlite3* db) {
     sqlite3_exec(db,
         "CREATE TABLE IF NOT EXISTS song_cache ("
         "path TEXT PRIMARY KEY, version INTEGER NOT NULL, mtime INTEGER NOT NULL, size INTEGER NOT NULL, "
-        "hash_0 TEXT, hash_1 TEXT, hash_2 TEXT, hash_3 TEXT, hash_4 TEXT, title TEXT, subtitle TEXT);",
+        "hash_0 TEXT, hash_1 TEXT, hash_2 TEXT, hash_3 TEXT, hash_4 TEXT, title TEXT, subtitle TEXT, "
+        "titles TEXT, subtitles TEXT, levels TEXT);",
         nullptr, nullptr, nullptr);
+    // tables made by version 1 lack the metadata columns (their rows are re-parsed anyway)
+    static bool columns_checked = false;
+    if (columns_checked) return;
+    columns_checked = true;
+    for (const char* col : {"titles", "subtitles", "levels"}) {
+        std::string sql = std::string("ALTER TABLE song_cache ADD COLUMN ") + col + " TEXT;";
+        sqlite3_exec(db, sql.c_str(), nullptr, nullptr, nullptr);   // fails harmlessly if present
+    }
+}
+
+// language/text pairs as "lang \x1f text \x1e ..." (control characters no title uses)
+static std::string encode_pairs(const std::vector<std::pair<std::string, std::string>>& pairs) {
+    std::string out;
+    for (const auto& [k, v] : pairs) {
+        if (!out.empty()) out += '\x1e';
+        out += k;
+        out += '\x1f';
+        out += v;
+    }
+    return out;
+}
+
+static std::vector<std::pair<std::string, std::string>> decode_pairs(const std::string& s) {
+    std::vector<std::pair<std::string, std::string>> out;
+    if (s.empty()) return out;
+    size_t start = 0;
+    for (;;) {
+        size_t end = s.find('\x1e', start);
+        std::string item = s.substr(start, end == std::string::npos ? std::string::npos : end - start);
+        size_t sep = item.find('\x1f');
+        if (sep != std::string::npos) out.emplace_back(item.substr(0, sep), item.substr(sep + 1));
+        if (end == std::string::npos) break;
+        start = end + 1;
+    }
+    return out;
+}
+
+static std::string encode_levels(const std::array<int, 5>& lv) {
+    std::string out;
+    for (int i = 0; i < 5; i++) out += (i ? "," : "") + std::to_string(lv[i]);
+    return out;
+}
+
+static std::array<int, 5> decode_levels(const std::string& s) {
+    std::array<int, 5> lv = {-1, -1, -1, -1, -1};
+    size_t start = 0;
+    for (int i = 0; i < 5 && start <= s.size(); i++) {
+        size_t end = s.find(',', start);
+        try { lv[i] = std::stoi(s.substr(start, end == std::string::npos ? std::string::npos : end - start)); }
+        catch (...) { break; }
+        if (end == std::string::npos) break;
+        start = end + 1;
+    }
+    return lv;
+}
+
+void ScoresManager::set_song_meta(const std::string& path, const SongCacheEntry& entry) {
+    std::lock_guard<std::mutex> lock(song_meta_mutex);
+    song_meta[path] = entry;
+}
+
+std::optional<SongCacheEntry> ScoresManager::get_song_meta(const std::string& path) {
+    std::lock_guard<std::mutex> lock(song_meta_mutex);
+    auto it = song_meta.find(path);
+    if (it == song_meta.end()) return std::nullopt;
+    return it->second;
 }
 
 std::unordered_map<std::string, SongCacheEntry> ScoresManager::load_song_cache() {
@@ -649,8 +716,8 @@ std::unordered_map<std::string, SongCacheEntry> ScoresManager::load_song_cache()
     ensure_song_cache_table(db_fsd);
     sqlite3_stmt* stmt;
     const char* query =
-        "SELECT path, mtime, size, hash_0, hash_1, hash_2, hash_3, hash_4, title, subtitle "
-        "FROM song_cache WHERE version = ?;";
+        "SELECT path, mtime, size, hash_0, hash_1, hash_2, hash_3, hash_4, title, subtitle, "
+        "titles, subtitles, levels FROM song_cache WHERE version = ?;";
     if (sqlite3_prepare_v2(db_fsd, query, -1, &stmt, nullptr) != SQLITE_OK) {
         spdlog::error("load_song_cache: failed to prepare statement: {}", sqlite3_errmsg(db_fsd));
         return cache;
@@ -665,8 +732,11 @@ std::unordered_map<std::string, SongCacheEntry> ScoresManager::load_song_cache()
         e.mtime = sqlite3_column_int64(stmt, 1);
         e.size  = sqlite3_column_int64(stmt, 2);
         for (int i = 0; i < 5; i++) e.hashes[i] = text(3 + i);
-        e.title    = text(8);
-        e.subtitle = text(9);
+        e.title     = text(8);
+        e.subtitle  = text(9);
+        e.titles    = decode_pairs(text(10));
+        e.subtitles = decode_pairs(text(11));
+        e.levels    = decode_levels(text(12));
         cache.emplace(text(0), std::move(e));
     }
     sqlite3_finalize(stmt);
@@ -678,8 +748,8 @@ void ScoresManager::store_song_cache(const std::string& path, const SongCacheEnt
     sqlite3_stmt* stmt;
     const char* query =
         "INSERT OR REPLACE INTO song_cache "
-        "(path, version, mtime, size, hash_0, hash_1, hash_2, hash_3, hash_4, title, subtitle) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        "(path, version, mtime, size, hash_0, hash_1, hash_2, hash_3, hash_4, title, subtitle, "
+        "titles, subtitles, levels) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
     if (sqlite3_prepare_v2(db_fsd, query, -1, &stmt, nullptr) != SQLITE_OK) {
         spdlog::error("store_song_cache: failed to prepare statement: {}", sqlite3_errmsg(db_fsd));
         return;
@@ -691,6 +761,11 @@ void ScoresManager::store_song_cache(const std::string& path, const SongCacheEnt
     for (int i = 0; i < 5; i++) sqlite3_bind_text(stmt, 5 + i, entry.hashes[i].c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 10, entry.title.c_str(), -1, SQLITE_STATIC);
     sqlite3_bind_text(stmt, 11, entry.subtitle.c_str(), -1, SQLITE_STATIC);
+    const std::string titles = encode_pairs(entry.titles), subtitles = encode_pairs(entry.subtitles);
+    const std::string levels = encode_levels(entry.levels);
+    sqlite3_bind_text(stmt, 12, titles.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 13, subtitles.c_str(), -1, SQLITE_STATIC);
+    sqlite3_bind_text(stmt, 14, levels.c_str(), -1, SQLITE_STATIC);
     sqlite3_step(stmt);
     sqlite3_finalize(stmt);
 }

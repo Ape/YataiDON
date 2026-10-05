@@ -65,16 +65,23 @@ struct SongCacheEntry {
     std::array<std::string, 5> hashes;
     std::string title;
     std::string subtitle;
+    // what Navigator::preload needs for search and the level filters: every language's title and
+    // subtitle (metadata order) and the level of courses 0..4 (-1 = none)
+    std::vector<std::pair<std::string, std::string>> titles;
+    std::vector<std::pair<std::string, std::string>> subtitles;
+    std::array<int, 5> levels = {-1, -1, -1, -1, -1};
 };
 
-// Bump when get_diff_hash / the parsers produce different hashes for the same file, so every
-// cached hash is computed again.
-constexpr int SONG_CACHE_VERSION = 1;
+// Bump when get_diff_hash / the parsers produce different hashes or metadata for the same file,
+// so every chart is parsed again.
+constexpr int SONG_CACHE_VERSION = 2;
 
 class ScoresManager {
 private:
     sqlite3* db_fsd;
     sqlite3_stmt* add_song_stmt = nullptr;
+    std::mutex song_meta_mutex;
+    std::unordered_map<std::string, SongCacheEntry> song_meta;
     mutable std::mutex maps_mutex;
     std::unordered_map<fs::path, std::array<std::string, 5>> path_to_hashes;
     std::unordered_map<std::string, fs::path> single_hash_to_path;
@@ -106,6 +113,9 @@ public:
     std::unordered_map<std::string, SongCacheEntry> load_song_cache();
     void store_song_cache(const std::string& path, const SongCacheEntry& entry);
     void remove_song_cache(const std::string& path);
+    // the loading screen's scan result per chart (key: UTF-8 path), for Navigator::preload
+    void set_song_meta(const std::string& path, const SongCacheEntry& entry);
+    std::optional<SongCacheEntry> get_song_meta(const std::string& path);
     std::optional<DanRecord> get_dan_record(const std::string& player_id, const std::string& course_title);
     void save_dan_record(const std::string& player_id, const std::string& course_title, const DanRecord& rec);
     std::optional<PlayerData> get_player_data(const std::string& player_id);

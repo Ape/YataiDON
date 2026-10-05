@@ -219,6 +219,22 @@ void Navigator::preload(std::vector<fs::path> songs_paths) {
                     if (i >= files.size() || abort_loading) break;
                     const fs::path& file = files[i];
                     if (!is_song_file(file)) continue;
+                    // the loading screen already read this chart (parsed or from its cache)
+                    auto u8 = file.u8string();
+                    if (auto meta = scores_manager.get_song_meta(std::string(u8.begin(), u8.end()))) {
+                        bool playable = false;
+                        for (int lv : meta->levels) if (lv >= 0) { playable = true; break; }
+                        if (playable) {
+                            std::lock_guard<std::mutex> lock(map_mutex);
+                            song_files[{meta->title, meta->subtitle}] = file;
+                            std::string text;
+                            for (const auto& [lang, t] : meta->titles)    text += t + '\n';
+                            for (const auto& [lang, t] : meta->subtitles) text += t + '\n';
+                            song_search_text[file.string()] = search_fold(text);
+                            song_levels[file.string()] = meta->levels;
+                        }
+                        continue;
+                    }
                     try {
                         SongParser parsed_entry = SongParser(file);
                         parsed_entry.get_metadata();
