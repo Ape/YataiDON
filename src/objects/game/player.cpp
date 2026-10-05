@@ -452,6 +452,9 @@ void Player::update(double ms_from_start, double current_ms, std::optional<Backg
                     note_type = NoteType::KAT_L;
                 }
             }
+            if (note_type == NoteType::BALLOON_HEAD || is_balloon) {
+                note_type = NoteType::DON_L;
+            }
             gauge_hit_effect.push_back(GaugeHitEffect(note_type, is_big, arc_player() == PlayerNum::P2));
         } else if (it->is_finished()) {
             it = draw_arc_list.erase(it);

@@ -69,6 +69,9 @@ NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bo
             texture_note_type = NoteType::KAT_L;
         }
     }
+    if (note_type == NoteType::BALLOON_HEAD || is_balloon) {
+        texture_note_type = NoteType::DON_L;
+    }
     t_note = tex.get_texture("notes/" + std::to_string((int)texture_note_type));
     if (big) {
         t_firework = tex.get_texture("hit_effect/firework");
