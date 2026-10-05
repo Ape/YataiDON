@@ -775,29 +775,62 @@ void Navigator::load_current_directory_async(const fs::path path) {
     if (!reloading_roots) FolderBox::run_deferred_scans(abort_loading);
 }
 
-void Navigator::load_collection_new(const fs::path& path, const BoxDef& box_def) {
-    auto two_weeks_ago = ch::system_clock::now() - ch::weeks(2);
-    int songs_added = 0;
-    for (const auto& sibling : fs::directory_iterator(path.parent_path())) {
+// New songs: charts whose folder changed in the last two weeks. The startup scan already listed
+// every playable chart (song_levels), so only those folders' write times are read -- no second
+// walk of the whole library. Songs live under the siblings of the collection folder. Call only
+// once the scan is done (song_levels is read without a lock).
+std::vector<fs::path> Navigator::find_new_songs(const fs::path& path) const {
+    std::vector<fs::path> hits;
+    const fs::path parent = path.parent_path();
+    const auto two_weeks_ago = fs::file_time_type::clock::now() - ch::weeks(2);
+    std::vector<std::string> index;
+    index.reserve(song_levels.size());
+    for (const auto& [path_str, levels] : song_levels) index.push_back(path_str);
+    std::sort(index.begin(), index.end());
+    for (const auto& path_str : index) {
         if (abort_loading) break;
-        if (!fs::is_directory(sibling) || sibling.path() == path) continue;
-        BoxDef sibling_box_def = parse_box_def(sibling.path());
-        for (const auto& entry : fs::recursive_directory_iterator(sibling)) {
-            if (abort_loading) break;
-            if (!is_song_file(entry.path())) continue;
-            auto last_write = fs::last_write_time(entry.path().parent_path());
-            auto last_write_sys = ch::system_clock::now() +
-                std::chrono::duration_cast<ch::system_clock::duration>(
-                    last_write - std::filesystem::file_time_type::clock::now());
-            if (last_write_sys < two_weeks_ago) continue;
-            if (songs_added > 0 && songs_added % 10 == 0)
-                enqueue_inline_box(make_back_box(path.parent_path(), &inline_back_def));
-            auto song = make_song_box(entry.path(), box_def, SongParser(entry.path()));
-            apply_song_genre(song.get(), sibling_box_def);
-            song->fade_in(266);
-            enqueue_inline_box(std::move(song));
-            songs_added++;
-        }
+        fs::path song_path(path_str);
+        fs::path rel = song_path.lexically_relative(parent);
+        if (rel.empty() || rel.begin()->string() == "..") continue;
+        fs::path sibling = parent / *rel.begin();
+        if (sibling == path) continue;
+        std::error_code ec;
+        auto last_write = fs::last_write_time(song_path.parent_path(), ec);
+        if (ec || last_write < two_weeks_ago) continue;
+        hits.push_back(song_path);
+    }
+    return hits;
+}
+
+// The hits and their parsers usually come from the prefetch started with the folder's open
+// animation (begin_inline_load); the sibling of the collection folder supplies the genre.
+void Navigator::load_collection_new(const fs::path& path, const BoxDef& box_def) {
+    std::vector<fs::path> hits;
+    std::unordered_map<std::string, std::unique_ptr<SongParser>> preparsed;
+    join_prefetch();
+    // join_loader aborts a prefetch still running when the animation ends: its list may be cut short
+    if (prefetch && prefetch->new_songs && prefetch->complete && prefetch->path == path && !abort_loading) {
+        hits      = std::move(prefetch->song_paths);
+        preparsed = std::move(prefetch->preparsed);
+        prefetch.reset();
+    } else {
+        prefetch.reset();
+        wait_for_song_files();
+        hits      = find_new_songs(path);
+        preparsed = parse_songs_parallel(hits, abort_loading);
+    }
+
+    const fs::path parent = path.parent_path();
+    int songs_added = 0;
+    for (const auto& h : hits) {
+        if (abort_loading) break;
+        if (songs_added > 0 && songs_added % 10 == 0)
+            enqueue_inline_box(make_back_box(parent, &inline_back_def));
+        auto song = make_song_box(h, box_def, take_parser(preparsed, h));
+        apply_song_genre(song.get(), parse_box_def(parent / *h.lexically_relative(parent).begin()));
+        song->fade_in(266);
+        enqueue_inline_box(std::move(song));
+        songs_added++;
     }
 }
 
@@ -1095,6 +1128,21 @@ void Navigator::start_inline_prefetch(const fs::path& path) {
     });
 }
 
+// Only once the startup scan is done: the prefetch thread must not join song_files_thread (the
+// loader does) and reads song_levels without a lock.
+void Navigator::start_new_songs_prefetch(const fs::path& path) {
+    join_prefetch();
+    prefetch = std::make_unique<InlinePrefetch>();
+    prefetch->path = path;
+    prefetch->new_songs = true;
+    InlinePrefetch* pf = prefetch.get();
+    prefetch_thread = std::thread([this, pf] {
+        pf->song_paths = find_new_songs(pf->path);
+        if (!abort_loading) pf->preparsed = parse_songs_parallel(pf->song_paths, abort_loading);
+        pf->complete = !abort_loading;
+    });
+}
+
 void Navigator::join_prefetch() {
     if (prefetch_thread.joinable()) prefetch_thread.join();
 }
@@ -1179,7 +1227,7 @@ void Navigator::load_songs_inline_async(const fs::path path, BoxDef box_def) {
     std::vector<fs::path> song_paths;
     std::unordered_map<std::string, std::vector<std::pair<bool, fs::path>>> plan;
     join_prefetch();
-    if (prefetch && prefetch->path == path && !abort_loading) {
+    if (prefetch && !prefetch->new_songs && prefetch->path == path && !abort_loading) {
         song_paths = std::move(prefetch->song_paths);
         plan       = std::move(prefetch->plan);
         preparsed  = std::move(prefetch->preparsed);
@@ -1363,6 +1411,8 @@ void Navigator::begin_inline_load() {
     emit_wheel_event(WHEEL_EVENT_OPEN_BEGIN);
     if (pending_inline_path && pending_inline_box_def.collection.empty())
         start_inline_prefetch(*pending_inline_path);
+    else if (pending_inline_path && pending_inline_box_def.collection == "NEW" && song_files_ready)
+        start_new_songs_prefetch(*pending_inline_path);
     bg_genre_pending = false;
     int approx_items = (pending_inline_box_def.collection == "RECOMMENDED" ||
                         pending_inline_box_def.collection == "DIFFICULTY")
