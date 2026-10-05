@@ -68,10 +68,14 @@ private:
         std::vector<fs::path> song_paths;
         std::unordered_map<std::string, std::vector<std::pair<bool, fs::path>>> plan;
         std::unordered_map<std::string, std::unique_ptr<SongParser>> preparsed;
+        bool new_songs = false; // song_paths are the NEW collection's hits (no plan)
+        bool complete  = false; // set by the prefetch thread when it was not aborted
     };
     std::thread              prefetch_thread;
     std::unique_ptr<InlinePrefetch> prefetch;
     void start_inline_prefetch(const fs::path& path);
+    void start_new_songs_prefetch(const fs::path& path);
+    std::vector<fs::path> find_new_songs(const fs::path& path) const;
     void join_prefetch();
     void scan_song_tree(const fs::path& path, std::vector<fs::path>& song_paths,
                         std::unordered_map<std::string, std::vector<std::pair<bool, fs::path>>>& plan);
