@@ -74,21 +74,17 @@ Download the latest release for your operating system from the [releases page](h
 
 Build with `-DYATAIDON_PROFILER=ON` to compile in the [Tracy](https://github.com/wolfpld/tracy) client,
 then run the Tracy profiler GUI of the same version (v0.14.1) and connect to the game. Frames, screen
-update / draw, every Lua callback (named after the script function), texture and chart loading and the
+update / draw, every Lua callback, texture and chart loading and the
 audio mixer show up as zones; Tracy's sampling also covers functions without a zone (run the game as
-administrator on Windows for call stacks). Nothing is collected until the GUI connects, and builds
-without the option are unaffected. `tracy-capture -o trace.tracy` records a session to a file that can
-be attached to an issue.
+administrator on Windows for call stacks). `tracy-capture -o trace.tracy` records a session to a file that can be attached to an issue.
 
-Skin scripts get Tracy's Lua API in the same build, for timing parts of a Lua function:
+The client only listens on localhost, so the GUI has to run on the same machine; configure with
+`-DTRACY_ONLY_LOCALHOST=OFF` to profile over the network (the connection is unauthenticated).
 
-```lua
-tracy.ZoneBeginN("box frame")
--- ...
-tracy.ZoneEnd()
-```
-
-Guard these with `if tracy then` in scripts that also run on normal builds.
+On Linux, call-stack sampling and context switches need root or a lower `kernel.perf_event_paranoid`
+(`sudo sysctl kernel.perf_event_paranoid=1`). Distro packages of the GUI rarely match v0.14.1, so build
+`profiler/` from the v0.14.1 tag. On Wayland, if the GUI crashes at startup with a floating point
+exception, build it with `-DLEGACY=ON` to run through X11.
 
 ## Controls
 

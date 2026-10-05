@@ -575,6 +575,7 @@ if(YATAIDON_PROFILER)
   # On demand: nothing is collected until the Tracy profiler GUI connects
   set(TRACY_ENABLE ON CACHE BOOL "" FORCE)
   set(TRACY_ON_DEMAND ON CACHE BOOL "" FORCE)
+  set(TRACY_ONLY_LOCALHOST ON CACHE BOOL "")
   FetchContent_Declare(
     tracy
     GIT_REPOSITORY https://github.com/wolfpld/tracy.git
