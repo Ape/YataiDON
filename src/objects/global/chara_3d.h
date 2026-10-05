@@ -112,6 +112,17 @@ private:
     float last_draw_x = std::numeric_limits<float>::lowest();
     float last_draw_y = std::numeric_limits<float>::lowest();
 
+    // Region rendering: scene_target covers only the character's screen rectangle (at 2x),
+    // placed at region_x/y (render pixels). full_target = scene_target is the whole screen.
+    bool full_target = false;
+    int region_x = 0;
+    int region_y = 0;
+    float last_zoom = 0.0f;
+    float last_cam_x = 0.0f;
+    float last_cam_y = 0.0f;
+    int last_rw = 0;
+    int last_rh = 0;
+
     ray::Shader null_shader;
     ray::Shader face_shader;
     ray::Shader cutout_shader;
@@ -126,8 +137,11 @@ private:
     void set_texture(fs::path& texture_path, int part_index, int material_index);
     void load_face_textures(fs::path& face_dir);
     void load_face_anims(fs::path& anim_path);
-    void draw_outline(float x, float y, int rt_w, int rt_h);
+    void draw_outline(float x, float y, int rt_w, int rt_h, float full_h);
     void draw_3d(float x, float y);
+    void draw_full_target(float x, float y, int rw, int rh, const ray::Camera2D& cam2d);
+    bool screen_bounds(float x, float y, const ray::Camera3D& cam3d, float zoom, int rw, int rh,
+                       float& x0, float& y0, float& x1, float& y1);
     void ensure_render_targets(int rw, int rh);
     void prewarm_render_targets();
 public:
