@@ -51,6 +51,7 @@ private:
     int arc_duration;
     float current_progress;
     double elapsed_ms;
+    bool note_finished_handled;
     double start_ms;
     PlayerNum player_num;
 
@@ -77,4 +78,7 @@ public:
     void draw(float y, ray::Shader mask_shader);
 
     bool is_finished() const;
+
+    bool is_note_finished() const;
+    bool consume_note_finished();
 };

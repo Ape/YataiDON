@@ -10,6 +10,7 @@ NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bo
     arc_duration = 22;
     current_progress = 0;
     elapsed_ms = 0;
+    note_finished_handled = false;
 
     float curve_height = tex.skin_config[SC::NOTE_ARC_CURVE_HEIGHT].height;
     this->start_x = start_x + tex.skin_config[SC::NOTE_ARC_START_X_OFFSET].x;
@@ -166,7 +167,7 @@ void NoteArc::draw(float y, ray::Shader mask_shader) {
             });
         }
     }
-    if (current_progress < 1.0) {
+    if (!is_note_finished()) {
         tex.draw_texture(t_note, {.x=x_i, .y=y + y_i});
     }
 }
@@ -176,4 +177,14 @@ bool NoteArc::is_finished() const {
     if (is_balloon) end_ms *= 1.5;
     if (t_firework) end_ms += firework_frames() * 16.67;
     return elapsed_ms >= end_ms;
+}
+
+bool NoteArc::is_note_finished() const {
+    return current_progress >= 1.0;
+}
+
+bool NoteArc::consume_note_finished() {
+    if (note_finished_handled || !is_note_finished()) return false;
+    note_finished_handled = true;
+    return true;
 }

@@ -442,12 +442,19 @@ void Player::update(double ms_from_start, double current_ms, std::optional<Backg
 
     for (auto it = draw_arc_list.begin(); it != draw_arc_list.end(); ) {
         it->update(current_ms);
-        if (it->is_finished()) {
+        if (it->consume_note_finished()) {
             NoteType note_type = it->note_type;
             bool is_big = it->is_big;
-            it = draw_arc_list.erase(it);
-            gauge_hit_effect.clear();
+            if (is_big) {  // there should be a better way to do this
+                if (note_type == NoteType::DON) {
+                    note_type = NoteType::DON_L;
+                } else if (note_type == NoteType::KAT) {
+                    note_type = NoteType::KAT_L;
+                }
+            }
             gauge_hit_effect.push_back(GaugeHitEffect(note_type, is_big, arc_player() == PlayerNum::P2));
+        } else if (it->is_finished()) {
+            it = draw_arc_list.erase(it);
         } else {
             ++it;
         }
