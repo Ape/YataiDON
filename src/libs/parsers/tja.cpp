@@ -91,12 +91,40 @@ inline std::filesystem::path get_proper_path(const std::string& path, const std:
     #endif
 }
 
+// One open per chart. test_encodings + read_file_lines opened the file twice, and on Windows the
+// open is most of the cost of reading a chart's metadata. Same result as those two: the encoding
+// from the BOM, lines split like std::getline on '\n' (a UTF-8 BOM is skipped).
+static std::vector<std::string> read_lines_once(const std::filesystem::path& path, std::string& encoding) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        encoding = "";
+        throw std::runtime_error("Could not open file: " + path.string());
+    }
+    file.seekg(0, std::ios::end);
+    const std::streamoff size = file.tellg();
+    file.seekg(0, std::ios::beg);
+    std::string raw(size > 0 ? static_cast<size_t>(size) : 0, '\0');
+    if (!raw.empty()) file.read(raw.data(), static_cast<std::streamsize>(raw.size()));
+    raw.resize(static_cast<size_t>(file.gcount() > 0 ? file.gcount() : 0));
+
+    const auto byte = [&](size_t i) { return i < raw.size() ? static_cast<unsigned char>(raw[i]) : 0u; };
+    if (byte(0) == 0xEF && byte(1) == 0xBB && byte(2) == 0xBF) encoding = "utf-8-sig";
+    else if (byte(0) == 0xFF && byte(1) == 0xFE) encoding = "utf-16-le";
+    else if (byte(0) == 0xFE && byte(1) == 0xFF) encoding = "utf-16-be";
+    else encoding = "shift-jis";
+
+    std::vector<std::string> lines;
+    size_t start = (encoding == "utf-8-sig") ? 3 : 0;
+    for (size_t nl; (nl = raw.find('\n', start)) != std::string::npos; start = nl + 1)
+        lines.emplace_back(raw, start, nl - start);
+    if (start < raw.size()) lines.emplace_back(raw, start, raw.size() - start);
+    return lines;
+}
+
 TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int player_num)
     : file_path(path), start_ms(static_cast<double>(start_delay)), current_ms(static_cast<double>(start_delay)), player_num(player_num) {
 
-    encoding = test_encodings(file_path);
-
-    std::vector<std::string> lines = read_file_lines(file_path, encoding);
+    std::vector<std::string> lines = read_lines_once(file_path, encoding);
 
     for (const auto& line : lines) {
         std::string cleaned;

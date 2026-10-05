@@ -84,6 +84,7 @@ void LoadingScreen::load_song_hashes() {
 
                 std::array<std::string, 5> hashes;
                 std::string title, subtitle;
+                SongCacheEntry meta;   // handed to Navigator::preload
 
                 auto cached = cache.find(path);
                 const bool from_cache = cached != cache.end() && cached->second.mtime == stamp.mtime &&
@@ -92,6 +93,7 @@ void LoadingScreen::load_song_hashes() {
                     hashes   = cached->second.hashes;
                     title    = cached->second.title;
                     subtitle = cached->second.subtitle;
+                    meta     = cached->second;
                     cache_hits++;
                 } else try {
                     SongParser parser(songs[i]);
@@ -110,6 +112,11 @@ void LoadingScreen::load_song_hashes() {
                     stamp.hashes   = hashes;
                     stamp.title    = title;
                     stamp.subtitle = subtitle;
+                    for (const auto& [lang, t] : parser.metadata.title)    stamp.titles.emplace_back(lang, t);
+                    for (const auto& [lang, t] : parser.metadata.subtitle) stamp.subtitles.emplace_back(lang, t);
+                    for (const auto& [course, data] : parser.metadata.course_data)
+                        if (course >= 0 && course <= 4) stamp.levels[course] = (int)data.level;
+                    meta = stamp;
                     std::lock_guard<std::mutex> lock(scores_mutex);
                     fresh.emplace_back(path, std::move(stamp));
                 } catch (const std::exception& e) {
@@ -122,6 +129,7 @@ void LoadingScreen::load_song_hashes() {
                     // a cached file's songs row was written when it was parsed
                     if (!from_cache) scores_manager.add_song(hashes, title, subtitle);
                     scores_manager.add_path_binding(songs[i], hashes);
+                    scores_manager.set_song_meta(path, meta);
 
                     progress = (float)++songs_loaded / songs.size();
                 } catch (const std::exception& e) {
