@@ -1369,10 +1369,17 @@ void Navigator::begin_inline_load() {
     genre_bg.emplace(items[open_index]->text_name, items[open_index]->back_color,
                      items[open_index]->texture_index, approx_items * 100);
     is_processing = true;
-    // The boxes below the opened folder slide out of the way for the inline list.
+    // The boxes below the opened folder slide out of the way for the inline list: by the room its
+    // songs will take (where set_positions puts them once they are in), not always off screen --
+    // a folder of two songs pushed its neighbours out of view and back. Unknown size: off screen.
+    const float off_screen = tex.screen_width + 150.0f;
     for (int i = 0; i < (int)items.size(); i++) {
-        if (items[i]->position > items[open_index]->position)
-            items[i]->move_box(tex.screen_width + 150, 600);
+        if (items[i]->position > items[open_index]->position) {
+            const float target = approx_items > 0
+                ? std::min(items[i]->position + approx_items * base_spacing, off_screen)
+                : off_screen;
+            items[i]->move_box(target, 600);
+        }
     }
 }
 
