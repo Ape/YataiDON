@@ -82,7 +82,8 @@ public:
     void fade_in(float delay);
     void fade_out();
 
-    void move_box(float target_position, float duration);
+    void move_box(float target_position, float duration, float delay = 0.0f,
+                  std::optional<EaseType> ease = EaseType::Cubic);
     virtual void update(double current_ms);
 
     const char* draw_state() const {
