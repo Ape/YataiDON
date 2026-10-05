@@ -508,7 +508,31 @@ void set_keyboard_visible(bool visible) {
 }
 
 // Unified keyboard text-field editing. See the declaration in input.h.
+// raylib's SDL platform starts text input with the window (for GetCharPressed). With an IME
+// such as a Chinese one, every key press then goes through the IME, and PollInputEvents took
+// 5-150 ms on the frame after a drum hit on a keyboard-type controller. Text input is only on
+// while poll_text_edit is in use.
+static bool text_input_wanted = false;
+static bool text_input_active = true;   // raylib started it
+
+void sync_text_input() {
+#if defined(PLATFORM_DESKTOP_SDL)
+    if (text_input_wanted != text_input_active) {
+        int count = 0;
+        SDL_Window** windows = SDL_GetWindows(&count);
+        if (windows && count > 0) {
+            if (text_input_wanted) SDL_StartTextInput(windows[0]);
+            else                   SDL_StopTextInput(windows[0]);
+            text_input_active = text_input_wanted;
+        }
+        SDL_free(windows);
+    }
+#endif
+    text_input_wanted = false;
+}
+
 TextEditAction poll_text_edit(std::string& text, const std::function<bool(int)>& accept) {
+    text_input_wanted = true;
     // Ctrl+V pastes the clipboard (first line only, UTF-8 as raylib hands it over).
     if ((ray::IsKeyDown(ray::KEY_LEFT_CONTROL) || ray::IsKeyDown(ray::KEY_RIGHT_CONTROL)) &&
         ray::IsKeyPressed(ray::KEY_V)) {
