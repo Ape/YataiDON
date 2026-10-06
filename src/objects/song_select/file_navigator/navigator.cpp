@@ -2366,22 +2366,30 @@ std::optional<fs::path> Navigator::find_song_by_title(const std::string& title, 
     std::string norm_subtitle = normalize_title(subtitle);
     if (norm_title.empty()) return std::nullopt;   // nothing to match on
 
-    for (auto& [key, path] : song_files) {
-        if (normalize_title(key.first) == norm_title &&
-            normalize_title(key.second) == norm_subtitle) {
-            return path;
+    std::lock_guard<std::mutex> lock(title_index_mutex);
+    if (title_index_size != song_files.size()) {
+        // First match in song_files order wins, as with the linear scans this replaced
+        title_subtitle_index.clear();
+        title_only_index.clear();
+        normalized_titles.clear();
+        normalized_titles.reserve(song_files.size());
+        for (auto& [key, path] : song_files) {
+            std::string t = normalize_title(key.first);
+            title_subtitle_index.emplace(t + '\x1f' + normalize_title(key.second), path);
+            title_only_index.emplace(t, path);
+            normalized_titles.emplace_back(std::move(t), path);
         }
+        title_index_size = song_files.size();
     }
+
+    if (auto it = title_subtitle_index.find(norm_title + '\x1f' + norm_subtitle); it != title_subtitle_index.end())
+        return it->second;
 
     // Fallback: title only
-    for (auto& [key, path] : song_files) {
-        if (normalize_title(key.first) == norm_title) {
-            return path;
-        }
-    }
+    if (auto it = title_only_index.find(norm_title); it != title_only_index.end())
+        return it->second;
 
-    for (auto& [key, path] : song_files) {
-        std::string indexed_title = normalize_title(key.first);
+    for (auto& [indexed_title, path] : normalized_titles) {
 
         // Check if norm_title is inside indexed_title or vice-versa
         if (indexed_title.find(norm_title) != std::string::npos ||

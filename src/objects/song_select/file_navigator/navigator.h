@@ -5,6 +5,8 @@
 #include <queue>
 #include <array>
 #include <unordered_map>
+#include <cstdint>
+#include <mutex>
 
 class SongSelectScript;
 
@@ -30,6 +32,13 @@ private:
     std::vector<std::unique_ptr<BaseBox>> items;
     TextureObject* t_background = nullptr;
     std::map<std::pair<std::string, std::string>, fs::path> song_files;
+    // find_song_by_title's lookup tables over song_files, rebuilt when its size changes: the dojo
+    // looks up every chart of every course (1000+), and each linear pass re-normalized the library
+    std::mutex title_index_mutex;
+    size_t title_index_size = SIZE_MAX;
+    std::unordered_map<std::string, fs::path> title_subtitle_index;  // normalized "title\x1fsubtitle"
+    std::unordered_map<std::string, fs::path> title_only_index;      // normalized title
+    std::vector<std::pair<std::string, fs::path>> normalized_titles; // song_files order
     // song path -> every title and subtitle in every language, ASCII-folded, for Song Search
     std::unordered_map<std::string, std::string> song_search_text;
     // song path -> level per course 0..4 (-1 = course absent), filled by the same scan; the
@@ -181,6 +190,7 @@ public:
     Statistics get_statistics(const fs::path& path);
 
     std::optional<fs::path> find_song_by_title(const std::string& title, const std::string& subtitle);
+    size_t song_file_count() const { return song_files.size(); }
 
     void move_left();
     void move_right();
