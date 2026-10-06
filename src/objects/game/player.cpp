@@ -137,6 +137,8 @@ ResultData Player::get_result_score() {
     result.bad = bad_count;
     result.max_combo = max_combo;
     result.total_drumroll = total_drumroll;
+    result.hit_offset_sum_ms = hit_offset_sum_ms;
+    result.hit_offset_count = hit_offset_count;
     if (dan_gauge) result.gauge_length = dan_gauge->get_length() * 0.87f;
     else if (gauge.has_value()) result.gauge_length = gauge->get_length() * 0.87f;
     if (skipped_run) result.gauge_length = 0.0f;
@@ -1282,6 +1284,14 @@ void Player::check_kusudama(double current_ms, DrumType drum_type, const Note& b
 void Player::check_note(double ms_from_start, DrumType drum_type, double current_ms, std::optional<Background>& background) {
     if (don_notes.empty() && kat_notes.empty() && other_notes.empty()) return;
 
+    auto record_hit_offset = [this, ms_from_start](const Note& note) {
+        if (modifiers.auto_play) return;
+
+        const double offset_ms = ms_from_start - note.hit_ms;
+        hit_offset_sum_ms += offset_ms;
+        hit_offset_count++;
+    };
+
     float good_window_ms;
     float ok_window_ms;
     float bad_window_ms;
@@ -1351,6 +1361,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
 
         bool big = curr_note.type == NoteType::DON_L || curr_note.type == NoteType::KAT_L;
         if ((curr_note.hit_ms - good_window_ms <= ms_from_start) && (ms_from_start <= curr_note.hit_ms + good_window_ms)) {
+            record_hit_offset(curr_note);
             if (draw_judge_list.size() < 7) {
                 draw_judge_list.push_back(Judgment(Judgments::GOOD, big));
             }
@@ -1370,6 +1381,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
             if (background.has_value()) background->handle_good(PlayerNum(1 + is_2p));
 
         } else if ((curr_note.hit_ms - ok_window_ms) <= ms_from_start && ms_from_start <= (curr_note.hit_ms + ok_window_ms)) {
+            record_hit_offset(curr_note);
             draw_judge_list.push_back(Judgment(Judgments::OK, big));
             lane_hit_effect = LaneHitEffect(drum_type, Judgments::OK);
             note_judgments[curr_note.index] = Judgments::OK;
@@ -1393,6 +1405,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
             branch_note_count++;
             // Same note as the GOOD/OK branches: curr_note may be lane[1] (stale head).
             const Note note = curr_note;
+            record_hit_offset(note);
             lane.erase(lane.begin() + lane_pos);
             note_judgments[note.index] = Judgments::BAD;
             auto it = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(),

@@ -97,6 +97,8 @@ public:
         combo = max_combo = 0;
         score = 0;
         total_drumroll = 0;
+        hit_offset_sum_ms = 0.0;
+        hit_offset_count = 0;
         was_gauge_full = false;
         note_judgments.clear();
         last_reported_score = -1;
@@ -159,6 +161,8 @@ private:
     int last_reported_gogo = -1;   // background handle_gogo edge detection
     int max_combo;
     int total_drumroll;
+    double hit_offset_sum_ms = 0.0;
+    int hit_offset_count = 0;
     std::unordered_map<int, Judgments> note_judgments;
 
     int arc_points;

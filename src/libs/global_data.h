@@ -175,6 +175,8 @@ struct ResultData {
     int total_drumroll = 0;
     float gauge_length = 0.0f;
     int prev_score = 0;
+    double hit_offset_sum_ms = 0.0;
+    int hit_offset_count = 0;
 };
 
 struct SessionData {

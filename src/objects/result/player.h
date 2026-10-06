@@ -7,6 +7,7 @@
 #include "score_animator.h"
 #include "../../libs/script.h"
 #include "../../libs/global_data.h"
+#include "../../libs/text.h"
 
 class ResultPlayer : public LuaScript {
     sol::protected_function fn_update, fn_draw, fn_draw_gauge, fn_chara_pos, fn_nameplate_pos;
@@ -15,6 +16,7 @@ class ResultPlayer : public LuaScript {
     bool is_2p  = false;
     Nameplate nameplate;
     std::unique_ptr<Chara3D> chara;
+    std::unique_ptr<OutlinedText> timing_offset_text;
     std::optional<double> score_delay;
     int update_index = 0;
     std::vector<std::tuple<std::string, int>> update_list;

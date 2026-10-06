@@ -1,6 +1,15 @@
 #include "player.h"
 #include "../../libs/audio.h"
 #include "../../libs/scores.h"
+#include "../../libs/text.h"
+#include <cmath>
+
+static std::string format_average_timing(const ResultData& result) {
+    if (result.hit_offset_count <= 0) return "-- ms";
+
+    const long average_ms = std::lround(result.hit_offset_sum_ms / result.hit_offset_count);
+    return (average_ms > 0 ? "+" : "") + std::to_string(average_ms) + " ms";
+}
 
 ResultPlayer::ResultPlayer(PlayerNum player_num, bool has_2p, bool is_2p)
     : player_num(player_num), has_2p(has_2p), is_2p(is_2p)
@@ -18,6 +27,9 @@ ResultPlayer::ResultPlayer(PlayerNum player_num, bool has_2p, bool is_2p)
     chara->set_anim(AnimIndex::DON_NORMAL);
 
     SessionData& sd = global_data.session_data[(int)player_num];
+    timing_offset_text = std::make_unique<OutlinedText>(
+        format_average_timing(sd.result_data),
+        static_cast<int>(20.0f * tex.screen_scale), ray::WHITE, ray::BLACK, false, 3.0f);
     nameplate = Nameplate(
         pd ? pd->username : "", pd ? pd->title : "",
         player_num,
@@ -208,4 +220,17 @@ void ResultPlayer::draw() {
         }
     }
     nameplate.draw(nx, ny, nf);
+
+    if (timing_offset_text) {
+        const int card_index = has_2p && is_2p ? 1 : 0;
+        if (tex.has_texture("bottom/chara_0")) {
+            TextureObject* red_panel = tex.get_texture("bottom/chara_0");
+            if (red_panel && card_index < static_cast<int>(red_panel->x.size()) &&
+                card_index < static_cast<int>(red_panel->y.size())) {
+                const float x = red_panel->x[card_index] + 6.0f * tex.screen_scale;
+                const float y = red_panel->y[card_index] + 6.0f * tex.screen_scale;
+                timing_offset_text->draw({.x = x, .y = y});
+            }
+        }
+    }
 }
