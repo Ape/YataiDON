@@ -903,8 +903,10 @@ void Player::handle_bpmchange(double ms_from_start, const TimelineObject& timeli
     if (timeline_object.start_time > ms_from_start) return;
     if (!timeline_object.bpm.has_value()) return;
 
-    bpm = timeline_object.bpm.value();
-    chara->set_bpm(std::abs(bpm));
+    // Negative in #HBSCROLL / #BMSCROLL charts that run the field backwards; animations and
+    // autoplay only want the tempo
+    bpm = std::abs(timeline_object.bpm.value());
+    chara->set_bpm(bpm);
 
     if (buffer_index != (int)timeline_buffer.size() - 1)
         timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
