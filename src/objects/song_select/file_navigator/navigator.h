@@ -94,6 +94,7 @@ private:
     std::optional<fs::path>  favorite_folder_path;
     std::set<std::string>    favorite_songs;
     std::unordered_map<std::string, bool>    def_file_cache;
+    std::unordered_map<std::string, bool>    child_folders_cache;  // has_child_folders; cleared with def_file_cache
     std::unordered_map<std::string, BoxDef>  box_def_cache;
 
     bool awaiting_diff_sort = false;
@@ -122,6 +123,7 @@ private:
 
     void setup_back_box(const fs::path& path, bool has_children, const BaseBox* from = nullptr);
     bool has_child_folders(const fs::path& path);
+    bool scan_child_folders(const fs::path& path);
 
     void wait_for_song_files();
     void enqueue_box(std::unique_ptr<BaseBox> box);
