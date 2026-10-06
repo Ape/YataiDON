@@ -613,10 +613,10 @@ void Player::draw_practice(double ms_from_start, float x, float y, ray::Shader& 
 void Player::get_load_time(Note& note) {
     int note_half_w = t_notes_9->width / 2;
     float travel_distance = tex.screen_width - JudgePos::X;
-    float base_pixels_per_ms = (note.bpm / 240000 * abs(note.scroll_x) * travel_distance);
-    if (base_pixels_per_ms == 0) {
-        base_pixels_per_ms = (note.bpm / 240000 * abs(note.scroll_y) * travel_distance);
-    }
+    // The faster axis decides when a note comes on screen: a polar #SCROLL pointing straight up
+    // leaves a horizontal component of ~1e-17, not 0
+    bool horizontal = abs(note.scroll_x) >= abs(note.scroll_y);
+    float base_pixels_per_ms = (note.bpm / 240000 * (horizontal ? abs(note.scroll_x) : abs(note.scroll_y)) * travel_distance);
     if (base_pixels_per_ms == 0) {
         note.load_ms = note.hit_ms;
         note.unload_ms = note.hit_ms;
@@ -630,8 +630,8 @@ void Player::get_load_time(Note& note) {
         if (scroll_type != ScrollType::NMSCROLL) {
             // On screen while (note beat - current beat) * px_per_beat is between the left edge
             // and the right edge
-            double px_per_beat = (note.scroll_x != 0 ? note.scroll_x : abs(note.scroll_y)) * travel_distance / 4;
-            double left = note.scroll_x != 0 ? -(JudgePos::X + note_half_w) : -(travel_distance + note_half_w);
+            double px_per_beat = (horizontal ? note.scroll_x : abs(note.scroll_y)) * travel_distance / 4;
+            double left = horizontal ? -(JudgePos::X + note_half_w) : -(travel_distance + note_half_w);
             double right = travel_distance + note_half_w;
             double beat = tempo_map.beat_at(note.hit_ms);
             double lo = beat - right / px_per_beat, hi = beat - left / px_per_beat;
