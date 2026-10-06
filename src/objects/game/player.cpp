@@ -628,11 +628,16 @@ void Player::get_load_time(Note& note) {
         !note.sudden_moving_ms.has_value() ||
         note.sudden_appear_ms.value() == std::numeric_limits<float>::infinity()) {
         if (scroll_type != ScrollType::NMSCROLL) {
-            double scroll = note.scroll_x != 0 ? abs(note.scroll_x) : abs(note.scroll_y);
-            double travel_beats = (travel_distance + note_half_w) / (scroll * travel_distance / 4);
+            // On screen while (note beat - current beat) * px_per_beat is between the left edge
+            // and the right edge, for the pass of the beat count that reaches the note
+            double px_per_beat = (note.scroll_x != 0 ? note.scroll_x : abs(note.scroll_y)) * travel_distance / 4;
+            double left = note.scroll_x != 0 ? -(JudgePos::X + note_half_w) : -(travel_distance + note_half_w);
+            double right = travel_distance + note_half_w;
             double beat = tempo_map.beat_at(note.hit_ms);
-            note.load_ms = tempo_map.ms_at_beat(beat - travel_beats);
-            note.unload_ms = tempo_map.ms_at_beat(beat + travel_beats);
+            double lo = beat - right / px_per_beat, hi = beat - left / px_per_beat;
+            auto [first, last] = tempo_map.ms_span_within(note.hit_ms, std::min(lo, hi), std::max(lo, hi));
+            note.load_ms = first;
+            note.unload_ms = last;
             return;
         }
         note.load_ms = note.hit_ms - normal_travel_ms;
@@ -899,7 +904,7 @@ void Player::handle_bpmchange(double ms_from_start, const TimelineObject& timeli
     if (!timeline_object.bpm.has_value()) return;
 
     bpm = timeline_object.bpm.value();
-    chara->set_bpm(bpm);
+    chara->set_bpm(std::abs(bpm));
 
     if (buffer_index != (int)timeline_buffer.size() - 1)
         timeline_buffer[buffer_index] = std::move(timeline_buffer.back());

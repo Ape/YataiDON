@@ -777,7 +777,10 @@ void TJAParser::handle_MEASURE(const std::string& value, ParserState& state) {
         try {
             double num = std::stof(value.substr(0, slash_pos));
             double den = std::stof(value.substr(slash_pos + 1));
-            if (num > 0.0f && den != 0.0f) {
+            // #BMSCROLL / #HBSCROLL charts pair a negative measure with a negative BPM: time
+            // still moves forward while the beat count runs back
+            bool beat_scroll = state.scroll_type != ScrollType::NMSCROLL;
+            if (den != 0.0f && (num > 0.0f || (beat_scroll && num != 0.0f))) {
                 state.time_signature = num / den;
             } else {
                 spdlog::warn("Ignoring degenerate #MEASURE {} in {}", value, file_path.string());

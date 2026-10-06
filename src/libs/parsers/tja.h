@@ -2,10 +2,12 @@
 
 #include <spdlog/spdlog.h>
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <deque>
 #include <filesystem>
 #include <functional>
+#include <limits>
 #include <map>
 #include <optional>
 #include <regex>
@@ -157,15 +159,38 @@ struct TempoMap {
         return p.beat + (ms - p.ms) * p.bpm / 60000.0;
     }
 
-    // Earliest chart time at which the beat count reaches `beat`
-    double ms_at_beat(double beat) const {
-        if (points.empty()) return 0.0;
-        auto it = std::lower_bound(points.begin(), points.end(), beat,
-            [](const TempoPoint& p, double v) { return p.beat < v; });
-        if (it != points.end() && it->beat == beat) return it->ms;
-        const TempoPoint& p = it == points.begin() ? *it : *std::prev(it);
-        if (p.bpm == 0.0) return p.ms;
-        return p.ms + (beat - p.beat) * 60000.0 / p.bpm;
+    // The stretch of chart time around `ms` during which the beat count stays within [lo, hi]
+    // (`ms` itself must be inside). A negative BPM runs the beat count back, so a chart can pass
+    // the same beat many times; only the pass around `ms` counts.
+    std::pair<double, double> ms_span_within(double ms, double lo, double hi) const {
+        constexpr double inf = std::numeric_limits<double>::infinity();
+        if (points.empty()) return {-inf, inf};
+        auto it = std::upper_bound(points.begin(), points.end(), ms,
+            [](double v, const TempoPoint& p) { return v < p.ms; });
+        size_t seg = it == points.begin() ? 0 : size_t(it - points.begin()) - 1;
+        // Chart times at which segment i's beat line is inside [lo, hi]
+        auto inside = [&](size_t i) -> std::pair<double, double> {
+            const TempoPoint& p = points[i];
+            if (p.bpm == 0.0) return (p.beat >= lo && p.beat <= hi) ? std::make_pair(-inf, inf) : std::make_pair(inf, -inf);
+            double a = p.ms + (lo - p.beat) * 60000.0 / p.bpm;
+            double b = p.ms + (hi - p.beat) * 60000.0 / p.bpm;
+            return {std::min(a, b), std::max(a, b)};
+        };
+        double first = ms;
+        for (size_t i = seg + 1; i-- > 0;) {
+            double from = i == 0 ? -inf : points[i].ms;
+            double enter = inside(i).first;
+            if (enter > from) { first = std::min(enter, first); break; }
+            first = from;
+        }
+        double last = ms;
+        for (size_t i = seg; i < points.size(); i++) {
+            double to = i + 1 < points.size() ? points[i + 1].ms : inf;
+            double leave = inside(i).second;
+            if (leave < to) { last = std::max(leave, last); break; }
+            last = to;
+        }
+        return {first, last};
     }
 };
 
