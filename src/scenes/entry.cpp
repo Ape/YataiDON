@@ -22,7 +22,8 @@ void EntryScreen::on_screen_start() {
     used_cards_.clear();
     local_login_ = false;
     login_ready_ = false;
-    if (online) network.probe_online();
+    // Non-blocking: an unreachable server held the screen for the 1.5 s timeout. Logins wait for it.
+    if (online) network.start_probe();
 
     // Card scanned on title (case 5) or auto login (case 3): join on first update
     if (global_data.card_reader_card_valid && !global_data.card_reader_card_id_hex.empty()) {
@@ -316,7 +317,7 @@ void EntryScreen::join_player(PlayerNum player_num, bool do_login) {
 }
 
 std::optional<Screens> EntryScreen::handle_input() {
-    if (login_pending()) return std::nullopt;
+    if (login_pending() || network.probing()) return std::nullopt;
     if (state == EntryState::WAITING) {
         const bool enter = ray::IsKeyPressed(ray::KEY_ENTER);
         const bool don = is_l_don_pressed() || is_r_don_pressed();
@@ -443,7 +444,7 @@ std::optional<Screens> EntryScreen::update() {
         finish_login(pending_login_.get());
     }
 
-    if (!players.empty() && !pending_card_hex_.empty() && !login_pending()) {
+    if (!players.empty() && !pending_card_hex_.empty() && !login_pending() && !network.probing()) {
         std::string hex = std::move(pending_card_hex_);
         pending_card_hex_.clear();
         join_with_card(hex);
@@ -462,7 +463,7 @@ std::optional<Screens> EntryScreen::update() {
         }
     }
     // Case 6: any card while a seat is free (P1 first, then P2)
-    if (card_reader_ && card_reader_->is_polling() && !login_ready_ && !login_pending() && state != EntryState::SELECT_COSTUME &&
+    if (card_reader_ && card_reader_->is_polling() && !login_ready_ && !login_pending() && !network.probing() && state != EntryState::SELECT_COSTUME &&
         !(seat_joined(PlayerNum::P1) && seat_joined(PlayerNum::P2))) {
         if (current_time - last_card_poll_ms_ >= global_data.config->card_reader.poll_interval_ms) {
             last_card_poll_ms_ = current_time;

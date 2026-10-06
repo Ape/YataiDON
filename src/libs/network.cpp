@@ -248,6 +248,12 @@ bool NetworkClient::probe_online() {
     return online;
 }
 
+void NetworkClient::start_probe() {
+    if (!network_enabled()) { online = false; return; }
+    probing_ = true;
+    check_heartbeat();
+}
+
 void NetworkClient::check_heartbeat() {
     if (pending_heartbeat.has_value()) return;
     pending_heartbeat = cpr::GetAsync(
@@ -794,6 +800,7 @@ void NetworkClient::update(double current_ms) {
 
     if (!network_enabled()) {
         online = false;
+        probing_ = false;
         return;
     }
     if (current_ms - last_heartbeat_ms >= HEARTBEAT_INTERVAL_MS) {
@@ -808,6 +815,9 @@ void NetworkClient::update(double current_ms) {
 
         bool was_online = online;
         online = response.status_code == 200;
+        if (probing_ && !online)
+            spdlog::warn("Network: server unreachable (HTTP {}), skipping profile sync", response.status_code);
+        probing_ = false;
         if (online != was_online) {
             spdlog::info("hiroba heartbeat: {}", online ? "online" : "offline");
         }
@@ -905,6 +915,7 @@ void NetworkClient::shutdown() {
 #else
 
 bool NetworkClient::probe_online() { return false; }
+void NetworkClient::start_probe() {}
 std::string NetworkClient::register_user(const std::string&, const std::string&) { return ""; }
 void NetworkClient::submit_score(const std::string&, int, const std::string&, const Score&, const std::map<double, InputLogType>&, int64_t, const std::string&, bool, int) {}
 bool NetworkClient::check_import_requested(const std::string&) { return false; }

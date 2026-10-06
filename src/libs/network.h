@@ -94,6 +94,9 @@ public:
     void check_and_install_android_update();
 
     bool probe_online();
+    // Non-blocking probe_online: sends a heartbeat now; is_online() updates when it lands
+    void start_probe();
+    bool probing() const { return probing_; }
     void update_costume(const std::string& access_code, int head_index, int body_index, int cos_index, bool is_costume);
 
     void poll_song_jump(const std::string& access_code);
@@ -113,6 +116,7 @@ private:
 
     bool online = false;
     bool outdated = false;
+    bool probing_ = false;
 #if defined(NETWORK_ENABLED)
     std::optional<cpr::AsyncResponse> pending_heartbeat;
     static constexpr double HEARTBEAT_INTERVAL_MS = 30000.0;
