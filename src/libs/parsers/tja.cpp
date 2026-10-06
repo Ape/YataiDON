@@ -646,16 +646,18 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
                     note_end = i;
                     break;
                 }
+                // Like Taiko-san Jiro, the scroll mode only counts before #START
+                bool started = note_start != -1 || p1_start != -1 || p2_start != -1;
                 if (line.find("#NMSCROLL") != std::string::npos) {
-                    scroll_type = ScrollType::NMSCROLL;
+                    if (!started) scroll_type = ScrollType::NMSCROLL;
                     continue;
                 }
                 else if (line.find("#BMSCROLL") != std::string::npos) {
-                    scroll_type = ScrollType::BMSCROLL;
+                    if (!started) scroll_type = ScrollType::BMSCROLL;
                     continue;
                 }
                 else if (line.find("#HBSCROLL") != std::string::npos) {
-                    scroll_type = ScrollType::HBSCROLL;
+                    if (!started) scroll_type = ScrollType::HBSCROLL;
                     continue;
                 }
             }
@@ -707,6 +709,8 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
             const std::string& line = data[i];
 
             if (line[0] == '#') {
+                if (line.starts_with("#NMSCROLL") || line.starts_with("#BMSCROLL") || line.starts_with("#HBSCROLL"))
+                    continue;
                 bar.push_back(line);
             }
             else if (line == ",") {
