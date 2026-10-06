@@ -150,12 +150,17 @@ struct TempoPoint {
 // Chart time to beat count, for #BMSCROLL / #HBSCROLL where notes scroll by beat
 struct TempoMap {
     std::vector<TempoPoint> points;
+    // Tempo before the first point (the BPM: header), so notes come on screen before the chart
+    // starts at that tempo even when the chart opens with a near-zero #BPMCHANGE; 0 = the first
+    // point's tempo
+    double lead_bpm = 0.0;
 
     double beat_at(double ms) const {
         if (points.empty()) return 0.0;
         auto it = std::upper_bound(points.begin(), points.end(), ms,
             [](double v, const TempoPoint& p) { return v < p.ms; });
-        const TempoPoint& p = it == points.begin() ? *it : *std::prev(it);
+        if (it == points.begin()) return points.front().beat + (ms - points.front().ms) * lead() / 60000.0;
+        const TempoPoint& p = *std::prev(it);
         return p.beat + (ms - p.ms) * p.bpm / 60000.0;
     }
 
@@ -165,27 +170,34 @@ struct TempoMap {
     std::pair<double, double> ms_within(double lo, double hi) const {
         constexpr double inf = std::numeric_limits<double>::infinity();
         double first = inf, last = -inf;
-        for (size_t i = 0; i < points.size(); i++) {
-            const TempoPoint& p = points[i];
-            double from = i == 0 ? -inf : p.ms;
-            double to = i + 1 < points.size() ? points[i + 1].ms : inf;
+        // One linear stretch of the beat count: through (ms, beat) at bpm, over [from, to]
+        auto stretch = [&](double ms, double beat, double bpm, double from, double to) {
             double enter, leave;
-            if (p.bpm == 0.0) {
-                if (p.beat < lo || p.beat > hi) continue;
+            if (bpm == 0.0) {
+                if (beat < lo || beat > hi) return;
                 enter = from;
                 leave = to;
             } else {
-                double a = p.ms + (lo - p.beat) * 60000.0 / p.bpm;
-                double b = p.ms + (hi - p.beat) * 60000.0 / p.bpm;
+                double a = ms + (lo - beat) * 60000.0 / bpm;
+                double b = ms + (hi - beat) * 60000.0 / bpm;
                 enter = std::max(std::min(a, b), from);
                 leave = std::min(std::max(a, b), to);
-                if (enter > leave) continue;
+                if (enter > leave) return;
             }
             first = std::min(first, enter);
             last = std::max(last, leave);
+        };
+        if (points.empty()) return {first, last};
+        stretch(points.front().ms, points.front().beat, lead(), -inf, points.front().ms);
+        for (size_t i = 0; i < points.size(); i++) {
+            const TempoPoint& p = points[i];
+            stretch(p.ms, p.beat, p.bpm, p.ms, i + 1 < points.size() ? points[i + 1].ms : inf);
         }
         return {first, last};
     }
+
+private:
+    double lead() const { return lead_bpm != 0.0 ? lead_bpm : points.front().bpm; }
 };
 
 struct NoteList {
