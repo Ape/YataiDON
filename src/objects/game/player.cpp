@@ -844,6 +844,17 @@ void Player::reset_chart() {
 
 std::optional<Note> Player::get_first_note() {
     if (draw_note_list.empty()) return std::nullopt;
+    // #BMSCROLL / #HBSCROLL: a note can be on screen long before it comes up (a slow #SCROLL, a
+    // beat count that stops or runs back), so the earliest-loading note says nothing about how
+    // long the lead-in has to be; take the first note to hit
+    if (scroll_type != ScrollType::NMSCROLL) {
+        auto first = std::min_element(draw_note_list.begin(), draw_note_list.end(),
+            [](const Note& a, const Note& b) {
+                if ((a.type == NoteType::BARLINE) != (b.type == NoteType::BARLINE)) return b.type == NoteType::BARLINE;
+                return a.hit_ms < b.hit_ms;
+            });
+        return *first;
+    }
     return draw_note_list.front();
 }
 

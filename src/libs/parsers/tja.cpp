@@ -445,6 +445,7 @@ TJAParser::notes_to_position(int diff) {
     state.curr_note_list = &master_notes.notes;
     state.curr_timeline = &master_notes.timeline;
     master_notes.tempo_map.points = {{current_ms, 0.0, metadata.bpm}};
+    master_notes.tempo_map.lead_bpm = metadata.bpm;
 
     // Process each bar
     for (const auto& bar : notes) {
