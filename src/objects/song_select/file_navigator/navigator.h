@@ -215,6 +215,7 @@ public:
     int wheel_event     = WHEEL_EVENT_NONE;
     int wheel_event_seq = 0;
     double wheel_leg_ms = 0.0;
+    bool wheel_events_read = false;  // the skin script reads the wheel events
     void emit_wheel_event(int id);
 
     static constexpr double kSwapDelayMs = (114.0 - 45.0) / 60.0 * 1000.0;
