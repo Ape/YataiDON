@@ -199,15 +199,15 @@ void Navigator::reset_for_skin_reload() {
     is_init = false;
 }
 
-void Navigator::preload(std::vector<fs::path> songs_paths) {
+void Navigator::preload(std::vector<fs::path> songs_paths, std::optional<std::vector<fs::path>> listed) {
     if (is_preloaded) return;
     root_paths = songs_paths;
     open_index = 0;
 
 #ifndef __EMSCRIPTEN__
     song_files_ready = false;
-    song_files_thread = std::thread([this, songs_paths]() {
-        std::vector<fs::path> files = get_song_files(songs_paths);
+    song_files_thread = std::thread([this, songs_paths, listed = std::move(listed)]() {
+        std::vector<fs::path> files = listed ? *listed : get_song_files(songs_paths);
         std::mutex map_mutex;
         std::atomic<size_t> cursor{0};
         unsigned pool_size = std::max(2u, std::thread::hardware_concurrency() / 2);

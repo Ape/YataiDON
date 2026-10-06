@@ -280,6 +280,40 @@ std::string win32_path_to_string(const std::filesystem::path& path) {
     return path.string(); // fallback
 }
 
+bool win32_list_dir(const std::filesystem::path& dir, std::vector<Win32DirEntry>& out) {
+    WIN32_FIND_DATAW fd;
+    HANDLE h = FindFirstFileExW((dir.wstring() + L"\\*").c_str(), FindExInfoBasic, &fd,
+                                FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
+    if (h == INVALID_HANDLE_VALUE) return false;
+    do {
+        const wchar_t* n = fd.cFileName;
+        if (n[0] == L'.' && (n[1] == L'\0' || (n[1] == L'.' && n[2] == L'\0'))) continue;
+        Win32DirEntry e;
+        e.name = n;
+        e.is_dir = (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+        e.is_reparse = (fd.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0;
+        out.push_back(std::move(e));
+    } while (FindNextFileW(h, &fd));
+    FindClose(h);
+    return true;
+}
+
+std::wstring win32_final_path(const std::filesystem::path& path) {
+    HANDLE h = CreateFileW(path.wstring().c_str(), 0, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                           nullptr, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    if (h == INVALID_HANDLE_VALUE) return {};
+    std::wstring result(MAX_PATH, L'\0');
+    DWORD len = GetFinalPathNameByHandleW(h, result.data(), static_cast<DWORD>(result.size()), FILE_NAME_NORMALIZED);
+    if (len >= result.size()) {
+        result.resize(len);
+        len = GetFinalPathNameByHandleW(h, result.data(), static_cast<DWORD>(result.size()), FILE_NAME_NORMALIZED);
+    }
+    CloseHandle(h);
+    if (len == 0 || len >= result.size()) return {};
+    result.resize(len);
+    return result;
+}
+
 // PortAudio WDM-KS backend
 static PaStream* g_pa_stream = nullptr;
 
