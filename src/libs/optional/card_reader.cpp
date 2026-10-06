@@ -748,4 +748,24 @@ void CardReader::led_reset() {
     send_command(CMD_LED_RESET, {}, false);
 }
 
+void ReaderOpener::request(const std::string& port, int baudrate) {
+    if (pending_.valid()) return;
+    pending_ = std::async(std::launch::async, [port, baudrate]() -> std::unique_ptr<CardReader> {
+        auto reader = std::make_unique<CardReader>();
+        if (!reader->initialize(port, baudrate)) return nullptr;
+        return reader;
+    });
+}
+
+std::optional<std::unique_ptr<CardReader>> ReaderOpener::take() {
+    if (!pending_.valid() || pending_.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+        return std::nullopt;
+    return pending_.get();
+}
+
+ReaderOpener& reader_opener() {
+    static ReaderOpener opener;
+    return opener;
+}
+
 }  // namespace card_reader

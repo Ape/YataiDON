@@ -6,6 +6,8 @@
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <future>
+#include <memory>
 #include <mutex>
 
 #ifdef ERROR  // wingdi.h's ERROR macro would clobber CardType::ERROR
@@ -124,5 +126,22 @@ private:
     static constexpr uint8_t CARD_TYPE_MIFARE = 0x10;
     static constexpr uint8_t CARD_TYPE_FELICA = 0x20;
 };
+
+// Opens the reader on a worker thread: scanning the COM ports and resetting the reader takes
+// seconds, which froze the title and entry screens. One attempt runs at a time, so the two screens
+// never probe the ports together; an attempt left running by one screen is picked up by the next.
+class ReaderOpener {
+public:
+    // Starts an attempt unless one is running or has a result nobody has taken yet
+    void request(const std::string& port, int baudrate);
+    // The attempt's reader once it has finished (nullptr if none was found); nullopt while it runs
+    // or when nothing was requested
+    std::optional<std::unique_ptr<CardReader>> take();
+
+private:
+    std::future<std::unique_ptr<CardReader>> pending_;
+};
+
+ReaderOpener& reader_opener();
 
 }  // namespace card_reader
