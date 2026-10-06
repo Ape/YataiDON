@@ -116,6 +116,7 @@ public:
     void spawn_ending_anim(Background* background = nullptr);
 
     void seek_to(double resume_time);
+    void set_audio_end(double chart_ms);
 
     void update(double ms_from_start, double current_ms, std::optional<Background>& background);
 
@@ -253,6 +254,7 @@ private:
     std::optional<Fireworks> fireworks;
     ScrollType scroll_type = ScrollType::NMSCROLL;
     TempoMap tempo_map;
+    std::optional<double> audio_end_ms;
     std::optional<ComboAnnounce> combo_announce;
     std::optional<BranchIndicator> branch_indicator;
     std::optional<std::variant<FailAnimation, ClearAnimation, FCAnimation>> ending_anim;
@@ -260,6 +262,7 @@ private:
     void get_load_time(Note& note);
 
     void reset_chart();
+    bool unplayable(const Note& note) const;
 
     void handle_timeline(double ms_from_start);
 

@@ -167,6 +167,13 @@ void GameScreen::init_tja(fs::path song) {
     }
 }
 
+void GameScreen::set_players_audio_end() {
+    if (!song_music.has_value() || song_music->empty()) return;
+    double audio_end = audio.get_sound_time_length(*song_music) * 1000.0
+                     + (parser->metadata.offset * 1000 + start_delay - (double)global_data.config->general.audio_offset);
+    for (auto& player : players) player->set_audio_end(audio_end);
+}
+
 void GameScreen::poll_pending_song() {
     if (!pending_song_load.valid() ||
         pending_song_load.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
@@ -175,6 +182,8 @@ void GameScreen::poll_pending_song() {
     std::string name = pending_song_load.get();
     if (name.empty()) return;
     song_music = name;
+
+    if (!song_started) set_players_audio_end();
 
     if (song_started && !paused) {
         audio.play_sound(*song_music, VolumePreset::MUSIC);

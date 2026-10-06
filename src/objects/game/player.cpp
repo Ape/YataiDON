@@ -654,6 +654,18 @@ void Player::get_load_time(Note& note) {
     note.unload_ms = note.hit_ms + unload_offset;
 }
 
+// #BMSCROLL / #HBSCROLL charts can hold notes behind a #DELAY that outlasts the song (a wall of
+// notes frozen on screen). They are drawn but never judged, counted or waited for.
+bool Player::unplayable(const Note& note) const {
+    return scroll_type != ScrollType::NMSCROLL && audio_end_ms.has_value()
+        && note.type != NoteType::BARLINE && note.hit_ms > audio_end_ms.value();
+}
+
+void Player::set_audio_end(double chart_ms) {
+    audio_end_ms = chart_ms;
+    if (scroll_type != ScrollType::NMSCROLL && end_time > chart_ms) reset_chart();
+}
+
 void Player::reset_chart() {
     if (!parser.has_value()) return;
 
@@ -684,19 +696,22 @@ void Player::reset_chart() {
                 it->unload_ms = note.unload_ms;
             }
         }
-        if (note.type == NoteType::DON || note.type == NoteType::DON_L) {
-            don_notes.push_back(note);
-        } else if (note.type == NoteType::KAT || note.type == NoteType::KAT_L) {
-            kat_notes.push_back(note);
-        } else if (note.type != NoteType::BARLINE) {
-            other_notes.push_back(note);
+        bool playable = !unplayable(note);
+        if (playable) {
+            if (note.type == NoteType::DON || note.type == NoteType::DON_L) {
+                don_notes.push_back(note);
+            } else if (note.type == NoteType::KAT || note.type == NoteType::KAT_L) {
+                kat_notes.push_back(note);
+            } else if (note.type != NoteType::BARLINE) {
+                other_notes.push_back(note);
+            }
         }
         draw_note_list.push_back(note);
         if (note.type != NoteType::BARLINE) {
             last_note = &note;
         }
 
-        if (note.hit_ms > end_time) {
+        if (playable && note.hit_ms > end_time) {
             end_time = note.hit_ms;
         }
     }
@@ -719,6 +734,7 @@ void Player::reset_chart() {
         if (!branch.empty()) {
             for (NoteList& section : branch) {
                 apply_modifiers(section, modifiers);
+                std::erase_if(section.notes, [&](const Note& n) { return unplayable(n); });
                 Note* last_note = nullptr;
                 for (Note& note: section.notes) {
                     get_load_time(note);
@@ -771,7 +787,8 @@ void Player::reset_chart() {
 
     NoteList total_notes; //all notes including master branch
 
-    total_notes.notes.insert(total_notes.notes.end(), notes.notes.begin(), notes.notes.end());
+    std::copy_if(notes.notes.begin(), notes.notes.end(), std::back_inserter(total_notes.notes),
+                 [&](const Note& n) { return !unplayable(n); });
     for (NoteList section : branch_m) {
         total_notes.notes.insert(total_notes.notes.end(), section.notes.begin(), section.notes.end());
     }
