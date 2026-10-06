@@ -18,6 +18,7 @@ void GameScreen::on_screen_start() {
     last_resync_ms = 0;
     JudgePos::X = tex.skin_config[SC::JUDGE_POS].x;
     JudgePos::Y = tex.skin_config[SC::JUDGE_POS].y;
+    TJAParser::jpos_field_width = (tex.screen_width - JudgePos::X) / tex.screen_scale;
     song_started = false;
     paused = false;
     score_saved = false;

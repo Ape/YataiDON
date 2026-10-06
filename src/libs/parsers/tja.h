@@ -306,6 +306,9 @@ public:
     TJAMetadata metadata;
     TJAEXData ex_data;
     bool scroll_disabled = false;
+    // Width of the default note field in base (unscaled) pixels, for #JPOSSCROLL distances given
+    // as a fraction of it (TaikoManyGimmicks). Set by the game screen before charts are parsed.
+    static inline double jpos_field_width = 0.0;
 
     void get_metadata();
     std::string get_difficulty_name() {

@@ -7,6 +7,7 @@
 #include <cstring>
 #include <fstream>
 #include <limits>
+#include <numbers>
 #include <numeric>
 #include <random>
 #include <sstream>
@@ -781,10 +782,11 @@ void TJAParser::handle_MEASURE(const std::string& value, ParserState& state) {
         try {
             double num = std::stof(value.substr(0, slash_pos));
             double den = std::stof(value.substr(slash_pos + 1));
-            // #BMSCROLL / #HBSCROLL charts pair a negative measure with a negative BPM: time
-            // still moves forward while the beat count runs back
+            // #BMSCROLL / #HBSCROLL charts pair a negative measure with a negative BPM (time
+            // still moves forward while the beat count runs back), or use a zero-length measure
+            // and space its notes with #DELAY
             bool beat_scroll = state.scroll_type != ScrollType::NMSCROLL;
-            if (den != 0.0f && (num > 0.0f || (beat_scroll && num != 0.0f))) {
+            if (den != 0.0f && (num > 0.0f || beat_scroll)) {
                 state.time_signature = num / den;
             } else {
                 spdlog::warn("Ignoring degenerate #MEASURE {} in {}", value, file_path.string());
@@ -811,6 +813,27 @@ void TJAParser::handle_SCROLL(const std::string& value, ParserState& state) {
 
     if (value.empty()) {
         spdlog::warn("Empty #SCROLL value in {}", file_path.string());
+        return;
+    }
+
+    // Polar form (TaikoManyGimmicks): #SCROLL <speed>, <rotation-lower>, <rotation-upper>, the
+    // speed rotated rotation-upper/rotation-lower turns counterclockwise
+    if (value.find(',') != std::string::npos && value.find('i') == std::string::npos) {
+        std::vector<double> parts;
+        std::stringstream ss(value);
+        std::string part;
+        try {
+            while (std::getline(ss, part, ',')) parts.push_back(std::stod(trim(part)));
+        } catch (const std::exception&) {
+            parts.clear();
+        }
+        if (parts.size() != 3 || parts[1] == 0.0) {
+            spdlog::warn("Invalid polar #SCROLL value '{}' in {}", value, file_path.string());
+            return;
+        }
+        double angle = 2.0 * std::numbers::pi * parts[2] / parts[1];
+        state.scroll_x_modifier = parts[0] * std::cos(angle);
+        state.scroll_y_modifier = parts[0] * std::sin(angle);
         return;
     }
 
@@ -1002,43 +1025,51 @@ void TJAParser::handle_JPOSSCROLL(const std::string& part, ParserState& state) {
         return;
     }
     std::string distance_str = parts[1];
+    replace_all(distance_str, ",", "");
 
-    double delta_x = 0.0f;
-    double delta_y = 0.0f;
+    // A component is pixels ("-94") or, as in TaikoManyGimmicks, a fraction of the default note
+    // field width ("3/5"); the distance is one component or a complex "x+yi" / "x-yi" / "yi"
+    auto component = [&](std::string c, double& out) -> bool {
+        if (c.empty() || c == "+" || c == "-") c += "1";
+        size_t slash = c.find('/');
+        try {
+            if (slash == std::string::npos) {
+                out = std::stod(c);
+            } else {
+                double den = std::stod(c.substr(slash + 1));
+                if (den == 0.0) return false;
+                out = std::stod(c.substr(0, slash)) / den * jpos_field_width;
+            }
+        } catch (const std::exception&) {
+            return false;
+        }
+        return true;
+    };
 
-    if (distance_str.find('i') != std::string::npos) {
-        std::string normalized = distance_str;
-        replace_all(normalized, ".i", "j");
-        replace_all(normalized, "i", "j");
-        replace_all(normalized, ",", "");
-
-        std::smatch match;
-        if (std::regex_match(normalized, match, complex_number_regex)) {
-            try {
-                if (match[1].length() > 0 && match[1].str().back() != 'j') {
-                    delta_x = std::stof(match[1]);
-                }
-                if (match[2].length() > 0) {
-                    std::string imag_str = match[2];
-                    delta_y = std::stof(imag_str);
-                } else if (match[1].length() > 0 && normalized.back() == 'j') {
-                    delta_y = std::stof(match[1]);
-                    delta_x = 0.0f;
-                }
-            } catch (const std::exception&) {
-                spdlog::warn("Invalid #JPOSSCROLL distance '{}' in {}", distance_str, file_path.string());
-                return;
+    double delta_x = 0.0;
+    double delta_y = 0.0;
+    bool valid;
+    if (!distance_str.empty() && distance_str.back() == 'i') {
+        std::string body = distance_str.substr(0, distance_str.size() - 1);
+        size_t split = std::string::npos;
+        for (size_t k = body.size(); k-- > 1;) {
+            char prev = body[k - 1];
+            if ((body[k] == '+' || body[k] == '-') && prev != 'e' && prev != 'E' && prev != '/') {
+                split = k;
+                break;
             }
         }
-    } else {
-        try {
-            double distance = std::stof(distance_str);
-            delta_x = distance;
-            delta_y = 0.0f;
-        } catch (const std::exception&) {
-            spdlog::warn("Invalid #JPOSSCROLL distance '{}' in {}", distance_str, file_path.string());
-            return;
+        if (split == std::string::npos) {
+            valid = component(body.empty() ? "1" : body, delta_y);
+        } else {
+            valid = component(body.substr(0, split), delta_x) && component(body.substr(split), delta_y);
         }
+    } else {
+        valid = component(distance_str, delta_x);
+    }
+    if (!valid) {
+        spdlog::warn("Invalid #JPOSSCROLL distance '{}' in {}", distance_str, file_path.string());
+        return;
     }
 
     if (direction == 0) {
