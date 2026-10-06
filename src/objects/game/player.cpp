@@ -629,15 +629,15 @@ void Player::get_load_time(Note& note) {
         note.sudden_appear_ms.value() == std::numeric_limits<float>::infinity()) {
         if (scroll_type != ScrollType::NMSCROLL) {
             // On screen while (note beat - current beat) * px_per_beat is between the left edge
-            // and the right edge, for the pass of the beat count that reaches the note
+            // and the right edge
             double px_per_beat = (note.scroll_x != 0 ? note.scroll_x : abs(note.scroll_y)) * travel_distance / 4;
             double left = note.scroll_x != 0 ? -(JudgePos::X + note_half_w) : -(travel_distance + note_half_w);
             double right = travel_distance + note_half_w;
             double beat = tempo_map.beat_at(note.hit_ms);
             double lo = beat - right / px_per_beat, hi = beat - left / px_per_beat;
-            auto [first, last] = tempo_map.ms_span_within(note.hit_ms, std::min(lo, hi), std::max(lo, hi));
-            note.load_ms = first;
-            note.unload_ms = last;
+            auto [first, last] = tempo_map.ms_within(std::min(lo, hi), std::max(lo, hi));
+            note.load_ms = std::min(first, note.hit_ms);
+            note.unload_ms = std::max(last, note.hit_ms);
             return;
         }
         note.load_ms = note.hit_ms - normal_travel_ms;
