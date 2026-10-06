@@ -1,6 +1,7 @@
 #pragma once
 
 #include <spdlog/spdlog.h>
+#include <algorithm>
 #include <cstddef>
 #include <deque>
 #include <filesystem>
@@ -49,8 +50,6 @@ struct TimelineObject {
 
     std::optional<double> bpm;
     std::optional<std::string> branch_params;
-    std::optional<double> delay;
-    std::optional<double> bpmchange;
     std::optional<bool> gogo_time;
     std::optional<bool> section_reset;
 
@@ -140,12 +139,46 @@ struct CompareNotes {
     }
 };
 
+struct TempoPoint {
+    double ms;
+    double beat;
+    double bpm;  // 0 while a #DELAY holds the beat still
+};
+
+// Chart time to beat count, for #BMSCROLL / #HBSCROLL where notes scroll by beat
+struct TempoMap {
+    std::vector<TempoPoint> points;
+
+    double beat_at(double ms) const {
+        if (points.empty()) return 0.0;
+        auto it = std::upper_bound(points.begin(), points.end(), ms,
+            [](double v, const TempoPoint& p) { return v < p.ms; });
+        const TempoPoint& p = it == points.begin() ? *it : *std::prev(it);
+        return p.beat + (ms - p.ms) * p.bpm / 60000.0;
+    }
+
+    // Earliest chart time at which the beat count reaches `beat`
+    double ms_at_beat(double beat) const {
+        if (points.empty()) return 0.0;
+        auto it = std::lower_bound(points.begin(), points.end(), beat,
+            [](const TempoPoint& p, double v) { return p.beat < v; });
+        if (it != points.end() && it->beat == beat) return it->ms;
+        const TempoPoint& p = it == points.begin() ? *it : *std::prev(it);
+        if (p.bpm == 0.0) return p.ms;
+        return p.ms + (beat - p.beat) * 60000.0 / p.bpm;
+    }
+};
+
 struct NoteList {
     std::deque<Note> notes;
     std::deque<TimelineObject> timeline;
+    ScrollType scroll_type = ScrollType::NMSCROLL;
+    TempoMap tempo_map;
 
     NoteList operator+(const NoteList& other) const {
         NoteList result;
+        result.scroll_type = scroll_type;
+        result.tempo_map = tempo_map;
         result.notes = notes;
         result.notes.insert(result.notes.end(),
                                  other.notes.begin(),
@@ -204,7 +237,6 @@ struct TJAEXData {
 struct ParserState {
     double time_signature = 4.0f / 4.0f;
     double bpm = 120.0f;
-    double bpmchange_last_bpm = 120.0f;
     double scroll_x_modifier = 1.0f;
     double scroll_y_modifier = 0.0f;
     ScrollType scroll_type = ScrollType::NMSCROLL;
@@ -221,8 +253,6 @@ struct ParserState {
     double sudden_moving = 0.0f;
     double judge_pos_x = 0.0f;
     double judge_pos_y = 0.0f;
-    double delay_current = 0.0f;
-    double delay_last_note_ms = 0.0f;
     bool is_branching = false;
     bool is_section_start = false;
     double start_branch_ms = 0.0f;
@@ -297,6 +327,7 @@ private:
     std::vector<std::vector<std::string>> data_to_notes(int diff);
 
     Note* get_note_ptr(Note& variant);
+    void add_tempo_point(double bpm);
 
     void set_branch_params(std::vector<TimelineObject>& bar_list, std::string branch_params,
                           std::optional<Note> section_bar);

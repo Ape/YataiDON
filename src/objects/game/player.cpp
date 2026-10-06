@@ -202,8 +202,6 @@ void Player::handle_timeline(double ms_from_start) {
         // dispatching as soon as the entry has been consumed.
         TimelineObject entry = timeline_buffer[i];
         const size_t before = timeline_buffer.size();
-        handle_scroll_type_commands(ms_from_start, entry, i);
-        if (timeline_buffer.size() != before) continue;
         handle_bpmchange(ms_from_start, entry, i);
         if (timeline_buffer.size() != before) continue;
         handle_judgeposition(ms_from_start, entry, i);
@@ -429,16 +427,6 @@ void Player::update(double ms_from_start, double current_ms, std::optional<Backg
         }
     }
     handle_timeline(ms_from_start);
-    if (delay_start.has_value() && delay_end.has_value()) {
-        if (ms_from_start >= delay_end.value()) {
-            double delay = delay_end.value() - delay_start.value();
-            for (auto& note : draw_note_buffer) note.load_ms += delay;
-            for (auto& note : draw_note_list) note.load_ms += delay;
-            for (auto& note : barlines) note.load_ms += delay;
-            delay_start.reset();
-            delay_end.reset();
-        }
-    }
 
     for (auto it = draw_arc_list.begin(); it != draw_arc_list.end(); ) {
         it->update(current_ms);
@@ -639,6 +627,14 @@ void Player::get_load_time(Note& note) {
     if (!note.sudden_appear_ms.has_value() ||
         !note.sudden_moving_ms.has_value() ||
         note.sudden_appear_ms.value() == std::numeric_limits<float>::infinity()) {
+        if (scroll_type != ScrollType::NMSCROLL) {
+            double scroll = note.scroll_x != 0 ? abs(note.scroll_x) : abs(note.scroll_y);
+            double travel_beats = (travel_distance + note_half_w) / (scroll * travel_distance / 4);
+            double beat = tempo_map.beat_at(note.hit_ms);
+            note.load_ms = tempo_map.ms_at_beat(beat - travel_beats);
+            note.unload_ms = tempo_map.ms_at_beat(beat + travel_beats);
+            return;
+        }
         note.load_ms = note.hit_ms - normal_travel_ms;
         note.unload_ms = note.hit_ms + normal_travel_ms;
         return;
@@ -669,7 +665,8 @@ void Player::reset_chart() {
     Note* last_note = nullptr;
     end_time = 0;
     bpm = parser->metadata.bpm;
-    scroll_multiplier = 1.0f;
+    scroll_type = notes.scroll_type;
+    tempo_map = notes.tempo_map;
 
     for (Note& note: notes.notes) {
         get_load_time(note);
@@ -828,45 +825,24 @@ std::optional<Note> Player::get_first_note() {
     return draw_note_list.front();
 }
 
+// #BMSCROLL / #HBSCROLL: distance = beats to the note, so the field speeds up and slows down
+// with the tempo and stops during a #DELAY. Otherwise: time to the note at the note's own BPM.
 float Player::get_position_x(const Note& note, double current_ms) {
-    if (delay_start.has_value()) {
-        current_ms = delay_start.value();
+    if (scroll_type != ScrollType::NMSCROLL) {
+        double beats = tempo_map.beat_at(note.hit_ms) - tempo_map.beat_at(current_ms);
+        return JudgePos::X + beats / 4 * note.scroll_x * (tex.screen_width - JudgePos::X);
     }
-    float speedx = note.bpm * scroll_multiplier / 240000 * note.scroll_x * (tex.screen_width - JudgePos::X);
+    float speedx = note.bpm / 240000 * note.scroll_x * (tex.screen_width - JudgePos::X);
     return JudgePos::X + (note.hit_ms - current_ms) * speedx;
 }
 
 float Player::get_position_y(const Note& note, double current_ms) {
-    if (delay_start.has_value()) {
-        current_ms = delay_start.value();
+    if (scroll_type != ScrollType::NMSCROLL) {
+        double beats = tempo_map.beat_at(note.hit_ms) - tempo_map.beat_at(current_ms);
+        return beats / 4 * note.scroll_y * (tex.screen_width - JudgePos::X);
     }
-    float speedy = note.bpm * scroll_multiplier / 240000 * note.scroll_y * ((tex.screen_width - JudgePos::X)/tex.screen_width) * tex.screen_width;
+    float speedy = note.bpm / 240000 * note.scroll_y * ((tex.screen_width - JudgePos::X)/tex.screen_width) * tex.screen_width;
     return (note.hit_ms - current_ms) * speedy;
-}
-
-void Player::handle_scroll_type_commands(double ms_from_start, const TimelineObject& timeline_object, int buffer_index) {
-    if (timeline_object.start_time > ms_from_start) return;
-    if (timeline_object.bpmchange.has_value()) {
-        scroll_multiplier *= timeline_object.bpmchange.value();
-        bpm *= timeline_object.bpmchange.value();
-        if (buffer_index != (int)timeline_buffer.size() - 1)
-            timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
-        timeline_buffer.pop_back();
-        return;
-    }
-
-    if (timeline_object.delay.has_value()) {
-        if (!delay_start.has_value()) {
-            delay_start = timeline_object.start_time;
-            delay_end = timeline_object.start_time + timeline_object.delay.value();
-        } else {
-            spdlog::error("Needs fix: delay is currently active, but another delay is being activated");
-        }
-        if (buffer_index != (int)timeline_buffer.size() - 1)
-            timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
-        timeline_buffer.pop_back();
-        return;
-    }
 }
 
 void Player::handle_gogotime(double ms_from_start, const TimelineObject& timeline_object, int buffer_index) {
@@ -1868,8 +1844,6 @@ void Player::seek_to(double resume_time) {
         timeline_buffer.push_back(entry);
         int idx = (int)timeline_buffer.size() - 1;
         const size_t before = timeline_buffer.size();
-        handle_scroll_type_commands(resume_time, entry, idx);
-        if (timeline_buffer.size() != before) continue;
         handle_bpmchange(resume_time, entry, idx);
         if (timeline_buffer.size() != before) continue;
         handle_judgeposition(resume_time, entry, idx);

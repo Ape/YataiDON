@@ -164,7 +164,6 @@ private:
     float judge_x;
     float judge_y;
 
-    float scroll_multiplier;
     bool is_gogo_time;
     bool was_gauge_full = false;
     Side autoplay_hit_side;
@@ -252,8 +251,8 @@ private:
     std::vector<ScoreCounterAnimation> base_score_list;
     std::optional<GogoTime> gogo_time;
     std::optional<Fireworks> fireworks;
-    std::optional<double> delay_start;
-    std::optional<double> delay_end;
+    ScrollType scroll_type = ScrollType::NMSCROLL;
+    TempoMap tempo_map;
     std::optional<ComboAnnounce> combo_announce;
     std::optional<BranchIndicator> branch_indicator;
     std::optional<std::variant<FailAnimation, ClearAnimation, FCAnimation>> ending_anim;
@@ -274,7 +273,6 @@ private:
 
     float get_position_y(const Note& note, double current_ms);
 
-    void handle_scroll_type_commands(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);
     void handle_gogotime(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);
     void handle_judgeposition(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);
     void handle_bpmchange(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);

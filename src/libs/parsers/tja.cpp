@@ -440,10 +440,10 @@ TJAParser::notes_to_position(int diff) {
 
     ParserState state;
     state.bpm = metadata.bpm;
-    state.bpmchange_last_bpm = metadata.bpm;
     state.balloons = metadata.course_data[diff].balloon;
     state.curr_note_list = &master_notes.notes;
     state.curr_timeline = &master_notes.timeline;
+    master_notes.tempo_map.points = {{current_ms, 0.0, metadata.bpm}};
 
     // Process each bar
     for (const auto& bar : notes) {
@@ -498,7 +498,6 @@ TJAParser::notes_to_position(int diff) {
             for (char item : part) {
                 // Skip empty notes (0) and non-digits
                 if (item == '0' || !std::isdigit(static_cast<unsigned char>(item))) {
-                    state.delay_last_note_ms = current_ms;
                     current_ms += increment;
                     continue;
                 }
@@ -507,19 +506,9 @@ TJAParser::notes_to_position(int diff) {
                 if (item == '9' && !state.curr_note_list->empty()) {
                     Note* last_note = &state.curr_note_list->back();
                     if (last_note && last_note->type == NoteType::KUSUDAMA) {
-                        state.delay_last_note_ms = current_ms;
                         current_ms += increment;
                         continue;
                     }
-                }
-
-                // Apply delay if present
-                if (state.delay_current != 0.0f) {
-                    TimelineObject delay_timeline;
-                    delay_timeline.start_time = state.delay_last_note_ms;
-                    delay_timeline.delay = state.delay_current;
-                    state.curr_timeline->push_back(delay_timeline);
-                    state.delay_current = 0.0f;
                 }
 
                 // Create and add note
@@ -530,6 +519,7 @@ TJAParser::notes_to_position(int diff) {
             }
         }
     }
+    master_notes.scroll_type = state.scroll_type;
     return {master_notes, branch_m, branch_e, branch_n};
 }
 
@@ -871,23 +861,24 @@ void TJAParser::handle_BPMCHANGE(const std::string& value, ParserState& state) {
         return;
     }
 
-    if (state.scroll_type == ScrollType::BMSCROLL ||
-        state.scroll_type == ScrollType::HBSCROLL) {
-        // Do not modify bpm, it needs to be changed live by bpmchange
-        double bpmchange = parsed_bpm / state.bpmchange_last_bpm;
-        state.bpmchange_last_bpm = parsed_bpm;
+    TimelineObject timeline_obj;
+    timeline_obj.start_time = this->current_ms;
+    timeline_obj.bpm = parsed_bpm;
+    state.bpm = parsed_bpm;
+    state.curr_timeline->push_back(timeline_obj);
+    add_tempo_point(parsed_bpm);
+}
 
-        TimelineObject bpmchange_timeline;
-        bpmchange_timeline.start_time = this->current_ms;
-        bpmchange_timeline.bpmchange = bpmchange;
-        state.curr_timeline->push_back(bpmchange_timeline);
-    } else {
-        TimelineObject timeline_obj;
-        timeline_obj.start_time = this->current_ms;
-        timeline_obj.bpm = parsed_bpm;
-        state.bpm = parsed_bpm;
-        state.curr_timeline->push_back(timeline_obj);
+// Branches rewind current_ms; their repeated tempo changes land before the last point and are
+// skipped, so the beat map follows the first branch.
+void TJAParser::add_tempo_point(double bpm) {
+    auto& points = master_notes.tempo_map.points;
+    if (current_ms < points.back().ms) return;
+    if (current_ms == points.back().ms) {
+        points.back().bpm = bpm;
+        return;
     }
+    points.push_back({current_ms, master_notes.tempo_map.beat_at(current_ms), bpm});
 }
 
 void TJAParser::handle_GOGOSTART(const std::string& value, ParserState& state) {
@@ -916,13 +907,11 @@ void TJAParser::handle_DELAY(const std::string& value, ParserState& state) {
         spdlog::warn("Invalid #DELAY value '{}' in {}", value, file_path.string());
         return;
     }
-    if (state.scroll_type == ScrollType::BMSCROLL || state.scroll_type == ScrollType::HBSCROLL) {
-        if (delay_ms > 0) {
-            //Do not modify current_ms, it will be modified live
-            state.delay_current += delay_ms;
-
-            //Delays will be combined between notes, and attached to previous note
-        }
+    if (delay_ms > 0) {
+        // The beat count stands still through a delay (seen with #BMSCROLL / #HBSCROLL)
+        add_tempo_point(0.0);
+        this->current_ms += delay_ms;
+        add_tempo_point(state.bpm);
     } else {
         this->current_ms += delay_ms;
     }
@@ -1207,7 +1196,6 @@ Note TJAParser::add_bar(ParserState& state) {
 Note TJAParser::add_note(char item, ParserState& state) {
     Note note = Note();
     note.hit_ms = this->current_ms;
-    state.delay_last_note_ms = this->current_ms;
     note.display = true;
     note.type = NoteType(item - '0');
     note.index = state.index;
