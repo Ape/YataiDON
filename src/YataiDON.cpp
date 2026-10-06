@@ -563,8 +563,11 @@ int main(int argc, char* argv[]) {
     return ios_run_main_loop(run_frame);
 #else
     input_thread = std::thread(input_polling_thread);
+    start_midi_input(global_data.config->midi);
 
     while (!ray::WindowShouldClose()) {
+        process_midi_events();
+
         // Consume buffered quit-key presses while editing to prevent a delayed game exit after the field closes.
         if (check_key_pressed(global_data.config->keys.exit_key) &&
             !is_text_input_key(global_data.config->keys.exit_key)) {
@@ -573,6 +576,7 @@ int main(int argc, char* argv[]) {
         run_frame();
     }
 
+    shutdown_midi_input();
     input_thread_running = false;
     if (input_thread.joinable()) {
         input_thread.join();

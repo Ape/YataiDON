@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.24)
 project(YataiDON VERSION 1.0.5 LANGUAGES C CXX)
 
 cmake_policy(SET CMP0002 NEW)  # Logical target names must be globally unique
@@ -231,7 +231,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE sndfile samplerate)
 if(NOT ANDROID AND NOT IOS AND NOT EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE rtaudio)
+  target_link_libraries(${PROJECT_NAME} PRIVATE rtaudio libremidi::libremidi)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE YATAIDON_MIDI_ENABLED)
 endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE portaudio)
 

@@ -401,6 +401,16 @@ Config get_config() {
     config.gamepad_2p.right_don = parseIntArrayOrDefault(gamepad_2p_node, "right_don", {});
     config.gamepad_2p.right_kat = parseIntArrayOrDefault(gamepad_2p_node, "right_kat", {});
 
+    const toml::table* midi_node = config_file["midi"].as_table();
+    config.midi.device = midi_node ? (*midi_node)["device"].value_or("") : "";
+    config.midi.channel = midi_node ? (*midi_node)["channel"].value_or(0) : 0;
+    config.midi.notes = parseIntArrayOrDefault(midi_node, "notes", {});
+    config.midi.buttons = parseIntArrayOrDefault(midi_node, "buttons", {});
+    if (config.midi.channel < 0 || config.midi.channel > 16) {
+        spdlog::warn("MIDI channel must be 0 (any) or 1-16; using any channel");
+        config.midi.channel = 0;
+    }
+
     // Parse audio
     config.audio.device_type = config_file["audio"]["device_type"].value_or(0);
     config.audio.device = config_file["audio"]["device"].value_or("");
@@ -543,6 +553,16 @@ void save_config(const Config& config) {
         {"left_don", gp2_left_don},
         {"right_don", gp2_right_don},
         {"right_kat", gp2_right_kat}
+    });
+
+    toml::array midi_notes, midi_buttons;
+    for (int note : config.midi.notes) midi_notes.push_back(note);
+    for (int button : config.midi.buttons) midi_buttons.push_back(button);
+    config_table.insert("midi", toml::table{
+        {"device", config.midi.device},
+        {"channel", config.midi.channel},
+        {"notes", midi_notes},
+        {"buttons", midi_buttons}
     });
 
     // Audio
