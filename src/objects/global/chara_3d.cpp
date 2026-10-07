@@ -806,7 +806,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         render_dirty = false;
         ray::BeginTextureMode(scene_target);
         ray::ClearBackground(ray::BLANK);
-        ray::BeginBlendMode(ray::BLEND_ALPHA);
+        ray::BeginBlendMode(ray::BLEND_CUSTOM_SEPARATE); // not BLEND_ALPHA: it blends dst alpha as a*a+dst*(1-a), making opaque pixels under a translucent sheet see-through
         ray::BeginMode3D(rc);
         draw_3d(x, y);
         draw_outline(x, y, scene_target_w, scene_target_h, rh * SUPERSAMPLE);
@@ -882,7 +882,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
 
         ray::BeginTextureMode(scene_target);
         ray::ClearBackground(ray::BLANK);
-        ray::BeginBlendMode(ray::BLEND_ALPHA);
+        ray::BeginBlendMode(ray::BLEND_CUSTOM_SEPARATE);
         ray::BeginMode3D(cam3d);
         draw_3d(x, y);
         draw_outline(x, y, ssw, ssh, (float)ssh);
