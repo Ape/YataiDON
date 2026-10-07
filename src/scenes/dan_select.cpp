@@ -22,21 +22,60 @@ static constexpr double DAN_INTRO_FULL_MS = 257.0 * 1000.0 / 60.0;
 
 int DanNavigator::total_notes_for(const std::vector<DanSongEntry>& songs) {
     int total = 0;
-    for (const auto& entry : songs) {
-        try {
-            SongParser sp(entry.song_path);
-            auto [notes, bm, be, bn] = sp.notes_to_position(entry.difficulty);
-            for (const Note& n : notes.notes)
+    for (const auto& entry : songs) total += song_note_count(entry.song_path, entry.difficulty);
+    return total;
+}
+
+std::shared_ptr<const TJAMetadata> DanNavigator::song_metadata(const fs::path& path) {
+    if (memo_) {
+        std::lock_guard<std::mutex> lock(memo_->mutex);
+        if (auto it = memo_->metadata.find(path); it != memo_->metadata.end()) return it->second;
+    }
+    auto meta = std::make_shared<const TJAMetadata>(SongParser(path).metadata);
+    if (memo_) {
+        std::lock_guard<std::mutex> lock(memo_->mutex);
+        memo_->metadata.emplace(path, meta);
+    }
+    return meta;
+}
+
+int DanNavigator::song_note_count(const fs::path& path, int difficulty) {
+    if (memo_) {
+        std::lock_guard<std::mutex> lock(memo_->mutex);
+        if (auto it = memo_->note_counts.find({path, difficulty}); it != memo_->note_counts.end()) return it->second;
+    }
+    int total = 0;
+    try {
+        SongParser sp(path);
+        auto [notes, bm, be, bn] = sp.notes_to_position(difficulty);
+        for (const Note& n : notes.notes)
+            if (n.type >= NoteType::DON && n.type <= NoteType::KAT_L) total++;
+        for (auto& sec : bm)
+            for (const Note& n : sec.notes)
                 if (n.type >= NoteType::DON && n.type <= NoteType::KAT_L) total++;
-            for (auto& sec : bm)
-                for (const Note& n : sec.notes)
-                    if (n.type >= NoteType::DON && n.type <= NoteType::KAT_L) total++;
-        } catch (const std::exception& e) {
-            spdlog::warn("DanNavigator::total_notes_for: failed to parse '{}': {}",
-                         entry.song_path.string(), e.what());
-        }
+    } catch (const std::exception& e) {
+        spdlog::warn("DanNavigator::total_notes_for: failed to parse '{}': {}", path.string(), e.what());
+    }
+    if (memo_) {
+        std::lock_guard<std::mutex> lock(memo_->mutex);
+        memo_->note_counts.emplace(std::make_pair(path, difficulty), total);
     }
     return total;
+}
+
+int DanNavigator::box_genre(const fs::path& box_def_dir) {
+    if (memo_) {
+        std::lock_guard<std::mutex> lock(memo_->mutex);
+        if (auto it = memo_->genres.find(box_def_dir); it != memo_->genres.end()) return it->second;
+    }
+    int genre = (int)GenreIndex::NAMCO;
+    if (fs::exists(box_def_dir / "box.def"))
+        genre = (int)Navigator::parse_box_def_uncached(box_def_dir).genre_index;
+    if (memo_) {
+        std::lock_guard<std::mutex> lock(memo_->mutex);
+        memo_->genres.emplace(box_def_dir, genre);
+    }
+    return genre;
 }
 
 Exam DanNavigator::parse_exam(const rapidjson::Value& e) {
@@ -85,23 +124,20 @@ std::optional<DanSongEntry> DanNavigator::load_song_entry(const rapidjson::Value
             return std::nullopt;
         }
 
-        SongParser sp(*path_opt);
-        int level = sp.metadata.course_data.count(diff)
-            ? sp.metadata.course_data.at(diff).level : 10;
+        auto meta = song_metadata(*path_opt);
+        int level = meta->course_data.count(diff)
+            ? meta->course_data.at(diff).level : 10;
 
         if (titles_out && global_data.config) {
             const std::string& lang = global_data.config->general.language;
-            titles_out->first  = sp.metadata.title.count(lang)
-                ? sp.metadata.title.at(lang)
-                : (sp.metadata.title.count("en") ? sp.metadata.title.at("en") : std::string());
-            titles_out->second = sp.metadata.subtitle.count(lang)
-                ? sp.metadata.subtitle.at(lang) : std::string();
+            titles_out->first  = meta->title.count(lang)
+                ? meta->title.at(lang)
+                : (meta->title.count("en") ? meta->title.at("en") : std::string());
+            titles_out->second = meta->subtitle.count(lang)
+                ? meta->subtitle.at(lang) : std::string();
         }
 
-        int genre = (int)GenreIndex::NAMCO;
-        fs::path box_def_dir = path_opt->parent_path().parent_path();
-        if (fs::exists(box_def_dir / "box.def"))
-            genre = (int)Navigator::parse_box_def_uncached(box_def_dir).genre_index;
+        int genre = box_genre(path_opt->parent_path().parent_path());
 
         bool hidden = chart.HasMember("hidden") && chart["hidden"].IsBool() &&
                       chart["hidden"].GetBool();
@@ -186,23 +222,22 @@ std::unique_ptr<DanBox> DanNavigator::load_dan_box(const fs::path& json_path) {
     return make_box(*d);
 }
 
-int DanNavigator::scan_root_data(const fs::path& root_path, std::vector<DanBoxData>& out) {
+void DanNavigator::collect_dan_jsons(const fs::path& root_path, std::vector<fs::path>& out) {
     if (root_path.empty()) {
         spdlog::warn("DanNavigator: skipping an empty dan root path");
-        return 0;
+        return;
     }
     std::error_code ec;
     if (!fs::is_directory(root_path, ec)) {
         spdlog::warn("DanNavigator: skipping dan root '{}': not a directory ({})",
                      root_path.string(), ec ? ec.message() : "no such directory");
-        return 0;
+        return;
     }
 #ifdef SUPPORT_FUMEN
     if (!gen4::find_data_root(root_path).empty() ||
-        !gen3::find_data_root(root_path).empty()) return 0;
+        !gen3::find_data_root(root_path).empty()) return;
 #endif
 
-    int added = 0;
     try {
         auto it = fs::recursive_directory_iterator(
             root_path, fs::directory_options::skip_permission_denied);
@@ -217,21 +252,88 @@ int DanNavigator::scan_root_data(const fs::path& root_path, std::vector<DanBoxDa
                 continue;
             }
 #endif
-            if (entry.path().filename() == "dan.json") {
-                try {
-                    if (auto d = load_dan_box_data(entry.path())) {
-                        out.push_back(std::move(*d));
-                        added++;
-                    }
-                } catch (const std::exception& ex) {
-                    spdlog::warn("DanNavigator: failed to load {}: {}",
-                                 entry.path().string(), ex.what());
-                }
-            }
+            if (entry.path().filename() == "dan.json") out.push_back(entry.path());
         }
     } catch (const std::exception& ex) {
         spdlog::warn("DanNavigator: error loading {}: {}", root_path.string(), ex.what());
     }
+}
+
+// Loads the courses on a few worker threads, in the order given
+std::vector<DanBoxData> DanNavigator::load_dan_jsons(const std::vector<fs::path>& jsons) {
+    ScanMemo memo;
+    memo_ = &memo;
+    std::vector<std::optional<DanBoxData>> loaded(jsons.size());
+    std::atomic<size_t> cursor{0};
+    unsigned pool_size = std::max(2u, std::thread::hardware_concurrency() / 2);
+    std::vector<std::thread> pool;
+    for (unsigned t = 0; t < pool_size; t++) {
+        pool.emplace_back([&]() {
+            for (;;) {
+                size_t i = cursor.fetch_add(1);
+                if (i >= jsons.size() || scan_abort.load()) break;
+                try {
+                    loaded[i] = load_dan_box_data(jsons[i]);
+                } catch (const std::exception& ex) {
+                    spdlog::warn("DanNavigator: failed to load {}: {}", jsons[i].string(), ex.what());
+                }
+            }
+        });
+    }
+    for (std::thread& worker : pool) worker.join();
+    memo_ = nullptr;
+
+    std::vector<DanBoxData> data;
+    for (auto& d : loaded)
+        if (d) data.push_back(std::move(*d));
+    return data;
+}
+
+// The scan result for the same dan.json files (paths and modification times) over the same song
+// library is reused for the rest of the session: re-entering the dojo re-read every course
+std::vector<DanBoxData> DanNavigator::scan_roots(const std::vector<fs::path>& roots) {
+    struct Cached {
+        std::vector<std::pair<fs::path, fs::file_time_type>> signature;
+        size_t library_size = 0;
+        std::string language;  // song titles are read in the UI language
+        std::vector<DanBoxData> data;
+    };
+    static std::mutex cache_mutex;
+    static std::map<std::vector<fs::path>, Cached> cache;
+
+    std::vector<fs::path> jsons;
+    for (const fs::path& root_path : roots) {
+        if (scan_abort.load()) return {};
+        collect_dan_jsons(root_path, jsons);
+    }
+    std::vector<std::pair<fs::path, fs::file_time_type>> signature;
+    signature.reserve(jsons.size());
+    for (const fs::path& json : jsons) {
+        std::error_code ec;
+        signature.emplace_back(json, fs::last_write_time(json, ec));
+    }
+    const size_t library_size = navigator.song_file_count();
+    const std::string language = global_data.config ? global_data.config->general.language : std::string();
+
+    {
+        std::lock_guard<std::mutex> lock(cache_mutex);
+        if (auto it = cache.find(roots);
+            it != cache.end() && it->second.signature == signature && it->second.library_size == library_size &&
+            it->second.language == language)
+            return it->second.data;
+    }
+
+    std::vector<DanBoxData> data = load_dan_jsons(jsons);
+    if (scan_abort.load()) return data;
+    std::lock_guard<std::mutex> lock(cache_mutex);
+    cache[roots] = Cached{std::move(signature), library_size, language, data};
+    return data;
+}
+
+int DanNavigator::scan_root_data(const fs::path& root_path, std::vector<DanBoxData>& out) {
+    std::vector<DanBoxData> data = scan_roots({root_path});
+    int added = (int)data.size();
+    for (DanBoxData& d : data) out.push_back(std::move(d));
     return added;
 }
 
@@ -243,23 +345,18 @@ int DanNavigator::scan_root(const fs::path& root_path) {
 }
 
 std::vector<DanBoxData> DanNavigator::scan_all_data(const std::vector<fs::path>& song_paths) {
-    std::vector<DanBoxData> data;
-
     while (!navigator.song_files_ready.load() && !scan_abort.load())
         std::this_thread::sleep_for(std::chrono::milliseconds(4));
+    if (scan_abort.load()) return {};
 
-    for (const fs::path& root_path : song_paths) {
-        if (scan_abort.load()) return data;
-        scan_root_data(root_path, data);
-    }
+    std::vector<DanBoxData> data = scan_roots(song_paths);
 
-    if (data.empty() && global_data.config) {
-        for (const fs::path& lib_root : global_data.config->paths.tja_path) {
-            if (scan_abort.load()) return data;
-            if (std::find(song_paths.begin(), song_paths.end(), lib_root) != song_paths.end())
-                continue;
-            scan_root_data(lib_root, data);
-        }
+    if (data.empty() && global_data.config && !scan_abort.load()) {
+        std::vector<fs::path> library;
+        for (const fs::path& lib_root : global_data.config->paths.tja_path)
+            if (std::find(song_paths.begin(), song_paths.end(), lib_root) == song_paths.end())
+                library.push_back(lib_root);
+        data = scan_roots(library);
         if (!data.empty())
             spdlog::warn("DanNavigator: the requested dan root yielded nothing; "
                          "recovered {} course(s) by re-scanning the song library",
