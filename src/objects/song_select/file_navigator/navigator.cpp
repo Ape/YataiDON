@@ -151,8 +151,10 @@ void Navigator::emit_wheel_event(int id) {
         wheel_leg_ms = get_current_ms();
 }
 
+// The swap waits for the arcade's leg timing only for a skin that draws the legs from the wheel
+// events; without one the screen sat empty for the rest of that time.
 bool Navigator::swap_is_early(int begin_id) const {
-    if (wheel_event != begin_id) return false;
+    if (!wheel_events_read || wheel_event != begin_id) return false;
     return (get_current_ms() - wheel_leg_ms) < kSwapDelayMs;
 }
 
@@ -198,6 +200,7 @@ void Navigator::load_all_roots() {
 
 void Navigator::reset_for_skin_reload() {
     join_loader();
+    wheel_events_read = false;
     is_init = false;
 }
 
@@ -2233,7 +2236,22 @@ void Navigator::update(double current_ms) {
                          std::move(state.saved_folder_box));
             open_index = state.folder_index;
             inline_state.reset();
+            std::vector<float> before;
+            for (const auto& box : items) before.push_back(box->position);
             set_positions(false, 500);
+            // The boxes the open folder pushed off screen are a screen width or more from their
+            // place, so set_positions puts them there at once: slide them in from the screen edge on
+            // their side instead (not from where they were: the list wraps, so that can be the far side)
+            if (!vertical_gallery) {
+                const float center = items[open_index]->position;
+                for (size_t i = 0; i < items.size(); i++) {
+                    const float to = items[i]->position;
+                    const bool was_off = before[i] > tex.screen_width || before[i] < -100.0f;
+                    if (to == before[i] || !was_off || to < -100.0f || to > tex.screen_width) continue;
+                    items[i]->set_position(to > center ? tex.screen_width + 100.0f : -200.0f);
+                    items[i]->move_box(to, 500);
+                }
+            }
             items[open_index]->exit_box();
             genre_bg.reset();
             is_processing = false;

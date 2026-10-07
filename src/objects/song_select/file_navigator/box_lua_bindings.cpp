@@ -286,8 +286,9 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "bg_genre_frame",         &Navigator::bg_genre_frame,
         "last_bg_genre_frame",    &Navigator::last_bg_genre_frame,
         "current_folder", &Navigator::lua_current_folder,
-        "wheel_event",     sol::readonly(&Navigator::wheel_event),
-        "wheel_event_seq", sol::readonly(&Navigator::wheel_event_seq)
+        // reading either marks the skin as one that animates the folder legs (see swap_is_early)
+        "wheel_event",     sol::property([](Navigator& n) { n.wheel_events_read = true; return n.wheel_event; }),
+        "wheel_event_seq", sol::property([](Navigator& n) { n.wheel_events_read = true; return n.wheel_event_seq; })
     );
 
     lua.new_usertype<GenreBG>("GenreBG",
