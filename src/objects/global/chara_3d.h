@@ -98,7 +98,7 @@ private:
     float rot_y = 0.0f;
     float rot_z = 0.0f;
 
-    AnimIndex prev_anim_idx = AnimIndex::DON_BALLOON_FAILURE;
+    AnimIndex prev_anim_idx = AnimIndex::DON_NORMAL;
     bool is_looping = true;
     bool use_render_textures = true;
 
@@ -133,6 +133,8 @@ private:
     ray::Shader outline_fxaa_shader;
     int outline_fxaa_size_loc = -1;
     int outline_fxaa_thickness_loc = -1;
+    int outline_fxaa_tint_color_loc = -1;
+    int outline_fxaa_tint_amount_loc = -1;
 
     void set_texture(fs::path& texture_path, int part_index, int material_index);
     void load_face_textures(fs::path& face_dir);
@@ -156,6 +158,7 @@ public:
 
     void set_don_colors(ray::Color body, ray::Color face, ray::Color rim);
 
+    void set_tint(ray::Color color, float amount);
     void set_bpm(float bpm);
     void set_anim(AnimIndex idx);
     int  get_anim_count() const;

@@ -174,6 +174,7 @@ struct ResultData {
     int max_combo = 0;
     int total_drumroll = 0;
     float gauge_length = 0.0f;
+    bool cleared = true;
     int prev_score = 0;
 };
 

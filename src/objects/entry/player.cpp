@@ -13,6 +13,7 @@ static void apply_pd_look(Chara3D& chara, PlayerData* pd, PlayerNum player_num) 
     } else {
         chara.set_don_colors(chara_default_color_1(player_num), chara_default_color_2(player_num), {249, 240, 225, 255});
     }
+    chara.set_anim(AnimIndex::DON_ENTRY_LOOP);
 }
 
 EntryPlayer::EntryPlayer(PlayerNum player_num, int side, BoxManager* box_manager)
@@ -28,6 +29,7 @@ EntryPlayer::EntryPlayer(PlayerNum player_num, int side, BoxManager* box_manager
     PlayerData* pd_ptr = pd ? &*pd : nullptr;
     chara = make_chara_from_player_data(pd_ptr, player_num == PlayerNum::P2);
     apply_pd_look(*chara, pd_ptr, player_num);
+    chara->set_anim(AnimIndex::DON_ENTRY_IN);
 
     if (!load("EntryPlayer", "player", side)) return;
     fn_start_animations   = lua_object["start_animations"];

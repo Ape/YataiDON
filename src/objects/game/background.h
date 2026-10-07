@@ -23,6 +23,7 @@ private:
     sol::protected_function fn_draw_gauge;
     sol::protected_function fn_handle_balloon_end;
     sol::protected_function fn_handle_gogo;
+    sol::protected_function fn_handle_miss_streak;
 
 public:
     Background(PlayerNum player_num, float bpm, const std::string& scene_preset);
@@ -54,6 +55,7 @@ public:
     void handle_balloon_end(PlayerNum player_num);
     // GOGO time started (true) / ended (false) for that player
     void handle_gogo(PlayerNum player_num, bool on);
+    void handle_miss_streak(PlayerNum player_num, bool on);
     bool wants_draw_ending() const { return fn_draw_ending.valid(); }
     void draw_back();
     void draw_fore();

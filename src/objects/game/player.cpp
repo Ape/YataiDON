@@ -139,8 +139,25 @@ ResultData Player::get_result_score() {
     result.total_drumroll = total_drumroll;
     if (dan_gauge) result.gauge_length = dan_gauge->get_length() * 0.87f;
     else if (gauge.has_value()) result.gauge_length = gauge->get_length() * 0.87f;
-    if (skipped_run) result.gauge_length = 0.0f;
+    if (dan_gauge) result.cleared = dan_gauge->get_is_clear();
+    else if (gauge.has_value()) result.cleared = gauge->get_is_clear();
+    if (skipped_run) {
+        result.gauge_length = 0.0f;
+        result.cleared = false;
+    }
     return result;
+}
+
+static constexpr int MISS_STREAK_TINT = 6;   // misses in a row that darken the Don and the background
+
+AnimIndex Player::rest_anim() const {
+    if (is_gogo_time) return AnimIndex::DON_SABI;
+    return was_gauge_clear ? AnimIndex::DON_NORM_LOOP : AnimIndex::DON_NORMAL;
+}
+
+void Player::on_miss() {
+    if (++miss_streak <= MISS_STREAK_TINT)
+        chara->set_anim(miss_streak == MISS_STREAK_TINT ? AnimIndex::DON_MISS6 : AnimIndex::DON_MISS);
 }
 
 void Player::spawn_ending_anim(Background* background) {
@@ -158,6 +175,7 @@ void Player::spawn_ending_anim(Background* background) {
     } else if (bad_count == 0) {
         ending_anim = FCAnimation(is_2p, ok_count == 0);
         kind = (ok_count == 0) ? "donderful" : "full_combo";
+        chara->set_anim(AnimIndex::DON_FULL_COMBO);
     } else {
         ending_anim = ClearAnimation(is_2p);
         kind = "clear";
@@ -496,6 +514,29 @@ void Player::update(double ms_from_start, double current_ms, std::optional<Backg
             chara->set_anim(AnimIndex::DON_FULL_GAGE);
         }
         was_gauge_full = gauge_full_now;
+        const bool streak_now = miss_streak >= MISS_STREAK_TINT;
+        if (streak_now != tinted_miss_streak || gauge_full_now != tinted_rainbow) {
+            if (tinted_miss_streak && !streak_now) chara->set_anim(rest_anim());
+            tinted_miss_streak = streak_now;
+            tinted_rainbow = gauge_full_now;
+            if (streak_now) chara->set_tint({0, 0, 0, 255}, 0.35f);
+            else if (gauge_full_now) chara->set_tint({255, 220, 0, 255}, 0.5f);
+            else chara->set_tint({0, 0, 0, 255}, 0.0f);
+            if (background.has_value()) background->handle_miss_streak(player_num, streak_now);
+        }
+        const bool gauge_clear_now = gauge->get_is_clear();
+        if (gauge_clear_now != was_gauge_clear) {
+            was_gauge_clear = gauge_clear_now;
+            if (!is_gogo_time) {
+                chara->set_anim(rest_anim());
+                chara->set_anim(gauge_clear_now ? AnimIndex::DON_NORM_UP : AnimIndex::DON_NORM_DOWN);
+            }
+        }
+        // balloon being hit vs. waiting for a hit
+        if (is_balloon && !balloon_idle && current_ms - last_balloon_hit_ms > 400.0) {
+            balloon_idle = true;
+            chara->set_anim(AnimIndex::DON_BALLOON_NOBEAT);
+        }
     }
     if (judge_counter.has_value()) {
         judge_counter->update(good_count, ok_count, bad_count, total_drumroll);
@@ -891,7 +932,7 @@ void Player::handle_gogotime(double ms_from_start, const TimelineObject& timelin
         chara->set_anim(AnimIndex::DON_SABI_START);
     } else {
         gogo_time.reset();
-        chara->set_anim(AnimIndex::DON_NORMAL);
+        chara->set_anim(rest_anim());
     }
 
     if (buffer_index != (int)timeline_buffer.size() - 1)
@@ -1032,6 +1073,7 @@ void Player::play_note_manager(double current_ms, std::optional<Background>& bac
         combo = 0;
         if (background.has_value()) background->handle_bad(PlayerNum(1 + is_2p));
         bad_count++;
+        on_miss();
         note_judgments[don_notes.front().index] = Judgments::BAD;
         if (dan_gauge) dan_gauge->add_bad();
         else if (gauge.has_value()) gauge->add_bad();
@@ -1044,6 +1086,7 @@ void Player::play_note_manager(double current_ms, std::optional<Background>& bac
         combo = 0;
         if (background.has_value()) background->handle_bad(PlayerNum(1 + is_2p));
         bad_count++;
+        on_miss();
         note_judgments[kat_notes.front().index] = Judgments::BAD;
         if (dan_gauge) dan_gauge->add_bad();
         else if (gauge.has_value()) gauge->add_bad();
@@ -1059,6 +1102,10 @@ void Player::play_note_manager(double current_ms, std::optional<Background>& bac
         if (note.type == NoteType::ROLL_HEAD || note.type == NoteType::ROLL_HEAD_L) {
             is_drumroll = true;
         } else if (note.type == NoteType::BALLOON_HEAD || note.type == NoteType::KUSUDAMA) {
+            if (!is_balloon) {
+                balloon_idle = true;
+                chara->set_anim(AnimIndex::DON_BALLOON_NOBEAT);
+            }
             is_balloon = true;
         } else if (note.type == NoteType::TAIL) {
             other_notes.pop_front();
@@ -1154,6 +1201,7 @@ void Player::note_manager(double current_ms, std::optional<Background>& backgrou
 }
 
 void Player::note_correct(const Note& note, double current_ms) {
+    miss_streak = 0;
     if (!don_notes.empty() && don_notes[0] == note) {
         don_notes.pop_front();
     } else if (!kat_notes.empty() && kat_notes[0] == note) {
@@ -1172,8 +1220,7 @@ void Player::note_correct(const Note& note, double current_ms) {
     if (note.type < NoteType::BALLOON_HEAD) {
         combo++;
         if (combo % 10 == 0) {
-            chara->set_anim(bad_count == 0 ? AnimIndex::DON_FULL_COMBO
-                                            : AnimIndex::DON_COMBO);
+            chara->set_anim(AnimIndex::DON_COMBO);
         }
         if (combo % 100 == 0) {
             combo_announce = ComboAnnounce(combo, current_ms, player_num);
@@ -1228,8 +1275,12 @@ void Player::check_balloon(double current_ms, DrumType drum_type, const Note& ba
     if (!balloon.count.has_value()) return;
     if (!balloon_counter.has_value()) {
         balloon_counter = BalloonCounter(balloon.count.value(), is_2p);
+    }
+    if (balloon_idle) {
+        balloon_idle = false;
         chara->set_anim(AnimIndex::DON_BALLOON_LOOP);
     }
+    last_balloon_hit_ms = current_ms;
     if (background.has_value())
         background->handle_balloon(PlayerNum(is_2p + 1), balloon.count.value() - curr_balloon_count - 1);
     curr_balloon_count++;
@@ -1336,6 +1387,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
         if (!blocked_by(other_lane) && !blocked_by(other_notes) && ms_from_start > next.hit_ms - ok_window_ms) {
             combo = 0;
             bad_count++;
+            on_miss();
             note_judgments[curr_note.index] = Judgments::BAD;
             if (dan_gauge) dan_gauge->add_bad();
             else if (gauge.has_value()) gauge->add_bad();
@@ -1389,6 +1441,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
         } else if ((curr_note.hit_ms - bad_window_ms) <= ms_from_start && ms_from_start <= (curr_note.hit_ms + bad_window_ms)) {
             draw_judge_list.push_back(Judgment(Judgments::BAD, big));
             bad_count++;
+            on_miss();
             combo = 0;
             branch_note_count++;
             // Same note as the GOOD/OK branches: curr_note may be lane[1] (stale head).
@@ -1422,9 +1475,13 @@ void Player::drumroll_counter_manager(double current_ms) {
 }
 
 void Player::balloon_counter_manager(double current_ms) {
+    if (!is_balloon && balloon_idle && !balloon_counter.has_value()) {   // never hit
+        balloon_idle = false;
+        chara->set_anim(rest_anim());
+    }
     if (!is_balloon && balloon_counter.has_value() && !balloon_counter->has_popped()) {
         balloon_counter.reset();
-        chara->set_anim(AnimIndex::DON_NORMAL);
+        chara->set_anim(rest_anim());
         chara->set_anim(AnimIndex::DON_BALLOON_FAILURE);
     }
     if (balloon_counter.has_value()) {
@@ -1435,7 +1492,7 @@ void Player::balloon_counter_manager(double current_ms) {
                 base_score_list.push_back(ScoreCounterAnimation(player_num, 5000, is_2p));
             }
             balloon_counter.reset();
-            chara->set_anim(AnimIndex::DON_NORMAL);
+            chara->set_anim(rest_anim());
             chara->set_anim(AnimIndex::DON_BALLOON_SUCCESS);
         }
     }

@@ -57,6 +57,7 @@ Background::Background(PlayerNum player_num, float bpm, const std::string& scene
         fn_draw_gauge    = lua_object["draw_gauge"];
         fn_handle_balloon_end = lua_object["handle_balloon_end"];
         fn_handle_gogo   = lua_object["handle_gogo"];
+        fn_handle_miss_streak = lua_object["handle_miss_streak"];
     }
 }
 
@@ -234,6 +235,15 @@ void Background::draw_gauge(PlayerNum player_num) {
     if (!result.valid()) {
         sol::error err = result;
         spdlog::error("Error calling draw_gauge: {}", err.what());
+    }
+}
+
+void Background::handle_miss_streak(PlayerNum player_num, bool on) {
+    if (!fn_handle_miss_streak.valid()) return;
+    auto result = fn_handle_miss_streak(lua_object, static_cast<int>(player_num), on);
+    if (!result.valid()) {
+        sol::error err = result;
+        spdlog::error("Error calling handle_miss_streak: {}", err.what());
     }
 }
 

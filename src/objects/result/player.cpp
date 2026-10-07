@@ -18,6 +18,7 @@ ResultPlayer::ResultPlayer(PlayerNum player_num, bool has_2p, bool is_2p)
     chara->set_anim(AnimIndex::DON_NORMAL);
 
     SessionData& sd = global_data.session_data[(int)player_num];
+    if (!sd.result_data.cleared) chara->set_anim(AnimIndex::DON_MISS_NORMAL);
     nameplate = Nameplate(
         pd ? pd->username : "", pd ? pd->title : "",
         player_num,

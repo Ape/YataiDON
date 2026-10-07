@@ -548,17 +548,26 @@ static constexpr int FACE_ANIM_IDS[] = {
     41, 40, 42, 43, 44, 45, 46, 58, 59, 62, 60, 18,
 };
 
+static constexpr int MIRROR_OFFSET = (int)AnimIndex::DON_BALLOON_FAILURE_MIRROR;
+static int base_anim(AnimIndex idx) { return static_cast<int>(idx) % MIRROR_OFFSET; }
+
 void Chara3D::set_anim(AnimIndex idx) {
-    int i = static_cast<int>(idx);
+    const int base = base_anim(idx);
+    if (base == (int)AnimIndex::DON_ENTRY_IN) set_anim(AnimIndex::DON_ENTRY_LOOP);
+    else if (base == (int)AnimIndex::DON_FUKKATU_START) set_anim(AnimIndex::DON_FUKKATU_LOOP);
+    int i = base + (mirror ? MIRROR_OFFSET : 0);
+    if (mirror && (base == (int)AnimIndex::DON_MISS || base == (int)AnimIndex::DON_MISS6))
+        i = (int)AnimIndex::DON_MISS6_MIRROR + (int)AnimIndex::DON_MISS_MIRROR - i;
+    idx = static_cast<AnimIndex>(i);
     int anim_count = part_anim_count.empty() ? 0 : part_anim_count[0];
     if (i >= 0 && i < anim_count) {
-        if (idx == AnimIndex::DON_NORMAL || idx == AnimIndex::DON_SABI) {
+        if (base == (int)AnimIndex::DON_NORMAL || base == (int)AnimIndex::DON_SABI ||
+            base == (int)AnimIndex::DON_BALLOON_NOBEAT || base == (int)AnimIndex::DON_MISS6 ||
+            get_anim_name(i).find("loop") != std::string::npos) {
             is_looping = true;
-        } else if (get_anim_name(i).find("loop") == std::string::npos) {
-            is_looping = false;
-            prev_anim_idx = anim_index;
         } else {
-            is_looping = true;
+            if (is_looping) prev_anim_idx = anim_index;  // not while chaining one-shots, or one would return to itself
+            is_looping = false;
         }
         anim_index = idx;
         anim_frame = 0;
@@ -584,6 +593,17 @@ std::string Chara3D::get_anim_name(int idx) {
     return "";
 }
 
+void Chara3D::set_tint(ray::Color color, float amount) {
+    if (outline_fxaa_shader.id == 0) return;
+    if (outline_fxaa_tint_color_loc < 0) {
+        outline_fxaa_tint_color_loc = ray::GetShaderLocation(outline_fxaa_shader, "tintColor");
+        outline_fxaa_tint_amount_loc = ray::GetShaderLocation(outline_fxaa_shader, "tintAmount");
+    }
+    float rgb[3] = {color.r / 255.0f, color.g / 255.0f, color.b / 255.0f};
+    ray::SetShaderValue(outline_fxaa_shader, outline_fxaa_tint_color_loc, rgb, ray::SHADER_UNIFORM_VEC3);
+    ray::SetShaderValue(outline_fxaa_shader, outline_fxaa_tint_amount_loc, &amount, ray::SHADER_UNIFORM_FLOAT);
+}
+
 void Chara3D::set_bpm(float bpm) {
     this->bpm = bpm;
 }
@@ -599,8 +619,10 @@ void Chara3D::update(double current_ms) {
         const int kf = part_anims[0][ai].keyframeCount;
         if (bpm > 0.0f && kf > 0) {
             double ms_per_beat = 60000.0 / bpm;
-            if (anim_index == AnimIndex::DON_NORMAL || anim_index == AnimIndex::DON_SABI) ms_per_beat *= 3;
-            if (anim_index == AnimIndex::DON_BALLOON_LOOP) ms_per_beat /= 2;
+            const int base = base_anim(anim_index);
+            if (base == (int)AnimIndex::DON_NORMAL) ms_per_beat *= 3;
+            else if (base == (int)AnimIndex::DON_SABI) ms_per_beat *= 6;
+            if (base == (int)AnimIndex::DON_BALLOON_LOOP) ms_per_beat /= 2;
             double ms_per_frame = ms_per_beat / kf;
             if (current_ms - last_frame_ms >= ms_per_frame) {
                 int loop_frames = kf - 1;

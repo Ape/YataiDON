@@ -98,6 +98,9 @@ public:
         score = 0;
         total_drumroll = 0;
         was_gauge_full = false;
+        was_gauge_clear = false;
+        tinted_miss_streak = tinted_rainbow = false;
+        miss_streak = 0;
         note_judgments.clear();
         last_reported_score = -1;
         last_reported_gogo = -1;
@@ -167,6 +170,14 @@ private:
 
     bool is_gogo_time;
     bool was_gauge_full = false;
+    bool was_gauge_clear = false;
+    bool tinted_miss_streak = false;
+    bool tinted_rainbow = false;
+    int miss_streak = 0;
+    double last_balloon_hit_ms = 0;
+    bool balloon_idle = false;
+    AnimIndex rest_anim() const;
+    void on_miss();
     Side autoplay_hit_side;
     int last_subdivision;
 
