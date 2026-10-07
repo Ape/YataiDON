@@ -35,17 +35,9 @@ void TitleScreen::on_screen_start() {
 
 #ifdef CARD_READER_ENABLED
     // Card reader only matters when online (case 4: offline scan does nothing)
+    // Opened on a worker thread; update() starts polling once it is ready
     if (global_data.config && global_data.config->network.online_play) {
-        g_card_reader = std::make_unique<card_reader::CardReader>();
-        if (g_card_reader->initialize(global_data.config->card_reader.port, global_data.config->card_reader.baudrate)) {
-            g_card_reader->start_polling();
-            g_card_reader->set_led_color(255, 255, 255);  // White for polling
-            g_last_card_poll_ms = get_current_ms();
-            spdlog::info("Card reader initialized and polling started");
-        } else {
-            spdlog::warn("Failed to initialize card reader");
-            g_card_reader.reset();
-        }
+        card_reader::reader_opener().request(global_data.config->card_reader.port, global_data.config->card_reader.baudrate);
     }
 #endif
 }
@@ -172,6 +164,19 @@ std::optional<Screens> TitleScreen::update() {
     }
 
 #ifdef CARD_READER_ENABLED
+    if (!g_card_reader) {
+        if (auto opened = card_reader::reader_opener().take()) {
+            g_card_reader = std::move(*opened);
+            if (g_card_reader) {
+                g_card_reader->start_polling();
+                g_card_reader->set_led_color(255, 255, 255);  // White for polling
+                g_last_card_poll_ms = current_ms;
+                spdlog::info("Card reader initialized and polling started");
+            } else {
+                spdlog::warn("Failed to initialize card reader");
+            }
+        }
+    }
     // Poll for cards if card reader is active
     if (g_card_reader && g_card_reader->is_polling()) {
         int poll_interval = global_data.config ? global_data.config->card_reader.poll_interval_ms : 100;

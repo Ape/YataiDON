@@ -248,6 +248,12 @@ bool NetworkClient::probe_online() {
     return online;
 }
 
+void NetworkClient::start_probe() {
+    if (!network_enabled()) { online = false; return; }
+    probing_ = true;
+    check_heartbeat();
+}
+
 void NetworkClient::check_heartbeat() {
     if (pending_heartbeat.has_value()) return;
     pending_heartbeat = cpr::GetAsync(
@@ -397,6 +403,46 @@ bool NetworkClient::fetch_costume(const std::string& access_code, int& head_inde
     cos_index = doc["chara_cos_index"].GetInt();
     is_costume = doc["chara_is_costume"].GetBool();
     return true;
+}
+
+std::optional<RemoteUser> NetworkClient::fetch_user(const std::string& access_code) {
+    if (!network_enabled()) return std::nullopt;
+    cpr::Response response = cpr::Get(
+        cpr::Url{network_url("/user")},
+        signed_headers("GET", "/user", {{"access_code", access_code}}),
+        cpr::Parameters{{"access_code", access_code}},
+        cpr::Timeout{5000}
+        NETWORK_CA_OPT
+    );
+    if (response.status_code != 200) return std::nullopt;
+
+    rapidjson::Document doc;
+    if (doc.Parse(response.text.c_str()).HasParseError() || !doc.IsObject()) return std::nullopt;
+
+    RemoteUser user;
+    if (doc.HasMember("username") && doc["username"].IsString()) user.username = doc["username"].GetString();
+    if (doc.HasMember("title") && doc["title"].IsString()) user.title = doc["title"].GetString();
+    if (doc.HasMember("title_bg") && doc["title_bg"].IsInt()) user.title_bg = doc["title_bg"].GetInt();
+    if (doc.HasMember("chara_color_1") && doc["chara_color_1"].IsString() &&
+        doc.HasMember("chara_color_2") && doc["chara_color_2"].IsString() &&
+        doc.HasMember("chara_color_3") && doc["chara_color_3"].IsString()) {
+        try {
+            user.chara_colors = std::array<ray::Color, 3>{
+                parse_hex_color(doc["chara_color_1"].GetString()),
+                parse_hex_color(doc["chara_color_2"].GetString()),
+                parse_hex_color(doc["chara_color_3"].GetString())};
+        } catch (const std::invalid_argument&) {}
+    }
+    if (doc.HasMember("chara_head_index") && doc["chara_head_index"].IsInt() &&
+        doc.HasMember("chara_body_index") && doc["chara_body_index"].IsInt() &&
+        doc.HasMember("chara_cos_index") && doc["chara_cos_index"].IsInt() &&
+        doc.HasMember("chara_is_costume") && doc["chara_is_costume"].IsBool()) {
+        user.costume = RemoteUser::Costume{doc["chara_head_index"].GetInt(), doc["chara_body_index"].GetInt(),
+                                           doc["chara_cos_index"].GetInt(), doc["chara_is_costume"].GetBool()};
+    }
+    user.import_requested = doc.HasMember("import_requested") && doc["import_requested"].IsBool()
+        && doc["import_requested"].GetBool();
+    return user;
 }
 
 #if defined(__ANDROID__)
@@ -754,6 +800,7 @@ void NetworkClient::update(double current_ms) {
 
     if (!network_enabled()) {
         online = false;
+        probing_ = false;
         return;
     }
     if (current_ms - last_heartbeat_ms >= HEARTBEAT_INTERVAL_MS) {
@@ -768,6 +815,9 @@ void NetworkClient::update(double current_ms) {
 
         bool was_online = online;
         online = response.status_code == 200;
+        if (probing_ && !online)
+            spdlog::warn("Network: server unreachable (HTTP {}), skipping profile sync", response.status_code);
+        probing_ = false;
         if (online != was_online) {
             spdlog::info("hiroba heartbeat: {}", online ? "online" : "offline");
         }
@@ -865,6 +915,7 @@ void NetworkClient::shutdown() {
 #else
 
 bool NetworkClient::probe_online() { return false; }
+void NetworkClient::start_probe() {}
 std::string NetworkClient::register_user(const std::string&, const std::string&) { return ""; }
 void NetworkClient::submit_score(const std::string&, int, const std::string&, const Score&, const std::map<double, InputLogType>&, int64_t, const std::string&, bool, int) {}
 bool NetworkClient::check_import_requested(const std::string&) { return false; }
@@ -875,6 +926,7 @@ void NetworkClient::update_username(const std::string&, const std::string&) {}
 bool NetworkClient::fetch_title(const std::string&, std::string&) { return false; }
 bool NetworkClient::fetch_title_bg(const std::string&, int&) { return false; }
 bool NetworkClient::fetch_costume(const std::string&, int&, int&, int&, bool&) { return false; }
+std::optional<RemoteUser> NetworkClient::fetch_user(const std::string&) { return std::nullopt; }
 void NetworkClient::check_and_install_android_update() {}
 void NetworkClient::update_costume(const std::string&, int, int, int, bool) {}
 std::vector<RemoteScore> NetworkClient::fetch_scores(const std::string&) { return {}; }
