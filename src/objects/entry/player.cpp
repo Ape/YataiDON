@@ -38,9 +38,31 @@ EntryPlayer::EntryPlayer(PlayerNum player_num, int side, BoxManager* box_manager
     fn_draw_drum_front    = lua_object["draw_drum_front"];
     fn_is_cloud_finished  = lua_object["is_cloud_finished"];
     fn_get_nameplate_fade = lua_object["get_nameplate_fade"];
+    fn_finish_cloud       = lua_object["finish_cloud"];
 }
 
-void EntryPlayer::start_animations() { call(fn_start_animations, "EntryPlayer:start_animations"); }
+void EntryPlayer::finish_loading() {
+    if (!loading) return;
+    loading = false;
+    call(fn_finish_cloud, "EntryPlayer:finish_cloud");
+}
+
+// Login data arrived after the join animation started: re-equip the real costume/colors/nameplate.
+void EntryPlayer::refresh_from_player_data() {
+    auto pd = scores_manager.get_player_data(get_player_id(player_num));
+    PlayerData* pd_ptr = pd ? &*pd : nullptr;
+    nameplate = std::make_unique<Nameplate>(
+        pd ? pd->username : "", pd ? pd->title : "",
+        player_num,
+        pd ? pd->dan : -1, pd ? pd->gold : false, pd ? pd->rainbow : false, pd ? pd->title_bg : 0);
+    chara = make_chara_from_player_data(pd_ptr, player_num == PlayerNum::P2);
+    apply_pd_look(*chara, pd_ptr, player_num);
+}
+
+void EntryPlayer::start_animations(bool hold_cloud) {
+    loading = hold_cloud;
+    call(fn_start_animations, "EntryPlayer:start_animations", hold_cloud);
+}
 
 void EntryPlayer::update(double current_time) {
     call(fn_update, "EntryPlayer:update", current_time);

@@ -290,9 +290,20 @@ bool EntryScreen::seat_joined(PlayerNum player_num) const {
 }
 
 void EntryScreen::join_player(PlayerNum player_num, bool do_login) {
+    // Start the login first (it picks the slot from players[0]); the join animation does not wait
+    // for the network. The cloud loops (player->loading) until the real costume/colors are equipped.
+    bool loading = false;
     if (do_login && !login_ready_) {
-        login_slot("", [this, player_num]() { join_player(player_num, false); });
-        return;
+        if (login_pending()) return;
+        login_slot("", [this, player_num]() {
+            for (auto& player : players) {
+                if (player && player->player_num == player_num) {
+                    player->refresh_from_player_data();
+                    player->finish_loading();
+                }
+            }
+        });
+        loading = login_pending();
     }
     login_ready_ = false;
     side = (player_num == PlayerNum::P1) ? 0 : 2;
@@ -300,13 +311,13 @@ void EntryScreen::join_player(PlayerNum player_num, bool do_login) {
 
     if (players[0]) {
         players[1] = std::make_unique<EntryPlayer>(global_data.player_num, side, box_manager.get());
-        players[1]->start_animations();
+        players[1]->start_animations(loading);
         global_data.player_num = PlayerNum::P1;
         is_2p = true;
     } else {
         global_data.first_login_player = global_data.player_num;
         players[0] = std::make_unique<EntryPlayer>(global_data.player_num, side, box_manager.get());
-        players[0]->start_animations();
+        players[0]->start_animations(loading);
         is_2p = false;
     }
     audio.play_sound("cloud", VolumePreset::SOUND);
