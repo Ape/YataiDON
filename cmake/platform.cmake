@@ -143,13 +143,13 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
             -g
             -fmax-errors=0
             -fsanitize=address
-            -fsanitize=leak
+            $<$<NOT:$<PLATFORM_ID:Darwin>>:-fsanitize=leak>
             -fsanitize=undefined
             -fno-omit-frame-pointer
         )
     target_link_options(${PROJECT_NAME} PRIVATE
             -fsanitize=address
-            -fsanitize=leak
+            $<$<NOT:$<PLATFORM_ID:Darwin>>:-fsanitize=leak>
             -fsanitize=undefined
         )
     message(STATUS "AddressSanitizer enabled for Debug build")

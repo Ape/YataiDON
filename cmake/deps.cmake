@@ -130,6 +130,13 @@ FetchContent_MakeAvailable(lua)
 if(IOS)
   target_compile_definitions(liblua PRIVATE LUA_USE_IOS)
 endif()
+# sol2 prefers <lua/lua.h> over <lua.h>, so a system Lua under e.g.
+# /opt/homebrew/include/lua would shadow the bundled one. Forward those
+# paths to the bundled headers via a dir that precedes system includes.
+foreach(_lua_hdr lua.h lauxlib.h lualib.h lua.hpp luaconf.h)
+  file(WRITE "${CMAKE_BINARY_DIR}/generated/lua/${_lua_hdr}"
+       "#include \"${lua_SOURCE_DIR}/src/${_lua_hdr}\"\n")
+endforeach()
 
 # Sol2
 message(STATUS "Fetching sol2...")
@@ -467,6 +474,12 @@ if(NETWORK_ENABLED)
     set(BUILD_CURL_EXE OFF CACHE BOOL "" FORCE)
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
   endif()
+endif()
+if(APPLE AND NOT IOS)
+  # curl auto-detects Homebrew's libidn2 but its lib dir never reaches our
+  # link line ("ld: library 'idn2' not found"); use macOS's built-in IDN.
+  set(USE_LIBIDN2 OFF CACHE BOOL "" FORCE)
+  set(USE_APPLE_IDN ON CACHE BOOL "" FORCE)
 endif()
 
 FetchContent_Declare(
