@@ -56,6 +56,7 @@ ResultPlayer::ResultPlayer(PlayerNum player_num, bool has_2p, bool is_2p)
                 spdlog::error("Error loading {}.lua: {}", script, err.what());
             }
         };
+        preload("Gauge",              "gauge");
         preload("BottomCharacters",   "bottom_characters");
         preload("ResultCrown",        "result_crown");
         preload("ResultCrownMessage", "result_crown_message");
