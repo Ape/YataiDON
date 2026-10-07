@@ -156,7 +156,8 @@ AnimIndex Player::rest_anim() const {
 }
 
 void Player::on_miss() {
-    if (++miss_streak <= MISS_STREAK_TINT)
+    miss_streak++;
+    if (!is_gogo_time && miss_streak <= MISS_STREAK_TINT)
         chara->set_anim(miss_streak == MISS_STREAK_TINT ? AnimIndex::DON_MISS6 : AnimIndex::DON_MISS);
 }
 
