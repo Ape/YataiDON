@@ -10,7 +10,9 @@
 #include "../../../libs/optional/gen4.h"
 #include "../../../libs/optional/gen3.h"
 #endif
+#include <chrono>
 #include <random>
+#include <thread>
 #include <algorithm>
 #include <cmath>
 
@@ -565,8 +567,11 @@ void Navigator::parse_song_list(const fs::path& path, BoxDef box_def, bool inlin
     bool needs_rewrite = false;
     int songs_added = 0;
 
-    for (const auto& entry : entries) {
-        fs::path final_path;
+    // Resolve every entry first so the songs can be parsed in parallel
+    std::vector<fs::path> resolved(entries.size());
+    for (size_t i = 0; i < entries.size(); i++) {
+        const auto& entry = entries[i];
+        fs::path& final_path = resolved[i];
 
         // Hash is the primary reference. If several songs share it, title and
         // subtitle disambiguate only among candidates with that same hash.
@@ -578,16 +583,25 @@ void Navigator::parse_song_list(const fs::path& path, BoxDef box_def, bool inlin
                 final_path = *by_title;
         }
         if (final_path.empty()) {
-            auto song_path_opt = find_song_by_title(entry.title, entry.subtitle);
-            if (!song_path_opt) {
-                out_entries.push_back(entry);
-                spdlog::warn("No song found for: {} | {}", entry.title, entry.subtitle);
-                continue;
-            }
-            final_path = *song_path_opt;
+            if (auto song_path_opt = find_song_by_title(entry.title, entry.subtitle))
+                final_path = *song_path_opt;
+        }
+    }
+    std::vector<fs::path> to_parse;
+    for (const fs::path& p : resolved)
+        if (!p.empty()) to_parse.push_back(p);
+    auto preparsed = parse_songs_parallel(to_parse, abort_loading);
+
+    for (size_t i = 0; i < entries.size(); i++) {
+        const auto& entry = entries[i];
+        const fs::path& final_path = resolved[i];
+        if (final_path.empty()) {
+            out_entries.push_back(entry);
+            spdlog::warn("No song found for: {} | {}", entry.title, entry.subtitle);
+            continue;
         }
 
-        SongParser parser(final_path);
+        SongParser parser = take_parser(preparsed, final_path);
         const auto& titles = parser.metadata.title;
         const auto& subtitles = parser.metadata.subtitle;
         const std::string title = titles.count("en") ? titles.at("en") : titles.begin()->second;
@@ -1066,16 +1080,23 @@ void Navigator::load_collection_recommended(const fs::path& path, const BoxDef& 
 void Navigator::load_collection_search(const fs::path& path, const BoxDef& box_def) {
     if (current_search.empty()) return;
     const std::string query = search_fold(current_search);
-    int songs_added = 0;
+    // Match any title / subtitle in any language (the box key is the English pair only), then
+    // parse the hits in parallel: a short query can match hundreds of songs
+    std::vector<fs::path> hits;
     for (const auto& [key, song_path] : song_files) {
         if (abort_loading) break;
-        // Match any title / subtitle in any language (the box key is the English pair only).
         auto st = song_search_text.find(song_path.string());
         const std::string& text = (st != song_search_text.end()) ? st->second : search_fold(key.first);
-        if (text.find(query) == std::string::npos) continue;
+        if (text.find(query) != std::string::npos) hits.push_back(song_path);
+    }
+    auto preparsed = parse_songs_parallel(hits, abort_loading);
+
+    int songs_added = 0;
+    for (const fs::path& song_path : hits) {
+        if (abort_loading) break;
         if (songs_added > 0 && songs_added % 10 == 0)
             enqueue_inline_box(make_back_box(path.parent_path(), &inline_back_def));
-        auto song = make_song_box(song_path, box_def, SongParser(song_path));
+        auto song = make_song_box(song_path, box_def, take_parser(preparsed, song_path));
         fs::path genre_folder = find_box_def_folder(song_path);
         if (!genre_folder.empty())
             apply_song_genre(song.get(), parse_box_def(genre_folder));
@@ -2290,6 +2311,9 @@ void Navigator::draw_score_history() {
         items[open_index]->draw_score_history();
 }
 
+// Course clear counts for the difficulty sort. The levels come from the startup scan (song_levels),
+// not a parse of every chart on disk: song select waits for this before it opens the difficulty
+// sort and before it hands over to the next screen.
 Statistics Navigator::get_statistics(const fs::path& path) {
     Statistics stats;
 
@@ -2297,39 +2321,37 @@ Statistics Navigator::get_statistics(const fs::path& path) {
         for (int level = 1; level <= 10; level++)
             stats[course][level] = CourseStats{};
 
-    for (const auto& sibling : fs::directory_iterator(path)) {
-        if (!fs::is_directory(sibling) || sibling.path() == path) continue;
+    // Wait for the scan without joining its thread (the loader does that)
+    while (!song_files_ready.load() && !abort_loading.load())
+        std::this_thread::sleep_for(std::chrono::milliseconds(4));
+    if (!song_files_ready.load()) return stats;
 
-        for (const auto& entry : fs::recursive_directory_iterator(sibling)) {
-            if (!is_song_file(entry.path())) continue;
+    // Songs below a folder of `path` (not files directly in it), as the directory walk counted them
+    for (const auto& [path_str, levels] : song_levels) {
+        fs::path song_path(path_str);
+        fs::path rel = song_path.lexically_relative(path);
+        if (rel.empty() || *rel.begin() == ".." || std::distance(rel.begin(), rel.end()) < 2) continue;
 
-            const auto& hashes = scores_manager.get_hashes(entry.path());
+        const auto& hashes = scores_manager.get_hashes(song_path);
+        for (int course = 0; course <= 4; course++) {
+            int level = levels[course];
+            if (level < 1 || level > 10) continue;
 
-            SongParser parser(entry.path());
-            parser.get_metadata();
+            CourseStats& cs = stats[course][level];
+            cs.total++;
 
-            for (const auto& [course, data] : parser.metadata.course_data) {
-                if (course < 0 || course > 4) continue;
-                int level = static_cast<int>(data.level);
-                if (level < 1 || level > 10) continue;
+            const std::string& hash = hashes[course];
+            if (hash.empty()) continue;
 
-                CourseStats& cs = stats[course][level];
-                cs.total++;
+            auto score = scores_manager.get_score(hash, course, scores_manager.player_1);
+            if (!score.has_value()) continue;
 
-                std::string hash = hashes[course];
-                if (hash.empty()) continue;
-
-                auto score = scores_manager.get_score(hash, course, scores_manager.player_1);
-                if (!score.has_value()) continue;
-
-                if (score->crown >= Crown::FC)
-                    cs.full_combos++;
-                if (score->crown >= Crown::CLEAR)
-                    cs.clears++;
-            }
+            if (score->crown >= Crown::FC)
+                cs.full_combos++;
+            if (score->crown >= Crown::CLEAR)
+                cs.clears++;
         }
     }
-
     return stats;
 }
 
