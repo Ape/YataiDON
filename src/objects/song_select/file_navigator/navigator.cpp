@@ -6,6 +6,9 @@
 #include "color_utils.h"
 #include "../song_select_script.h"
 #include "../../../libs/filesystem.h"
+#ifdef _WIN32
+#include "../../../platform/platform_windows.h"
+#endif
 #ifdef SUPPORT_FUMEN
 #include "../../../libs/optional/gen4.h"
 #include "../../../libs/optional/gen3.h"
@@ -175,6 +178,7 @@ void Navigator::load_all_roots() {
     items.clear();
     open_index = 0;
     def_file_cache.clear();
+    child_folders_cache.clear();
     box_def_cache.clear();
     is_processing    = true;
     loading_complete = false;
@@ -1558,6 +1562,7 @@ void Navigator::load_current_directory(const fs::path path) {
 
     open_index = 0;
     def_file_cache.clear();
+    child_folders_cache.clear();
     box_def_cache.clear();
     setup_back_box(path, true);
     is_processing = true;
@@ -1615,6 +1620,7 @@ bool Navigator::jump_to_song_path(const fs::path& song_path) {
     auto load_full = [&](const fs::path& folder) {
         open_index = 0;
         def_file_cache.clear();
+    child_folders_cache.clear();
         box_def_cache.clear();
         setup_back_box(folder, true);
         loading_complete = false;
@@ -1728,13 +1734,60 @@ void Navigator::setup_back_box(const fs::path& path, bool has_children, const Ba
     }
 }
 
+// Asked again for the same folder on every open and close (closing a folder asks it of the parent).
 bool Navigator::has_child_folders(const fs::path& path) {
+    const std::string key = path.string();
+    if (auto it = child_folders_cache.find(key); it != child_folders_cache.end()) return it->second;
+    const bool result = scan_child_folders(path);
+    child_folders_cache[key] = result;
+    return result;
+}
+
+bool Navigator::scan_child_folders(const fs::path& path) {
 #ifdef SUPPORT_FUMEN
     if (gen4::genre_of_path(path) >= 0) return false;
     if (!gen3::genre_of_path(path).empty()) return false;
 #endif
     if (is_gen4_root(path) || is_gen3_root(path)) return true;
 
+#ifdef _WIN32
+    // The same checks from one listing per child folder: the portable loop listed each child twice and
+    // stat'ed it about six times, which took most of a second for a genre of several hundred songs.
+    std::vector<Win32DirEntry> entries;
+    if (!win32_list_dir(path, entries))
+        throw fs::filesystem_error("cannot open directory", path,
+                                   std::make_error_code(std::errc::no_such_file_or_directory));
+    auto named = [](const Win32DirEntry& e, const wchar_t* name) { return _wcsicmp(e.name.c_str(), name) == 0; };
+    for (const Win32DirEntry& entry : entries) {
+        if (!entry.is_dir) continue;
+        const fs::path child = path / entry.name;
+        std::vector<Win32DirEntry> inner;
+        if (!win32_list_dir(child, inner)) continue;
+
+        bool has_fumen = false, has_usrdir = false;
+        for (const Win32DirEntry& e : inner) {
+            if (named(e, L"box.def")) return true;                                       // has_def_file
+            if (!e.is_dir) {
+                if (fs::path(e.name).extension() == ".osu") return true;                  // is_osu_song_folder
+            } else if (named(e, L"fumen")) {
+                has_fumen = true;
+            } else if (named(e, L"USRDIR")) {
+                has_usrdir = true;
+            }
+        }
+        // a data root has a fumen folder (gen3 may sit under USRDIR/data)
+        if ((has_fumen || has_usrdir) && (is_gen4_root(child) || !gen3_root_at(child).empty()))
+            return true;
+        // has_def_file: a box.def further down, not inside a data root
+        for (const Win32DirEntry& e : inner) {
+            if (!e.is_dir) continue;
+            const fs::path sub = child / e.name;
+            if (is_gen4_root(sub) || !gen3_root_at(sub).empty()) continue;
+            if (has_def_file(sub)) return true;
+        }
+    }
+    return false;
+#else
     for (const auto& entry : fs::directory_iterator(path)) {
         if (fs::is_directory(entry.path()) && has_def_file(entry.path()) || is_osu_song_folder(entry.path()))
             return true;
@@ -1742,6 +1795,7 @@ bool Navigator::has_child_folders(const fs::path& path) {
             return true;
     }
     return false;
+#endif
 }
 
 bool Navigator::is_directory(BaseBox* item) {
