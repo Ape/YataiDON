@@ -99,7 +99,6 @@ public:
         total_drumroll = 0;
         was_gauge_full = false;
         was_gauge_clear = false;
-        tinted_miss_streak = tinted_rainbow = false;
         miss_streak = 0;
         note_judgments.clear();
         last_reported_score = -1;

@@ -1219,7 +1219,7 @@ void Player::note_correct(const Note& note, double current_ms) {
 
     if (note.type < NoteType::BALLOON_HEAD) {
         combo++;
-        if (combo % 10 == 0) {
+        if (combo % 10 == 0 && !is_gogo_time) {
             chara->set_anim(AnimIndex::DON_COMBO);
         }
         if (combo % 100 == 0) {
