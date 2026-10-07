@@ -234,6 +234,7 @@ void GameScreen::restart_song() {
     }
     players.clear();
     init_tja(global_data.session_data[(int)global_data.player_num].selected_song);
+    if (background.has_value()) background->handle_miss_streak(global_data.player_num, false);
     audio.play_sound("restart", VolumePreset::SOUND);
     init_skip();
     song_started = false;
