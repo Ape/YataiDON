@@ -5,7 +5,11 @@
 #include "../../libs/scores.h"
 #include "../../libs/filesystem.h"
 #include <algorithm>
+#include <cstdlib>
+#include <cstring>
 #include <fstream>
+#include <map>
+#include <mutex>
 #include <rapidjson/document.h>
 namespace ray {
 #include <raymath.h>
@@ -65,45 +69,84 @@ static ray::Matrix rotation_xyz(float ax, float ay, float az) {
     return r;
 }
 
-static void reindex_animations(ray::Model& model, ray::Model& glb_model,
-                               ray::ModelAnimation* anims, int anim_count) {
-    if (!anims || anim_count <= 0 || !model.skeleton.bones || !glb_model.skeleton.bones) return;
+// animations.glb is a few MB and every part of every Don used to parse it twice (LoadModel for
+// its bone names, LoadModelAnimations for the poses): about 185 ms per part on every screen with
+// a Don. It is parsed once per file (again if the file changes, e.g. after a skin update) and each
+// part gets its own copy with the poses reordered to its skeleton.
+struct AnimSource {
+    fs::file_time_type mtime;
+    std::uintmax_t size = 0;
+    std::vector<std::string> bone_names;  // the glb's skeleton; empty if it has none
+    ray::ModelAnimation* anims = nullptr;
+    int count = 0;
+};
+
+static const AnimSource& anim_source(const fs::path& path) {
+    static std::mutex mutex;
+    static std::map<fs::path, AnimSource> cache;
+    std::lock_guard<std::mutex> lock(mutex);
+
+    std::error_code ec;
+    const auto mtime = fs::last_write_time(path, ec);
+    const auto size = fs::file_size(path, ec);
+    AnimSource& src = cache[path];
+    if (src.anims && src.mtime == mtime && src.size == size) return src;
+
+    if (src.anims) ray::UnloadModelAnimations(src.anims, src.count);
+    src = AnimSource{};
+    src.mtime = mtime;
+    src.size = size;
+    ray::Model glb_model = ray::LoadModel(path.string().c_str());
+    if (glb_model.skeleton.bones)
+        for (int i = 0; i < glb_model.skeleton.boneCount; i++)
+            src.bone_names.emplace_back(glb_model.skeleton.bones[i].name);
+    ray::UnloadModel(glb_model);
+    src.anims = ray::LoadModelAnimations(path.string().c_str(), &src.count);
+    return src;
+}
+
+// A copy of `src`'s animations for `model`: the poses reordered to the model's bones, bones the glb
+// does not animate held at the model's bind pose (copied as they are when either side has no
+// skeleton). Freed with UnloadModelAnimations.
+static ray::ModelAnimation* reindexed_animations(const ray::Model& model, const AnimSource& src) {
+    if (!src.anims || src.count <= 0) return nullptr;
+    const bool reindex = model.skeleton.bones && !src.bone_names.empty();
     std::unordered_map<std::string, int> glb_bone_idx;
-    for (int i = 0; i < glb_model.skeleton.boneCount; i++)
-        glb_bone_idx[glb_model.skeleton.bones[i].name] = i;
+    for (int i = 0; i < (int)src.bone_names.size(); i++)
+        glb_bone_idx[src.bone_names[i]] = i;
 
-    int n = model.skeleton.boneCount;
+    auto* out = (ray::ModelAnimation*)std::calloc(src.count, sizeof(ray::ModelAnimation));
+    if (!out) return nullptr;
+    for (int a = 0; a < src.count; a++) {
+        const ray::ModelAnimation& in = src.anims[a];
+        ray::ModelAnimation& anim = out[a];
+        std::memcpy(anim.name, in.name, sizeof(anim.name));
+        anim.boneCount = in.boneCount;
+        if (in.keyframeCount <= 0 || !in.keyframePoses) continue;
 
-    for (int a = 0; a < anim_count; a++) {
-        auto& anim = anims[a];
-        if (anim.keyframeCount <= 0 || !anim.keyframePoses) continue;
-        ray::ModelAnimPose* new_poses =
-            (ray::ModelAnimPose*)std::malloc(anim.keyframeCount * sizeof(ray::ModelAnimPose));
-        if (!new_poses) continue;
-
-        bool alloc_ok = true;
-        int f = 0;
-        for (; f < anim.keyframeCount; f++) {
-            new_poses[f] = (ray::Transform*)std::malloc(n * sizeof(ray::Transform));
-            if (!new_poses[f]) { alloc_ok = false; break; }
+        const int n = reindex ? model.skeleton.boneCount : (int)in.boneCount;
+        anim.keyframePoses = (ray::ModelAnimPose*)std::calloc(in.keyframeCount, sizeof(ray::ModelAnimPose));
+        if (!anim.keyframePoses) continue;
+        anim.keyframeCount = in.keyframeCount;
+        anim.boneCount = n;
+        for (int f = 0; f < in.keyframeCount; f++) {
+            // calloc'd: a failed allocation leaves the rest null, which UnloadModelAnimations frees safely
+            anim.keyframePoses[f] = (ray::Transform*)std::malloc(n * sizeof(ray::Transform));
+            if (!anim.keyframePoses[f]) break;
+            if (!reindex) {
+                std::memcpy(anim.keyframePoses[f], in.keyframePoses[f], n * sizeof(ray::Transform));
+                continue;
+            }
             for (int b = 0; b < n; b++) {
                 auto it = glb_bone_idx.find(model.skeleton.bones[b].name);
-                if (it != glb_bone_idx.end() && it->second < anim.boneCount)
-                    new_poses[f][b] = anim.keyframePoses[f][it->second];
+                if (it != glb_bone_idx.end() && it->second < (int)in.boneCount)
+                    anim.keyframePoses[f][b] = in.keyframePoses[f][it->second];
                 else
-                    new_poses[f][b] = model.skeleton.bindPose[b];
+                    anim.keyframePoses[f][b] = model.skeleton.bindPose[b];
             }
         }
-        if (!alloc_ok) {
-            for (int i = 0; i < f; i++) std::free(new_poses[i]);
-            std::free(new_poses);
-            continue;
-        }
-        for (int i = 0; i < anim.keyframeCount; i++) std::free(anim.keyframePoses[i]);
-        std::free(anim.keyframePoses);
-        anim.keyframePoses = new_poses;
-        anim.boneCount = n;
     }
+    return out;
 }
 
 static std::string name_lower(const char* s) {
@@ -269,11 +312,9 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
             model.materials[i].shader = cutout_shader;
         }
 
-    ray::Model glb_model = ray::LoadModel(anim_path.string().c_str());
-    int anim_count = 0;
-    ray::ModelAnimation* anims = ray::LoadModelAnimations(anim_path.string().c_str(), &anim_count);
-    reindex_animations(model, glb_model, anims, anim_count);
-    ray::UnloadModel(glb_model);
+    const AnimSource& anim_src = anim_source(anim_path);
+    ray::ModelAnimation* anims = reindexed_animations(model, anim_src);
+    int anim_count = anims ? anim_src.count : 0;
 
     parts.push_back(model);
     part_material_indices.push_back(std::move(material_indices));
