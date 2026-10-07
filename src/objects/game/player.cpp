@@ -1787,6 +1787,10 @@ void Player::draw_overlays(float y, const ray::Shader& mask_shader) {
     for (GaugeHitEffect& anim : gauge_hit_effect) {
         anim.draw(y);
     }
+    score_counter.draw(y);
+    for (ScoreCounterAnimation& anim : base_score_list) {
+        anim.draw(y);
+    }
 
     combo_display.draw(y);
     if (combo_announce.has_value()) {
@@ -1827,10 +1831,6 @@ void Player::draw_overlays(float y, const ray::Shader& mask_shader) {
     }
     if (kusudama_counter.has_value()) {
         kusudama_counter->draw();
-    }
-    score_counter.draw(y);
-    for (ScoreCounterAnimation& anim : base_score_list) {
-        anim.draw(y);
     }
     // Practice mode draws the lyric itself, after the large drums, so it is not hidden.
     if (!practice_lyric) draw_lyric(y);
