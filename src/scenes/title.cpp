@@ -106,6 +106,7 @@ void TitleScreen::scene_manager(double current_ms) {
             std::uniform_int_distribution<size_t> dist(0, op_video_list.size() - 1);
             fs::path chosen = op_video_list[dist(rng)];
             op_video.emplace(chosen);
+            op_video->set_volume(global_data.config->volume.attract_mode);
             op_video->start(current_ms);
         }
         op_video->update(current_ms);
@@ -130,6 +131,7 @@ void TitleScreen::scene_manager(double current_ms) {
             std::uniform_int_distribution<size_t> dist(0, attract_video_list.size() - 1);
             fs::path chosen = attract_video_list[dist(rng)];
             attract_video.emplace(chosen);
+            attract_video->set_volume(global_data.config->volume.attract_mode);
             attract_video->start(current_ms);
         }
         attract_video->update(current_ms);
