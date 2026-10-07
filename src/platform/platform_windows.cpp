@@ -170,6 +170,11 @@ bool win32_precise_sleep_us(long long us) {
     return true;
 }
 
+void win32_lower_thread_priority() {
+    // Not THREAD_MODE_BACKGROUND_BEGIN: its low I/O priority made a full skin check several times slower
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_LOWEST);
+}
+
 void win32_install_crash_handlers() {
     std::signal(SIGINT, [](int) { std::_Exit(0); });
     SetUnhandledExceptionFilter(crash_exception_filter);

@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
+#include <vector>
 
 #include <spdlog/spdlog.h>
 
@@ -12,6 +14,10 @@
 #ifndef __EMSCRIPTEN__
 
 #include <cpr/cpr.h>
+
+#ifdef _WIN32
+#include "../platform/platform_windows.h"
+#endif
 
 #if defined(__ANDROID__)
 // Bundled Mozilla CA bundle for libcurl on Android (which has no system trust
@@ -44,6 +50,77 @@ cpr::Response get_url(const std::string& url, int32_t timeout_ms, int32_t connec
     curl_easy_setopt(session.GetCurlHolder()->handle, CURLOPT_SSL_EC_CURVES, "X25519:P-256:P-384");
 #endif
     return session.Get();
+}
+
+// Hashes the file in pieces rather than reading all of it into memory. Empty on a read error.
+std::string sha256_file(const fs::path& path) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) return {};
+    crypto::Sha256 ctx;
+    std::vector<char> buf(1 << 20);
+    while (in) {
+        in.read(buf.data(), static_cast<std::streamsize>(buf.size()));
+        const std::streamsize got = in.gcount();
+        if (got > 0) ctx.update(reinterpret_cast<const uint8_t*>(buf.data()), static_cast<size_t>(got));
+    }
+    if (in.bad()) return {};
+    return crypto::to_hex(ctx.finalize());
+}
+
+// The hash of each skin file as of its last check, so a pass reads only the files whose size or
+// modification time changed since. Kept in cache/skin_hashes/<skin>.txt, one
+// "<hash> <size> <mtime> <path>" line per file (the path last: it may contain spaces).
+struct HashCacheEntry {
+    std::string hash;
+    uintmax_t size = 0;
+    int64_t mtime = 0;
+};
+using HashCache = std::unordered_map<std::string, HashCacheEntry>;
+
+fs::path hash_cache_path(const fs::path& skin_dir) {
+    return fs::path("cache") / "skin_hashes" / (skin_dir.filename().string() + ".txt");
+}
+
+HashCache load_hash_cache(const fs::path& skin_dir) {
+    HashCache cache;
+    std::ifstream in(hash_cache_path(skin_dir));
+    std::string line;
+    while (std::getline(in, line)) {
+        std::istringstream fields(line);
+        HashCacheEntry e;
+        if (!(fields >> e.hash >> e.size >> e.mtime)) continue;
+        std::string rel;
+        std::getline(fields >> std::ws, rel);
+        if (!rel.empty()) cache[rel] = std::move(e);
+    }
+    return cache;
+}
+
+void save_hash_cache(const fs::path& skin_dir, const HashCache& cache) {
+    const fs::path file = hash_cache_path(skin_dir);
+    const fs::path tmp = fs::path(file).concat(".tmp");
+    std::error_code ec;
+    fs::create_directories(file.parent_path(), ec);
+    {
+        std::ofstream out(tmp, std::ios::trunc);
+        if (!out) return;
+        for (const auto& [rel, e] : cache)
+            out << e.hash << ' ' << e.size << ' ' << e.mtime << ' ' << rel << '\n';
+        if (!out) return;
+    }
+    fs::rename(tmp, file, ec);
+    if (ec) fs::remove(tmp, ec);
+}
+
+// Size and modification time of `path`; false if it cannot be read
+bool file_stamp(const fs::path& path, uintmax_t& size, int64_t& mtime) {
+    std::error_code ec;
+    size = fs::file_size(path, ec);
+    if (ec) return false;
+    const auto t = fs::last_write_time(path, ec);
+    if (ec) return false;
+    mtime = static_cast<int64_t>(t.time_since_epoch().count());
+    return true;
 }
 
 bool is_lfs_pointer(const std::string& body) {
@@ -88,6 +165,8 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
         return;
     }
 
+    HashCache cache = load_hash_cache(skin_dir);
+    HashCache seen;   // this manifest's files: entries for files it no longer lists are dropped
     std::istringstream lines(checksums.text);
     std::string hash, rel_path;
     int updated = 0;
@@ -101,13 +180,19 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
             spdlog::warn("Skin update ({}): skipping unsafe manifest path {}", skin_dir.filename().string(), rel_path);
             continue;
         }
-        std::error_code size_ec;
-        uintmax_t size = fs::file_size(local_file, size_ec);
-        if (!size_ec) {
-            std::ifstream in(local_file, std::ios::binary);
-            std::string contents(size, '\0');
-            in.read(contents.data(), static_cast<std::streamsize>(size));
-            if (crypto::to_hex(crypto::sha256(contents)) == hash) continue;
+        const std::string& key = rel_path;  // the manifest's own spelling (UTF-8)
+        uintmax_t size = 0;
+        int64_t mtime = 0;
+        if (file_stamp(local_file, size, mtime)) {
+            // unchanged since its last check: the cached hash stands for the file
+            auto cached = cache.find(key);
+            std::string local_hash;
+            if (cached != cache.end() && cached->second.size == size && cached->second.mtime == mtime)
+                local_hash = cached->second.hash;
+            else
+                local_hash = sha256_file(local_file);
+            if (!local_hash.empty()) seen[key] = HashCacheEntry{local_hash, size, mtime};
+            if (local_hash == hash) continue;
         }
 
         // File is missing or differs: this pass has at least one real update.
@@ -139,9 +224,15 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
             continue;
         }
         out << file_resp.text;
+        out.close();
+        if (out && file_stamp(local_file, size, mtime))
+            seen[key] = HashCacheEntry{crypto::to_hex(crypto::sha256(file_resp.text)), size, mtime};
+        else
+            seen.erase(key);
         note_file_updated();
         ++updated;
     }
+    save_hash_cache(skin_dir, seen);
     spdlog::info("Skin update ({}): {} file(s) updated", skin_dir.filename().string(), updated);
 }
 
@@ -169,6 +260,10 @@ void SkinUpdater::start() {
     if (started_.exchange(true)) return;
     running_ = true;
     thread_ = std::thread([this] {
+#ifdef _WIN32
+        // below the game for CPU time: a pass without a hash cache reads every skin file
+        win32_lower_thread_priority();
+#endif
         try {
             scan_skins();
         } catch (const std::exception& e) {
