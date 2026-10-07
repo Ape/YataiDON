@@ -36,6 +36,20 @@ bool win32_is_key_down_native(int raylib_key);
 // Converts a filesystem::path to a string suitable for Windows APIs (CP932 for Japanese).
 std::string win32_path_to_string(const std::filesystem::path& path);
 
+// One entry of a directory listing, with the attributes the listing already carries.
+struct Win32DirEntry {
+    std::wstring name;
+    bool is_dir = false;
+    bool is_reparse = false;  // symlink, junction or other reparse point
+};
+
+// Lists `dir` (without "." and "..") in the order the file system returns it.
+// Returns false if the directory cannot be opened.
+bool win32_list_dir(const std::filesystem::path& dir, std::vector<Win32DirEntry>& out);
+
+// The path `path` resolves to with every link followed, or an empty string if it cannot be opened.
+std::wstring win32_final_path(const std::filesystem::path& path);
+
 // Windows audio backend initialization functions.
 // Returns true if initialization succeeded.
 // device_name: output device to open (empty = host API default).

@@ -11,8 +11,7 @@
 void LoadingScreen::on_screen_start() {
     init_visuals();
 
-    songs = get_song_files(global_data.config->paths.tja_path);
-    start_ms = get_current_ms();   // after the (blocking) song scan: the countdown starts on screen
+    start_ms = get_current_ms();
 #ifdef __EMSCRIPTEN__
     load_song_hashes();
 #else
@@ -55,6 +54,8 @@ void LoadingScreen::init_visuals() {
 
 void LoadingScreen::load_song_hashes() {
     try {
+        // Listed here, not in on_screen_start: the screen keeps drawing while a large library is walked
+        songs = get_song_files(global_data.config->paths.tja_path);
         std::atomic<int> songs_loaded = 0;
         const int thread_count = std::max(1u, std::thread::hardware_concurrency());
         std::vector<std::thread> threads;
@@ -179,7 +180,7 @@ void LoadingScreen::load_song_hashes() {
 }
 
 void LoadingScreen::load_navigator() {
-    navigator.preload(global_data.config->paths.tja_path);
+    navigator.preload(global_data.config->paths.tja_path, songs);
 }
 
 Screens LoadingScreen::on_screen_end(Screens next_screen) {
