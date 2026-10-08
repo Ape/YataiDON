@@ -440,7 +440,7 @@ static void run_frame() {
     if (ray::IsKeyPressed(ray::KEY_F12)) {
         static int screenshot_counter = 0;
         ray::Image image = ray::LoadImageFromScreen();
-        if (L.current_screen == Screens::RESULT) {
+        if (L.current_screen == Screens::RESULT && tex.options[SCO::CROP_RESULT_SCREENSHOT]) {
             ray::ImageCrop(&image, {0, 0, (float)image.width, (float)image.height / 2.0f});
         }
         ray::ExportImage(image, ray::TextFormat("screenshot%03i.png", screenshot_counter));
