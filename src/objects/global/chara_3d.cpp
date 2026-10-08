@@ -365,8 +365,7 @@ Chara3D::Chara3D(std::string& model_name, bool mirror, bool use_skin_config) {
     fs::path face_dir = resolve_skin_path("Models/face");
     load_face_textures(face_dir);
 
-    fs::path skin_anim_path = fs::path("Skins") / global_data.config->paths.skin
-                              / "Graphics" / "global" / "animation.json";
+    fs::path skin_anim_path = resolve_skin_path("Graphics/global/animation.json");
     load_face_anims(skin_anim_path);
 
     set_anim(anim_index);
@@ -391,8 +390,7 @@ Chara3D::Chara3D(std::string& head_name, std::string& body_name, bool mirror, bo
     fs::path face_dir = resolve_skin_path("Models/face");
     load_face_textures(face_dir);
 
-    fs::path skin_anim_path = fs::path("Skins") / global_data.config->paths.skin
-                              / "Graphics" / "global" / "animation.json";
+    fs::path skin_anim_path = resolve_skin_path("Graphics/global/animation.json");
     load_face_anims(skin_anim_path);
 
     set_anim(anim_index);
@@ -542,10 +540,10 @@ void Chara3D::set_don_colors(ray::Color body, ray::Color face, ray::Color rim) {
 }
 
 static constexpr int FACE_ANIM_IDS[] = {
-    13, 14, 15, 16, 65, 17, 22, 19, 30, 29, 23, 24, 63, 44,
-    40, 41, 42, 43, 44, 45, 46, 58, 59, 62, 60, 18,
-    13, 14, 15, 16, 65, 17, 22, 19, 30, 29, 23, 24, 63, 44,
-    41, 40, 42, 43, 44, 45, 46, 58, 59, 62, 60, 18,
+    13, 14, 15, 16, 65, 17, 22, 19, 30, 29, 23, 24, 25, 26,
+    40, 40, 42, 43, 44, 45, 46, 58, 59, 62, 60, 18,
+    13, 14, 15, 16, 64, 17, 22, 21, 36, 35, 23, 24, 25, 26,
+    40, 40, 42, 43, 44, 45, 46, 58, 59, 62, 61, 20,
 };
 
 static constexpr int MIRROR_OFFSET = (int)AnimIndex::DON_BALLOON_FAILURE_MIRROR;
