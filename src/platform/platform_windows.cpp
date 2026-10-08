@@ -181,6 +181,10 @@ void win32_install_crash_handlers() {
 }
 
 bool win32_is_key_down_native(int raylib_key) {
+    DWORD fg_pid = 0;
+    GetWindowThreadProcessId(GetForegroundWindow(), &fg_pid);
+    if (fg_pid != GetCurrentProcessId()) return false;
+
     int vk_code = 0;
 
     // Handle letters (A-Z)
@@ -270,7 +274,6 @@ bool win32_is_key_down_native(int raylib_key) {
 
     if (vk_code == 0) return false;
 
-    // Note: Window focus check should be done by caller if needed
     return (GetAsyncKeyState(vk_code) & 0x8000) != 0;
 }
 
