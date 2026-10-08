@@ -21,6 +21,9 @@ std::filesystem::path win32_path_from_encoded(const std::string& path_str, const
 // Gets the directory containing the current executable.
 std::filesystem::path win32_get_executable_dir();
 
+// Runs the calling thread below the game's threads for CPU time.
+void win32_lower_thread_priority();
+
 // Initializes Windows-specific crash handlers (SEH exception filter, dbghelp stack traces).
 void win32_install_crash_handlers();
 
