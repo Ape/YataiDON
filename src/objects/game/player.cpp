@@ -1097,8 +1097,8 @@ static double ease_progress(double t, EaseDir dir, EaseCalc calc) {
             default: return x;
         }
     };
-    if (dir == EaseDir::IN) return in(t);
-    if (dir == EaseDir::OUT) return 1.0 - in(1.0 - t);
+    if (dir == EaseDir::IN_) return in(t);
+    if (dir == EaseDir::OUT_) return 1.0 - in(1.0 - t);
     return t < 0.5 ? in(t * 2.0) / 2.0 : 1.0 - in((1.0 - t) * 2.0) / 2.0;
 }
 

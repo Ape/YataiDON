@@ -815,7 +815,7 @@ void TJAParser::register_extended_commands(std::map<std::string, CommandHandler>
             auto a = split(v);
             std::vector<double> d;
             if (!num(base + "START", a, 2, d)) return;
-            static const std::map<std::string, EaseDir> dirs = {{"IN", EaseDir::IN}, {"OUT", EaseDir::OUT}, {"IN_OUT", EaseDir::IN_OUT}};
+            static const std::map<std::string, EaseDir> dirs = {{"IN", EaseDir::IN_}, {"OUT", EaseDir::OUT_}, {"IN_OUT", EaseDir::IN_OUT}};
             static const std::map<std::string, EaseCalc> calcs = {{"CUBIC", EaseCalc::CUBIC}, {"QUARTIC", EaseCalc::QUARTIC},
                 {"QUINTIC", EaseCalc::QUINTIC}, {"SINUSOIDAL", EaseCalc::SINUSOIDAL}, {"EXPONENTIAL", EaseCalc::EXPONENTIAL},
                 {"CIRCULAR", EaseCalc::CIRCULAR}, {"LINEAR", EaseCalc::LINEAR}};

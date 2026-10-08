@@ -48,7 +48,7 @@ enum class ScrollType : int {
 
 // TJAPlayer3-Extended camera commands
 enum class CamProp : int { H_OFFSET, V_OFFSET, ZOOM, ROTATION, H_SCALE, V_SCALE, RESET, BORDER_COLOR };
-enum class EaseDir : int { IN, OUT, IN_OUT };
+enum class EaseDir : int { IN_, OUT_, IN_OUT };
 enum class EaseCalc : int { CUBIC, QUARTIC, QUINTIC, SINUSOIDAL, EXPONENTIAL, CIRCULAR, LINEAR };
 
 struct CameraEvent {
@@ -57,7 +57,7 @@ struct CameraEvent {
     double to = 0.0;     // value to set / ease end; BORDER_COLOR: g
     double extra = 0.0;  // BORDER_COLOR: b
     bool ease = false;
-    EaseDir dir = EaseDir::IN;
+    EaseDir dir = EaseDir::IN_;
     EaseCalc calc = EaseCalc::LINEAR;
 };
 
