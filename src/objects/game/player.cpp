@@ -576,13 +576,13 @@ void Player::draw(double ms_from_start, float x, float y, ray::Shader& mask_shad
         }
         if (bg_hook) bg_hook->draw_gauge(player_num);
     }
-    if (lane_hit_effect.has_value()) {
-        lane_hit_effect->draw(y);
-    }
     tex.draw_texture(t_lane_hit_circle, {.x = judge_x, .y = y + judge_y});
 
     if (gogo_time.has_value()) {
         gogo_time->draw(judge_x, y + judge_y);
+    }
+    if (lane_hit_effect.has_value()) {
+        lane_hit_effect->draw(y);
     }
     if (fireworks.has_value()) {
         fireworks->draw();
@@ -941,7 +941,13 @@ void Player::handle_gogotime(double ms_from_start, const TimelineObject& timelin
         chara->set_anim(AnimIndex::DON_SABI_START);
     } else {
         gogo_time.reset();
-        chara->set_anim(rest_anim());
+        if (0 < miss_streak && miss_streak < MISS_STREAK_TINT) {
+            chara->set_anim(AnimIndex::DON_MISS);
+        } else if (0 < miss_streak) {
+            chara->set_anim(AnimIndex::DON_MISS6);
+        } else {
+            chara->set_anim(rest_anim());
+        }
     }
 
     if (buffer_index != (int)timeline_buffer.size() - 1)
