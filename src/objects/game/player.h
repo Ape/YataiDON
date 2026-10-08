@@ -292,6 +292,9 @@ private:
     void handle_bpmchange(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);
     void handle_branch_param(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);
     void handle_lyric(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);
+    void handle_camera(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);
+    void update_camera(double ms_from_start);
+    std::vector<TimelineObject> camera_eases;  // running #CAM*START..END events (P1 only)
     void handle_section(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);
 
     void play_note_manager(double current_ms, std::optional<Background>& background);

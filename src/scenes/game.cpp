@@ -104,6 +104,7 @@ Screens GameScreen::on_screen_end(Screens next_screen) {
     song_music.reset();
     parser.reset();
     players.clear();
+    global_data.camera = CameraConfig();  // TJA camera commands must not leak out of the song
 
     return Screen::on_screen_end(next_screen);
 }

@@ -199,6 +199,10 @@ void Player::reload_for_dan(std::optional<SongParser>& new_parser, int new_diffi
     branch_n.clear();
     timeline.clear();
     timeline_buffer.clear();
+    if (!is_2p) {
+        camera_eases.clear();
+        global_data.camera = CameraConfig();
+    }
     draw_judge_list.clear();
 
     gauge.reset();
@@ -209,6 +213,7 @@ void Player::reload_for_dan(std::optional<SongParser>& new_parser, int new_diffi
 }
 
 void Player::handle_timeline(double ms_from_start) {
+    update_camera(ms_from_start);
     if (timeline.empty()) return;
     // Drain everything due: one per frame lets same-time commands trail by frames
     while (!timeline.empty() && ms_from_start > timeline.front().start_time) {
@@ -230,6 +235,8 @@ void Player::handle_timeline(double ms_from_start) {
         handle_branch_param(ms_from_start, entry, i);
         if (timeline_buffer.size() != before) continue;
         handle_lyric(ms_from_start, entry, i);
+        if (timeline_buffer.size() != before) continue;
+        handle_camera(ms_from_start, entry, i);
         if (timeline_buffer.size() != before) continue;
         handle_section(ms_from_start, entry, i);
     }
@@ -1075,6 +1082,77 @@ void Player::handle_lyric(double ms_from_start, const TimelineObject& timeline_o
     if (buffer_index != (int)timeline_buffer.size() - 1)
         timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
     timeline_buffer.pop_back();
+}
+
+static double ease_progress(double t, EaseDir dir, EaseCalc calc) {
+    t = std::clamp(t, 0.0, 1.0);
+    auto in = [calc](double x) {
+        switch (calc) {
+            case EaseCalc::CUBIC: return x * x * x;
+            case EaseCalc::QUARTIC: return x * x * x * x;
+            case EaseCalc::QUINTIC: return x * x * x * x * x;
+            case EaseCalc::SINUSOIDAL: return 1.0 - std::cos(x * M_PI / 2.0);
+            case EaseCalc::EXPONENTIAL: return x == 0.0 ? 0.0 : std::pow(2.0, 10.0 * (x - 1.0));
+            case EaseCalc::CIRCULAR: return 1.0 - std::sqrt(1.0 - x * x);
+            default: return x;
+        }
+    };
+    if (dir == EaseDir::IN) return in(t);
+    if (dir == EaseDir::OUT) return 1.0 - in(1.0 - t);
+    return t < 0.5 ? in(t * 2.0) / 2.0 : 1.0 - in((1.0 - t) * 2.0) / 2.0;
+}
+
+static void apply_camera_prop(CamProp prop, float v) {
+    CameraConfig& c = global_data.camera;
+    switch (prop) {
+        case CamProp::H_OFFSET: c.offset.x = v; break;
+        case CamProp::V_OFFSET: c.offset.y = v; break;
+        case CamProp::ZOOM: c.zoom = v; break;
+        case CamProp::ROTATION: c.rotation = v; break;
+        case CamProp::H_SCALE: c.h_scale = v; break;
+        case CamProp::V_SCALE: c.v_scale = v; break;
+        default: break;
+    }
+}
+
+// TJAPlayer3-Extended camera commands drive the global camera; only P1 owns it.
+void Player::handle_camera(double ms_from_start, const TimelineObject& timeline_object, int buffer_index) {
+    if (timeline_object.start_time > ms_from_start) return;
+    if (!timeline_object.cam.has_value()) return;
+
+    if (!is_2p) {
+        const CameraEvent& ev = timeline_object.cam.value();
+        if (ev.prop == CamProp::RESET) {
+            camera_eases.clear();
+            ray::Color border = global_data.camera.border_color;
+            global_data.camera = CameraConfig();
+            global_data.camera.border_color = border;
+        } else if (ev.prop == CamProp::BORDER_COLOR) {
+            global_data.camera.border_color = {(unsigned char)std::clamp(ev.from, 0.0, 255.0),
+                                               (unsigned char)std::clamp(ev.to, 0.0, 255.0),
+                                               (unsigned char)std::clamp(ev.extra, 0.0, 255.0), 255};
+        } else if (ev.ease) {
+            std::erase_if(camera_eases, [&](const TimelineObject& t) { return t.cam->prop == ev.prop; });
+            camera_eases.push_back(timeline_object);
+        } else {
+            std::erase_if(camera_eases, [&](const TimelineObject& t) { return t.cam->prop == ev.prop; });
+            apply_camera_prop(ev.prop, (float)ev.to);
+        }
+    }
+    if (buffer_index != (int)timeline_buffer.size() - 1)
+        timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
+    timeline_buffer.pop_back();
+}
+
+void Player::update_camera(double ms_from_start) {
+    for (const TimelineObject& t : camera_eases) {
+        const CameraEvent& ev = t.cam.value();
+        double len = t.end_time - t.start_time;
+        double p = len > 0 ? (ms_from_start - t.start_time) / len : 1.0;
+        double e = ease_progress(p, ev.dir, ev.calc);
+        apply_camera_prop(ev.prop, (float)(ev.from + (ev.to - ev.from) * e));
+    }
+    std::erase_if(camera_eases, [&](const TimelineObject& t) { return ms_from_start >= t.end_time; });
 }
 
 void Player::play_note_manager(double current_ms, std::optional<Background>& background) {
@@ -1957,6 +2035,8 @@ void Player::seek_to(double resume_time) {
         handle_branch_param(resume_time, entry, idx);
         if (timeline_buffer.size() != before) continue;
         handle_lyric(resume_time, entry, idx);
+        if (timeline_buffer.size() != before) continue;
+        handle_camera(resume_time, entry, idx);
         if (timeline_buffer.size() != before) continue;
         handle_section(resume_time, entry, idx);
     }

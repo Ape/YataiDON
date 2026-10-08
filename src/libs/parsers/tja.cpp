@@ -768,10 +768,82 @@ std::map<std::string, TJAParser::CommandHandler> TJAParser::build_command_regist
         REGISTER_HANDLER(JPOSSCROLL)
         REGISTER_HANDLER(LYRIC)
 
+        register_extended_commands(registry);
         return registry;
 }
 
 #undef REGISTER_HANDLER
+
+// TJAPlayer3-Extended commands
+void TJAParser::register_extended_commands(std::map<std::string, CommandHandler>& registry) {
+    auto split = [](const std::string& v) {
+        std::vector<std::string> out;
+        std::istringstream iss(v);
+        std::string tok;
+        while (std::getline(iss, tok, ',')) out.push_back(trim(tok));
+        return out;
+    };
+    auto push = [this](ParserState& s, CameraEvent ev) -> TimelineObject* {
+        TimelineObject t = TimelineObject();
+        t.start_time = t.end_time = this->current_ms;
+        t.cam = ev;
+        s.curr_timeline->push_back(t);
+        return &s.curr_timeline->back();  // deque: stays valid across later push_back
+    };
+    auto num = [this](const std::string& cmd, const std::vector<std::string>& a, size_t n,
+                      std::vector<double>& out) {
+        if (a.size() < n) { spdlog::warn("Malformed {} in {}", cmd, file_path.string()); return false; }
+        try { for (size_t i = 0; i < n; i++) out.push_back(std::stod(a[i])); }
+        catch (const std::exception&) { spdlog::warn("Invalid {} values in {}", cmd, file_path.string()); return false; }
+        return true;
+    };
+
+    struct Prop { const char* name; CamProp prop; };
+    for (auto [name, prop] : {Prop{"HOFFSET", CamProp::H_OFFSET}, {"VOFFSET", CamProp::V_OFFSET},
+                              {"ZOOM", CamProp::ZOOM}, {"ROTATION", CamProp::ROTATION},
+                              {"HSCALE", CamProp::H_SCALE}, {"VSCALE", CamProp::V_SCALE}}) {
+        std::string cmd = std::string("#CAM") + name;
+        registry[cmd] = [=](const std::string& v, ParserState& s) {
+            std::vector<double> d;
+            if (!num(cmd, split(v), 1, d)) return;
+            CameraEvent ev; ev.prop = prop; ev.to = d[0];
+            push(s, ev);
+        };
+        // HOFFSET/VOFFSET have no eased form upstream; they are #CAMHMOVE/#CAMVMOVE
+        std::string base = prop == CamProp::H_OFFSET ? "#CAMHMOVE" : prop == CamProp::V_OFFSET ? "#CAMVMOVE" : cmd;
+        registry[base + "START"] = [=](const std::string& v, ParserState& s) {
+            auto a = split(v);
+            std::vector<double> d;
+            if (!num(base + "START", a, 2, d)) return;
+            static const std::map<std::string, EaseDir> dirs = {{"IN", EaseDir::IN}, {"OUT", EaseDir::OUT}, {"IN_OUT", EaseDir::IN_OUT}};
+            static const std::map<std::string, EaseCalc> calcs = {{"CUBIC", EaseCalc::CUBIC}, {"QUARTIC", EaseCalc::QUARTIC},
+                {"QUINTIC", EaseCalc::QUINTIC}, {"SINUSOIDAL", EaseCalc::SINUSOIDAL}, {"EXPONENTIAL", EaseCalc::EXPONENTIAL},
+                {"CIRCULAR", EaseCalc::CIRCULAR}, {"LINEAR", EaseCalc::LINEAR}};
+            CameraEvent ev; ev.prop = prop; ev.from = d[0]; ev.to = d[1]; ev.ease = true;
+            if (a.size() > 2 && dirs.count(a[2])) ev.dir = dirs.at(a[2]);
+            if (a.size() > 3 && calcs.count(a[3])) ev.calc = calcs.at(a[3]);
+            s.open_cam[prop] = push(s, ev);
+        };
+        registry[base + "END"] = [=](const std::string&, ParserState& s) {
+            auto it = s.open_cam.find(prop);
+            if (it == s.open_cam.end()) return;
+            it->second->end_time = this->current_ms;
+            s.open_cam.erase(it);
+        };
+    }
+    registry["#CAMRESET"] = [=](const std::string&, ParserState& s) {
+        CameraEvent ev; ev.prop = CamProp::RESET;
+        push(s, ev);
+    };
+    registry["#BORDERCOLOR"] = [=](const std::string& v, ParserState& s) {
+        std::vector<double> d;
+        if (!num("#BORDERCOLOR", split(v), 3, d)) return;
+        CameraEvent ev; ev.prop = CamProp::BORDER_COLOR; ev.from = d[0]; ev.to = d[1]; ev.extra = d[2];
+        push(s, ev);
+    };
+    registry["#ENABLEDORON"] = [](const std::string&, ParserState& s) { s.doron = true; };
+    registry["#DISABLEDORON"] = [](const std::string&, ParserState& s) { s.doron = false; };
+}
 
 void TJAParser::handle_MEASURE(const std::string& value, ParserState& state) {
     size_t slash_pos = value.find('/');
@@ -1232,7 +1304,7 @@ Note TJAParser::add_bar(ParserState& state) {
 Note TJAParser::add_note(char item, ParserState& state) {
     Note note = Note();
     note.hit_ms = this->current_ms;
-    note.display = true;
+    note.display = !state.doron;
     note.type = NoteType(item - '0');
     note.index = state.index;
     note.bpm = state.bpm;

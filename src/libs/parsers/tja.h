@@ -46,6 +46,21 @@ enum class ScrollType : int {
     HBSCROLL = 2
 };
 
+// TJAPlayer3-Extended camera commands
+enum class CamProp : int { H_OFFSET, V_OFFSET, ZOOM, ROTATION, H_SCALE, V_SCALE, RESET, BORDER_COLOR };
+enum class EaseDir : int { IN, OUT, IN_OUT };
+enum class EaseCalc : int { CUBIC, QUARTIC, QUINTIC, SINUSOIDAL, EXPONENTIAL, CIRCULAR, LINEAR };
+
+struct CameraEvent {
+    CamProp prop = CamProp::RESET;
+    double from = 0.0;   // ease start; BORDER_COLOR: r
+    double to = 0.0;     // value to set / ease end; BORDER_COLOR: g
+    double extra = 0.0;  // BORDER_COLOR: b
+    bool ease = false;
+    EaseDir dir = EaseDir::IN;
+    EaseCalc calc = EaseCalc::LINEAR;
+};
+
 struct TimelineObject {
     double start_time;
     double end_time;
@@ -62,6 +77,7 @@ struct TimelineObject {
     int seq = 0;
 
     std::optional<std::string> lyric;
+    std::optional<CameraEvent> cam;  // eased events run start_time -> end_time
 
 };
 
@@ -287,6 +303,8 @@ struct ParserState {
     double judge_pos_y = 0.0f;
     bool is_branching = false;
     bool is_section_start = false;
+    bool doron = false;  // #ENABLEDORON: notes created while set are invisible
+    std::map<CamProp, TimelineObject*> open_cam;  // eased camera events awaiting their *END
     double start_branch_ms = 0.0f;
     double start_branch_bpm = 120.0f;
     double start_branch_time_sig = 4.0f / 4.0f;
@@ -368,6 +386,7 @@ private:
                           std::optional<Note> section_bar);
 
     std::map<std::string, CommandHandler> build_command_registry();
+    void register_extended_commands(std::map<std::string, CommandHandler>& registry);
     std::vector<std::pair<std::string, CommandHandler>> cached_cmds;
 
     void handle_MEASURE(const std::string& value, ParserState& state);

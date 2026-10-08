@@ -56,6 +56,10 @@ void draw_outer_border(int screen_width, int screen_height, ray::Color last_colo
     DrawRectangle(screen_width, 0, screen_width, screen_height, last_color);
     DrawRectangle(0, -screen_height, screen_width, screen_height, last_color);
     DrawRectangle(0, screen_height, screen_width, screen_height, last_color);
+    DrawRectangle(-screen_width, -screen_height, screen_width, screen_height, last_color);
+    DrawRectangle(screen_width, -screen_height, screen_width, screen_height, last_color);
+    DrawRectangle(-screen_width, screen_height, screen_width, screen_height, last_color);
+    DrawRectangle(screen_width, screen_height, screen_width, screen_height, last_color);
 }
 
 static void draw_skin_update_status() {
