@@ -360,6 +360,8 @@ Config get_config() {
         config_file["general"]["sync_scores_on_launch"].value_or(false));
     config.network.auto_login = config_file["network"]["auto_login"].value_or(true);
 
+    config.card_reader.enabled = config_file["card_reader"]["enabled"].value_or(false);
+
     // Parse paths
     config.paths.tja_path = parsePathArrayOrDefault(config_file, "paths", "tja_path", {fs::path("Songs")});
     config.paths.skin = fs::path(config_file["paths"]["skin"].value_or("PyTaikoGreen"));
@@ -466,6 +468,8 @@ void save_config(const Config& config) {
         {"sync_scores", config.network.sync_scores},
         {"auto_login", config.network.auto_login}
     });
+
+    config_table.insert("card_reader", toml::table{{"enabled", config.card_reader.enabled}});
 
     // Paths
     toml::array tja_path_array;
