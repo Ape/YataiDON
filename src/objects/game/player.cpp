@@ -210,10 +210,10 @@ void Player::reload_for_dan(std::optional<SongParser>& new_parser, int new_diffi
 
 void Player::handle_timeline(double ms_from_start) {
     if (timeline.empty()) return;
-    TimelineObject timeline_object = timeline.front();
-    if (ms_from_start > timeline_object.start_time) {
+    // Drain everything due: one per frame lets same-time commands trail by frames
+    while (!timeline.empty() && ms_from_start > timeline.front().start_time) {
+        timeline_buffer.push_back(timeline.front());
         timeline.pop_front();
-        timeline_buffer.push_back(timeline_object);
     }
 
     for (int i = (int)timeline_buffer.size() - 1; i >= 0; i--) {
@@ -795,6 +795,7 @@ void Player::reset_chart() {
     }
 
     this->timeline = notes.timeline;
+    last_jpos_key = {-1e300, -1};
 
     // Rasterize every #LYRIC glyph now, in one go: otherwise each new line with an
     // unseen character rebuilt the lyric-size font atlas mid-song (a ~20 ms hitch
@@ -948,7 +949,11 @@ void Player::handle_judgeposition(double ms_from_start, const TimelineObject& ti
     if (!timeline_object.delta_x.has_value()) return;
     if (!timeline_object.delta_y.has_value()) return;
 
-    if (timeline_object.start_time <= ms_from_start && ms_from_start <= timeline_object.end_time) {
+    const std::pair<double, int> key{timeline_object.start_time, timeline_object.seq};
+    const bool newest = key >= last_jpos_key;
+    if (newest) last_jpos_key = key;
+
+    if (newest && timeline_object.start_time <= ms_from_start && ms_from_start <= timeline_object.end_time) {
         double duration = timeline_object.end_time - timeline_object.start_time;
         if (duration > 0) {
             double t = (ms_from_start - timeline_object.start_time) / duration;
@@ -963,6 +968,11 @@ void Player::handle_judgeposition(double ms_from_start, const TimelineObject& ti
     }
 
     if (ms_from_start > timeline_object.end_time) {
+        if (newest) {
+            judge_x = (timeline_object.judge_pos_x.value() + timeline_object.delta_x.value()) * tex.screen_scale;
+            judge_y = (timeline_object.judge_pos_y.value() + timeline_object.delta_y.value()) * tex.screen_scale;
+        }
+
         if (buffer_index != (int)timeline_buffer.size() - 1)
             timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
         timeline_buffer.pop_back();
@@ -1911,6 +1921,7 @@ void Player::seek_to(double resume_time) {
     draw_note_buffer.clear();
     barlines.clear();
     timeline_buffer.clear();
+    last_jpos_key = {-1e300, -1};
     draw_judge_list.clear();
     draw_drum_hit_list.clear();
     draw_arc_list.clear();

@@ -59,6 +59,7 @@ struct TimelineObject {
     std::optional<double> judge_pos_y;
     std::optional<double> delta_x;
     std::optional<double> delta_y;
+    int seq = 0;
 
     std::optional<std::string> lyric;
 

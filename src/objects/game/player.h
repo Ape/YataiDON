@@ -166,6 +166,7 @@ private:
     int arc_points;
     float judge_x;
     float judge_y;
+    std::pair<double, int> last_jpos_key{-1e300, -1};  // (start_time, seq) of the newest #JPOSSCROLL applied
 
     bool is_gogo_time;
     bool was_gauge_full = false;

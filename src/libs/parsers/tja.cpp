@@ -472,11 +472,6 @@ TJAParser::notes_to_position(int diff) {
                 }
                 continue;
             }
-            // Skip unrecognized non-digit lines
-            else if (!part.empty() && !std::isdigit(static_cast<unsigned char>(part[0]))) {
-                spdlog::warn("Unrecognized token '{}' in {}", part, file_path.string());
-                continue;
-            }
 
             // Add barline
             double ms_per_measure = get_ms_per_measure(state.bpm, state.time_signature);
@@ -500,6 +495,7 @@ TJAParser::notes_to_position(int diff) {
             for (char item : part) {
                 // Skip empty notes (0) and non-digits
                 if (item == '0' || !std::isdigit(static_cast<unsigned char>(item))) {
+                    if (item != '0') spdlog::warn("Unrecognized note '{}' in {}", item, file_path.string());
                     current_ms += increment;
                     continue;
                 }
@@ -1104,6 +1100,7 @@ void TJAParser::handle_JPOSSCROLL(const std::string& part, ParserState& state) {
     jpos_scroll.judge_pos_y = state.judge_pos_y;
     jpos_scroll.delta_x = delta_x;
     jpos_scroll.delta_y = delta_y;
+    jpos_scroll.seq = static_cast<int>(state.curr_timeline->size());
 
     state.curr_timeline->push_back(jpos_scroll);
 
