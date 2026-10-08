@@ -177,8 +177,7 @@ void SongSelect2PScreen::draw() {
 
     draw_overlays();
 
-    const bool popup_open = !player->option_panel_by_lua &&
-                            (player->neiro_selector.has_value()   || player->modifier_selector.has_value()
+    const bool popup_open = (player->neiro_selector.has_value()   || player->modifier_selector.has_value()
                           || player_2->neiro_selector.has_value() || player_2->modifier_selector.has_value());
     if (screen_init && !popup_open) navigator.draw_score_history();
 
