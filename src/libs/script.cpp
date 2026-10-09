@@ -273,6 +273,40 @@ void ScriptManager::init(fs::path script_path) {
     std::string default_path = (*lua)["package"]["path"];
     (*lua)["package"]["path"] = package_path + ";" + default_path;
 
+    std::vector<std::string> script_dirs{skin_scripts_dir};
+    for (const fs::path& dir : ancestor_scripts) script_dirs.push_back(dir.string());
+    sol::function make_require = lua->load(R"(
+        local orig, caller_source, dirs = ...
+        local searchpath, loaded = package.searchpath, package.loaded
+        local function path_from(k)
+            local p = {}
+            for i = k, #dirs do p[#p + 1] = dirs[i] .. "/?.lua;" .. dirs[i] .. "/?/init.lua" end
+            return table.concat(p, ";")
+        end
+        return function(name)
+            local src = caller_source()
+            for k = 2, #dirs do
+                if src:sub(1, #dirs[k] + 2) == "@" .. dirs[k] .. "/" then
+                    local file = searchpath(name, path_from(k))
+                    if not file or file == searchpath(name, package.path) then break end
+                    if loaded[file] == nil then
+                        local m = assert(loadfile(file))(name, file)
+                        loaded[file] = m == nil and true or m
+                    end
+                    return loaded[file], file
+                end
+            end
+            return orig(name)
+        end
+    )", "=skin_require");
+    auto caller_source = [](sol::this_state s) -> std::string {
+        lua_Debug ar;   // level 0 = this function, 1 = the require wrapper, 2 = its caller
+        if (!lua_getstack(s, 2, &ar) || !lua_getinfo(s, "S", &ar) || !ar.source) return "";
+        return ar.source;
+    };
+    (*lua)["require"] = make_require.call<sol::function>(
+        (*lua)["require"], sol::make_object(*lua, caller_source), sol::as_table(script_dirs));
+
     index_scripts(script_path);
     for (const fs::path& dir : ancestor_scripts) index_scripts(dir);
 
