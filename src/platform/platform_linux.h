@@ -15,4 +15,6 @@ std::filesystem::path unix_get_executable_dir();
 // Initializes Unix-specific crash handlers (signal handlers with altstack for stack overflow protection).
 void unix_install_crash_handlers();
 
+void unix_close_window();
+
 #endif // YATAIDON_PLATFORM_UNIX_H

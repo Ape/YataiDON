@@ -16,6 +16,7 @@
 #include "libs/song_parser.h"
 #include "libs/skin_updater.h"
 #include "libs/text.h"
+#include "libs/webcam.h"
 
 #ifdef _WIN32
 #include "platform/platform_windows.h"
@@ -23,6 +24,8 @@
 #include "platform/platform_android.h"
 #elif defined(__EMSCRIPTEN__)
 #include "platform/platform_emscripten.h"
+#elif defined(__linux__)
+#include "platform/platform_linux.h"
 #endif
 
 #ifdef PLATFORM_ANDROID
@@ -577,13 +580,17 @@ int main(int argc, char* argv[]) {
     skin_updater.shutdown();
     shutdown_sdl_joysticks();
     delete g_loop;
+    g_loop = nullptr;
+    // Cleanup needs a live SDL/OpenGL context and config.
+    webcam.close();
+    unload_skin();
     delete global_data.config;
     global_data.config = nullptr;
-    global_tex.unload_textures();
-    tex.unload_textures();
-    script_manager.shutdown();
+#if defined(__linux__) && !defined(__ANDROID__)
+    unix_close_window();
+#else
     ray::CloseWindow();
-    audio.close_audio_device();
+#endif
     spdlog::info("Game closed");
 #endif
 }

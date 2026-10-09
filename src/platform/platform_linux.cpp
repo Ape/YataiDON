@@ -1,4 +1,7 @@
 #include "platform_linux.h"
+#include "../libs/ray.h"
+#include <SDL3/SDL_video.h>
+#include <dlfcn.h>
 
 #include <spdlog/spdlog.h>
 #include <algorithm>
@@ -82,6 +85,21 @@ std::filesystem::path unix_get_executable_dir() {
     }
     buffer[len] = '\0';
     return std::filesystem::path(buffer).parent_path();
+}
+
+void unix_close_window() {
+    // SDL unloads EGL before disconnecting Wayland; queued NVIDIA events still
+    // reference this module's protocol metadata, so keep it loaded until then.
+    void* egl_wayland = nullptr;
+    const char* driver = SDL_GetCurrentVideoDriver();
+
+    if (driver && std::strcmp(driver, "wayland") == 0) {
+        egl_wayland = dlopen("libnvidia-egl-wayland.so.1", RTLD_LAZY | RTLD_NOLOAD);
+    }
+
+    ray::CloseWindow();
+
+    if (egl_wayland) dlclose(egl_wayland);
 }
 
 void unix_install_crash_handlers() {
