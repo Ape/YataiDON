@@ -1225,6 +1225,7 @@ void Player::play_note_manager(double current_ms, std::optional<Background>& bac
 }
 
 void Player::draw_note_manager(double current_ms) {
+    current_ms += visual_offset;
     while (!draw_note_list.empty() && current_ms >= draw_note_list.front().load_ms) {
         Note current_note = draw_note_list.front();
         draw_note_list.pop_front();
@@ -1781,6 +1782,7 @@ void Player::draw_balloon(double current_ms, float y, const Note& head, int curr
 }
 
 void Player::draw_notes(double current_ms, float y) {
+    current_ms += visual_offset;
     for (auto it = barlines.rbegin(); it != barlines.rend(); ++it) {
         draw_bar(current_ms, y, *it);
     }
