@@ -7,14 +7,16 @@ Judgment::Judgment(Judgments type, bool big)
     big_outer = big && type != Judgments::BAD && tex.has_animation(68) && tex.has_animation(69);
     fade_animation_1 = dynamic_cast<FadeAnimation*>(tex.get_animation(big_outer ? 69 : 27, true));
     fade_animation_2 = dynamic_cast<FadeAnimation*>(tex.get_animation(28, true));
+    fade_animation_3 = dynamic_cast<FadeAnimation*>(tex.get_animation(77, true));
     move_animation = dynamic_cast<MoveAnimation*>(tex.get_animation(29, true));
     texture_animation = dynamic_cast<TextureChangeAnimation*>(tex.get_animation(big_outer ? 68 : 30, true));
-    if (!fade_animation_1 || !fade_animation_2 || !move_animation || !texture_animation)
-        throw std::runtime_error("Judgment: animation 27/28/29/30 has an unexpected type");
+    if (!fade_animation_1 || !fade_animation_2 || !fade_animation_3 || !move_animation || !texture_animation)
+        throw std::runtime_error("Judgment: animation 27/28/29/30/77 has an unexpected type");
 
     move_animation->start();
     fade_animation_2->start();
     fade_animation_1->start();
+    fade_animation_3->start();
     texture_animation->start();
 
     if (big_outer && tex.has_animation(70)) {
@@ -55,11 +57,12 @@ void Judgment::update(double current_ms) {
     BaseAnimation* animations[] = {
         fade_animation_1,
         fade_animation_2,
+        fade_animation_3,
         move_animation,
         texture_animation
     };
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
         animations[i]->update(current_ms);
     }
     for (BaseAnimation* a : {(BaseAnimation*)outer_scale, (BaseAnimation*)ray_scale, (BaseAnimation*)ray_fade,
@@ -69,7 +72,7 @@ void Judgment::update(double current_ms) {
 }
 
 void Judgment::draw_effect(float judge_x, float judge_y) {
-    float fade = fade_animation_2->attribute;
+    float fade = fade_animation_3->attribute;
     tex.draw_texture(t_effect, {.x=judge_x, .y=judge_y, .fade=fade});
 }
 
@@ -101,5 +104,5 @@ void Judgment::draw_text(float judge_x, float judge_y) {
 }
 
 bool Judgment::is_finished() const {
-    return fade_animation_2->is_finished;
+    return fade_animation_2->is_finished && fade_animation_3->is_finished;
 }

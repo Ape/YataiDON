@@ -11,6 +11,7 @@ private:
 
     FadeAnimation* fade_animation_1;
     FadeAnimation* fade_animation_2;
+    FadeAnimation* fade_animation_3;
     MoveAnimation* move_animation;
     TextureChangeAnimation* texture_animation;
     TextureObject* t_effect = nullptr;
