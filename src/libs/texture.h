@@ -161,6 +161,8 @@ private:
     std::vector<fs::path> ancestor_graphics_paths;
     std::vector<float> ancestor_scales;
     std::unordered_set<std::string> loaded_subsets;
+    std::unordered_map<std::string, int> tex_id_refcount;
+    std::unordered_map<std::string, std::unordered_set<std::string>> subset_loaded_ids;
 
     bool read_screen_animations(const std::string& screen_name, rapidjson::Document& out);
 
@@ -197,10 +199,6 @@ public:
         if (it == skin_config_by_name.end()) return fallback;
         auto t = it->second.text.find(language);
         return t == it->second.text.end() ? fallback : t->second;
-    }
-
-    ~TextureWrapper() {
-        unload_textures();
     }
 
     fs::path skin_root()   const { return graphics_path.parent_path(); }

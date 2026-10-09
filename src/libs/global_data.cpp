@@ -8,6 +8,7 @@
 #include "text.h"
 #include "audio.h"
 #include "../objects/global/debug_menu.h"
+#include "../objects/song_select/file_navigator/navigator.h"
 #include <spdlog/spdlog.h>
 
 GlobalData global_data;
@@ -80,6 +81,7 @@ void load_skin() {
 }
 
 void unload_skin() {
+    navigator.reset_for_skin_reload();
     debug_menu.clear_selection();
     debug_menu.unload_fonts();
     tex.unload_textures();

@@ -204,6 +204,19 @@ void Navigator::load_all_roots() {
 
 void Navigator::reset_for_skin_reload() {
     join_loader();
+    wait_for_song_files();
+
+    inline_state.reset();
+    pending_inline_folder = nullptr;
+    pending_inline_path.reset();
+    genre_bg.reset();
+    items.clear();
+    while (!pending_boxes.empty()) pending_boxes.pop();
+    while (!pending_inline_boxes.empty()) pending_inline_boxes.pop();
+
+    script = nullptr;
+    is_inline = false;
+    inline_streaming = false;
     wheel_events_read = false;
     is_init = false;
 }
