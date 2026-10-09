@@ -533,8 +533,8 @@ void GameScreen::end_song() {
         global_data.songs_played += 1;
         score_saved = true;
     }
-    constexpr double SKIP_RESULT_DELAY = 2800.0;
-    double transition_delay = players[0]->was_skipped() ? SKIP_RESULT_DELAY : 8533.34;
+    const double transition_delay = global_data.config->general.fast_transitions
+        ? kFastResultTransitionDelayMs : (players[0]->was_skipped() ? 2800.0 : 8533.34);
     if (ms_from_start >= players[0]->end_time + transition_delay) {
         if (!result_transition.is_started) {
             result_transition.start();

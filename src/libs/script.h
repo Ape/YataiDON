@@ -7,6 +7,7 @@
 #include <set>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -62,6 +63,7 @@ public:
     // each asset is only decoded and uploaded once per screen change.
     TextureWrapper& tex;
     std::unique_ptr<sol::state> lua;
+    std::optional<double> current_ms_override;
 
     ScriptManager() : tex(::tex) {}
 

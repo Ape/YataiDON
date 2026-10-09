@@ -24,6 +24,7 @@ struct GeneralConfig {
     int webcam_number = -1;
     bool touch_input = false;
     bool skin_updater = true;
+    bool fast_transitions = false;
 };
 
 struct CardReaderConfig {

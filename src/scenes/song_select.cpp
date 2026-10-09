@@ -290,7 +290,7 @@ std::optional<Screens> SongSelectScreen::update() {
 
     if (game_transition.has_value() && join_request_ms < 0.0) {
         game_transition->update(current_time);
-        if (game_transition->is_finished()) {
+        if (game_transition->is_finished() && !player->is_voice_playing()) {
             return on_screen_end(get_game_screen_target());
         }
     }
