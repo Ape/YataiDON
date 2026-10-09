@@ -5,6 +5,7 @@
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <spdlog/spdlog.h>
@@ -167,6 +168,7 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
 
     HashCache cache = load_hash_cache(skin_dir);
     HashCache seen;   // this manifest's files: entries for files it no longer lists are dropped
+    std::unordered_set<std::string> listed;
     std::istringstream lines(checksums.text);
     std::string hash, rel_path;
     int updated = 0;
@@ -181,6 +183,7 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
             continue;
         }
         const std::string& key = rel_path;  // the manifest's own spelling (UTF-8)
+        listed.insert(key);
         uintmax_t size = 0;
         int64_t mtime = 0;
         if (file_stamp(local_file, size, mtime)) {
@@ -232,8 +235,26 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
         note_file_updated();
         ++updated;
     }
+
+    int removed = 0;
+    for (const auto& [rel, e] : cache) {
+        if (listed.count(rel)) continue;
+        const fs::path local_file = (skin_dir / rel).lexically_normal();
+        const fs::path local_rel = local_file.lexically_relative(skin_dir);
+        if (local_rel.empty() || *local_rel.begin() == "..") continue;
+        uintmax_t size = 0;
+        int64_t mtime = 0;
+        if (!file_stamp(local_file, size, mtime) || size != e.size || mtime != e.mtime) continue;
+        std::error_code ec;
+        if (!fs::remove(local_file, ec)) continue;
+        ++removed;
+        for (fs::path dir = local_file.parent_path(); dir != skin_dir && fs::is_empty(dir, ec) && !ec; dir = dir.parent_path())
+            if (!fs::remove(dir, ec)) break;
+    }
+    if (removed > 0) any_updated_.store(true);
+
     save_hash_cache(skin_dir, seen);
-    spdlog::info("Skin update ({}): {} file(s) updated", skin_dir.filename().string(), updated);
+    spdlog::info("Skin update ({}): {} file(s) updated, {} removed", skin_dir.filename().string(), updated, removed);
 }
 
 void SkinUpdater::scan_skins() {
