@@ -23,19 +23,6 @@ inline double json_member(const Value& o, const char* key, double fallback) {
     return o.HasMember(key) ? json_number(o[key], fallback) : fallback;
 }
 
-// Two screens can share a subset name (e.g. both have a "notes" folder), in which
-// case they resolve to the very same "subset/name" key and the very same textures[]
-// entry. Refcount by key so unload_folder() only actually drops a texture once
-// every screen/subset that loaded it has unloaded it.
-std::unordered_map<std::string, int>& tex_id_refcount() {
-    static std::unordered_map<std::string, int> refcount;
-    return refcount;
-}
-std::unordered_map<std::string, std::unordered_set<std::string>>& subset_loaded_ids() {
-    static std::unordered_map<std::string, std::unordered_set<std::string>> ids;
-    return ids;
-}
-
 }  // namespace
 
 void TextureWrapper::init(const fs::path& skin_path) {
@@ -159,8 +146,8 @@ void TextureWrapper::unload_textures() {
     animations.clear();
     copied_animations.clear();
     screen_animations.clear();
-    subset_loaded_ids().clear();
-    tex_id_refcount().clear();
+    subset_loaded_ids.clear();
+    tex_id_refcount.clear();
     debug_draw_log.clear();
     debug_draw_log_prev.clear();
 }
@@ -646,8 +633,8 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
         spdlog::error("No textures loaded for {}/{}", screen_name, subset);
     } else {
         loaded_subsets.insert(dedup_key);
-        subset_loaded_ids()[dedup_key] = ids_this_call;
-        for (const std::string& id : ids_this_call) ++tex_id_refcount()[id];
+        subset_loaded_ids[dedup_key] = ids_this_call;
+        for (const std::string& id : ids_this_call) ++tex_id_refcount[id];
     }
 }
 
@@ -661,9 +648,9 @@ void TextureWrapper::unload_folder(const std::string& screen_name, const std::st
     // A subset name can be shared by several screens (they resolve to the same
     // "subset/name" keys), so only drop a texture once every
     // screen/subset that loaded it has also unloaded it.
-    auto& refcount = tex_id_refcount();
-    auto ids_it = subset_loaded_ids().find(dedup_key);
-    if (ids_it != subset_loaded_ids().end()) {
+    auto& refcount = tex_id_refcount;
+    auto ids_it = subset_loaded_ids.find(dedup_key);
+    if (ids_it != subset_loaded_ids.end()) {
         for (const std::string& id : ids_it->second) {
             auto rc_it = refcount.find(id);
             if (rc_it == refcount.end()) continue;
@@ -672,7 +659,7 @@ void TextureWrapper::unload_folder(const std::string& screen_name, const std::st
                 refcount.erase(rc_it);
             }
         }
-        subset_loaded_ids().erase(ids_it);
+        subset_loaded_ids.erase(ids_it);
     }
 
     loaded_subsets.erase(dedup_key);
