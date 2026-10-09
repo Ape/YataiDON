@@ -202,8 +202,11 @@ std::optional<Screens> TitleScreen::update() {
                     g_card_reader->stop_polling();
 
                     // Start fade out to entry screen
-                    fade_out->start();
-                    audio.play_sound("don", VolumePreset::SOUND);
+                    if (!fade_out->is_started) {
+                        fade_out->start();
+                        fade_out->unlock_input();
+                        audio.play_sound("don", VolumePreset::SOUND);
+                    }
                 }
             }
         }
@@ -212,7 +215,8 @@ std::optional<Screens> TitleScreen::update() {
 
     scene_manager(current_ms);
     if (is_l_don_pressed() || is_r_don_pressed()) {
-        fade_out->start();
+        if (!fade_out->is_started) fade_out->start();
+        fade_out->unlock_input();
         audio.play_sound("don", VolumePreset::SOUND);
     }
     return std::nullopt;
