@@ -1197,9 +1197,8 @@ void Player::play_note_manager(double current_ms, std::optional<Background>& bac
         if (note.type == NoteType::ROLL_HEAD || note.type == NoteType::ROLL_HEAD_L) {
             is_drumroll = true;
         } else if (note.type == NoteType::BALLOON_HEAD || note.type == NoteType::KUSUDAMA) {
-            if (!is_balloon) {
+            if (!is_balloon) { // should not set animation DON_BALLOON_NOBEAT here
                 balloon_idle = true;
-                chara->set_anim(AnimIndex::DON_BALLOON_NOBEAT);
             }
             is_balloon = true;
         } else if (note.type == NoteType::TAIL) {
@@ -1909,7 +1908,7 @@ void Player::draw_modifiers(float y) {
 }
 
 void Player::draw_lane_cover(float y) {
-    if (!is_balloon) {
+    if (!is_balloon || (balloon_idle && !balloon_counter.has_value())) {
         if (is_2p) {
             chara->draw(tex.skin_config[SC::GAME_CHARA_P2].x, y + tex.skin_config[SC::GAME_CHARA_P2].y, 1.0f);
         } else {
@@ -1972,7 +1971,9 @@ void Player::draw_overlays(float y, const ray::Shader& mask_shader) {
             if (const SkinInfo* p2 = tex.skin_entry("balloon_counter_2p_offset"))
                 rig_2p_y = p2->y;
         }
-        chara->draw(tex.skin_config[SC::GAME_CHARA_BALLOON].x, y + tex.skin_config[SC::GAME_CHARA_BALLOON].y + rig_2p_y, 1.0f);
+        if (!balloon_idle || balloon_counter.has_value()) {
+            chara->draw(tex.skin_config[SC::GAME_CHARA_BALLOON].x, y + tex.skin_config[SC::GAME_CHARA_BALLOON].y + rig_2p_y, 1.0f);
+        }
     }
 
     if (drumroll_counter.has_value()) {
