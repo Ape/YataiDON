@@ -13,7 +13,7 @@ target_link_options(${PROJECT_NAME} PRIVATE -ObjC)
 set(IOS_BUNDLE_IDENTIFIER "com.yataidon.app" CACHE STRING "iOS application bundle identifier")
 set(IOS_DEVELOPMENT_TEAM "" CACHE STRING "Apple development team for signing")
 set_target_properties(${PROJECT_NAME} PROPERTIES
-  OBJCXX_STANDARD 20
+  OBJCXX_STANDARD 23
   OBJCXX_STANDARD_REQUIRED YES
   MACOSX_BUNDLE TRUE
   MACOSX_BUNDLE_INFO_PLIST "${CMAKE_SOURCE_DIR}/ios/Info.plist.in"
