@@ -1,3 +1,4 @@
+#include "../libs/localized_text.h"
 #include "game_2p.h"
 #include "../libs/animation.h"
 #include "../libs/input.h"
@@ -15,8 +16,8 @@ void Game2PScreen::init_tja(fs::path song) {
     auto& titles = parser->metadata.title;
     auto& subtitles = parser->metadata.subtitle;
     const std::string& lang = global_data.config->general.language;
-    std::string title = titles.count(lang) ? titles.at(lang) : titles.count("en") ? titles.at("en") : titles.empty() ? "" : titles.begin()->second;
-    std::string subtitle = subtitles.count(lang) ? subtitles.at(lang) : "";
+    std::string title = localized_text(titles, lang, LocalizedTextFallback::ENGLISH_OR_FIRST);
+    std::string subtitle = localized_text(subtitles, lang, LocalizedTextFallback::NONE);
 
     global_data.session_data[(int)PlayerNum::P1].song_title = title;
     global_data.session_data[(int)PlayerNum::P1].song_subtitle = subtitle;

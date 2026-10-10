@@ -1,3 +1,4 @@
+#include "../libs/localized_text.h"
 #include "game.h"
 #include "../libs/animation.h"
 #include "../libs/scores.h"
@@ -135,8 +136,8 @@ void GameScreen::init_tja(fs::path song) {
     auto& subtitles = parser->metadata.subtitle;
     const std::string& lang = global_data.config->general.language;
 
-    global_data.session_data[(int)global_data.player_num].song_title = titles.count(lang) ? titles.at(lang) : titles.count("en") ? titles.at("en") : titles.empty() ? "" : titles.begin()->second;
-    global_data.session_data[(int)global_data.player_num].song_subtitle = subtitles.count(lang) ? subtitles.at(lang) : "";
+    global_data.session_data[(int)global_data.player_num].song_title = localized_text(titles, lang, LocalizedTextFallback::ENGLISH_OR_FIRST);
+    global_data.session_data[(int)global_data.player_num].song_subtitle = localized_text(subtitles, lang, LocalizedTextFallback::NONE);
     global_data.session_data[(int)global_data.player_num].song_subtitle_full_display = parser->metadata.subtitle_full_display;
 
     if (fs::exists(parser->metadata.wave) && !song_music.has_value() && !pending_song_load.valid()) {
