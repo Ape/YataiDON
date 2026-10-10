@@ -544,7 +544,9 @@ void GameScreen::end_song() {
 }
 
 std::optional<Screens> GameScreen::update() {
-    Screen::update();
+    if (auto init = Screen::update()) {
+        return init;
+    }
 
     double current_ms = get_frame_ms();
     allnet_indicator.update(current_ms);
