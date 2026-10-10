@@ -1821,6 +1821,7 @@ bool Navigator::scan_child_folders(const fs::path& path) {
 }
 
 bool Navigator::is_directory(BaseBox* item) {
+    if (item == nullptr) return false;
     if (dynamic_cast<FolderBox*>(item) != nullptr) return true;
     return !is_song(item) && fs::is_directory(item->path);
 }
