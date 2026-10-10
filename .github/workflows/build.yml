@@ -399,11 +399,11 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
-      - name: Install NDK r27d and CMake 3.22.1
+      - name: Install NDK r27d and CMake 3.31.6
         run: |
           SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
           yes | $SDKMANAGER --licenses >/dev/null 2>&1 || true
-          $SDKMANAGER "ndk;27.3.13750724" "cmake;3.22.1"
+          $SDKMANAGER "ndk;27.3.13750724" "cmake;3.31.6"
 
       - name: Cache FFmpeg for Android arm64
         id: cache-ffmpeg
@@ -433,7 +433,7 @@ jobs:
       - name: Write local.properties
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-          echo "cmake.dir=$ANDROID_SDK_ROOT/cmake/3.22.1" >> android/local.properties
+          echo "cmake.dir=$ANDROID_SDK_ROOT/cmake/3.31.6" >> android/local.properties
 
       - name: Decode keystore
         run: |
