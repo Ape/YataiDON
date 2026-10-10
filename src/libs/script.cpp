@@ -826,6 +826,14 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
         return global_data.config->general.display_bpm;
     });
 
+    tex.set_function("timing_offset", [](int player_num) -> sol::optional<std::string> {
+        if (!global_data.config->general.show_timing_offset) return sol::nullopt;
+        const ResultData& r = global_data.session_data[player_num].result_data;
+        if (r.hit_offset_count <= 0) return std::string("-- ms");
+        const long ms = std::lround(r.hit_offset_sum_ms / r.hit_offset_count);
+        return (ms > 0 ? "+" : "") + std::to_string(ms) + " ms";
+    });
+
     tex.set_function("song_title", []() -> std::string {
         return current_session().song_title;
     });
