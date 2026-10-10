@@ -545,6 +545,23 @@ void GameScreen::end_song() {
     }
 }
 
+void GameScreen::update_gameplay(double current_ms) {
+    poll_pending_song();
+    if (transition->is_finished()) {
+        start_song(ms_from_start);
+        reset_input_lock();
+    }
+
+    resync_song(current_ms);
+    update_background(current_ms);
+
+    for (auto& player : players) {
+        player->update(ms_from_start, current_ms, background);
+    }
+
+    song_info.update(current_ms);
+}
+
 std::optional<Screens> GameScreen::update() {
     Screen::update();
 
@@ -554,17 +571,7 @@ std::optional<Screens> GameScreen::update() {
         ms_from_start = current_ms - start_ms;
 
     transition->update(current_ms);
-    poll_pending_song();
-    if (transition->is_finished()) {
-        start_song(ms_from_start);
-        reset_input_lock();
-    }
-    resync_song(current_ms);
-    update_background(current_ms);
-
-    for (auto& player : players)
-        player->update(ms_from_start, current_ms, background);
-    song_info.update(current_ms);
+    update_gameplay(current_ms);
     update_skip();
     result_transition.update(current_ms);
 
