@@ -815,7 +815,7 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
     lua["text"] = text;
 
     tex.set_function("get_current_ms", []() -> double {
-        return get_current_ms();
+        return script_manager.current_ms_override.value_or(get_current_ms());
     });
 
     tex.set_function("player_num", []() -> int {

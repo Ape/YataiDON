@@ -115,7 +115,7 @@ void SongSelectPlayer::update(double current_time) {
         }
     }
     if (ura_switch.has_value()) ura_switch->update(current_time);
-    if (voice_played && !is_voice_playing()) {
+    if (voice_played && (global_data.config->general.fast_transitions || !is_voice_playing())) {
         is_ready = true;
     }
 }

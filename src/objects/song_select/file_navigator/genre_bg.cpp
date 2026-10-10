@@ -22,10 +22,11 @@ GenreBG::GenreBG(const std::string& text_name, std::optional<ray::Color> color, 
         shader_loaded = ray::IsShaderValid(shader);
     }
 
-    stretch = std::make_unique<MoveAnimation>(333, 20 * tex.screen_scale, false, false, 0, 0, 0, std::nullopt, EaseType::Cubic);
-    scale = std::make_unique<TextureResizeAnimation>(100, 0.9f, false, false, 1.0);
-    move = std::make_unique<MoveAnimation>(600, std::min((float)tex.screen_width, distance) * tex.screen_scale, false, false, 0, stretch->duration*1.5);
-    fade = std::make_unique<FadeAnimation>(100, 0.0, false, false, 1.0);
+    const double duration_scale = global_data.config->general.fast_transitions ? 0.2 : 1.0;
+    stretch = std::make_unique<MoveAnimation>(333 * duration_scale, 20 * tex.screen_scale, false, false, 0, 0, 0, std::nullopt, EaseType::Cubic);
+    scale = std::make_unique<TextureResizeAnimation>(100 * duration_scale, 0.9f, false, false, 1.0);
+    move = std::make_unique<MoveAnimation>(600 * duration_scale, std::min((float)tex.screen_width, distance) * tex.screen_scale, false, false, 0, stretch->duration*1.5);
+    fade = std::make_unique<FadeAnimation>(100 * duration_scale, 0.0, false, false, 1.0);
     stretch->start();
     scale->start();
     move->start();
@@ -89,4 +90,3 @@ void GenreBG::update(double current_ms, FolderBox* box) {
         box->update(current_ms);
     }
 }
-

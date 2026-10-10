@@ -23,6 +23,37 @@ SongSelectScript::SongSelectScript() {
     fn_draw_sort_window  = lua_object["draw_sort_window"];
 }
 
+double SongSelectScript::animation_ms() {
+    const double now = get_current_ms();
+
+    if (fast_open_started_ms) {
+        const double elapsed = std::clamp(now - *fast_open_started_ms, 0.0, 500.0);
+
+        if (elapsed < 500.0) return now + clock_offset_ms + elapsed * 4.0;
+
+        clock_offset_ms += 2000.0;
+        fast_open_started_ms.reset();
+    }
+
+    return now + clock_offset_ms;
+}
+
+void SongSelectScript::start_folder_open() {
+    finish_folder_open();
+
+    if (!global_data.config->general.fast_transitions) return;
+
+    fast_open_started_ms = get_current_ms();
+}
+
+void SongSelectScript::finish_folder_open() {
+    if (!fast_open_started_ms) return;
+
+    // Retain the elapsed offset so skin timers never run backwards when acceleration ends.
+    clock_offset_ms += std::clamp(get_current_ms() - *fast_open_started_ms, 0.0, 500.0) * 4.0;
+    fast_open_started_ms.reset();
+}
+
 void SongSelectScript::update(double current_ms) { call(fn_update, "SongSelect:update", current_ms); }
 void SongSelectScript::restart_text_fade()        { call(fn_restart_text_fade, "SongSelect:restart_text_fade"); }
 void SongSelectScript::draw_footer()              { call(fn_draw_footer, "SongSelect:draw_footer"); }

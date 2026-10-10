@@ -40,6 +40,7 @@ public:
     SongInfo song_info;
     std::optional<Transition> transition;
     ResultTransition result_transition;
+    static constexpr double kFastResultTransitionDelayMs = 3000.0;
     AllNetIcon allnet_indicator;
     std::optional<Background> background;
 

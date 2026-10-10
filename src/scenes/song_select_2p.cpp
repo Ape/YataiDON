@@ -133,7 +133,7 @@ std::optional<Screens> SongSelect2PScreen::update() {
 
     if (game_transition.has_value()) {
         game_transition->update(current_time);
-        if (game_transition->is_finished()) {
+        if (game_transition->is_finished() && !player->is_voice_playing() && !player_2->is_voice_playing()) {
             return on_screen_end(get_game_screen_target());
         }
     }

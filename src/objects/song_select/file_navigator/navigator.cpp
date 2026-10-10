@@ -150,6 +150,12 @@ Navigator::~Navigator() {
 void Navigator::emit_wheel_event(int id) {
     wheel_event = id;
     ++wheel_event_seq;
+    if ((id == WHEEL_EVENT_OPEN_BEGIN || id == WHEEL_EVENT_OPEN_SWAP) && script)
+        script->start_folder_open();
+
+    if (id != WHEEL_EVENT_OPEN_BEGIN && id != WHEEL_EVENT_OPEN_SWAP && script)
+        script->finish_folder_open();
+
     if (id == WHEEL_EVENT_OPEN_BEGIN || id == WHEEL_EVENT_CLOSE_BEGIN)
         wheel_leg_ms = get_current_ms();
 }
@@ -158,7 +164,10 @@ void Navigator::emit_wheel_event(int id) {
 // events; without one the screen sat empty for the rest of that time.
 bool Navigator::swap_is_early(int begin_id) const {
     if (!wheel_events_read || wheel_event != begin_id) return false;
-    return (get_current_ms() - wheel_leg_ms) < kSwapDelayMs;
+    const double duration_scale = global_data.config->general.fast_transitions &&
+        begin_id == WHEEL_EVENT_OPEN_BEGIN ? 0.2 : 1.0;
+
+    return (get_current_ms() - wheel_leg_ms) < kSwapDelayMs * duration_scale;
 }
 
 void Navigator::wait_for_song_files() {
