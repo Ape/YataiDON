@@ -307,6 +307,7 @@ Config get_config() {
     config.general.timer_frozen = config_file["general"]["timer_frozen"].value_or(true);
     config.general.song_timer = config_file["general"]["song_timer"].value_or(false);
     config.general.judge_counter = config_file["general"]["judge_counter"].value_or(false);
+    config.general.show_timing_offset = config_file["general"]["show_timing_offset"].value_or(false);
     config.general.log_level = config_file["general"]["log_level"].value_or("info");
     config.general.practice_mode_bar_delay = config_file["general"]["practice_mode_bar_delay"].value_or(1);
     config.general.score_method = config_file["general"]["score_method"].value_or("shinuchi");
@@ -448,6 +449,7 @@ void save_config(const Config& config) {
         {"timer_frozen", config.general.timer_frozen},
         {"song_timer", config.general.song_timer},
         {"judge_counter", config.general.judge_counter},
+        {"show_timing_offset", config.general.show_timing_offset},
         {"log_level", config.general.log_level},
         {"practice_mode_bar_delay", config.general.practice_mode_bar_delay},
         {"score_method", config.general.score_method},
