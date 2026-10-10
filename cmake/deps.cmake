@@ -538,6 +538,26 @@ else()
   FetchContent_MakeAvailable(rtaudio)
 endif()
 
+if(NOT EMSCRIPTEN)
+  set(LIBREMIDI_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(LIBREMIDI_TESTS OFF CACHE BOOL "" FORCE)
+  set(LIBREMIDI_NO_JACK ON CACHE BOOL "" FORCE)
+  set(LIBREMIDI_NO_PIPEWIRE ON CACHE BOOL "" FORCE)
+  set(LIBREMIDI_NO_WINMM ON CACHE BOOL "" FORCE)
+  set(LIBREMIDI_NO_WINMIDI ON CACHE BOOL "" FORCE)
+  set(LIBREMIDI_NO_NETWORK ON CACHE BOOL "" FORCE)
+  set(LIBREMIDI_NO_KEYBOARD ON CACHE BOOL "" FORCE)
+
+  FetchContent_Declare(
+    libremidi
+    GIT_REPOSITORY https://github.com/celtera/libremidi.git
+    GIT_TAG v5.4.3
+    GIT_SHALLOW TRUE
+  )
+
+  FetchContent_MakeAvailable(libremidi)
+endif()
+
 # PortAudio (Windows only -- WDM-KS / MME backends; the other Windows APIs
 # -- DirectSound/ASIO/WASAPI -- are handled by RtAudio above)
 if(WIN32)

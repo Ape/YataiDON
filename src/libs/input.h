@@ -35,6 +35,14 @@ bool check_key_released(int key);
 // only sees devices it has a gamepad mapping for.
 int take_gamepad_button_pressed();
 
+// Inject a discrete gamepad-style press into the shared input buffer. Button
+// numbers use the same IDs stored in config.toml.
+void submit_gamepad_button_press(int button);
+
+void start_midi_input(const MidiConfig& config);
+void process_midi_events();
+void shutdown_midi_input();
+
 double get_last_input_ms();
 
 // Clear all buffered input events

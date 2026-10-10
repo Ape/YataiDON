@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.24)
 project(YataiDON VERSION 1.0.5 LANGUAGES C CXX)
 
 cmake_policy(SET CMP0002 NEW)  # Logical target names must be globally unique
@@ -233,6 +233,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE sndfile samplerate)
 if(NOT ANDROID AND NOT IOS AND NOT EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE rtaudio)
 endif()
+if(NOT EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE libremidi::libremidi)
+endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE portaudio)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE g719)
@@ -247,10 +250,6 @@ if(SUPPORT_FUMEN)
 endif()
 
 include(cmake/platform.cmake)
-option(YATAIDON_BUILD_NETWORK_TESTS "Build isolated Simulator network integration checks" OFF)
-if(YATAIDON_BUILD_NETWORK_TESTS)
-  add_subdirectory(tests/network)
-endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"

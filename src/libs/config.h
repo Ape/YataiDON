@@ -78,6 +78,16 @@ struct GamepadConfig {
     std::vector<int> right_kat;
 };
 
+struct MidiConfig {
+    // Case-sensitive substring of the MIDI port name; empty disables MIDI.
+    std::string device;
+    // MIDI channels are exposed to config as 1-16; 0 accepts any channel.
+    int channel = 0;
+    // Parallel arrays: MIDI note -> gamepad button number.
+    std::vector<int> notes;
+    std::vector<int> buttons;
+};
+
 struct AudioConfig {
     int device_type = 0;
     std::string device;   // Output device name (empty = system default)
@@ -112,6 +122,7 @@ struct Config {
     Keys2PConfig keys_2p;
     GamepadConfig gamepad_1p;
     GamepadConfig gamepad_2p;
+    MidiConfig midi;
     AudioConfig audio;
     VolumeConfig volume;
     VideoConfig video;
