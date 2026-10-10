@@ -45,6 +45,8 @@ void shutdown_sdl_joysticks();
 // Platform-independent keyboard visibility control
 void set_keyboard_visible(bool visible);
 
+bool is_text_input_key(int key);
+
 // Enable/disable touch drum
 void set_touch_drum_enabled(bool enabled);
 

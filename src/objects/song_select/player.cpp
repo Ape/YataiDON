@@ -330,8 +330,8 @@ std::optional<std::string> SongSelectPlayer::handle_input_search() {
     if (action == TextEditAction::None && (is_l_don_pressed(player_num) || is_r_don_pressed(player_num)))
         action = TextEditAction::Confirm;
 #endif
-    if (action == TextEditAction::Confirm) {
-        std::string result = trim_search(search_string);
+    if (action == TextEditAction::Confirm || action == TextEditAction::Cancel) {
+        std::string result = action == TextEditAction::Confirm ? trim_search(search_string) : "";
         search_string = "";
         clear_input_buffers();
         return result;
