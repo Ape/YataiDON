@@ -231,8 +231,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE sndfile samplerate)
 if(NOT ANDROID AND NOT IOS AND NOT EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE rtaudio libremidi::libremidi)
-  target_compile_definitions(${PROJECT_NAME} PRIVATE YATAIDON_MIDI_ENABLED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE rtaudio)
+endif()
+if(NOT EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE libremidi::libremidi)
 endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE portaudio)
 
@@ -248,10 +250,6 @@ if(SUPPORT_FUMEN)
 endif()
 
 include(cmake/platform.cmake)
-option(YATAIDON_BUILD_NETWORK_TESTS "Build isolated Simulator network integration checks" OFF)
-if(YATAIDON_BUILD_NETWORK_TESTS)
-  add_subdirectory(tests/network)
-endif()
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"

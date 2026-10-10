@@ -12,7 +12,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#ifdef YATAIDON_MIDI_ENABLED
+#ifndef __EMSCRIPTEN__
 #include <libremidi/libremidi.hpp>
 #ifdef _WIN32
 #include <roapi.h>
@@ -468,7 +468,7 @@ void submit_gamepad_button_press(int button) {
     pressed_keys.insert(vkey);
 }
 
-#ifdef YATAIDON_MIDI_ENABLED
+#ifndef __EMSCRIPTEN__
 namespace {
 
 struct MidiPortEvent {
@@ -528,7 +528,7 @@ static void queue_midi_port_event(MidiInput& state, const libremidi::input_port&
 
 void start_midi_input(const MidiConfig& config) {
     if (config.device.empty()) return;
-#ifdef YATAIDON_MIDI_ENABLED
+#ifndef __EMSCRIPTEN__
     if (midi_input) {
         spdlog::warn("MIDI input listener was already started");
         return;
@@ -610,7 +610,7 @@ void start_midi_input(const MidiConfig& config) {
 }
 
 void process_midi_events() {
-#ifdef YATAIDON_MIDI_ENABLED
+#ifndef __EMSCRIPTEN__
     if (!midi_input || !midi_input->events_pending.exchange(false, std::memory_order_acquire)) return;
     auto& state = *midi_input;
     std::vector<MidiPortEvent> events;
@@ -671,7 +671,7 @@ void process_midi_events() {
 }
 
 void shutdown_midi_input() {
-#ifdef YATAIDON_MIDI_ENABLED
+#ifndef __EMSCRIPTEN__
     midi_input.reset();
 #endif
 }
