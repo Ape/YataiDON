@@ -316,7 +316,9 @@ static void run_frame() {
     ray::PollInputEvents();
 #if defined(YATAIDON_PLATFORM_IOS)
     if (ios_is_suspended_state()) return;
-    poll_keyboard_once();
+#endif
+#if defined(YATAIDON_PLATFORM_IOS) || defined(__EMSCRIPTEN__)
+    poll_keyboard_once();  // no input thread on these platforms
 #endif
     poll_touch_once();
 

@@ -3,6 +3,8 @@
 #include <spdlog/spdlog.h>
 #include <filesystem>
 #include <chrono>
+#include <csignal>
+#include <unistd.h>
 #include <thread>
 
 #ifdef __EMSCRIPTEN__
@@ -74,13 +76,5 @@ void emscripten_sync_filesystem() {
     });
 #else
     // Nothing to do on non-Emscripten
-#endif
-}
-
-void emscripten_sleep(unsigned int ms) {
-#ifdef __EMSCRIPTEN__
-    emscripten_sleep(ms);
-#else
-    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 #endif
 }

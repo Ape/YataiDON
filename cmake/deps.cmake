@@ -347,8 +347,6 @@ elseif(EMSCRIPTEN)
   message(STATUS "FFmpeg disabled on Emscripten -- video/av features unavailable until ported")
   foreach(_lib avformat avcodec avutil swscale swresample)
     add_library(FFmpeg::${_lib} INTERFACE IMPORTED)
-    set_target_properties(FFmpeg::${_lib} PROPERTIES
-      INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/src/libs")
   endforeach()
 elseif(IOS)
   set(IOS_FFMPEG_PREFIX "" CACHE PATH "iOS FFmpeg prefix from tools/build_ffmpeg_ios.sh")
@@ -482,13 +480,15 @@ if(APPLE AND NOT IOS)
   set(USE_APPLE_IDN ON CACHE BOOL "" FORCE)
 endif()
 
-FetchContent_Declare(
-    cpr
-    GIT_REPOSITORY https://github.com/libcpr/cpr.git
-    GIT_TAG        1.11.2
-    GIT_SHALLOW    TRUE
-)
-FetchContent_MakeAvailable(cpr)
+if(NOT EMSCRIPTEN)  # no curl/SSL on web; browser build has no cpr users
+  FetchContent_Declare(
+      cpr
+      GIT_REPOSITORY https://github.com/libcpr/cpr.git
+      GIT_TAG        1.11.2
+      GIT_SHALLOW    TRUE
+  )
+  FetchContent_MakeAvailable(cpr)
+endif()
 
 # miniz (ZIP reading, used for .osz extraction)
 message(STATUS "Fetching miniz...")

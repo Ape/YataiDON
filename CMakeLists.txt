@@ -14,6 +14,12 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+if(EMSCRIPTEN)
+  # std::thread is used throughout; every object (deps included) must be built with atomics.
+  add_compile_options(-pthread)
+  add_link_options(-pthread)
+endif()
+
 include(FetchContent)
 if(IOS)
   # Device and Simulator can both be arm64 but cannot share dependency binaries.
@@ -47,7 +53,7 @@ endif()
 
 set(DATATABLE_SEED "${_env_DATATABLE_SEED}" CACHE STRING "Decryption seed for the gen 4 datatable")
 set(FUMEN_SEED "${_env_FUMEN_SEED}" CACHE STRING "Decryption seed for gen 4 fumen")
-if(DATATABLE_SEED AND FUMEN_SEED)
+if(DATATABLE_SEED AND FUMEN_SEED AND NOT EMSCRIPTEN)  # optional features need FFmpeg etc.
   set(SUPPORT_FUMEN ON)
 else()
   set(SUPPORT_FUMEN OFF)
@@ -198,7 +204,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     miniz
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
+if(NOT EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE cpr::cpr)
+endif()
 
 if(YATAIDON_PROFILER)
   target_link_libraries(${PROJECT_NAME} PRIVATE Tracy::TracyClient)
