@@ -16,6 +16,7 @@ struct GeneralConfig {
     bool timer_frozen = false;
     bool song_timer = false;
     bool judge_counter = false;
+    bool show_timing_offset = false;
     std::string log_level;
     int practice_mode_bar_delay = 0;
     std::string score_method;
