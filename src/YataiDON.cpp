@@ -553,11 +553,7 @@ int main(int argc, char* argv[]) {
 #endif
 
     rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD, RL_FUNC_ADD);
-#if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS) || defined(__EMSCRIPTEN__)
     ray::SetExitKey(ray::KEY_NULL);
-#else
-    ray::SetExitKey(global_data.config->keys.exit_key);
-#endif
     ray::HideCursor();
 
     L.next_frame_time = std::chrono::steady_clock::now();
@@ -568,7 +564,12 @@ int main(int argc, char* argv[]) {
 #else
     input_thread = std::thread(input_polling_thread);
 
-    while (!ray::WindowShouldClose() && !check_key_pressed(global_data.config->keys.exit_key)) {
+    while (!ray::WindowShouldClose()) {
+        // Consume buffered quit-key presses while editing to prevent a delayed game exit after the field closes.
+        if (check_key_pressed(global_data.config->keys.exit_key) &&
+            !is_text_input_key(global_data.config->keys.exit_key)) {
+            break;
+        }
         run_frame();
     }
 

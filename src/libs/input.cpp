@@ -490,7 +490,19 @@ void shutdown_sdl_joysticks() {
     sdl_joysticks_init_done = false;
 }
 
+static bool keyboard_editing = false;
+
+bool is_text_input_key(int key) {
+    if (!keyboard_editing) return false;
+
+    return (key >= ray::KEY_SPACE && key <= ray::KEY_GRAVE) ||
+           (key >= ray::KEY_KP_0 && key <= ray::KEY_KP_EQUAL) ||
+           (key >= ray::KEY_ESCAPE && key <= ray::KEY_END) ||
+           (key >= ray::KEY_LEFT_SHIFT && key <= ray::KEY_RIGHT_SUPER);
+}
+
 void set_keyboard_visible(bool visible) {
+    keyboard_editing = visible;
     #if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
         int count = 0;
         SDL_Window** windows = SDL_GetWindows(&count);

@@ -104,6 +104,7 @@ void SongSelectScreen::handle_input_search() {
     search_box->current_search = player->search_string;
     if (result) {
         search_box.reset();
+        set_keyboard_visible(false);
         state = SongSelectState::BROWSING;
         // Enter on an empty (or blank) query just closes the box: there is nothing to
         // search for, so do not open the search folder.
@@ -331,6 +332,7 @@ std::optional<Screens> SongSelectScreen::update() {
 }
 
 Screens SongSelectScreen::on_screen_end(Screens next_screen) {
+    if (search_box) set_keyboard_visible(false);
     if (stats_future.valid()) stats_future.wait();
     navigator.join_loader();
     ray::UnloadShader(shader);
