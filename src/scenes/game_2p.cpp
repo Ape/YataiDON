@@ -56,19 +56,7 @@ std::optional<Screens> Game2PScreen::update() {
     if (!paused) {
         ms_from_start = current_time - start_ms;
     }
-    poll_pending_song();
-    if (transition->is_finished()) {
-        start_song(ms_from_start);
-        reset_input_lock();
-    }
-    resync_song(current_time);
-
-    update_background(current_time);
-
-    for (auto& p : players) {
-        p->update(ms_from_start, current_time, background);
-    }
-    song_info.update(current_time);
+    update_gameplay(current_time);
     result_transition.update(current_time);
 
     if (result_transition.is_finished && !audio.is_sound_playing("result_transition")) {
