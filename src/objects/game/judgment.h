@@ -11,7 +11,7 @@ private:
 
     FadeAnimation* fade_animation_1;
     FadeAnimation* fade_animation_2;
-    FadeAnimation* fade_animation_3;
+    FadeAnimation* fade_animation_3 = nullptr;  // null when the skin has no animation 77
     MoveAnimation* move_animation;
     TextureChangeAnimation* texture_animation;
     TextureObject* t_effect = nullptr;
