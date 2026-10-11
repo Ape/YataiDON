@@ -1,4 +1,3 @@
-#include "../../../libs/localized_text.h"
 #include "box_song.h"
 #include "../../../libs/text.h"
 #include "navigator.h"

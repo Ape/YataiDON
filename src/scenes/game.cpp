@@ -1,4 +1,4 @@
-#include "../libs/localized_text.h"
+#include "../libs/text.h"
 #include "game.h"
 #include "../libs/animation.h"
 #include "../libs/scores.h"

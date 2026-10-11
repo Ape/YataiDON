@@ -1,4 +1,4 @@
-#include "../../../libs/localized_text.h"
+#include "../../../libs/text.h"
 #include "box_dan.h"
 #include "../../../libs/song_parser.h"
 #include "../../../libs/scores.h"

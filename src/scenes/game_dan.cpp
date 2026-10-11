@@ -1,4 +1,4 @@
-#include "../libs/localized_text.h"
+#include "../libs/text.h"
 #include "game_dan.h"
 #include <algorithm>
 #include "../libs/input.h"

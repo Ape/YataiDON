@@ -1,4 +1,4 @@
-#include "../libs/localized_text.h"
+#include "../libs/text.h"
 #include "dan_select.h"
 #include <tuple>
 #include <climits>
