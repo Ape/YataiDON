@@ -6,6 +6,7 @@
 #include "../objects/global/coin_overlay.h"
 #include "../objects/global/indicator.h"
 #include "../objects/song_select/modifier.h"
+#include "../objects/song_select/dan_transition.h"
 #include "../objects/global/timer.h"
 #include "../objects/global/chara_3d.h"
 #include "../objects/global/nameplate.h"
@@ -138,6 +139,7 @@ private:
     AllNetIcon allnet_indicator;
     std::unique_ptr<Indicator> indicator;
     SongSelectState state = SongSelectState::BROWSING;
+    std::optional<DanTransition> dan_transition;  // plays on leaving for song select
 
     std::unique_ptr<Chara3D> chara;
     Nameplate nameplate;
@@ -190,6 +192,7 @@ private:
     void   publish_scan_state(double current_ms);
 
     std::optional<Screens> tick_timer(double current_ms);
+    std::optional<Screens> start_dan_transition();
     void open_confirm(double current_ms);
 
     void handle_input_browsing(double current_ms);

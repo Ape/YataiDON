@@ -659,6 +659,7 @@ void DanSelectScreen::on_screen_start() {
     indicator     = std::make_unique<Indicator>(Indicator::State::SELECT);
     confirm_fade  = dynamic_cast<FadeAnimation*>(tex.get_animation(8));
     state         = SongSelectState::BROWSING;
+    dan_transition.reset();
     confirm_index = CONFIRM_NO;
     last_moved    = 0;
     modifier_selector.reset();
@@ -784,6 +785,14 @@ void DanSelectScreen::open_confirm(double current_ms) {
     }
 }
 
+std::optional<Screens> DanSelectScreen::start_dan_transition() {
+    // skins without a dan_transition folder go straight back
+    if (!tex.has_texture("dan_transition/background")) return on_screen_end(Screens::SONG_SELECT);
+    dan_transition.emplace(19);
+    dan_transition->start();
+    return std::nullopt;
+}
+
 Screens DanSelectScreen::on_screen_end(Screens next_screen) {
     dan_navigator.abort_init();
     DanBox* current = dan_navigator.get_current();
@@ -890,6 +899,11 @@ std::optional<Screens> DanSelectScreen::update() {
     confirm_fade->update(current_ms);
     nameplate.update(current_ms);
     if (chara) chara->update(current_ms);
+    if (dan_transition.has_value()) {
+        dan_transition->update(current_ms);
+        if (dan_transition->is_finished()) return on_screen_end(Screens::SONG_SELECT);
+        return std::nullopt;
+    }
     if (auto next = tick_timer(current_ms)) return next;
 
     if (state == SongSelectState::BROWSING) {
@@ -907,7 +921,7 @@ std::optional<Screens> DanSelectScreen::update() {
 
     // Back: left kat in browsing with no songs or specific back logic
     if (check_key_pressed(global_data.config->keys.back_key) && state == SongSelectState::BROWSING) {
-        return on_screen_end(Screens::SONG_SELECT);
+        return start_dan_transition();
     }
     return std::nullopt;
 }
@@ -967,4 +981,6 @@ void DanSelectScreen::draw() {
     if (select_timer) select_timer->draw();
 
     indicator->draw_top();
+
+    if (dan_transition.has_value()) dan_transition->draw();
 }
