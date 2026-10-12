@@ -7,6 +7,8 @@ class DanBox : public BaseBox {
 public:
     std::string dan_title;
     int dan_color = 0;
+    std::vector<bool> song_masked;  // hidden songs not yet reached
+    int clear_mark = 0;  // 0 none, 1 passed, 2 perfect (from the saved dan record)
     int dan_rank = -1;   // -1 = unearned/not yet ranked
     int dan_index = -1;  // -1 = unselected
     bool gaiden = false;

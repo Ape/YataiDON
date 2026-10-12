@@ -234,8 +234,18 @@ std::optional<Screens> DanSelectScreen::handle_input_selected() {
         return std::nullopt;
     }
 
-    if (l_kat) { audio.play_sound("kat", VolumePreset::SOUND); confirm_index = std::max(confirm_index - 1, (int)CONFIRM_OPTION); }
-    if (r_kat) { audio.play_sound("kat", VolumePreset::SOUND); confirm_index = std::min(confirm_index + 1, (int)CONFIRM_NO); }
+    // Entries run OPTION, YES, NO left to right; a skin that puts YES right of NO flips that order
+    const bool yes_right = [] {
+        if (!tex.has_texture("dan_select/confirm_box/yes") || !tex.has_texture("dan_select/confirm_box/no")) return false;
+        TextureObject* yes = tex.get_texture("dan_select/confirm_box/yes");
+        TextureObject* no  = tex.get_texture("dan_select/confirm_box/no");
+        return yes && no && !yes->x.empty() && !no->x.empty() && yes->x[0] > no->x[0];
+    }();
+    const int order[3] = {CONFIRM_OPTION, yes_right ? CONFIRM_NO : CONFIRM_YES, yes_right ? CONFIRM_YES : CONFIRM_NO};
+    int slot = (int)(std::find(order, order + 3, confirm_index) - order);
+    if (l_kat) { audio.play_sound("kat", VolumePreset::SOUND); slot = std::max(slot - 1, 0); }
+    if (r_kat) { audio.play_sound("kat", VolumePreset::SOUND); slot = std::min(slot + 1, 2); }
+    confirm_index = order[slot];
 
     if (!don) return std::nullopt;
 
@@ -297,8 +307,12 @@ void DanSelectScreen::draw() {
 
     dan_navigator.draw();
 
-    if (chara) chara->draw(187.0f, 934.0f, 0.8f);
-    nameplate.draw(23.4f, 922.0f);
+    // Lumen DonModel rests in the same 200x200 box as song select, so share its slots
+    const bool p1 = global_data.player_num == PlayerNum::P1;
+    const SkinInfo& chara_pos = tex.skin_config[p1 ? SC::SONG_SELECT_CHARA_1P : SC::SONG_SELECT_CHARA_2P];
+    const SkinInfo& plate_pos = tex.skin_config[p1 ? SC::SONG_SELECT_NAMEPLATE_1P : SC::SONG_SELECT_NAMEPLATE_2P];
+    if (chara) chara->draw(chara_pos.x, chara_pos.y, 1.0f);
+    nameplate.draw(plate_pos.x, plate_pos.y);
 
     if (state == SongSelectState::SONG_SELECTED) {
         if (scene && confirm_fade->attribute > 0) scene->draw_confirm(confirm_fade->attribute, confirm_index);

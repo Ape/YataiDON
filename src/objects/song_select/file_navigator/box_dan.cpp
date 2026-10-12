@@ -41,17 +41,18 @@ void DanBox::load_text() {
 
     int revealed = 0;
     {
+        // rank: 1 = played/failed, 2..7 = passes (7 = rainbow)
+        auto rec = scores_manager.get_dan_record(
+            get_player_id(global_data.player_num), dan_title);
+        if (rec) clear_mark = rec->rank >= 7 ? 2 : (rec->rank >= 2 ? 1 : 0);
         bool any_hidden = false;
         for (const auto& e : songs) any_hidden |= e.hidden;
-        if (any_hidden) {
-            auto rec = scores_manager.get_dan_record(
-                get_player_id(global_data.player_num), dan_title);
-            if (rec && rec->rank > 0) revealed = rec->arrival;
-        }
+        if (any_hidden && rec && rec->rank > 0) revealed = rec->arrival;
     }
 
     const std::string& lang = global_data.config->general.language;
     int song_idx = 0;
+    song_masked.clear();
     const bool have_titles = song_titles.size() == songs.size();
     for (auto& entry : songs) {
         std::string title_str, sub_str;
@@ -63,7 +64,9 @@ void DanBox::load_text() {
             title_str = localized_text(sp.metadata.title, lang, LocalizedTextFallback::ENGLISH);
             sub_str   = localized_text(sp.metadata.subtitle, lang, LocalizedTextFallback::NONE);
         }
-        if (entry.hidden && song_idx >= revealed) {
+        const bool masked = entry.hidden && song_idx >= revealed;
+        song_masked.push_back(masked);
+        if (masked) {
             title_str = "？？？";
             sub_str.clear();
         }
