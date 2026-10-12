@@ -6,6 +6,7 @@
 #include "color_utils.h"
 #include "../song_select_script.h"
 #include "../../../libs/filesystem.h"
+#include "../../../libs/text_encoding.h"
 #ifdef _WIN32
 #include "../../../platform/platform_windows.h"
 #endif
@@ -1366,6 +1367,7 @@ BoxDef Navigator::parse_box_def_uncached(const fs::path& path) {
         if (line.size() >= 3 && (unsigned char)line[0] == 0xEF &&
             (unsigned char)line[1] == 0xBB && (unsigned char)line[2] == 0xBF)
             line.erase(0, 3);
+        line = utf8_from_utf8_or_sjis(line);   // box.def files from older simulators are Shift-JIS
         line.erase(0, line.find_first_not_of(" \t\r\n"));
         line.erase(line.find_last_not_of(" \t\r\n") + 1);
         auto get_value = [&](const std::string& prefix) -> std::string {

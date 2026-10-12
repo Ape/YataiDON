@@ -216,6 +216,15 @@ if(CARD_READER_ENABLED)
   target_compile_definitions(${PROJECT_NAME} PRIVATE CARD_READER_ENABLED)
 endif()
 
+# Shift-JIS charts and box.def files are converted with iconv outside Windows (src/libs/text_encoding.cpp)
+if(NOT WIN32 AND NOT EMSCRIPTEN)
+  find_package(Iconv)
+  if(Iconv_FOUND)
+    target_link_libraries(${PROJECT_NAME} PRIVATE Iconv::Iconv)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE YATAIDON_HAVE_ICONV)
+  endif()
+endif()
+
 if(NETWORK_ENABLED)
   target_compile_definitions(${PROJECT_NAME} PRIVATE
     NETWORK_ENABLED
