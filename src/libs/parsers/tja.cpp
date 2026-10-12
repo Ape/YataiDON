@@ -1,4 +1,5 @@
 #include "tja.h"
+#include "../text.h"
 #include "../profiler.h"
 #include "../md5.h"
 #include <algorithm>
@@ -113,7 +114,12 @@ static std::vector<std::string> read_lines_once(const std::filesystem::path& pat
     if (byte(0) == 0xEF && byte(1) == 0xBB && byte(2) == 0xBF) encoding = "utf-8-sig";
     else if (byte(0) == 0xFF && byte(1) == 0xFE) encoding = "utf-16-le";
     else if (byte(0) == 0xFE && byte(1) == 0xFF) encoding = "utf-16-be";
-    else encoding = "shift-jis";
+    else {
+        // No BOM: UTF-8 or Shift-JIS. Shift-JIS is converted here, so titles and file names are
+        // UTF-8 from here on either way (it used to stay Shift-JIS and showed as '?')
+        encoding = "utf-8";
+        if (!is_valid_utf8(raw)) raw = utf8_from_utf8_or_sjis(raw);
+    }
 
     std::vector<std::string> lines;
     size_t start = (encoding == "utf-8-sig") ? 3 : 0;

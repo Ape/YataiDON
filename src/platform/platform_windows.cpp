@@ -288,6 +288,18 @@ std::string win32_path_to_string(const std::filesystem::path& path) {
     return path.string(); // fallback
 }
 
+std::string win32_utf8_from_sjis(std::string_view text) {
+    const int wlen = MultiByteToWideChar(932, 0, text.data(), static_cast<int>(text.size()), nullptr, 0);
+    if (wlen <= 0) return std::string(text);
+    std::wstring wide(static_cast<size_t>(wlen), L'\0');
+    MultiByteToWideChar(932, 0, text.data(), static_cast<int>(text.size()), wide.data(), wlen);
+    const int len = WideCharToMultiByte(CP_UTF8, 0, wide.data(), wlen, nullptr, 0, nullptr, nullptr);
+    if (len <= 0) return std::string(text);
+    std::string out(static_cast<size_t>(len), '\0');
+    WideCharToMultiByte(CP_UTF8, 0, wide.data(), wlen, out.data(), len, nullptr, nullptr);
+    return out;
+}
+
 bool win32_list_dir(const std::filesystem::path& dir, std::vector<Win32DirEntry>& out) {
     WIN32_FIND_DATAW fd;
     HANDLE h = FindFirstFileExW((dir.wstring() + L"\\*").c_str(), FindExInfoBasic, &fd,

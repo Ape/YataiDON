@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include <optional>
 #include <vector>
 
@@ -38,6 +39,9 @@ bool win32_is_key_down_native(int raylib_key);
 
 // Converts a filesystem::path to a string suitable for Windows APIs (CP932 for Japanese).
 std::string win32_path_to_string(const std::filesystem::path& path);
+
+// Shift-JIS (code page 932) text as UTF-8; the bytes unchanged when they do not convert.
+std::string win32_utf8_from_sjis(std::string_view text);
 
 // One entry of a directory listing, with the attributes the listing already carries.
 struct Win32DirEntry {
