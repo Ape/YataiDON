@@ -1095,6 +1095,7 @@ void Navigator::load_collection_recommended(const fs::path& path, const BoxDef& 
         if (abort_loading) break;
         const fs::path& song_path = all_songs[i];
         auto song = make_song_box(song_path, box_def, SongParser(song_path));
+        song->preserve_order = true;
         fs::path genre_folder = find_box_def_folder(song_path);
         if (!genre_folder.empty())
             apply_song_genre(song.get(), parse_box_def(genre_folder));
