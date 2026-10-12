@@ -6,13 +6,15 @@ DanTransition::DanTransition(int base_id) : base_id(base_id) {
     started = false;
 }
 
-void DanTransition::start() {
-    slide_in = dynamic_cast<MoveAnimation*>(tex.get_animation(base_id + 0));
-    if (!slide_in) throw std::runtime_error("DanTransition: animation base_id is not a MoveAnimation");
-    don_rise = dynamic_cast<MoveAnimation*>(tex.get_animation(base_id + 1));
-    emblem_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(base_id + 2));
-    emblem_spin = dynamic_cast<MoveAnimation*>(tex.get_animation(base_id + 3));
-    flash = dynamic_cast<FadeAnimation*>(tex.get_animation(base_id + 4));
+bool DanTransition::start() {
+    // a skin's own animation.json may predate these ids, or use them for other animations
+    auto anim = [](int id) { return tex.has_animation(id) ? tex.get_animation(id) : nullptr; };
+    slide_in = dynamic_cast<MoveAnimation*>(anim(base_id + 0));
+    if (!slide_in) return false;
+    don_rise = dynamic_cast<MoveAnimation*>(anim(base_id + 1));
+    emblem_fade = dynamic_cast<FadeAnimation*>(anim(base_id + 2));
+    emblem_spin = dynamic_cast<MoveAnimation*>(anim(base_id + 3));
+    flash = dynamic_cast<FadeAnimation*>(anim(base_id + 4));
     // the Don, emblem and flash are optional: skins with only a curtain still work
     if (!tex.has_texture("dan_transition/flash") || !don_rise || !emblem_fade || !emblem_spin || !flash)
         don_rise = emblem_spin = nullptr, emblem_fade = flash = nullptr;
@@ -28,6 +30,7 @@ void DanTransition::start() {
         t_emblem = tex.get_texture("dan_transition/emblem");
         t_flash = tex.get_texture("dan_transition/flash");
     }
+    return true;
 }
 
 void DanTransition::update(double current_ms) {
