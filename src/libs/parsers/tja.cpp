@@ -830,7 +830,7 @@ void TJAParser::register_extended_commands(std::map<std::string, CommandHandler>
             if (a.size() > 3 && calcs.count(a[3])) ev.calc = calcs.at(a[3]);
             s.open_cam[prop] = push(s, ev);
         };
-        registry[base + "END"] = [=](const std::string&, ParserState& s) {
+        registry[base + "END"] = [=, this](const std::string&, ParserState& s) {
             auto it = s.open_cam.find(prop);
             if (it == s.open_cam.end()) return;
             it->second->end_time = this->current_ms;

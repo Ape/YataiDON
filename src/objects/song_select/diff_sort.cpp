@@ -243,7 +243,6 @@ void DiffSortSelect::draw_statistics() {
             counter = std::to_string(selected_level);
         }
         float margin = tex.skin_config[SC::DIFF_SORT_MARGIN_1].x;
-        float total_width = counter.size() * margin;
         for (size_t i = 0; i < counter.size(); i++) {
             int digit = counter[i] - '0';
             tex.draw_texture(t_stat_num_star, {.frame=digit, .x=tex.skin_config[SC::DIFF_SORT_STAT_NUM_STAR].x-(counter.size() - i) * margin, .y=tex.skin_config[SC::DIFF_SORT_STAT_NUM_STAR].y});
@@ -253,7 +252,7 @@ void DiffSortSelect::draw_statistics() {
             ? std::to_string(statistics[prev_diff][prev_level].total)
             : std::to_string(statistics[selected_box][selected_level].total);
         margin = tex.skin_config[SC::DIFF_SORT_MARGIN_2].x;
-        total_width = counter.size() * margin;
+        float total_width = counter.size() * margin;
         for (size_t i = 0; i < counter.size(); i++) {
             int digit = counter[i] - '0';
             tex.draw_texture(t_stat_num, {.frame=digit, .x=-(total_width/2)+(i*margin)});
