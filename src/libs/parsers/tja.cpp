@@ -1,5 +1,5 @@
 #include "tja.h"
-#include "../text_encoding.h"
+#include "../text.h"
 #include "../profiler.h"
 #include "../md5.h"
 #include <algorithm>

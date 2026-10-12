@@ -6,7 +6,7 @@
 #include "color_utils.h"
 #include "../song_select_script.h"
 #include "../../../libs/filesystem.h"
-#include "../../../libs/text_encoding.h"
+#include "../../../libs/text.h"
 #ifdef _WIN32
 #include "../../../platform/platform_windows.h"
 #endif
