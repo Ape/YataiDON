@@ -61,6 +61,7 @@ ResultPlayer::ResultPlayer(PlayerNum player_num, bool has_2p, bool is_2p)
         preload("BottomCharacters",   "bottom_characters");
         preload("ResultCrown",        "result_crown");
         preload("ResultCrownMessage", "result_crown_message");
+        preload("ResultBasin",        "result_basin");
         preload("HighScoreIndicator", "high_score_indicator");
     }
 
@@ -87,6 +88,7 @@ ResultPlayer::ResultPlayer(PlayerNum player_num, bool has_2p, bool is_2p)
     fn_update     = lua_object["update"];
     fn_draw       = lua_object["draw"];
     fn_draw_gauge = lua_object["draw_gauge"];
+    fn_draw_front = lua_object["draw_front"];
     fn_chara_pos  = lua_object["chara_pos"];
     fn_nameplate_pos = lua_object["nameplate_pos"];
 }
@@ -162,6 +164,13 @@ void ResultPlayer::update(double current_ms, bool fade_in_finished, bool is_skip
         }
     }
     update_score_animation(current_ms, is_skipped);
+    if (!miss_loop_started && lua_object.valid()) {
+        sol::optional<bool> miss_loop = lua_object["chara_miss_loop"];
+        if (miss_loop && miss_loop.value()) {
+            chara->set_anim(AnimIndex::DON_MISS6);
+            miss_loop_started = true;
+        }
+    }
     call(fn_update, "ResultPlayer:update",
          current_ms, fade_in_finished,
          score, good, ok, bad, max_combo, total_drumroll, is_skipped);
@@ -193,6 +202,7 @@ void ResultPlayer::draw() {
         }
     }
     chara->draw(cx, cy, cs);
+    if (fn_draw_front.valid()) call(fn_draw_front, "ResultPlayer:draw_front");
     call(fn_draw_gauge, "ResultPlayer:draw_gauge");
     float nx = tex.skin_config[SC::RESULT_NAMEPLATE].x;
     float ny = tex.skin_config[SC::RESULT_NAMEPLATE].y
