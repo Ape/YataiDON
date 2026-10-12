@@ -38,6 +38,7 @@ private:
     sol::protected_function fn_update;
     sol::protected_function fn_draw_bg;
     sol::protected_function fn_draw_fg;
+    sol::protected_function fn_is_ready;
 
     std::vector<ray::Texture2D> costume_icons;
     std::vector<int> costume_ids;
@@ -47,6 +48,13 @@ private:
     int picked_head_id = -1;
 
     TextureObject* t_item_box = nullptr;
+
+    // icon glide after a selection change (matches SCROLL_MS in costume_menu.lua)
+    static constexpr double ICON_SCROLL_MS = 67.0;
+    double now_ms = 0.0;
+    int icon_prev_index = -1;
+    int icon_scroll_dir = 0;
+    double icon_scroll_start = 0.0;
 
     void load_costume_icons(const std::string& subdir, const std::string& json_key);
 

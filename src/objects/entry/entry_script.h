@@ -1,4 +1,6 @@
 #pragma once
+#include <optional>
+#include <utility>
 #include "../../libs/script.h"
 
 class EntryScript : public LuaScript {
@@ -12,6 +14,8 @@ private:
     sol::protected_function fn_draw_side_select_buttons;
     sol::protected_function fn_decide_side_select;
     sol::protected_function fn_draw_footer;
+    sol::protected_function fn_draw_waiting;
+    sol::protected_function fn_wait_chara_pos;
     sol::protected_function fn_draw_player_entry;
 
 public:
@@ -25,5 +29,8 @@ public:
     void draw_side_select_buttons(int side);
     void decide_side_select(int side);
     void draw_footer(bool p1_joined, bool p2_joined);
+    void draw_waiting();
+    // where the Chara3D of a wait panel stands; nullopt if the skin has no wait panels
+    std::optional<std::pair<float, float>> wait_chara_pos(bool p2);
     void draw_player_entry();
 };

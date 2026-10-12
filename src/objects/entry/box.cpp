@@ -4,6 +4,18 @@
 static constexpr int ENTRY_BOX_MOVE_ANIM_ID = 10;
 static constexpr int ENTRY_BOX_OPEN_ANIM_ID = 11;
 
+static const char* mode_key(Screens location) {
+    switch (location) {
+        case Screens::SONG_SELECT:
+        case Screens::SONG_SELECT_2P:   return "entry_game";
+        case Screens::DAN_SELECT:       return "entry_dan";
+        case Screens::PRACTICE_SELECT:  return "entry_practice";
+        case Screens::ENTRY:            return "entry_costume";
+        case Screens::SETTINGS:         return "entry_settings";
+        default:                        return "";
+    }
+}
+
 Box::Box(const std::string& text_str, int font_size, Screens location) : location(location) {
     auto box_tex = tex.textures.find("mode_select/box");
     if (box_tex == tex.textures.end() || !box_tex->second) {
@@ -31,7 +43,7 @@ Box::Box(const std::string& text_str, int font_size, Screens location) : locatio
     static_left = left_x;
     right_x = left_x + tex.textures["mode_select/box"]->width - tex.textures["mode_select/box_highlight_right"]->width;
     static_right = right_x;
-    if (!load("EntryBox", "box", text_str, font_size)) {
+    if (!load("EntryBox", "box", text_str, font_size, std::string(mode_key(location)))) {
         spdlog::error("Box: failed to load EntryBox/box script; draw() will be a no-op");
         return;
     }
@@ -116,6 +128,6 @@ void Box::move_down() {
     moving_down = true;
 }
 
-void Box::draw(float fade) {
-    call(fn_draw, "EntryBox:draw", x, left_x, right_x, is_selected, move->is_finished, (float)open->attribute, fade, y_pos);
+void Box::draw(float fade, bool has_prev, bool has_next, bool disabled) {
+    call(fn_draw, "EntryBox:draw", x, left_x, right_x, is_selected, move->is_finished, (float)open->attribute, fade, y_pos, has_prev, has_next, disabled);
 }

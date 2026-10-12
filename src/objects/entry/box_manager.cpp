@@ -92,8 +92,14 @@ void BoxManager::change_board_list() {
     selected_box_index = 0;
 }
 
+// practice has no 2P mode: with two players in, its board is greyed out
+bool BoxManager::is_disabled(int index) const {
+    return is_2p && boxes[index]->location == Screens::PRACTICE_SELECT;
+}
+
 bool BoxManager::selection_allowed() const {
-    return !(is_2p && boxes[selected_box_index]->location == Screens::DAN_SELECT);
+    return !is_disabled(selected_box_index) &&
+           !(is_2p && boxes[selected_box_index]->location == Screens::DAN_SELECT);
 }
 
 void BoxManager::select_box() {
@@ -173,7 +179,7 @@ void BoxManager::update(double current_time_ms, bool two_player) {
 }
 
 void BoxManager::draw() {
-    for (auto& box : boxes) {
-        box->draw(fade_out->attribute);
+    for (int i = 0; i < num_boxes; i++) {
+        boxes[i]->draw(fade_out->attribute, i > 0, i < num_boxes - 1, is_disabled(i));
     }
 }

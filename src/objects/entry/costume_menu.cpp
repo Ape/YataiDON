@@ -19,6 +19,7 @@ CostumeMenu::CostumeMenu(PlayerNum player_num) : player_num(player_num), is_2p(p
     fn_update  = lua_object["update"];
     fn_draw_bg = lua_object["draw_bg"];
     fn_draw_fg = lua_object["draw_fg"];
+    fn_is_ready = lua_object["is_ready"];
 }
 
 CostumeMenu::~CostumeMenu() {
@@ -27,6 +28,8 @@ CostumeMenu::~CostumeMenu() {
 }
 
 void CostumeMenu::load_costume_icons(const std::string& subdir, const std::string& json_key) {
+    icon_prev_index = -1;
+    icon_scroll_dir = 0;
     for (auto& icon : costume_icons)
         ray::UnloadTexture(icon);
     costume_icons.clear();
@@ -153,6 +156,7 @@ void CostumeMenu::apply_preset(const std::string& item) {
 }
 
 void CostumeMenu::update(double current_time_ms) {
+    now_ms = current_time_ms;
     call(fn_update, "CostumeMenu:update", current_time_ms);
 }
 
@@ -170,6 +174,7 @@ std::string CostumeMenu::get_costume_name() const {
 }
 
 void CostumeMenu::handle_input() {
+    if (fn_is_ready.valid() && !call_r<bool>(fn_is_ready, "CostumeMenu:is_ready").value_or(true)) return;
     if (costume_select_mode) {
         if (!costume_icons.empty()) {
             int n = (int)costume_icons.size();
@@ -247,7 +252,7 @@ void CostumeMenu::handle_input() {
 }
 
 void CostumeMenu::draw(float x, float y) {
-    call(fn_draw_bg, "CostumeMenu:draw_bg", x, y, selected_index, costume_select_mode, preset_seq);
+    call(fn_draw_bg, "CostumeMenu:draw_bg", x, y, selected_index, costume_select_mode, preset_seq, static_cast<int>(pick_stage));
 
     constexpr float ITEM_W = 80.0f;
 
@@ -255,6 +260,17 @@ void CostumeMenu::draw(float x, float y) {
         float base_x = t_item_box->x[0] + x;
         float base_y = t_item_box->y[0] + y;
         int n = (int)costume_icons.size();
+        if (costume_icon_index != icon_prev_index) {
+            if (icon_prev_index >= 0) {
+                int step = ((costume_icon_index - icon_prev_index) % n + n) % n;
+                icon_scroll_dir = step == 1 ? 1 : (step == n - 1 ? -1 : 0);
+                icon_scroll_start = now_ms;
+            }
+            icon_prev_index = costume_icon_index;
+        }
+        float glide = icon_scroll_dir * ITEM_W *
+            (1.0f - std::clamp((float)((now_ms - icon_scroll_start) / ICON_SCROLL_MS), 0.0f, 1.0f));
+        base_x += glide;
         int slots = std::min(5, n);
         for (int i = 0; i < slots; i++) {
             int idx = ((costume_icon_index - 2 + i) % n + n) % n;

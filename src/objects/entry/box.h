@@ -34,5 +34,5 @@ public:
     void move_right();
     void move_up();
     void move_down();
-    void draw(float fade);
+    void draw(float fade, bool has_prev = false, bool has_next = false, bool disabled = false);
 };

@@ -55,6 +55,7 @@ private:
     std::unique_ptr<Timer> timer;
 
     std::unique_ptr<Chara3D> chara;
+    std::unique_ptr<Chara3D> wait_chara[2];  // wait panels, P1 / P2
     bool announce_played = false;
     std::vector<std::unique_ptr<EntryPlayer>> players;
 
@@ -68,6 +69,7 @@ private:
     bool local_login_ = false;   // Don pressed: scores.db only, never register
     bool login_ready_ = false;   // next join_player already logged in (Enter / auto login)
 
+    std::unique_ptr<Chara3D> make_preview_chara(PlayerNum player_num);
     void reload_preview_chara(PlayerNum player_num);
     bool arcade_credit() const;
     bool seat_joined(PlayerNum player_num) const;

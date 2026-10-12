@@ -59,6 +59,8 @@ void EntryScreen::on_screen_start() {
     lua_entry = std::make_unique<EntryScript>();
     lua_entry->start_side_select();
     reload_preview_chara(PlayerNum::P1);
+    wait_chara[0].reset();
+    wait_chara[1].reset();
     announce_played = false;
     players.clear();
     players.resize(2);
@@ -243,16 +245,21 @@ void EntryScreen::start_second_player_join() {
                  (int)first, (int)global_data.first_login_player, (int)second);
 }
 
-void EntryScreen::reload_preview_chara(PlayerNum player_num) {
+std::unique_ptr<Chara3D> EntryScreen::make_preview_chara(PlayerNum player_num) {
     std::string player_id = get_player_id(player_num);
     auto pd = scores_manager.get_player_data(player_id);
-    chara = make_chara_from_player_data(pd ? &*pd : nullptr);
+    auto c = make_chara_from_player_data(pd ? &*pd : nullptr);
     if (pd) {
-        chara->set_don_colors(pd->chara_color_1, pd->chara_color_2, pd->chara_color_3);
-        chara->apply_face(pd->chara_face_index);
+        c->set_don_colors(pd->chara_color_1, pd->chara_color_2, pd->chara_color_3);
+        c->apply_face(pd->chara_face_index);
     } else {
-        chara->set_don_colors(chara_default_color_1(player_num), chara_default_color_2(player_num), {249, 240, 225, 255});
+        c->set_don_colors(chara_default_color_1(player_num), chara_default_color_2(player_num), {249, 240, 225, 255});
     }
+    return c;
+}
+
+void EntryScreen::reload_preview_chara(PlayerNum player_num) {
+    chara = make_preview_chara(player_num);
 }
 
 Screens EntryScreen::on_screen_end(Screens next_screen) {
@@ -500,6 +507,9 @@ std::optional<Screens> EntryScreen::update() {
     }
     nameplate.update(current_time);
     chara->update(current_time);
+    if (state == EntryState::WAITING) {
+        for (auto& c : wait_chara) if (c) c->update(current_time);
+    }
     for (auto& player : players) {
         if (player) player->update(current_time);
     }
@@ -573,7 +583,13 @@ void EntryScreen::draw() {
     draw_player_drum();
 
     if (state == EntryState::WAITING) {
-        // nothing: side select hidden
+        lua_entry->draw_waiting();
+        for (int i = 0; i < 2; i++) {
+            auto pos = lua_entry->wait_chara_pos(i == 1);
+            if (!pos) continue;
+            if (!wait_chara[i]) wait_chara[i] = make_preview_chara(i == 0 ? PlayerNum::P1 : PlayerNum::P2);
+            wait_chara[i]->draw(pos->first, pos->second);
+        }
     } else if (state == EntryState::SELECT_SIDE) {
         draw_side_select(lua_entry->get_side_select_fade());
     } else if (state == EntryState::SELECT_MODE) {
