@@ -21,7 +21,7 @@ private:
     TextureObject* t_flash = nullptr;
 public:
     explicit DanTransition(int base_id = 38);
-    void start();
+    bool start();  // false when the skin has no slide-in animation at base_id
     void update(double current_ms);
     void draw();
     bool is_started() const;

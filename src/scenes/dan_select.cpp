@@ -789,7 +789,10 @@ std::optional<Screens> DanSelectScreen::start_dan_transition() {
     // skins without a dan_transition folder go straight back
     if (!tex.has_texture("dan_transition/background")) return on_screen_end(Screens::SONG_SELECT);
     dan_transition.emplace(19);
-    dan_transition->start();
+    if (!dan_transition->start()) {
+        dan_transition.reset();
+        return on_screen_end(Screens::SONG_SELECT);
+    }
     return std::nullopt;
 }
 
