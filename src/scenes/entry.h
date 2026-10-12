@@ -6,6 +6,7 @@
 #include "../objects/entry/box_manager.h"
 #include "../objects/entry/entry_script.h"
 #include "../objects/entry/player.h"
+#include "../objects/entry/name_entry.h"
 #include "../objects/global/nameplate.h"
 #include "../objects/global/coin_overlay.h"
 #include "../objects/global/allnet_indicator.h"
@@ -25,7 +26,8 @@ enum class EntryState {
     SELECT_SIDE = 0,
     SELECT_MODE = 1,
     SELECT_COSTUME = 2,
-    WAITING = 3  // online, auto_login off: side select hidden until Enter (online) or Don (local)
+    WAITING = 3, // online, auto_login off: side select hidden until Enter (online) or Don (local)
+    NAME_ENTRY = 4  // a freshly registered account picks its name; resumes name_prev_state_
 };
 
 // The network half of an online login, done on a worker thread so the entry screen keeps running:
@@ -91,6 +93,14 @@ private:
     void finish_slot(int slot, PlayerData pd);
     bool login_pending() const { return pending_login_.valid(); }
     void join_with_card(const std::string& card_hex);
+
+    std::unique_ptr<NameEntry> name_entry_;
+    EntryState name_prev_state_ = EntryState::SELECT_SIDE;
+    int name_slot_ = 0;
+    int name_pending_ = -1;  // slot of a new account whose name is asked once its side is chosen
+    std::function<void()> name_then_;
+    void begin_name_entry(int slot, std::function<void()> then);
+    void end_name_entry();
     void on_card_login();
 
 public:

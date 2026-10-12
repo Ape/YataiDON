@@ -74,6 +74,7 @@ void EntryPlayer::update(double current_time) {
 
 void EntryPlayer::open_costume_menu() {
     costume_menu.emplace(player_num);
+    audio.play_sound("select_costume", VolumePreset::VOICE);
     preset_seq_applied = 0;
 }
 

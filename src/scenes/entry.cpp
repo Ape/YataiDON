@@ -5,6 +5,7 @@
 #include "../libs/config.h"
 #include "../libs/network.h"
 #include <algorithm>
+#include <thread>
 
 void EntryScreen::on_screen_start() {
     Screen::on_screen_start();
@@ -22,6 +23,8 @@ void EntryScreen::on_screen_start() {
     used_cards_.clear();
     local_login_ = false;
     login_ready_ = false;
+    name_pending_ = -1;
+    name_entry_.reset();
     // Non-blocking: an unreachable server held the screen for the 1.5 s timeout. Logins wait for it.
     if (online) network.start_probe();
 
@@ -181,13 +184,63 @@ void EntryScreen::finish_login(RemoteLogin remote) {
             network.clear_import_flag(code);
         }
     }
-    if (pd.username.empty()) pd.username = "Player " + code.substr(0, 8);
+    if (pd.username.empty()) pd.username = "Player";
     if (cfg.sync_scores) {
         int updated = scores_manager.apply_remote_scores(remote.scores, code);
         spdlog::info("sync_from_server: updated {} scores from hiroba", updated);
     }
 
+    const bool fresh = remote.card || !remote.replaced_code.empty();
+    const bool needs_name = fresh && pd.username.rfind("Player", 0) == 0 || pd.username.rfind("Don-chan", 0) == 0;
+
     finish_slot(slot, pd);
+    if (needs_name) {
+        if (players[slot]) {
+            begin_name_entry(slot, std::move(then));
+            return;
+        }
+        // Side not chosen yet (card scan): side select shows a blank nameplate, join_player asks
+        name_pending_ = slot;
+        if (slot == 0) nameplate = Nameplate("", pd.title, PlayerNum::ALL, pd.dan, pd.gold, pd.rainbow, pd.title_bg);
+    }
+    if (then) then();
+}
+
+void EntryScreen::begin_name_entry(int slot, std::function<void()> then) {
+    const bool is_2p_seat = players[slot] && players[slot]->player_num == PlayerNum::P2;
+    name_entry_ = std::make_unique<NameEntry>(is_2p_seat);
+    if (name_entry_->unavailable()) {  // skin without a name picker keeps the default name
+        name_entry_.reset();
+        if (then) then();
+        return;
+    }
+    name_slot_ = slot;
+    name_then_ = std::move(then);
+    name_prev_state_ = state;
+    state = EntryState::NAME_ENTRY;
+    audio.stop_sound("bgm");
+    audio.play_sound("name_select_bgm", VolumePreset::MUSIC);
+    audio.play_sound("name_entry_vo", VolumePreset::VOICE);
+}
+
+void EntryScreen::end_name_entry() {
+    const std::string name = name_entry_->get_name();
+    name_entry_.reset();
+    if (!name.empty()) {
+        PlayerData pd = name_slot_ == 0 ? scores_manager.player_1_data : scores_manager.player_2_data;
+        pd.username = name;
+        finish_slot(name_slot_, pd);
+        const std::string& code = name_slot_ == 0 ? global_data.config->network.access_code_1
+                                                  : global_data.config->network.access_code_2;
+        std::thread([code, name]() { network.update_username(code, name); }).detach();
+    }
+    audio.stop_sound("name_select_bgm");
+    audio.stop_sound("name_entry_vo");
+    audio.play_sound("bgm", VolumePreset::MUSIC);
+    if (players[name_slot_]) players[name_slot_]->refresh_from_player_data();
+    state = name_prev_state_;
+    auto then = std::move(name_then_);
+    name_then_ = nullptr;
     if (then) then();
 }
 
@@ -213,7 +266,7 @@ void EntryScreen::on_card_login() {
         // Second player: same screen as pressing Don for the free seat
         const PlayerNum free_seat = (players[0]->player_num == PlayerNum::P1) ? PlayerNum::P2 : PlayerNum::P1;
         const PlayerData& pd = scores_manager.player_2_data;
-        nameplate = Nameplate(pd.username, pd.title, PlayerNum::ALL, pd.dan, pd.gold, pd.rainbow, pd.title_bg);
+        nameplate = Nameplate(name_pending_ == 1 ? "" : pd.username, pd.title, PlayerNum::ALL, pd.dan, pd.gold, pd.rainbow, pd.title_bg);
         reload_preview_chara(free_seat);
     }
     state = EntryState::SELECT_SIDE;
@@ -264,6 +317,7 @@ void EntryScreen::reload_preview_chara(PlayerNum player_num) {
 
 Screens EntryScreen::on_screen_end(Screens next_screen) {
     audio.stop_sound("bgm");
+    audio.stop_sound("name_select_bgm");
     // Leaving with a login in flight (input and the timer wait for it, so this is an edge case):
     // drop it instead of waiting on the network; the worker finishes on its own
     if (login_pending()) {
@@ -332,10 +386,29 @@ void EntryScreen::join_player(PlayerNum player_num, bool do_login) {
     if (state == EntryState::SELECT_SIDE) lua_entry->decide_side_select(side);
     state = EntryState::SELECT_MODE;
     audio.play_sound("don", VolumePreset::SOUND);
+    if (name_pending_ >= 0 && players[name_pending_]) {
+        const int slot = name_pending_;
+        name_pending_ = -1;
+        begin_name_entry(slot, nullptr);
+    }
 }
 
 std::optional<Screens> EntryScreen::handle_input() {
     if (login_pending() || network.probing()) return std::nullopt;
+    if (state == EntryState::NAME_ENTRY) {
+        if (is_l_kat_pressed()) {
+            audio.play_sound("kat", VolumePreset::SOUND);
+            name_entry_->input(NameEntry::LEFT);
+        } else if (is_r_kat_pressed()) {
+            audio.play_sound("kat", VolumePreset::SOUND);
+            name_entry_->input(NameEntry::RIGHT);
+        } else if (is_l_don_pressed() || is_r_don_pressed()) {
+            audio.play_sound("don", VolumePreset::SOUND);
+            name_entry_->input(NameEntry::DECIDE);
+        }
+        if (name_entry_->is_done()) end_name_entry();
+        return std::nullopt;
+    }
     if (state == EntryState::WAITING) {
         const bool enter = ray::IsKeyPressed(ray::KEY_ENTER);
         const bool don = is_l_don_pressed() || is_r_don_pressed();
@@ -481,7 +554,7 @@ std::optional<Screens> EntryScreen::update() {
         }
     }
     // Case 6: any card while a seat is free (P1 first, then P2)
-    if (card_reader_ && card_reader_->is_polling() && !login_ready_ && !login_pending() && !network.probing() && state != EntryState::SELECT_COSTUME &&
+    if (card_reader_ && card_reader_->is_polling() && !login_ready_ && !login_pending() && !network.probing() && state != EntryState::SELECT_COSTUME && state != EntryState::NAME_ENTRY &&
         !(seat_joined(PlayerNum::P1) && seat_joined(PlayerNum::P2))) {
         if (current_time - last_card_poll_ms_ >= global_data.config->card_reader.poll_interval_ms) {
             last_card_poll_ms_ = current_time;
@@ -501,8 +574,9 @@ std::optional<Screens> EntryScreen::update() {
     allnet_indicator.update(current_time);
     entry_overlay.update(current_time);
     lua_entry->update(current_time);
+    if (name_entry_) name_entry_->update(current_time);
     box_manager->update(current_time, is_2p);
-    if (state != EntryState::WAITING && !(arcade_credit() && state == EntryState::SELECT_SIDE) && !login_pending()) {
+    if (state != EntryState::WAITING && state != EntryState::NAME_ENTRY && !(arcade_credit() && state == EntryState::SELECT_SIDE) && !login_pending()) {
         timer->update(current_time);
     }
     nameplate.update(current_time);
@@ -534,7 +608,7 @@ std::optional<Screens> EntryScreen::update() {
     for (auto& player : players) {
         if (player && player->is_cloud_animation_finished() &&
             !audio.is_sound_playing("entry_start_" + std::to_string((int)global_data.player_num) + "p") &&
-            !announce_played) {
+            !announce_played && state != EntryState::NAME_ENTRY) {
             audio.play_sound("select_mode", VolumePreset::VOICE);
             announce_played = true;
         }
@@ -612,7 +686,8 @@ void EntryScreen::draw() {
         }
     }
 
-    lua_entry->draw_player_entry();
+    if (!name_entry_) lua_entry->draw_player_entry();  // the name picker has its own title in its place
+    if (name_entry_) name_entry_->draw();
 
     if (box_manager->is_finished()) {
         ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::BLACK);
