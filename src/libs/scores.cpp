@@ -530,11 +530,6 @@ void ScoresManager::export_to_hiroba(const std::string& access_code, const std::
     spdlog::info("export_to_hiroba: submitted {} scores", count);
 }
 
-int ScoresManager::sync_from_server(const std::string& access_code, const std::string& player_id) {
-    if (access_code.empty()) return 0;
-    return apply_remote_scores(network.fetch_scores(access_code), player_id);
-}
-
 int ScoresManager::apply_remote_scores(const std::vector<RemoteScore>& scores, const std::string& player_id) {
     int updated = 0;
     for (const RemoteScore& rs : scores) {

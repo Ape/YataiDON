@@ -55,11 +55,12 @@ enum class Screens {
     LOADING,
     INPUT_CALI,
     GAME_OVER,
-    INPUT_TEST
+    INPUT_TEST,
+    RETRY_GAME
 };
 
 inline std::string screens_to_string(Screens screen) {
-    static const std::array<std::string, 20> names = {
+    static const std::array<std::string, 21> names = {
         "TITLE",
         "ENTRY",
         "SONG_SELECT",
@@ -79,7 +80,8 @@ inline std::string screens_to_string(Screens screen) {
         "LOADING",
         "INPUT_CALI",
         "GAME_OVER",
-        "INPUT_TEST"
+        "INPUT_TEST",
+        "RETRY_GAME"
     };
     int idx = static_cast<int>(screen);
     if (idx < 0 || static_cast<size_t>(idx) >= names.size()) return "UNKNOWN";

@@ -185,10 +185,7 @@ void EntryScreen::finish_login(RemoteLogin remote) {
         }
     }
     if (pd.username.empty()) pd.username = "Player";
-    if (cfg.sync_scores) {
-        int updated = scores_manager.apply_remote_scores(remote.scores, code);
-        spdlog::info("sync_from_server: updated {} scores from hiroba", updated);
-    }
+    if (cfg.sync_scores) scores_manager.apply_remote_scores(remote.scores, code);
 
     const bool fresh = remote.card || !remote.replaced_code.empty();
     const bool needs_name = fresh && pd.username.rfind("Player", 0) == 0 || pd.username.rfind("Don-chan", 0) == 0;

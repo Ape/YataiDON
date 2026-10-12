@@ -11,6 +11,8 @@ void ResultScreen::on_screen_start() {
     }
     audio.play_sound("bgm", VolumePreset::MUSIC);
     fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(0));
+    retry_message.reset();
+    retrying = false;
     fade_in.emplace(global_data.player_num);
     skipped_time = 0;
     skip_enabled_ms = 0;
@@ -36,12 +38,33 @@ Screens ResultScreen::on_screen_end(Screens next_screen) {
         ray::UnloadTexture(loading_graphic.value());
         loading_graphic.reset();
     }
-    reset_session();
+    // the retry mini-game restarts the song from this session
+    if (next_screen != Screens::RETRY_GAME) reset_session();
     return Screen::on_screen_end(next_screen);
 }
 
 double ResultScreen::reveal_end_ms() {
     return player_1.has_value() ? player_1->reveal_end_ms() : 0.0;
+}
+
+bool ResultScreen::retry_pending() const {
+    const SessionData& session_data = global_data.session_data[(int)global_data.player_num];
+    const bool limit_reached = global_data.config->general.song_limit > 0 && global_data.config->general.song_limit == global_data.songs_played;
+    return allow_retry && !session_data.result_data.cleared && !limit_reached && script_manager.has_lua_script("retry_game");
+}
+
+bool ResultScreen::exiting() const {
+    return retrying || (fade_out && fade_out->is_started);
+}
+
+void ResultScreen::begin_exit() {
+    retrying = retry_pending() && fade_in.has_value();
+    if (retrying) {
+        audio.play_sound("retry_transition", VolumePreset::SOUND);
+        fade_in->start_reverse();
+    } else {
+        fade_out->start();
+    }
 }
 
 void ResultScreen::handle_input(double current_ms) {
@@ -60,14 +83,14 @@ void ResultScreen::handle_input(double current_ms) {
     }
     const double advance_delay = global_data.config->general.fast_transitions
         ? kFastInputDelayMs : kWaitEffectEndMs + kWaitNextSceneMs;
-    if (current_ms >= reveal_end + advance_delay && !fade_out->is_started) {
-        fade_out->start();
+    if (current_ms >= reveal_end + advance_delay && !exiting()) {
+        begin_exit();
         audio.play_sound("don", VolumePreset::SOUND);
     }
 }
 
 void ResultScreen::update_input_and_timeout(double current_ms) {
-    if (!fade_out || fade_out->is_started) return;
+    if (!fade_out || exiting()) return;
 
     if (skip_enabled_ms == 0 && fade_in.has_value() && fade_in->is_finished())
         skip_enabled_ms = current_ms + (global_data.config->general.fast_transitions
@@ -76,9 +99,9 @@ void ResultScreen::update_input_and_timeout(double current_ms) {
     if (skip_enabled_ms > 0 && current_ms >= skip_enabled_ms) handle_input(current_ms);
 
     double reveal_end = reveal_end_ms();
-    if (reveal_end > 0 && !fade_out->is_started
+    if (reveal_end > 0 && !exiting()
         && current_ms >= reveal_end + kWaitEffectEndMs + kAutoNextSceneMs) {
-        fade_out->start();
+        begin_exit();
     }
 }
 
@@ -91,7 +114,13 @@ std::optional<Screens> ResultScreen::update() {
 
     update_input_and_timeout(current_time);
 
-    if (fade_out) {
+    if (retrying) {
+        if (fade_in->is_finished()) {
+            if (!retry_message) retry_message.emplace();
+            retry_message->update(current_time);
+            if (retry_message->is_finished()) return on_screen_end(Screens::RETRY_GAME);
+        }
+    } else if (fade_out) {
         fade_out->update(current_time);
         if (fade_out->is_finished) {
             if (global_data.config->general.song_limit > 0 && global_data.config->general.song_limit == global_data.songs_played) {
@@ -108,6 +137,7 @@ std::optional<Screens> ResultScreen::update() {
 void ResultScreen::draw_overlay() {
     if (fade_in.has_value()) fade_in->draw();
     if (fade_out) ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::BLACK, fade_out->attribute));
+    if (retry_message) retry_message->draw();
     coin_overlay.draw();
     allnet_indicator.draw();
 }

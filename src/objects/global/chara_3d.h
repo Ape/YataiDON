@@ -100,6 +100,8 @@ private:
 
     AnimIndex prev_anim_idx = AnimIndex::DON_NORMAL;
     bool is_looping = true;
+    bool frozen = false;
+    void apply_pose();
     bool use_render_textures = true;
 
     ray::RenderTexture2D scene_target = {};
@@ -161,6 +163,9 @@ public:
     void set_tint(ray::Color color, float amount);
     void set_bpm(float bpm);
     void set_anim(AnimIndex idx);
+    void set_rotation(float x, float y, float z);
+    void set_frozen(bool frozen);
+    void set_anim_progress(float progress);
     int  get_anim_count() const;
     std::string get_anim_name(int idx);
 

@@ -8,12 +8,17 @@
 #include "../objects/game/song_info.h"
 #include "../objects/global/allnet_indicator.h"
 #include "../objects/global/coin_overlay.h"
+#include "../objects/result/retry_message.h"
 
 class ResultScreen : public Screen {
 protected:
     std::unique_ptr<OutlinedText> song_info;
     std::unique_ptr<OutlinedText> song_info_subtitle;
     FadeAnimation* fade_out = nullptr;
+    // after the fade out of a failed run: the revive message, then the retry mini-game
+    std::optional<ResultRetryMessage> retry_message;
+    bool retrying = false;
+    bool allow_retry = true;
     AllNetIcon allnet_indicator;
     CoinOverlay coin_overlay;
 
@@ -32,6 +37,10 @@ protected:
     std::unique_ptr<SongNum> song_num;
 
     void handle_input(double current_ms);
+
+    bool retry_pending() const;
+    bool exiting() const;
+    void begin_exit();
 
     virtual double reveal_end_ms();
     void update_input_and_timeout(double current_ms);

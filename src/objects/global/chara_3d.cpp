@@ -5,6 +5,7 @@
 #include "../../libs/scores.h"
 #include "../../libs/filesystem.h"
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
@@ -548,6 +549,8 @@ static constexpr int FACE_ANIM_IDS[] = {
     40, 40, 42, 43, 44, 45, 46, 58, 59, 62, 61, 20,
 };
 
+static constexpr int FUKKATU_FACE = 8;
+
 static constexpr int MIRROR_OFFSET = (int)AnimIndex::DON_BALLOON_FAILURE_MIRROR;
 static int base_anim(AnimIndex idx) { return static_cast<int>(idx) % MIRROR_OFFSET; }
 
@@ -573,9 +576,14 @@ void Chara3D::set_anim(AnimIndex idx) {
         anim_frame = 0;
         last_frame_ms = 0;
         render_dirty = true;
+        if (frozen) apply_pose();
     }
 
-    if (i >= 0 && i < (int)(sizeof(FACE_ANIM_IDS) / sizeof(FACE_ANIM_IDS[0]))) {
+    if (base == (int)AnimIndex::DON_FUKKATU_LOOP || base == (int)AnimIndex::DON_FUKKATU_START) {
+        // the revive sequence holds one face instead of running a face animation
+        current_face_anim = nullptr;
+        apply_face(FUKKATU_FACE);
+    } else if (i >= 0 && i < (int)(sizeof(FACE_ANIM_IDS) / sizeof(FACE_ANIM_IDS[0]))) {
         auto it = face_anims.find(FACE_ANIM_IDS[i]);
         if (it != face_anims.end()) {
             current_face_anim = it->second.get();
@@ -604,6 +612,38 @@ void Chara3D::set_tint(ray::Color color, float amount) {
     ray::SetShaderValue(outline_fxaa_shader, outline_fxaa_tint_amount_loc, &amount, ray::SHADER_UNIFORM_FLOAT);
 }
 
+void Chara3D::apply_pose() {
+    const int ai = static_cast<int>(anim_index);
+    for (size_t p = 0; p < parts.size(); p++) {
+        if (ai < 0 || ai >= part_anim_count[p]) continue;
+        ray::UpdateModelAnimation(parts[p], part_anims[p][ai], anim_frame);
+    }
+    render_dirty = true;
+}
+
+void Chara3D::set_frozen(bool value) {
+    frozen = value;
+    if (frozen) apply_pose();
+    else last_frame_ms = 0;
+}
+
+void Chara3D::set_anim_progress(float progress) {
+    const int ai = static_cast<int>(anim_index);
+    if (part_anim_count.empty() || ai < 0 || ai >= part_anim_count[0]) return;
+    const int loop_frames = part_anims[0][ai].keyframeCount - 1;
+    if (loop_frames <= 0) return;
+    const float cycle = progress - std::floor(progress);
+    anim_frame = std::min(loop_frames - 1, static_cast<int>(cycle * loop_frames));
+    apply_pose();
+}
+
+void Chara3D::set_rotation(float x, float y, float z) {
+    rot_x = x;
+    rot_y = y;
+    rot_z = z;
+    render_dirty = true;
+}
+
 void Chara3D::set_bpm(float bpm) {
     this->bpm = bpm;
 }
@@ -613,6 +653,7 @@ int Chara3D::get_anim_count() const {
 }
 
 void Chara3D::update(double current_ms) {
+    if (frozen) return;
     int anim_count = part_anim_count.empty() ? 0 : part_anim_count[0];
     if (anim_count > 0) {
         int ai = static_cast<int>(anim_index);

@@ -50,6 +50,7 @@
 #include "scenes/song_select_practice.h"
 #include "scenes/title.h"
 #include "scenes/game_over.h"
+#include "scenes/retry_game.h"
 
 #include "objects/global/debug_menu.h"
 #include "objects/global/fps_counter.h"
@@ -291,6 +292,7 @@ static void populate_screens(std::unordered_map<Screens, std::unique_ptr<Screen>
     if (except != Screens::INPUT_CALI)      screens[Screens::INPUT_CALI]      = std::make_unique<InputCaliScreen>();
     if (except != Screens::GAME_OVER)       screens[Screens::GAME_OVER]       = std::make_unique<GameOverScreen>();
     if (except != Screens::INPUT_TEST)      screens[Screens::INPUT_TEST]      = std::make_unique<InputTestScreen>();
+    if (except != Screens::RETRY_GAME)      screens[Screens::RETRY_GAME]      = std::make_unique<RetryGameScreen>();
 }
 
 void drop_other_screens_for_skin_reload() {
