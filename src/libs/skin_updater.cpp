@@ -124,6 +124,12 @@ bool file_stamp(const fs::path& path, uintmax_t& size, int64_t& mtime) {
     return true;
 }
 
+// HTTP 200 alone is not enough: a transfer cut short by the timeout still carries the 200 it
+// started with, and its body is only the part that arrived.
+bool fetched(const cpr::Response& r) {
+    return r.status_code == 200 && r.error.code == cpr::ErrorCode::OK;
+}
+
 bool is_lfs_pointer(const std::string& body) {
     static const std::string kLfsMarker = "version https://git-lfs.github.com/spec/v1";
     return body.compare(0, kLfsMarker.size(), kLfsMarker) == 0;
@@ -158,9 +164,11 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
         return repo_url + "/media/branch/" + branch + "/" + rel_path;
     };
 
-    cpr::Response checksums = get_url(raw_url("checksums.sha256"), 10000, 5000);
-    if (checksums.status_code != 200) {
-        spdlog::warn("Skin update ({}): could not fetch checksums.sha256 (HTTP {}, curl error {}: {})",
+    // a whole manifest or nothing: files it doesn't list get removed below, so a truncated
+    // one would delete everything past the cut (and the last line must be complete)
+    cpr::Response checksums = get_url(raw_url("checksums.sha256"), 60000, 5000);
+    if (!fetched(checksums) || checksums.text.empty() || checksums.text.back() != '\n') {
+        spdlog::warn("Skin update ({}): could not fetch a complete checksums.sha256 (HTTP {}, curl error {}: {})",
                      skin_dir.filename().string(), checksums.status_code,
                      static_cast<int>(checksums.error.code), checksums.error.message);
         return;
@@ -202,7 +210,7 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
         any_updated_.store(true);
         set_current_file(rel_path);
         cpr::Response file_resp = get_url(raw_url(rel_path), 15000, 5000);
-        if (file_resp.status_code != 200) {
+        if (!fetched(file_resp)) {
             spdlog::warn("Skin update ({}): failed to download {} (HTTP {})", skin_dir.filename().string(), rel_path, file_resp.status_code);
             continue;
         }
@@ -211,12 +219,20 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
             spdlog::debug("Skin update ({}): {} is an LFS pointer; fetching content from media endpoint",
                           skin_dir.filename().string(), rel_path);
             cpr::Response lfs_resp = get_url(media_url(rel_path), 60000, 5000);
-            if (lfs_resp.status_code != 200) {
+            if (!fetched(lfs_resp)) {
                 spdlog::warn("Skin update ({}): failed to download LFS content {} (HTTP {})",
                              skin_dir.filename().string(), rel_path, lfs_resp.status_code);
                 continue;
             }
             file_resp = std::move(lfs_resp);
+        }
+
+        // only what the manifest describes is written, so a short or stale body never lands
+        const std::string got_hash = crypto::to_hex(crypto::sha256(file_resp.text));
+        if (got_hash != hash) {
+            spdlog::warn("Skin update ({}): {} does not match checksums.sha256; keeping the local file",
+                         skin_dir.filename().string(), rel_path);
+            continue;
         }
 
         std::error_code mkdir_ec;
@@ -229,7 +245,7 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
         out << file_resp.text;
         out.close();
         if (out && file_stamp(local_file, size, mtime))
-            seen[key] = HashCacheEntry{crypto::to_hex(crypto::sha256(file_resp.text)), size, mtime};
+            seen[key] = HashCacheEntry{got_hash, size, mtime};
         else
             seen.erase(key);
         note_file_updated();
