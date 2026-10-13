@@ -117,6 +117,7 @@ std::optional<Screens> DanSelectScreen::tick_timer(double current_ms) {
     timer_fired = false;
     if (state == SongSelectState::BROWSING) {
         if (dan_navigator.boxes.empty()) return std::nullopt;
+        if (dan_navigator.get_current()->is_back) return start_dan_transition();
         audio.play_sound("don_big", VolumePreset::SOUND);
         open_confirm(current_ms);
         return std::nullopt;
@@ -215,7 +216,8 @@ void DanSelectScreen::handle_input_browsing(double current_ms) {
         wheel_locked = true;
     } else if (!wheel_locked && confirm) {
         audio.play_sound("don", VolumePreset::SOUND);
-        open_confirm(current_ms);
+        if (dan_navigator.get_current()->is_back) back_requested = true;
+        else open_confirm(current_ms);
     }
 }
 
@@ -282,6 +284,10 @@ std::optional<Screens> DanSelectScreen::update() {
 
     if (state == SongSelectState::BROWSING) {
         handle_input_browsing(current_ms);
+        if (back_requested) {
+            back_requested = false;
+            return start_dan_transition();
+        }
     } else if (state == SongSelectState::SONG_SELECTED) {
         if (modifier_selector.has_value()) {
             modifier_selector->update(current_ms);

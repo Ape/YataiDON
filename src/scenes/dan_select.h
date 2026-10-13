@@ -69,6 +69,7 @@ private:
     std::optional<Screens> tick_timer(double current_ms);
     std::optional<Screens> start_dan_transition();
     void open_confirm(double current_ms);
+    bool back_requested = false;
 
     void handle_input_browsing(double current_ms);
     std::optional<Screens> handle_input_selected();

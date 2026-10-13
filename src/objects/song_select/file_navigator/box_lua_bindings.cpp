@@ -168,6 +168,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "clear_mark",     sol::readonly(&DanBox::clear_mark),
         "dan_index",      sol::readonly(&DanBox::dan_index),
         "gaiden",         sol::readonly(&DanBox::gaiden),
+        "is_back",        sol::readonly(&DanBox::is_back),
         "total_notes",    sol::readonly(&DanBox::total_notes),
         "song_masked",    [](DanBox& self, double i) { auto k = static_cast<size_t>(i); return k < self.song_masked.size() && self.song_masked[k]; },
         "song_count",     [](DanBox& self) { return (int)self.songs.size(); },

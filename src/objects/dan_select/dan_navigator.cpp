@@ -469,6 +469,13 @@ void DanNavigator::publish(std::vector<DanBoxData>&& data) {
 
     if (boxes.empty()) { spdlog::warn("DanNavigator: no dan courses found"); return; }
 
+    if (tex.has_texture("back/folder")) {
+        auto back = std::make_unique<DanBox>(fs::path("back"), "back", 0, std::vector<DanSongEntry>{},
+                                             std::vector<Exam>{}, 0);
+        back->is_back = true;
+        boxes.push_back(std::move(back));
+    }
+
     set_positions(true, 0);
     boxes[selected_index]->expand_box();
     for (auto& b : boxes) b->fade_in(100);

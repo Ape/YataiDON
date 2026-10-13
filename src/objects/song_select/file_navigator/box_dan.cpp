@@ -20,6 +20,7 @@ static float dan_shrink_font(float font_size) {
 }
 
 void DanBox::load_text() {
+    if (is_back) { text_loaded = true; return; }
     BaseBox::load_text();  // populates name (vertical) for closed state
     const SkinInfo* chip_slot = tex.skin_entry("dan_chip_name");
     float base_font = (chip_slot && chip_slot->font_size > 0)
