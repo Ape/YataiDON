@@ -233,6 +233,12 @@ void Navigator::reset_for_skin_reload() {
 
 void Navigator::preload(std::vector<fs::path> songs_paths, std::optional<std::vector<fs::path>> listed) {
     if (is_preloaded) return;
+
+    for (fs::path& root : songs_paths) {
+        if (root.filename().empty())
+            root = root.parent_path();
+    }
+
     root_paths = songs_paths;
     open_index = 0;
 
