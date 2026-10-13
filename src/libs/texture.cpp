@@ -7,6 +7,8 @@
 #include <charconv>
 #include <thread>
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 
 namespace {
 
@@ -443,6 +445,141 @@ std::unordered_set<std::string> overridden_names(const fs::path& child_folder) {
     return names;
 }
 
+// Decodes a screen's PNGs ahead of load_folder on worker threads, in the order the folders
+// get loaded, so decoding overlaps the uploads and no folder waits on its slowest image.
+// Decoded images not yet taken are capped at a byte budget; a folder's leftovers (names the
+// child skin overrides) are dropped once that folder is done.
+class ImagePrefetch {
+public:
+    ImagePrefetch(const std::vector<std::vector<fs::path>>& groups, size_t budget_bytes)
+        : budget(budget_bytes) {
+        for (size_t g = 0; g < groups.size(); ++g) {
+            for (const fs::path& p : groups[g]) {
+                std::string key = image_key(p);
+                if (index.count(key)) continue;
+                index.emplace(key, items.size());
+                items.push_back(Item{p, g});
+            }
+        }
+        unsigned hw = std::thread::hardware_concurrency();
+        size_t workers = std::min<size_t>(items.size(), std::clamp<unsigned>(hw ? hw - 1 : 3, 1, 16));
+        for (size_t w = 0; w < workers; ++w) pool.emplace_back([this]() { work(); });
+    }
+
+    ~ImagePrefetch() {
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            stop = true;
+        }
+        cv.notify_all();
+        for (auto& t : pool) t.join();
+        for (Item& it : items)
+            if (it.state == State::Done && it.image.data) ray::UnloadImage(it.image);
+    }
+
+    // The decoded image for path when it's part of this prefetch (waiting for a worker that
+    // has started it, decoding it here if none has); false when it isn't.
+    bool take(const fs::path& path, ray::Image& image, ray::Rectangle& border) {
+        std::unique_lock<std::mutex> lock(mutex);
+        auto found = index.find(image_key(path));
+        if (found == index.end()) return false;
+        Item& it = items[found->second];
+        cv.wait(lock, [&]() { return it.state != State::Decoding; });
+        if (it.state == State::Pending) {
+            it.state = State::Taken;
+            lock.unlock();
+            decode(it.path, image, border);
+            return true;
+        }
+        if (it.state != State::Done) return false;
+        image = it.image;
+        border = it.border;
+        it.image = ray::Image{};
+        it.state = State::Taken;
+        held -= it.bytes;
+        cv.notify_all();
+        return true;
+    }
+
+    // Folder group g has been loaded: whatever it (and earlier groups) left untaken goes.
+    void finish_group(size_t g) {
+        std::lock_guard<std::mutex> lock(mutex);
+        finished_groups = std::max(finished_groups, g + 1);
+        for (Item& it : items) {
+            if (it.group > g) continue;
+            if (it.state == State::Pending) it.state = State::Dropped;
+            else if (it.state == State::Done) {
+                if (it.image.data) ray::UnloadImage(it.image);
+                it.image = ray::Image{};
+                held -= it.bytes;
+                it.state = State::Dropped;
+            }
+        }
+        cv.notify_all();
+    }
+
+    static std::string image_key(const fs::path& p) { return p.lexically_normal().generic_string(); }
+
+private:
+    enum class State { Pending, Decoding, Done, Taken, Dropped };
+    struct Item {
+        fs::path path;
+        size_t group;
+        State state = State::Pending;
+        ray::Image image{};
+        ray::Rectangle border{};
+        size_t bytes = 0;
+    };
+
+    static void decode(const fs::path& path, ray::Image& image, ray::Rectangle& border) {
+        try {
+            image = ray::LoadImage(path.string().c_str());
+        } catch (const std::exception& e) {
+            spdlog::error("Failed to decode image {}: {}", path.string(), e.what());
+            image = ray::Image{};
+        }
+        border = image.data ? ray::GetImageAlphaBorder(image, 0.0f) : ray::Rectangle{};
+    }
+
+    void work() {
+        std::unique_lock<std::mutex> lock(mutex);
+        while (true) {
+            cv.wait(lock, [&]() { return stop || held < budget; });
+            while (next < items.size() && items[next].state != State::Pending) ++next;
+            if (stop || next >= items.size()) return;
+            Item& it = items[next++];
+            it.state = State::Decoding;
+            lock.unlock();
+            ray::Image image;
+            ray::Rectangle border;
+            decode(it.path, image, border);
+            lock.lock();
+            if (finished_groups > it.group) {   // its folder was loaded while this one decoded
+                if (image.data) ray::UnloadImage(image);
+                it.state = State::Dropped;
+                continue;
+            }
+            it.image = image;
+            it.border = border;
+            it.bytes = image.data ? static_cast<size_t>(ray::GetPixelDataSize(image.width, image.height, image.format)) : 0;
+            it.state = State::Done;
+            held += it.bytes;
+            cv.notify_all();
+        }
+    }
+
+    std::vector<Item> items;
+    std::unordered_map<std::string, size_t> index;
+    std::vector<std::thread> pool;
+    std::mutex mutex;
+    std::condition_variable cv;
+    size_t next = 0;
+    size_t held = 0;
+    size_t finished_groups = 0;   // groups below this are done with
+    const size_t budget;
+    bool stop = false;
+};
+
 void TextureWrapper::load_folder(const std::string& screen_name, const std::string& subset) {
     lua_texture_lookup.clear();
     // Subset leaf name is the key prefix used in textures[] (e.g. "notes_nijiiro" from "game/notes_nijiiro")
@@ -535,8 +672,23 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                 }
             }
 
-            std::vector<ray::Image> images;
-            decode_images_parallel(files, images);
+            // images load_screen_textures already decoded, the rest here
+            std::vector<ray::Image> images(files.size());
+            std::vector<ray::Rectangle> borders(files.size());
+            std::vector<char> has_border(files.size(), 0);
+            std::vector<fs::path> rest;
+            std::vector<size_t> rest_index;
+            for (size_t i = 0; i < files.size(); ++i) {
+                if (image_prefetch && image_prefetch->take(files[i], images[i], borders[i])) {
+                    has_border[i] = 1;
+                } else {
+                    rest.push_back(files[i]);
+                    rest_index.push_back(i);
+                }
+            }
+            std::vector<ray::Image> decoded;
+            decode_images_parallel(rest, decoded);
+            for (size_t k = 0; k < rest.size(); ++k) images[rest_index[k]] = decoded[k];
 
             try {
                 // GPU textures indexed by file, so keys that share one atlas PNG
@@ -579,7 +731,8 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                         p.mapping->IsObject() && !p.mapping->HasMember("x2")) {
                         const ray::Image& img = images[p.first_file];
                         if (img.data) {
-                            const ray::Rectangle border = ray::GetImageAlphaBorder(img, 0.0f);
+                            const ray::Rectangle border = has_border[p.first_file]
+                                ? borders[p.first_file] : ray::GetImageAlphaBorder(img, 0.0f);
                             if (border.width > 0.0f) {
                                 obj->opaque_right = (border.x + border.width) * tex_scale;
                             }
@@ -666,6 +819,9 @@ void TextureWrapper::unload_folder(const std::string& screen_name, const std::st
     spdlog::info("Textures unloaded for folder: {}/{}", screen_name, subset);
 }
 
+// decoded-but-not-yet-uploaded images load_screen_textures may hold ahead of load_folder
+constexpr size_t kPrefetchBudgetBytes = size_t{128} << 20;
+
 void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     PROFILE_SCOPE();
     PROFILE_ZONE_TEXT(screen_name);
@@ -682,12 +838,45 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
 
     load_animations(screen_name);
 
-    // Subsets of the child and every ancestor (load_folder dedups by screen/subset)
+    // Subsets of the child and every ancestor, each once
+    std::vector<std::string> subsets;
+    std::unordered_set<std::string> seen;
     for (const fs::path& dir : screen_dirs) {
         for (const auto& entry : fs::directory_iterator(dir)) {
-            if (entry.is_directory()) {
-                load_folder(screen_name, entry.path().filename().string());
+            if (!entry.is_directory()) continue;
+            std::string name = entry.path().filename().string();
+            if (seen.insert(name).second && !loaded_subsets.count(screen_name + "/" + name))
+                subsets.push_back(std::move(name));
+        }
+    }
+
+    // every PNG those folders hold (frame folders included), one group per subset
+    std::vector<std::vector<fs::path>> groups(subsets.size());
+    for (size_t g = 0; g < subsets.size(); ++g) {
+        for (const fs::path& root : roots) {
+            const fs::path dir = root / screen_name / subsets[g];
+            if (!fs::exists(dir / "texture.json")) continue;
+            std::error_code ec;
+            for (const auto& entry : fs::directory_iterator(dir, ec)) {
+                const fs::path& p = entry.path();
+                if (entry.is_directory()) {
+                    std::error_code sub_ec;
+                    for (const auto& frame : fs::directory_iterator(p, sub_ec))
+                        if (frame.is_regular_file() && frame.path().extension() == ".png") groups[g].push_back(frame.path());
+                } else if (p.extension() == ".png") {
+                    groups[g].push_back(p);
+                }
             }
+        }
+    }
+
+    {
+        ImagePrefetch prefetch(groups, kPrefetchBudgetBytes);
+        image_prefetch = &prefetch;
+        struct Reset { ImagePrefetch*& p; ~Reset() { p = nullptr; } } reset{image_prefetch};
+        for (size_t g = 0; g < subsets.size(); ++g) {
+            load_folder(screen_name, subsets[g]);
+            prefetch.finish_group(g);
         }
     }
 

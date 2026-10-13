@@ -163,6 +163,8 @@ private:
     std::unordered_set<std::string> loaded_subsets;
     std::unordered_map<std::string, int> tex_id_refcount;
     std::unordered_map<std::string, std::unordered_set<std::string>> subset_loaded_ids;
+    // set while load_screen_textures runs: the screen's PNGs, decoded ahead of load_folder
+    class ImagePrefetch* image_prefetch = nullptr;
 
     bool read_screen_animations(const std::string& screen_name, rapidjson::Document& out);
 
