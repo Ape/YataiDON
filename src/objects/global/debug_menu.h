@@ -748,6 +748,18 @@ private:
         f.push_back({"session.result.total_drumroll", DataField::Kind::INT, &sd.result_data.total_drumroll});
         f.push_back({"session.result.gauge_length", DataField::Kind::FLOAT, nullptr, nullptr, nullptr, nullptr, &sd.result_data.gauge_length});
         f.push_back({"session.result.prev_score", DataField::Kind::INT, &sd.result_data.prev_score});
+        DanResultData& dr = sd.dan_result_data;
+        f.push_back({"session.dan_result.dan_color", DataField::Kind::INT, &dr.dan_color});
+        f.push_back({"session.dan_result.dan_rank", DataField::Kind::INT, &dr.dan_rank});
+        f.push_back({"session.dan_result.dan_index", DataField::Kind::INT, &dr.dan_index});
+        f.push_back({"session.dan_result.dan_index_max", DataField::Kind::INT, &dr.dan_index_max});
+        f.push_back({"session.dan_result.is_gaiden", DataField::Kind::BOOL, nullptr, &dr.is_gaiden});
+        f.push_back({"session.dan_result.dan_title", DataField::Kind::STRING, nullptr, nullptr, &dr.dan_title});
+        f.push_back({"session.dan_result.score", DataField::Kind::INT, &dr.score});
+        f.push_back({"session.dan_result.gauge_length", DataField::Kind::FLOAT, nullptr, nullptr, nullptr, nullptr, &dr.gauge_length});
+        f.push_back({"session.dan_result.max_combo", DataField::Kind::INT, &dr.max_combo});
+        f.push_back({"session.dan_result.odai_result", DataField::Kind::INT, &dr.odai_result});
+        f.push_back({"session.dan_result.skipped", DataField::Kind::BOOL, nullptr, &dr.skipped});
         return f;
     }
 

@@ -418,6 +418,7 @@ void DanResultScreen::draw() {
     float cx = cs_default.x, cy = cs_default.y, cscale = 1.0f;
     draw_seq->chara_pos(cx, cy, cscale);
     if (chara) chara->draw(cx, cy, cscale);
+    draw_seq->draw_overlay(s);
 
     const SkinInfo* n = tex.skin_entry("dan_result_nameplate");
     const SkinInfo& ns_default = n ? *n : tex.skin_config[SC::RESULT_NAMEPLATE];

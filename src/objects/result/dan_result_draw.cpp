@@ -17,6 +17,7 @@ sol::table build_rd_table(const DanResultData& rd) {
     t["max_combo"]      = rd.max_combo;
     t["odai_result"]    = rd.odai_result;
     t["skipped"]        = rd.skipped;
+    t["player_num"]     = (int)global_data.player_num;
 
     sol::table songs = lua.create_table();
     for (size_t i = 0; i < rd.songs.size(); i++) {
@@ -87,12 +88,12 @@ DanResultDraw::DanResultDraw(const DanResultData& rd, int prev_arrival, int prev
               best_score_show, gauge_exam, gauge_value, std::max(gauge_border, 1)))
         return;
     fn_draw          = lua_object["draw"];
+    fn_draw_overlay  = lua_object["draw_overlay"];
     fn_chara_pos     = lua_object["chara_pos"];
     fn_nameplate_pos = lua_object["nameplate_pos"];
 }
 
-void DanResultDraw::draw(const FrameState& s) {
-    if (!fn_draw.valid() || !script_manager.lua) return;
+sol::table DanResultDraw::state_table(const FrameState& s) {
     sol::state& lua = *script_manager.lua;
     sol::table t = lua.create_table();
     t["now"]              = s.now;
@@ -118,8 +119,17 @@ void DanResultDraw::draw(const FrameState& s) {
         rows[i + 1] = rt;
     }
     t["rows"] = rows;
+    return t;
+}
 
-    call(fn_draw, "DanResultDraw:draw", t);
+void DanResultDraw::draw(const FrameState& s) {
+    if (!fn_draw.valid() || !script_manager.lua) return;
+    call(fn_draw, "DanResultDraw:draw", state_table(s));
+}
+
+void DanResultDraw::draw_overlay(const FrameState& s) {
+    if (!fn_draw_overlay.valid() || !script_manager.lua) return;
+    call(fn_draw_overlay, "DanResultDraw:draw_overlay", state_table(s));
 }
 
 bool DanResultDraw::chara_pos(float& x, float& y, float& scale) {

@@ -14,6 +14,7 @@ struct DanResultRowSchedule {
 // DanResultScreen; this only ever reads state, it never mutates it.
 class DanResultDraw : public LuaScript {
     sol::protected_function fn_draw;
+    sol::protected_function fn_draw_overlay;
     sol::protected_function fn_chara_pos;
     sol::protected_function fn_nameplate_pos;
 public:
@@ -36,10 +37,15 @@ public:
     };
 
     void draw(const FrameState& s);
+    // Drawn after the chara (clear/fail stamp sits above it); optional in skins.
+    void draw_overlay(const FrameState& s);
 
     // Overrides the caller's default chara/nameplate position when the active
     // draw branch (page2 / celebration / congrats) wants something else;
     // returns false (leaving x/y/etc untouched) when lua has nothing to say.
     bool chara_pos(float& x, float& y, float& scale);
     bool nameplate_pos(float& x, float& y, float& fade);
+
+private:
+    sol::table state_table(const FrameState& s);
 };
