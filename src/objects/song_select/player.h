@@ -18,6 +18,8 @@ public:
     Difficulty prev_diff;
     std::vector<Difficulty> curr_diffs;
     double last_moved;
+    double hold_start = 0, next_repeat = 0;
+    int hold_dir = 0;
     bool selected_song;
     bool is_ready;
     bool is_ura;

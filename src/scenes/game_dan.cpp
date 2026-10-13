@@ -6,7 +6,6 @@
 
 void DanGameScreen::on_screen_start() {
     Screen::on_screen_start();
-    init_dan_textures();
     mask_shader   = load_shader("shader/dummy.vs", "shader/mask.fs");
     ms_from_start = 0;
     start_ms      = 0;
@@ -42,71 +41,6 @@ void DanGameScreen::on_screen_start() {
 
     result_transition = ResultTransition(PlayerNum::DAN);
     allnet_indicator  = AllNetIcon();
-}
-
-// The drumroll condition icon is `exam_roll` in newer skins and `exam_drumroll` in older
-// ones; use whichever the active skin carries.
-TextureObject* exam_icon_id(const std::string& preferred, const char* folder) {
-    if (tex.has_texture(preferred)) return tex.get_texture(preferred);
-    const std::string alt = std::string(folder) + "/exam_drumroll";
-    if (tex.has_texture(alt)) return tex.get_texture(alt);
-    return tex.get_texture(preferred);
-}
-
-void DanGameScreen::init_dan_textures() {
-    t_exam_bg              = tex.get_texture("dan_info/exam_bg");
-    t_exam_overlay_1       = tex.get_texture("dan_info/exam_overlay_1");
-    t_exam_overlay_2       = tex.get_texture("dan_info/exam_overlay_2");
-    t_exam_fail            = tex.get_texture("dan_info/exam_fail");
-    t_exam_failed          = tex.get_texture("dan_info/exam_failed");
-    t_exam_less            = tex.get_texture("dan_info/exam_less");
-    t_exam_more             = tex.get_texture("dan_info/exam_more");
-    t_exam_percent         = tex.get_texture("dan_info/exam_percent");
-    t_exam_badge           = tex.get_texture("dan_info/exam_badge");
-    t_exam_frame_back_all  = tex.get_texture("dan_info/exam_frame_back_all");
-    t_exam_frame_front_all = tex.get_texture("dan_info/exam_frame_front_all");
-    t_exam_border_counter  = tex.get_texture("dan_info/exam_border_counter");
-    t_value_counter        = tex.get_texture("dan_info/value_counter");
-    t_exam_sub_bg          = tex.get_texture("dan_info/exam_sub_bg");
-    t_exam_sub_track       = tex.get_texture("dan_info/exam_sub_track");
-    t_exam_sub_front       = tex.get_texture("dan_info/exam_sub_front");
-    t_exam_sub_chip        = tex.get_texture("dan_info/exam_sub_chip");
-    t_exam_sub_counter     = tex.get_texture("dan_info/exam_sub_counter");
-    t_total_notes          = tex.get_texture("dan_info/total_notes");
-    t_total_notes_counter  = tex.get_texture("dan_info/total_notes_counter");
-    t_rank_plate           = tex.get_texture("dan_info/rank_plate");
-    t_dan_frame            = tex.get_texture("dan_info/frame");
-
-    t_classic_bars = {
-        {"exam_red",  tex.get_texture("dan_info/exam_red")},
-        {"exam_gold", tex.get_texture("dan_info/exam_gold")},
-        {"exam_max",  tex.get_texture("dan_info/exam_max")},
-    };
-    static const std::unordered_map<std::string, std::string> exam_icon_paths = {
-        {"gauge",        "dan_info/exam_gauge"},
-        {"combo",        "dan_info/exam_combo"},
-        {"hit",          "dan_info/exam_hit"},
-        {"judgebad",     "dan_info/exam_judgebad"},
-        {"judgegood",    "dan_info/exam_judgegood"},
-        {"judgeperfect", "dan_info/exam_judgeperfect"},
-        {"score",        "dan_info/exam_score"},
-        {"renda",        "dan_info/exam_roll"},
-    };
-    t_exam_icons.clear();
-    for (const auto& [exam_type, path] : exam_icon_paths)
-        t_exam_icons[exam_type] = exam_icon_id(path, "dan_info");
-
-    t_fill_bar = {
-        {"dan_info/exam_sub_red",     tex.get_texture("dan_info/exam_sub_red")},
-        {"dan_info/exam_red",         tex.get_texture("dan_info/exam_red")},
-        {"dan_info/exam_sub_gold",    tex.get_texture("dan_info/exam_sub_gold")},
-        {"dan_info/exam_gold",        tex.get_texture("dan_info/exam_gold")},
-        {"dan_info/exam_sub_max",     tex.get_texture("dan_info/exam_sub_max")},
-        {"dan_info/exam_max",         tex.get_texture("dan_info/exam_max")},
-    };
-    for (const char* name : {"dan_info/exam_sub_rainbow", "dan_info/exam_rainbow", "dan_info/exam_rainbow_all",
-                             "dan_info/exam_sub_down80", "dan_info/exam_down80"})
-        if (tex.has_texture(name)) t_fill_bar[name] = tex.get_texture(name);
 }
 
 void DanGameScreen::init_dan() {
@@ -175,13 +109,16 @@ void DanGameScreen::init_dan() {
 
     const std::string& lang = global_data.config->general.language;
     std::string title = sd.song_title;
-    hori_name = std::make_unique<OutlinedText>(title, tex.skin_config[SC::DAN_TITLE].font_size, ray::WHITE, ray::BLACK, false);
+    draw_seq.emplace(title);
 
     current_song_title = localized_text(parser->metadata.title, lang, LocalizedTextFallback::REQUIRED_ENGLISH);
     std::string subtitle = localized_text(parser->metadata.subtitle, lang, LocalizedTextFallback::NONE);
     song_info = SongInfo(current_song_title, subtitle, parser->metadata.subtitle_full_display, first.genre_index - 1, 1);
 
-    start_ms = get_current_ms() - parser->metadata.offset * 1000 - (double)global_data.config->general.audio_offset;
+    between.start(get_current_ms(), current_song_title, subtitle,
+                  parser->metadata.subtitle_full_display);
+    start_ms = get_current_ms() + DanBetween::SONG_OPEN_MS
+             - parser->metadata.offset * 1000 - (double)global_data.config->general.audio_offset;
 }
 
 void DanGameScreen::change_song() {
@@ -522,9 +459,8 @@ void DanGameScreen::trigger_fail_out(double current_ms) {
 
 Screens DanGameScreen::on_screen_end(Screens next_screen) {
     dan_info_cache.reset();
-    hori_name.reset();
+    draw_seq.reset();
     between.stop();
-    exam_captions.clear();
     return GameScreen::on_screen_end(next_screen);
 }
 
@@ -717,230 +653,12 @@ void DanGameScreen::push_dan_state() {
     background->handle_dan(global_data.player_num, st);
 }
 
-void DanGameScreen::draw_digit_counter(const std::string& digits, float margin_x, TextureObject* tex_id, int index, float y, float x_offset) {
-    for (int j = 0; j < (int)digits.size(); j++) {
-        float x = -(float)(digits.size() - j) * margin_x + x_offset;
-        tex.draw_texture(tex_id, {.frame=digits[j]-'0', .x=x, .y=y, .index=index});
-    }
-}
-
-void DanGameScreen::draw_exam_row(const DanExamInfo& info, const Exam& exam, int index, float y) {
-    const SkinInfo& dei = dan_exam_info();
-    const SkinInfo* bm = tex.skin_entry("dan_exam_border_margin");
-    float border_margin = bm ? bm->x : tex.skin_config[SC::DAN_SCORE_BOX_MARGIN].x;
-    const SkinInfo* vm = tex.skin_entry("dan_value_counter_margin");
-    float value_margin = vm ? vm->x : border_margin;
-
-    if (!tex.has_texture("dan_info/exam_border_counter")) {
-        // Classic HUD (PyTaikoGreen and other skins made before the Nijiiro rework): the
-        // row as it was drawn then - background, overlay 1, one bar picked by progress
-        // (exam_red / exam_gold / exam_max), icon shifted left of the border digits, the
-        // border digits and 以上/未満 mark, overlay 2, the live value on value_counter index 1.
-        const float score_margin = tex.skin_config[SC::DAN_SCORE_BOX_MARGIN].x;
-        tex.draw_texture(t_exam_bg,        {.y = y});
-        tex.draw_texture(t_exam_overlay_1, {.y = y});
-        auto bar_it = t_classic_bars.find(info.bar_texture);
-        if (exam_failed[index])
-            tex.draw_texture(t_exam_fail, {.y = y, .x2 = info.bar_width});
-        else if (bar_it != t_classic_bars.end())
-            tex.draw_texture(bar_it->second, {.y = y, .x2 = info.bar_width});
-        const std::string red_str = std::to_string(info.red_value);
-        const float type_x = -(float)red_str.size() * 20.0f * tex.screen_scale;
-        auto ic = t_exam_icons.find(info.exam_type);
-        if (ic != t_exam_icons.end())
-            tex.draw_texture(ic->second, {.x = type_x, .y = y});
-        const float gauge_shift = (info.exam_type == "gauge") ? -score_margin : 0.0f;
-        draw_digit_counter(red_str, score_margin, t_value_counter, 0, y, gauge_shift);
-        if (info.exam_range == "less")      tex.draw_texture(t_exam_less, {.y = y});
-        else if (info.exam_range == "more") tex.draw_texture(t_exam_more, {.y = y});
-        tex.draw_texture(t_exam_overlay_2, {.y = y});
-        if (exam_failed[index]) {
-            tex.draw_texture(t_exam_failed, {.y = y});
-        } else {
-            draw_digit_counter(std::to_string(info.counter_value), score_margin, t_value_counter, 1, y);
-            if (info.exam_type == "gauge") {
-                tex.draw_texture(t_exam_percent, {.y = y, .index = 0});
-                tex.draw_texture(t_exam_percent, {.y = y, .index = 1});
-            }
-        }
-        return;
-    }
-
-    tex.draw_texture(t_exam_bg, {.y = y});
-    tex.draw_texture(t_exam_badge,
-                     {.frame = info.gothrough ? 0 : 1 + std::min(song_index, 2), .y = y});
-
-    const bool all = info.gothrough;
-    tex.draw_texture(all ? t_exam_frame_back_all : t_exam_overlay_1, {.y = y});
-
-    const SkinInfo* wa = tex.skin_entry("dan_exam_bar_all");
-    float bar_full = all && wa ? wa->width : dei.width;
-
-    auto fill = [&](const std::string& state, float w, float fy, bool sub) {
-        if (w <= 0 || state == "empty") return;
-        std::string rb   = sub ? "dan_info/exam_sub_rainbow" : "dan_info/exam_rainbow";
-        if (!sub && all && t_fill_bar.count("dan_info/exam_rainbow_all"))
-            rb = "dan_info/exam_rainbow_all";
-        const std::string d80  = sub ? "dan_info/exam_sub_down80"  : "dan_info/exam_down80";
-        const std::string up50 = sub ? "dan_info/exam_sub_red"     : "dan_info/exam_red";
-        const std::string up80 = sub ? "dan_info/exam_sub_gold"    : "dan_info/exam_gold";
-        const std::string p100 = sub ? "dan_info/exam_sub_max"     : "dan_info/exam_max";
-        if (state == "max" && t_fill_bar.count(rb)) {
-            TextureObject* rb_tex = t_fill_bar.at(rb);
-            const float th   = (float)rb_tex->height;
-            const float tw   = (float)rb_tex->width;
-            const float perd = tw * 0.5f;
-            const double phase_ms = get_frame_ms();
-            const float ph   = perd - (float)std::fmod(phase_ms / 1000.0
-                                                       * (perd * 60.0 / 80.0), (double)perd);
-            const float avail = tw - ph;
-            if (w <= avail) {
-                tex.draw_texture(rb_tex, {.y = fy, .x2 = w,
-                                      .src = ray::Rectangle{ph, 0.0f, w, th}});
-            } else {
-                tex.draw_texture(rb_tex, {.y = fy, .x2 = avail,
-                                      .src = ray::Rectangle{ph, 0.0f, avail, th}});
-                tex.draw_texture(rb_tex, {.x = avail, .y = fy, .x2 = w - avail,
-                                      .src = ray::Rectangle{0.0f, 0.0f, w - avail, th}});
-            }
-            return;
-        }
-        std::string id = p100;
-        if (state == "up_50")           id = up50;
-        else if (state == "up_80")      id = up80;
-        else if (state == "max_soon")   id = p100;
-        else if (state == "max_soon2")  id = p100;
-        else if (state == "down_80")    id = t_fill_bar.count(d80) ? d80 : up80;
-        tex.draw_texture(t_fill_bar.at(id), {.y = fy, .x2 = w});
-    };
-    if (exam_failed[index]) {
-        tex.draw_texture(t_exam_fail, {.y = y, .x2 = bar_full});
-    } else {
-        fill(info.bar_state, bar_full * info.progress, y, false);
-    }
-
-    tex.draw_texture(all ? t_exam_frame_front_all : t_exam_overlay_2, {.y = y});
-
-    auto icon_it = t_exam_icons.find(info.exam_type);
-    if (icon_it != t_exam_icons.end())
-        tex.draw_texture(icon_it->second, {.y = y});
-
-    const SkinInfo* bt = tex.skin_entry("dan_game_exam_border_text");
-    OutlinedText* cap = nullptr;
-    float bt_ol = 4.0f / tex.screen_scale;
-    if (bt) {
-        if (bt->outline >= 0) bt_ol = bt->outline;
-        cap = exam_captions.get(
-            exam_threshold_text(tex, info.exam_type, info.exam_range,
-                                info.red_value, global_data.config->general.language),
-            bt->font_size > 0 ? bt->font_size : 36, bt_ol);
-    }
-    if (cap) {
-        const float pad = ExamCaptionCache::pad_for(bt_ol, tex.screen_scale);
-        cap->draw({.x = bt->x - cap->width + pad, .y = bt->y - pad + y});
-    } else {
-        if (info.exam_range == "less")      tex.draw_texture(t_exam_less, {.y = y});
-        else if (info.exam_range == "more") tex.draw_texture(t_exam_more, {.y = y});
-
-        float gauge_shift = 0.0f;
-        if (info.exam_type == "gauge") {
-            tex.draw_texture(t_exam_percent, {.y = y, .index = 0});
-            const SkinInfo* gs = tex.skin_entry("dan_exam_gauge_shift");
-            gauge_shift = -(gs ? gs->x : border_margin);
-        }
-        draw_digit_counter(std::to_string(info.red_value), border_margin,
-                           t_exam_border_counter, 0, y, gauge_shift);
-    }
-
-    if (exam_failed[index]) {
-        tex.draw_texture(t_exam_failed, {.y = y});
-    } else {
-        const SkinInfo* vl = tex.skin_entry("dan_exam_value_left");
-        const std::string live = std::to_string(info.counter_value);
-        if (vl) {
-            const float json_x = (t_value_counter && !t_value_counter->x.empty())
-                               ? t_value_counter->x[0] : 920.0f;
-            for (int j = 0; j < (int)live.size(); j++)
-                tex.draw_texture(t_value_counter,
-                                 {.frame = live[j] - '0',
-                                  .x = vl->x + j * value_margin - json_x, .y = y});
-            if (info.exam_type == "gauge") {
-                const float pjson = (t_exam_percent && t_exam_percent->x.size() > 1)
-                                  ? t_exam_percent->x[1] : 944.0f;
-                tex.draw_texture(t_exam_percent,
-                                 {.x = vl->x + live.size() * value_margin - pjson,
-                                  .y = y, .index = 1});
-            }
-        } else {
-            draw_digit_counter(live, value_margin, t_value_counter, 0, y);
-            if (info.exam_type == "gauge")
-                tex.draw_texture(t_exam_percent, {.y = y, .index = 1});
-        }
-    }
-
-    if (!all) {
-        const SkinInfo* sp = tex.skin_entry("dan_exam_sub_row");
-        float sub_pitch  = sp ? sp->y : 50.0f;
-        float sub_margin = sp ? sp->x : 20.0f;
-        for (int j = 0; j < 2; j++) {
-            float sy = y + j * sub_pitch;
-            tex.draw_texture(t_exam_sub_bg,    {.y = sy});
-            if (j >= info.song_count) continue;   // not reached yet: stub only
-            tex.draw_texture(t_exam_sub_track, {.y = sy});
-            const SkinInfo* sb = tex.skin_entry("dan_exam_sub_bar");
-            float sub_full = sb ? sb->width : 234.0f;
-            fill(info.song_state[j], sub_full * info.song_progress[j], sy, true);
-            tex.draw_texture(t_exam_sub_front, {.y = sy});
-            tex.draw_texture(t_exam_sub_chip,  {.frame = j, .y = sy});
-            draw_digit_counter(std::to_string(info.song_value[j]), sub_margin,
-                               t_exam_sub_counter, 0, sy);
-        }
-    }
-}
-
-void DanGameScreen::draw_dan_info() {
-    if (!dan_info_cache.has_value()) return;
-    const DanInfoCache& cache = *dan_info_cache;
-    const SessionData& sd = global_data.session_data[(int)global_data.player_num];
-
-    tex.draw_texture(t_total_notes, {});
-    // Skins built around the classic HUD (no exam_border_counter art, no Lua dan panel)
-    // still get the remaining-notes counter from the engine.
-    if (!tex.has_texture("dan_info/exam_border_counter") &&
-        tex.has_texture("dan_info/total_notes_counter")) {
-        draw_digit_counter(std::to_string(cache.remaining_notes), tex.skin_config[SC::DAN_TOTAL_NOTES_MARGIN].x,
-                           t_total_notes_counter, 0, 0);
-    }
-
-    float offset_y = dan_exam_info().y;
-    const auto& exams = sd.selected_dan_exam;
-    int slot = 0;
-    for (int i = 0; i < (int)cache.exam_data.size(); i++) {
-        if (i >= (int)exams.size()) break;
-        if (exams[i].type == "gauge") continue;
-        if (slot >= 3) break;
-        draw_exam_row(cache.exam_data[i], exams[i], i, slot * offset_y);
-        slot++;
-    }
-
-    if (sd.dan_rank >= 0 && tex.options[SCO::DAN_GAME_RANK_PLATE]) {
-        tex.draw_texture(t_rank_plate, {.frame = sd.dan_rank});
-    } else {
-        tex.draw_texture(t_dan_frame, {.frame = dan_color});
-        if (hori_name) {
-            SkinInfo hn = tex.skin_config[SC::DAN_GAME_HORI_NAME];
-            hori_name->draw({
-                .x = hn.x - hori_name->width / 2.0f,
-                .y = hn.y,
-                .x2 = std::min(hori_name->width, hn.width) - hori_name->width
-            });
-        }
-    }
-}
-
 void DanGameScreen::draw() {
     if (background.has_value()) background->draw_back();
-    draw_dan_info();
+    if (dan_info_cache.has_value() && draw_seq.has_value()) {
+        const SessionData& sd = global_data.session_data[(int)global_data.player_num];
+        draw_seq->draw(*dan_info_cache, exam_failed, song_index, dan_color, sd.dan_rank, get_frame_ms());
+    }
     if (dan_gauge) dan_gauge->draw();
     if (background.has_value()) background->draw_gauge(PlayerNum::P1);
     if (players.size() == 1)

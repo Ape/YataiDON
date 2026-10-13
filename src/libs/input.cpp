@@ -130,6 +130,23 @@ bool is_input_key_pressed(const std::vector<int>& keys, const std::vector<int>& 
     return false;
 }
 
+static bool keys_held(const std::vector<int>& keys, const std::vector<int>& pad) {
+    for (int k : keys) if (k >= 0 && k < (int)previous_key_states.size() && previous_key_states[k]) return true;
+    for (int b : pad) {
+        if (b < 0 || b >= 18) continue;
+        for (auto& g : previous_gamepad_states) if (g[b]) return true;
+    }
+    return false;
+}
+
+bool is_kat_held(bool left, PlayerNum player_num) {
+    const auto& c = *global_data.config;
+    bool p1 = player_num == PlayerNum::P1 || player_num == PlayerNum::ALL;
+    bool p2 = player_num == PlayerNum::P2 || player_num == PlayerNum::ALL;
+    return (p1 && keys_held(left ? c.keys_1p.left_kat : c.keys_1p.right_kat, left ? c.gamepad_1p.left_kat : c.gamepad_1p.right_kat))
+        || (p2 && keys_held(left ? c.keys_2p.left_kat : c.keys_2p.right_kat, left ? c.gamepad_2p.left_kat : c.gamepad_2p.right_kat));
+}
+
 bool is_l_don_pressed(PlayerNum player_num, float* strength) {
     if (player_num == PlayerNum::P1) {
         return is_input_key_pressed(global_data.config->keys_1p.left_don, global_data.config->gamepad_1p.left_don, strength)

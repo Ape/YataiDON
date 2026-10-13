@@ -248,6 +248,16 @@ SongSelectState SongSelectPlayer::handle_input_browsing(double current_ms) {
         navigated = true;
     }
 
+    int dir = is_kat_held(true, player_num) ? -1 : is_kat_held(false, player_num) ? 1 : 0;
+    if (l_kat || r_kat) { hold_dir = dir; hold_start = current_ms; next_repeat = current_ms + 350; }
+    else if (dir != hold_dir) hold_dir = 0;
+    if (hold_dir && !navigated && current_ms >= next_repeat) {
+        audio.play_sound("kat", VolumePreset::SOUND);
+        if (hold_dir < 0) navigator.move_left(); else navigator.move_right();
+        last_moved = current_ms;
+        next_repeat = current_ms + 70;
+    }
+
     if (ray::IsKeyPressed(ray::KEY_SPACE)) {
         BaseBox* item = navigator.get_current_item();
         if (navigator.is_song(item)) {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <string>
 
@@ -12,14 +13,13 @@
 class DanBetween {
 public:
     static constexpr double FPS     = 60.0;
-    static constexpr double F_START = 5.0;
-    static constexpr double F_STAY  = 123.0;
-    static constexpr double F_OPEN  = 204.0;
-    static constexpr double F_END   = 369.0;
-    static constexpr double CLOSE_TO_OPEN_FRAMES = 360.0;
+    static constexpr double F_START = 2.0;
+    static constexpr double F_TEXT  = 120.0;
+    static constexpr double F_OPEN  = 201.0;
+    static constexpr double F_END   = 366.0;
 
-    static constexpr double SONG_OPEN_MS = CLOSE_TO_OPEN_FRAMES * 1000.0 / FPS;
-    static constexpr double TOTAL_MS = SONG_OPEN_MS + (F_END - F_OPEN) * 1000.0 / FPS;
+    static constexpr double SONG_OPEN_MS = (F_OPEN - F_START) * 1000.0 / FPS;
+    static constexpr double TOTAL_MS     = (F_END - F_START) * 1000.0 / FPS;
 
     void start(double now, const std::string& title, const std::string& subtitle,
                bool show_subtitle);
@@ -47,14 +47,26 @@ private:
 
 namespace dan_between_detail {
 
-inline float skin_outline(const SkinInfo& s) { return s.outline >= 0 ? s.outline : 3.0f; }
+inline float skin_outline(const SkinInfo& s) { return s.outline >= 0 ? s.outline : 4.0f; }
 
 inline double fallback_tx(double f) {
-    if (f <= DanBetween::F_START) return 1071.0;
-    if (f < 67.0)  return 1071.0 + (360.0 - 1071.0) * (f - 5.0) / 62.0;
-    if (f <= DanBetween::F_OPEN) return 360.0;
-    if (f < 219.0) return 360.0 + (1071.0 - 360.0) * (f - 204.0) / 15.0;
-    return 1071.0;
+    auto lerp = [](double a, double b, double t) { return a + (b - a) * t; };
+    double px;
+    if (f <= 2.0)       px = 714.0;
+    else if (f < 3.0)   px = lerp(714.0, 588.2, f - 2.0);
+    else if (f < 19.0) {
+        const double k = (f - 3.0) / 16.0;
+        px = lerp(588.2, 291.4, (1.0 - (std::exp(-3.0 * k) - std::exp(-3.0)) / (1.0 - std::exp(-3.0))));
+    }
+    else if (f < 51.0)  px = lerp(291.4, 272.5, (f - 19.0) / 32.0);
+    else if (f < 64.0)  px = lerp(272.5, 240.0, (f - 51.0) / 13.0);
+    else if (f <= DanBetween::F_OPEN) px = 240.0;
+    else if (f < DanBetween::F_OPEN + 15.0) {
+        const double k = (f - DanBetween::F_OPEN) / 15.0;
+        px = lerp(240.0, 714.0, k * (2.0 - k));
+    }
+    else px = 714.0;
+    return px / 480.0;
 }
 
 }  // namespace dan_between_detail
@@ -103,10 +115,7 @@ inline void DanBetween::update(double now) {
 }
 
 inline double DanBetween::clip_frame() const {
-    if (elapsed < SONG_OPEN_MS) {
-        return std::min(F_STAY, F_START + elapsed * FPS / 1000.0);
-    }
-    return std::min(F_END, F_OPEN + (elapsed - SONG_OPEN_MS) * FPS / 1000.0);
+    return F_START + elapsed * FPS / 1000.0;
 }
 
 inline double DanBetween::door_tx() const {
@@ -115,15 +124,15 @@ inline double DanBetween::door_tx() const {
 
 inline double DanBetween::text_alpha() const {
     const double f = clip_frame();
-    if (f < F_STAY) return 0.0;
-    if (f < 340.0)  return 1.0;
-    return std::clamp((368.0 - f) / 28.0, 0.0, 1.0);
+    if (f < F_TEXT) return 0.0;
+    if (f < 337.0)  return 1.0;
+    return std::clamp((365.0 - f) / 28.0, 0.0, 1.0);
 }
 
 inline void DanBetween::draw(float lane_y) {
     if (!active) return;
     const double f = clip_frame();
-    if (f < F_START || f >= F_END) return;
+    if (f >= F_END) return;
     if (!tex.has_texture("lane/dan_between_fusuma")) return;
 
     TextureObject* door_id = tex.get_texture("lane/dan_between_fusuma");
@@ -169,7 +178,7 @@ inline void DanBetween::draw(float lane_y) {
     const float src_top = crop_top / sc;
     const float src_h   = crop_h / sc;
 
-    const float tx = (float)door_tx();
+    const float tx = (float)door_tx() * (float)door.x2[0];
     tex.draw_texture(door_id, {.x = tx, .y = lane_y + crop_top,
                                .y2 = crop_h - door_h,
                                .src = ray::Rectangle{0, src_top,
@@ -180,4 +189,5 @@ inline void DanBetween::draw(float lane_y) {
                                                      -(float)door.width, src_h}});
 
     ray::EndScissorMode();
+
 }

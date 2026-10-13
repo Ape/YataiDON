@@ -4,11 +4,9 @@
 #include <string>
 #include <vector>
 #include <optional>
-#include <unordered_map>
-#include <memory>
 #include "game.h"
 #include "../objects/game/dan_between.h"
-#include "../objects/game/exam_caption.h"
+#include "../objects/game/dan_game_lua.h"
 
 struct DanExamInfo {
     float   progress     = 0;
@@ -55,9 +53,7 @@ private:
 
     DanBetween between;
 
-    std::unique_ptr<OutlinedText> hori_name;
-
-    ExamCaptionCache exam_captions;
+    std::optional<DanGameLua> draw_seq;
 
     // Cumulative stat tracking across songs
     int prev_good = 0, prev_ok = 0, prev_bad = 0, prev_drumroll = 0;
@@ -81,7 +77,6 @@ private:
     DanInfoCache calculate_dan_info();
     int get_exam_progress(const Exam& exam);
     int get_exam_progress_song(const Exam& exam, int song_idx);
-    void draw_exam_row(const DanExamInfo& info, const Exam& exam, int index, float y);
     void fill_unplayed_songs();
     void check_exam_failures(bool course_finished = false, bool song_finished = false);
 
@@ -91,40 +86,4 @@ private:
 
     static const SkinInfo& dan_exam_info();
     void push_dan_state();
-    void draw_dan_info();
-    void draw_digit_counter(const std::string& digits, float margin_x, TextureObject* tex_id, int index, float y, float x_offset = 0);
-
-    // Textures resolved once in on_screen_start(), after load_screen_textures() has run,
-    // instead of calling tex.get_texture() every frame from draw_exam_row()/draw_dan_info().
-    void init_dan_textures();
-
-    TextureObject* t_exam_bg = nullptr;
-    TextureObject* t_exam_overlay_1 = nullptr;
-    TextureObject* t_exam_overlay_2 = nullptr;
-    TextureObject* t_exam_fail = nullptr;
-    TextureObject* t_exam_failed = nullptr;
-    TextureObject* t_exam_less = nullptr;
-    TextureObject* t_exam_more = nullptr;
-    TextureObject* t_exam_percent = nullptr;
-    TextureObject* t_exam_badge = nullptr;
-    TextureObject* t_exam_frame_back_all = nullptr;
-    TextureObject* t_exam_frame_front_all = nullptr;
-    TextureObject* t_exam_border_counter = nullptr;
-    TextureObject* t_value_counter = nullptr;
-    TextureObject* t_exam_sub_bg = nullptr;
-    TextureObject* t_exam_sub_track = nullptr;
-    TextureObject* t_exam_sub_front = nullptr;
-    TextureObject* t_exam_sub_chip = nullptr;
-    TextureObject* t_exam_sub_counter = nullptr;
-    TextureObject* t_total_notes = nullptr;
-    TextureObject* t_total_notes_counter = nullptr;
-    TextureObject* t_rank_plate = nullptr;
-    TextureObject* t_dan_frame = nullptr;
-
-    // info.bar_texture ("exam_red"/"exam_gold"/"exam_max") -> classic-HUD bar art.
-    std::unordered_map<std::string, TextureObject*> t_classic_bars;
-    // exam type ("gauge"/"combo"/.../"renda") -> icon, already resolved through exam_icon_id().
-    std::unordered_map<std::string, TextureObject*> t_exam_icons;
-    // fill()'s bar-segment path ("dan_info/exam_sub_rainbow" etc, its own key) -> art.
-    std::unordered_map<std::string, TextureObject*> t_fill_bar;
 };
