@@ -1,7 +1,5 @@
 #include "transition.h"
-#include "../../libs/global_data.h"
 #include <algorithm>
-#include <stdexcept>
 
 Transition::Transition(const std::string& title, const std::string& subtitle, bool is_second) :
     is_second(is_second) {

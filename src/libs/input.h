@@ -2,10 +2,8 @@
 
 #include <atomic>
 #include <functional>
-#include <mutex>
 #include <string>
 #include <thread>
-#include <unordered_set>
 #include <vector>
 
 #include "ray.h" // IWYU pragma: keep

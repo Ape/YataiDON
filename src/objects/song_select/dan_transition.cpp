@@ -1,6 +1,5 @@
 #include "dan_transition.h"
 #include <algorithm>
-#include <stdexcept>
 
 DanTransition::DanTransition(int base_id) : base_id(base_id) {
     started = false;

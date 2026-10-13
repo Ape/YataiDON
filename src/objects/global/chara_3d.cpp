@@ -1,7 +1,6 @@
 #include "chara_3d.h"
 #include "../../libs/animation.h"
 #include "../../libs/camera_utils.h"
-#include "../../libs/global_data.h"
 #include "../../libs/scores.h"
 #include "../../libs/filesystem.h"
 #include <algorithm>

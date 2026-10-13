@@ -15,7 +15,6 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(EMSCRIPTEN)
-  # std::thread is used throughout; every object (deps included) must be built with atomics.
   add_compile_options(-pthread)
   add_link_options(-pthread)
 endif()

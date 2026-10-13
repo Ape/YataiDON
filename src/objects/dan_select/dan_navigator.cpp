@@ -76,23 +76,51 @@ int DanNavigator::box_genre(const fs::path& box_def_dir) {
     return genre;
 }
 
+static std::string normalize_exam_type(std::string t) {
+    std::transform(t.begin(), t.end(), t.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    static const std::map<std::string, std::string> names = {
+        {"judgeperfect", "judgeperfect"}, {"jp", "judgeperfect"},
+        {"judgegood", "judgegood"}, {"jg", "judgegood"},
+        {"judgebad", "judgebad"}, {"jb", "judgebad"},
+        {"score", "score"}, {"s", "score"},
+        {"roll", "renda"}, {"r", "renda"}, {"renda", "renda"},
+        {"hit", "hit"}, {"h", "hit"},
+        {"combo", "combo"}, {"c", "combo"},
+        {"accuracy", "accuracy"}, {"a", "accuracy"},
+        {"judgeadlib", "judgeadlib"}, {"ja", "judgeadlib"},
+        {"judgemine", "judgemine"}, {"jm", "judgemine"},
+    };
+    auto it = names.find(t);
+    return it != names.end() ? it->second : "gauge";
+}
+
 Exam DanNavigator::parse_exam(const rapidjson::Value& e) {
     Exam exam;
-    exam.type  = e.HasMember("type")  && e["type"].IsString()  ? e["type"].GetString()  : "";
+    if (e.HasMember("type") && e["type"].IsString()) exam.type = normalize_exam_type(e["type"].GetString());
     exam.range = e.HasMember("range") && e["range"].IsString() ? e["range"].GetString() : "";
-    if (e.HasMember("value") && e["value"].IsArray() && e["value"].Size() >= 1 && e["value"][0].IsArray()) {
-        // per-song borders: [[red, gold], [red, gold], [red, gold]] (gold optional)
-        for (auto& pair : e["value"].GetArray()) {
-            if (!pair.IsArray() || pair.Size() < 1 || !pair[0].IsInt()) continue;
-            const int red  = pair[0].GetInt();
-            const int gold = pair.Size() >= 2 && pair[1].IsInt() ? pair[1].GetInt() : Exam::GOLD_FULL;
-            exam.song_red.push_back(red);
-            exam.song_gold.push_back(gold);
+    std::transform(exam.range.begin(), exam.range.end(), exam.range.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    if (exam.range != "less") exam.range = "more";
+    if (e.HasMember("value") && e["value"].IsArray()) {
+        const auto& v = e["value"];
+        bool per_song = false;
+        for (auto& x : v.GetArray()) per_song |= x.IsArray() || x.IsNull();
+        if (per_song) {
+            // per-song borders: [[red, gold], null, [red, gold]] (gold optional; null = no border,
+            // kept as a 0 placeholder so the song indices stay aligned)
+            for (auto& pair : v.GetArray()) {
+                int red = 0, gold = Exam::GOLD_FULL;
+                if (pair.IsArray() && pair.Size() >= 1 && pair[0].IsInt()) {
+                    red  = pair[0].GetInt();
+                    gold = pair.Size() >= 2 && pair[1].IsInt() ? pair[1].GetInt() : Exam::GOLD_FULL;
+                }
+                exam.song_red.push_back(red);
+                exam.song_gold.push_back(gold);
+            }
+            if (!exam.song_red.empty()) { exam.red = exam.song_red[0]; exam.gold = exam.song_gold[0]; }
+        } else if (v.Size() >= 1 && v[0].IsInt()) {
+            exam.red  = v[0].GetInt();
+            exam.gold = v.Size() >= 2 && v[1].IsInt() ? v[1].GetInt() : exam.red;  // a lone value is both borders
         }
-        if (!exam.song_red.empty()) { exam.red = exam.song_red[0]; exam.gold = exam.song_gold[0]; }
-    } else if (e.HasMember("value") && e["value"].IsArray() && e["value"].Size() >= 1 && e["value"][0].IsInt()) {
-        exam.red  = e["value"][0].GetInt();
-        exam.gold = e["value"].Size() >= 2 && e["value"][1].IsInt() ? e["value"][1].GetInt() : Exam::GOLD_FULL;
     }
     // A gold on the wrong side of its red is not a border (bad data would light the rainbow
     // the moment the value passes it): treat that song as red-only.
@@ -112,11 +140,32 @@ Exam DanNavigator::parse_exam(const rapidjson::Value& e) {
 std::optional<DanSongEntry> DanNavigator::load_song_entry(const rapidjson::Value& chart,
                                                           std::pair<std::string, std::string>* titles_out) {
     try {
-        std::string chart_title    = chart["title"].GetString();
-        std::string chart_subtitle = chart.HasMember("subtitle") ? chart["subtitle"].GetString() : "";
-        int diff = chart["difficulty"].GetInt();
+        auto str = [&](const char* k) -> std::string {
+            return chart.HasMember(k) && chart[k].IsString() ? chart[k].GetString() : "";
+        };
+        // difficulty: 0-4 or a name ("oni"); anything else is Oni, as in OpenTaiko
+        int diff = 3;
+        if (chart.HasMember("difficulty")) {
+            const auto& d = chart["difficulty"];
+            if (d.IsInt()) diff = d.GetInt();
+            else if (d.IsString()) {
+                std::string n = d.GetString();
+                std::transform(n.begin(), n.end(), n.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+                static const std::map<std::string, int> names = {
+                    {"easy", 0}, {"normal", 1}, {"hard", 2}, {"oni", 3}, {"edit", 4},
+                    {"0", 0}, {"1", 1}, {"2", 2}, {"3", 3}, {"4", 4}};
+                if (auto it = names.find(n); it != names.end()) diff = it->second;
+            }
+        }
 
-        auto path_opt = navigator.find_song_by_title(chart_title, chart_subtitle);
+        // hash first, title/subtitle when the hash is absent or unknown
+        std::string chart_title = str("title");
+        std::optional<fs::path> path_opt;
+        if (std::string hash = str("hash"); !hash.empty()) {
+            path_opt = scores_manager.get_path_by_diff_hash(hash);
+            if (!path_opt) path_opt = scores_manager.get_path_by_hash(hash);
+        }
+        if (!path_opt) path_opt = navigator.find_song_by_title(chart_title, str("subtitle"));
         if (!path_opt) {
             spdlog::warn("DanNavigator: song '{}' not found", chart_title);
             return std::nullopt;
@@ -136,6 +185,8 @@ std::optional<DanSongEntry> DanNavigator::load_song_entry(const rapidjson::Value
 
         bool hidden = chart.HasMember("hidden") && chart["hidden"].IsBool() &&
                       chart["hidden"].GetBool();
+        if (chart.HasMember("title_show") && chart["title_show"].IsBool() && !chart.HasMember("hidden"))
+            hidden = !chart["title_show"].GetBool();
 
         return DanSongEntry{*path_opt, genre, diff, level, hidden};
     } catch (...) {
@@ -146,13 +197,26 @@ std::optional<DanSongEntry> DanNavigator::load_song_entry(const rapidjson::Value
 
 std::optional<DanBoxData> DanNavigator::load_dan_box_data(const fs::path& json_path) {
     auto doc = read_json_file(json_path);
-    if (!doc.IsObject() || !doc.HasMember("title") || !doc["title"].IsString() ||
-        !doc.HasMember("color") || !doc["color"].IsInt()) {
-        spdlog::warn("DanNavigator: {} is missing required title/color", json_path.string());
+    if (!doc.IsObject() || !doc.HasMember("title")) {
+        spdlog::warn("DanNavigator: {} is missing required title", json_path.string());
         return std::nullopt;
     }
-    std::string title = doc["title"].GetString();
-    int color = doc["color"].GetInt();
+    // title: a string, or a {language: text} object (.tcm)
+    std::string title;
+    if (doc["title"].IsString()) {
+        title = doc["title"].GetString();
+    } else if (doc["title"].IsObject()) {
+        std::map<std::string, std::string> values;
+        for (auto& m : doc["title"].GetObject())
+            if (m.value.IsString()) values[m.name.GetString()] = m.value.GetString();
+        const std::string lang = global_data.config ? global_data.config->general.language : "en";
+        title = localized_text(values, lang, LocalizedTextFallback::ENGLISH_OR_FIRST);
+    }
+    if (title.empty()) {
+        spdlog::warn("DanNavigator: {} has no usable title", json_path.string());
+        return std::nullopt;
+    }
+    int color = doc.HasMember("color") && doc["color"].IsInt() ? doc["color"].GetInt() : 0;
     int rank = doc.HasMember("rank_art") && doc["rank_art"].IsInt() ? doc["rank_art"].GetInt() : -1;
     int dan_index = -1;
     if (doc.HasMember("dan_index") && doc["dan_index"].IsInt()) {
@@ -169,21 +233,41 @@ std::optional<DanBoxData> DanNavigator::load_dan_box_data(const fs::path& json_p
 
     std::vector<DanSongEntry> songs;
     std::vector<std::pair<std::string, std::string>> song_titles;
-    if (doc.HasMember("charts")) {
+    std::vector<size_t> kept;  // chart index of each loaded song, to realign per-song exam values
+    if (doc.HasMember("charts") && doc["charts"].IsArray()) {
+        size_t ci = 0;
         for (auto& chart : doc["charts"].GetArray()) {
             std::pair<std::string, std::string> t;
-            if (auto entry = load_song_entry(chart, &t)) {
-                songs.push_back(*entry);
-                song_titles.push_back(std::move(t));
-            }
+            if (chart.IsObject())
+                if (auto entry = load_song_entry(chart, &t)) {
+                    songs.push_back(*entry);
+                    song_titles.push_back(std::move(t));
+                    kept.push_back(ci);
+                }
+            ci++;
         }
     }
     if (songs.empty()) return std::nullopt;
 
     std::vector<Exam> exams;
-    if (doc.HasMember("exams")) {
-        for (auto& e : doc["exams"].GetArray())
-            exams.push_back(parse_exam(e));
+    if (doc.HasMember("exams") && doc["exams"].IsArray()) {
+        for (auto& e : doc["exams"].GetArray()) {
+            if (!e.IsObject()) continue;
+            Exam ex = parse_exam(e);
+            if (ex.type.empty()) continue;
+            if (ex.per_song()) {
+                std::vector<int> red, gold;
+                for (size_t idx : kept) {
+                    red.push_back(idx < ex.song_red.size() ? ex.song_red[idx] : 0);
+                    gold.push_back(idx < ex.song_gold.size() ? ex.song_gold[idx] : Exam::GOLD_FULL);
+                }
+                ex.song_red = red;
+                ex.song_gold = gold;
+                ex.red = red[0];
+                ex.gold = gold[0];
+            }
+            exams.push_back(ex);
+        }
     }
 
     DanBoxData d;
@@ -247,7 +331,9 @@ void DanNavigator::collect_dan_jsons(const fs::path& root_path, std::vector<fs::
                 continue;
             }
 #endif
-            if (entry.path().filename() == "dan.json") out.push_back(entry.path());
+            const auto name = entry.path().filename();
+            const auto ext  = entry.path().extension();
+            if (name == "dan.json" || ext == ".tcm" || ext == ".optktcm") out.push_back(entry.path());
         }
     } catch (const std::exception& ex) {
         spdlog::warn("DanNavigator: error loading {}: {}", root_path.string(), ex.what());
@@ -627,4 +713,3 @@ void DanNavigator::draw() {
     if (t_arrow_l)
         tex.draw_texture(t_arrow_l, {.x = pos - drift, .fade = aa});
 }
-
