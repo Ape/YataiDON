@@ -1397,6 +1397,9 @@ void Player::check_kusudama(double current_ms, DrumType drum_type, const Note& b
     if (!balloon.count.has_value()) return;
 
     Player* owner = kusudama_owner();
+    if (owner->kusudama_counter.has_value() && owner->kusudama_counter->has_missed()) {
+        owner->kusudama_counter.reset();
+    }
     if (!owner->kusudama_counter.has_value()) {
         owner->kusudama_counter = KusudamaCounter(balloon.count.value());
         owner->kusudama_shared_hits = 0;
@@ -1607,7 +1610,8 @@ void Player::balloon_counter_manager(double current_ms) {
 
 void Player::kusudama_counter_manager(double current_ms) {
     if (!is_balloon && kusudama_counter.has_value() && !kusudama_counter->has_popped()) {
-        kusudama_counter.reset();
+        if (kusudama_counter->can_miss()) kusudama_counter->miss(current_ms);
+        else kusudama_counter.reset();
     }
     if (kusudama_counter.has_value()) {
         kusudama_counter->update(current_ms, kusudama_shared_hits);

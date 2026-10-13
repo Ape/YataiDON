@@ -46,7 +46,7 @@ void GaugeHitEffect::update(double current_ms) {
     fade_out->update(current_ms);
     rotation->update(current_ms);
 
-    if (resize->attribute <= 0.70) {
+    if (texture_change->attribute < 2 || resize->attribute <= 0.70) {
         color = ray::WHITE;
     } else if (resize->attribute <= 0.80) {
         color = ray::YELLOW;
@@ -64,13 +64,15 @@ void GaugeHitEffect::update(double current_ms) {
         }
     }
 
-    dest_width = width * resize->attribute;
-    dest_height = width * resize->attribute;
+    const bool ring = (int)texture_change->attribute >= 2;
+    const double scale = ring ? resize->attribute : 1.0;
+    dest_width = width * scale;
+    dest_height = width * scale;
     origin = {dest_width / 2, dest_height / 2};
-    x2_pos = -width + (width * resize->attribute);
-    y2_pos = -width + (width * resize->attribute);
+    x2_pos = -width + (width * scale);
+    y2_pos = -width + (width * scale);
 
-    rotation_angle = rotation->attribute * 100;
+    rotation_angle = ring ? rotation->attribute : 0;
 
 }
 

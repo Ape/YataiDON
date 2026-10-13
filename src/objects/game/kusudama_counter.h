@@ -1,36 +1,22 @@
 #pragma once
 
-#include "../../libs/animation.h"
+#include "../../libs/script.h"
 
-#include "../../libs/texture.h"
-
-class KusudamaCounter {
+// Counting, animations and drawing live in game/kusudama_counter.lua.
+class KusudamaCounter : public LuaScript {
 private:
-    int balloon_total = 0;
-    int balloon_count = 0;
-    bool is_popped = false;
-    TextureObject* t_kusudama = nullptr;
-    TextureObject* t_renda = nullptr;
-    TextureObject* t_counter = nullptr;
-    MoveAnimation* move = nullptr;
-    MoveAnimation* renda_move = nullptr;
-    FadeAnimation* renda_fade_in = nullptr;
-    FadeAnimation* renda_fade_out = nullptr;
-    TextStretchAnimation* stretch = nullptr;
-    TextureResizeAnimation* breathing = nullptr;
-    MoveAnimation* renda_breathe = nullptr;
-    TextureChangeAnimation* open = nullptr;
-    FadeAnimation* fade_out = nullptr;
+    bool fx = false;
+    sol::protected_function fn_update, fn_miss, fn_draw, fn_popped, fn_missed, fn_finished;
 public:
     KusudamaCounter(int total);
 
-    void update_count(int count);
-
     void update(double current_ms, int count);
-
     void draw();
+    bool is_finished();
+    bool has_popped();
 
-    bool is_finished() const;
-
-    bool has_popped() const;
+    // Skins with the effect layers keep the counter on screen while the ball falls after a failed kusudama.
+    bool can_miss() const { return fx; }
+    bool has_missed();
+    void miss(double current_ms);
 };

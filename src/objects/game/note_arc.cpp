@@ -7,7 +7,7 @@ NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bo
     : note_type(note_type), start_ms(current_ms), player_num(player_num), is_big(big), is_balloon(is_balloon)
 {
     arc_points = 100;
-    arc_duration = 28;
+    arc_duration = 31;
     current_progress = 0;
     elapsed_ms = 0;
     note_finished_handled = false;
@@ -147,18 +147,14 @@ void NoteArc::draw(float y, ray::Shader mask_shader) {
         }
     } else if (is_big && !is_balloon && t_firework && firework_frames() > 0 &&
                arc_points_cache && !arc_points_cache->empty()) {
-        const double interval = 28.0;
-        const double duration = 16.67;
+        const double frame_ms = 16.67;
         const int frame_count = firework_frames();
-        const int spawn_count = (int)(
-            std::min(elapsed_ms, (double)arc_duration * 16.67) / interval) + 1;
-
-        for (int i = 1; i < spawn_count; ++i) {
-            const double spawn_ms = i * interval;
+        for (int i = 0; i < 6; ++i) {
+            const double spawn_ms = (6 + 3 * i) * frame_ms;
             const double age_ms = elapsed_ms - spawn_ms;
-            const int frame = (int)(age_ms / duration);
-            if (frame < 0 || frame >= frame_count) continue;
-            const double position_progress = std::min(spawn_ms / ((double)arc_duration * 16.67), 1.0);
+            const int frame = (int)(age_ms / frame_ms);
+            if (age_ms < 0 || frame >= frame_count) continue;
+            const double position_progress = std::min(spawn_ms / ((double)arc_duration * frame_ms), 1.0);
             const std::size_t point_index = std::min((std::size_t)(position_progress * arc_points),arc_points_cache->size() - 1);
             const float firework_x = (float)((*arc_points_cache)[point_index].first);
             const float firework_y = (float)((*arc_points_cache)[point_index].second);

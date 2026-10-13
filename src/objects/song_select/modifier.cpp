@@ -50,7 +50,7 @@ ModifierSelector::ModifierSelector(PlayerNum player_num, PlayerData* player) : p
     blue_arrow_fade = (FadeAnimation*)tex.get_animation(29, true);
     blue_arrow_move = (MoveAnimation*)tex.get_animation(30, true);
     move            = (MoveAnimation*)tex.get_animation(28, true);
-    move_out        = tex.has_animation(39) ? (MoveAnimation*)tex.get_animation(39, true) : nullptr;
+    move_out        = tex.has_animation(43) ? (MoveAnimation*)tex.get_animation(43, true) : nullptr;
     move->start();
     move_sideways   = (MoveAnimation*)tex.get_animation(31, true);
     fade_sideways   = (FadeAnimation*)tex.get_animation(32, true);

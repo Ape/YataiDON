@@ -1,5 +1,6 @@
 #include "balloon_counter.h"
 #include <algorithm>
+#include <cmath>
 #include <stdexcept>
 
 BalloonCounter::BalloonCounter(int count, bool is_2p)
@@ -20,6 +21,9 @@ void BalloonCounter::update_count(int count) {
     count = std::clamp(count, 0, std::max(balloon_total, 0));
     if (balloon_count != count) {
         balloon_count = count;
+        const int new_stage = (balloon_total > 0) ? std::min(5, balloon_count * 6 / balloon_total) : 0;
+        if (new_stage != stage || balloon_count == 1) stage_ms = now_ms;
+        stage = new_stage;
         fade->start();
         stretch->start();
         if (balloon_total > 0 && balloon_count >= balloon_total) {
@@ -29,6 +33,7 @@ void BalloonCounter::update_count(int count) {
 }
 
 void BalloonCounter::update(double current_ms, int count) {
+    now_ms = current_ms;
     stretch->update(current_ms);
     if (is_popped) fade->update(current_ms);
 
@@ -54,10 +59,15 @@ void BalloonCounter::draw(float y) {
     if (is_popped) {
         tex.draw_texture(t_pop, {.frame=7, .x=body_x, .y=y + body_y, .fade=fade->attribute});
     } else if (balloon_count >= 1) {
-        static const int GEKI[6] = {0, 2, 3, 4, 5, 6};
-        const int step = (balloon_total > 0) ? (balloon_count * 6 / balloon_total) : 0;
-        const int balloon_index = GEKI[std::min(5, std::max(0, step))];
-        tex.draw_texture(t_pop, {.frame=balloon_index, .x=body_x, .y=y + body_y, .fade=fade->attribute});
+        // Lumen: stage 0 plays art 0, 1 (83 ms each) then 2; later stages hold the previous stage's art for 167 ms.
+        static const int STAGE_ART[6] = {2, 3, 4, 5, 6, 6};
+        const double t = now_ms - stage_ms;
+        int balloon_index = STAGE_ART[stage];
+        if (stage == 0) balloon_index = t < 83 ? 0 : (t < 167 ? 1 : 2);
+        else if (t < 167) balloon_index = STAGE_ART[stage - 1];
+        float shake = 0.0f;
+        if (tex.skin_entry("balloon_pop_shake")) shake = (std::fmod(now_ms, 133.0) < 67 ? -2.0f : 1.0f) * tex.screen_scale;
+        tex.draw_texture(t_pop, {.frame=balloon_index, .x=body_x + shake, .y=y + body_y, .fade=fade->attribute});
     }
     if (balloon_count > 0) {
         tex.draw_texture(t_bubble, {.mirror = bubble_mirror, .x=x_offset, .y=y + y_offset, .fade=fade->attribute});

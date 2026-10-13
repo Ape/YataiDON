@@ -46,7 +46,7 @@ void ScoreCounterAnimation::update(double current_ms) {
 
     // Cache y positions
     for (int i = 0; i < counter_str.length(); i++) {
-        y_pos_list[i] = move_animation_y_fan->attribute + (i + 1) * 5;
+        y_pos_list[i] = move_animation_y_fan->attribute + i * 5;
     }
 }
 
