@@ -38,8 +38,9 @@ void DanResultScreen::on_screen_start() {
     if (!fade_out || !page2_fade) {
         throw std::runtime_error("DanResultScreen: animation 0/1 is not a FadeAnimation");
     }
-    is_page2   = false;
-    page_start_ms = get_current_ms();
+    is_page2       = false;
+    page1_skipped  = false;
+    page_start_ms  = get_current_ms();
     page1_start_ms = page_start_ms;
 
     const SessionData& sd = global_data.session_data[(int)global_data.player_num];
@@ -260,6 +261,14 @@ void DanResultScreen::handle_input(double current_ms) {
             return;
         }
         if (!fade_out->is_started) fade_out->start();
+    } else if (don && !page1_skipped) {
+        page1_skipped = true;
+        page1_start_ms = current_ms - WAIT_END_TIME_MS;
+        page_start_ms = current_ms;
+
+        const int player_num = static_cast<int>(global_data.player_num);
+        const SessionData& sd = global_data.session_data[player_num];
+        page1_plates_played = static_cast<int>(sd.dan_result_data.songs.size());
     } else {
         page2_fade->start();
         is_page2 = true;
