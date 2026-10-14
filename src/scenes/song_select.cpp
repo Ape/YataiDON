@@ -351,6 +351,7 @@ std::optional<Screens> SongSelectScreen::update() {
 }
 
 Screens SongSelectScreen::on_screen_end(Screens next_screen) {
+    diff_sort_selector.reset();
     if (search_box) set_keyboard_visible(false);
     if (stats_future.valid()) stats_future.wait();
     navigator.join_loader();
