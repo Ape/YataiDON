@@ -1,6 +1,7 @@
 #include "text.h"
 #include "han_fold_table.h"
 #include "script.h"
+#include "filesystem.h"
 #include <vector>
 #include <cmath>
 #include <cstdlib>
@@ -456,13 +457,14 @@ OutlinedText::OutlinedText(std::string text, int font_size,
                            bool is_vertical,
                            float outline_thickness,
                            float spacing,
-                           float v_advance)
+                           float v_advance,
+                           const std::string& font_name)
     : text(std::move(text)),
       font_size(static_cast<float>(font_size)),
       outline_thickness(static_cast<float>(outline_thickness * global_tex.screen_scale)),
       v_advance(v_advance)
 {
-    worker_font = font_manager.copy_font(this->text, font_size);
+    worker_font = named_font_manager(font_name).copy_font(this->text, font_size);
 
     if (is_vertical) {
         float char_height    = ray::MeasureTextEx(worker_font, "A", font_size, spacing).y;
@@ -797,6 +799,36 @@ void OutlinedText::draw(const DrawTextureParams& params) {
 }
 
 FontManager font_manager;
+
+static std::unordered_map<std::string, std::unique_ptr<FontManager>> named_fonts;
+
+FontManager& named_font_manager(const std::string& name) {
+    if (name.empty()) return font_manager;
+    auto it = named_fonts.find(name);
+    if (it == named_fonts.end()) {
+        std::unique_ptr<FontManager> fm;
+        if (name.find_first_of("/\\") == std::string::npos) {
+            fs::path p = resolve_skin_path("Fonts/" + (fs::path(name).has_extension() ? name : name + ".ttf"));
+            try {
+                fm = std::make_unique<FontManager>();
+                fm->init(p);
+                if (fm->get_font("A?", 16).glyphCount <= 0) throw std::runtime_error("no usable glyphs in " + p.string());
+            } catch (const std::exception& e) {
+                spdlog::warn("font '{}' failed to load, using default: {}", name, e.what());
+                fm.reset();
+            }
+        } else {
+            spdlog::warn("invalid font name '{}', using default", name);
+        }
+        it = named_fonts.emplace(name, std::move(fm)).first;   // null entry caches failure
+    }
+    return it->second ? *it->second : font_manager;
+}
+
+void unload_named_fonts() {
+    for (auto& [n, fm] : named_fonts) if (fm) fm->unload();
+    named_fonts.clear();
+}
 
 bool is_valid_utf8(std::string_view text) {
     size_t i = 0;

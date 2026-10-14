@@ -771,7 +771,8 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
 
     sol::table text = lua.create_table();
     text.set_function("create_text", [](const std::string& skin_config_key, std::array<double, 4> color,
-        std::array<double, 4> outline_color, bool is_vertical, float outline_thickness, float spacing) -> std::unique_ptr<OutlinedText> {
+        std::array<double, 4> outline_color, bool is_vertical, float outline_thickness, float spacing,
+        sol::optional<std::string> font) -> std::unique_ptr<OutlinedText> {
             auto config_it = script_manager.tex.skin_config_by_name.find(skin_config_key);
             if (config_it == script_manager.tex.skin_config_by_name.end()) {
                 spdlog::error("Skin config key not found: {}", skin_config_key);
@@ -795,7 +796,7 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
             outline_color_val.g = to_u8(outline_color[1]);
             outline_color_val.b = to_u8(outline_color[2]);
             outline_color_val.a = to_u8(outline_color[3]);
-            std::unique_ptr<OutlinedText> ptr = std::make_unique<OutlinedText>(text, font_size, color_val, outline_color_val, is_vertical, outline_thickness, spacing);
+            std::unique_ptr<OutlinedText> ptr = std::make_unique<OutlinedText>(text, font_size, color_val, outline_color_val, is_vertical, outline_thickness, spacing, 1.0f, font.value_or(""));
             ptr->x_offset = config_it->second.x;
             ptr->y_offset = config_it->second.y;
             return ptr;
@@ -804,13 +805,13 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
     text.set_function("create_raw_text", [](const std::string& content, double font_size,
         std::array<double, 4> color, std::array<double, 4> outline_color,
         bool is_vertical, sol::optional<float> thickness, sol::optional<float> spacing,
-        sol::optional<float> v_advance)
+        sol::optional<float> v_advance, sol::optional<std::string> font)
         -> std::unique_ptr<OutlinedText> {
             auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
             ray::Color c  = { to_u8(color[0]),         to_u8(color[1]),         to_u8(color[2]),         to_u8(color[3]) };
             ray::Color oc = { to_u8(outline_color[0]), to_u8(outline_color[1]), to_u8(outline_color[2]), to_u8(outline_color[3]) };
             return std::make_unique<OutlinedText>(content, static_cast<int>(font_size), c, oc, is_vertical,
-                thickness.value_or(5.0f), spacing.value_or(2.0f), v_advance.value_or(1.0f));
+                thickness.value_or(5.0f), spacing.value_or(2.0f), v_advance.value_or(1.0f), font.value_or(""));
     });
 
     lua["text"] = text;

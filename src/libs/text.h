@@ -112,7 +112,8 @@ public:
                  bool is_vertical,
                  float outline_thickness = 5.0f,
                  float spacing = 2.0f,
-                 float v_advance = 1.0f);
+                 float v_advance = 1.0f,
+                 const std::string& font_name = "");
 
     ~OutlinedText();
 
@@ -128,6 +129,10 @@ public:
 };
 
 extern FontManager font_manager;
+
+// Skin font by name ("Fonts/<name>[.ttf]"); empty or unloadable -> the default font_manager.
+FontManager& named_font_manager(const std::string& name);
+void unload_named_fonts();
 
 // Text read from charts and box.def files is UTF-8 (with or without a BOM) or, in files made for
 // older simulators, Shift-JIS without a BOM.

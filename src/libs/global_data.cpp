@@ -88,6 +88,7 @@ void unload_skin() {
     global_tex.unload_textures();
     script_manager.shutdown();
     font_manager.unload();
+    unload_named_fonts();
     audio.unload_all_sounds();
     audio.unload_all_music();
     audio.close_audio_device();
