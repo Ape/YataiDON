@@ -81,6 +81,11 @@ void Transition::start() {
 }
 
 void Transition::update(double current_ms) {
+    // dan course without loading art (e.g. PyTaikoGreen): no transition at all
+    if (dan_color >= 0 && !global_tex.has_texture("loading_dan/night")) {
+        finished = true;
+        return;
+    }
     call(fn_update, "SongTransition:update", current_ms,
          (double)cur_rainbow, (double)cur_fade);
     if (auto s = call_r<sol::table>(fn_state, "SongTransition:state")) {
@@ -118,10 +123,9 @@ void Transition::draw_song_info() {
 void Transition::draw() {
     float total_offset = 0;
     if (is_second) total_offset = global_tex.skin_config[SC::TRANSITION_OFFSET].y;
-    // the dan loading art (loading_dan/night, plaque) is optional: without it a dan course loads
-    // like any song
-    if (dan_color >= 0 && global_tex.has_texture("loading_dan/night")) {
-        draw_dan(total_offset);
+    // the dan loading art (loading_dan/night, plaque) is optional: without it a dan course has no transition
+    if (dan_color >= 0) {
+        if (global_tex.has_texture("loading_dan/night")) draw_dan(total_offset);
         return;
     }
 
