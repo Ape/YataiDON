@@ -148,6 +148,9 @@ inline ConfigRef get_config_ref(const std::string& path) {
     if (path == "limits/practice_time_limit") {
         return &c->limits.practice_time_limit;
     }
+    if (path == "general/single_player_only") {
+        return &c->general.single_player_only;
+    }
     // paths
     if (path == "paths/skin") {
         return &c->paths.skin;
