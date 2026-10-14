@@ -46,6 +46,16 @@ struct DanRecord {
     int arrival   = 0;
 };
 
+inline Rank rank_for_score(int score) {
+    if (score >= 1000000) return Rank::_RAINBOW;
+    if (score >= 950000)  return Rank::_PURPLE;
+    if (score >= 900000)  return Rank::_PINK;
+    if (score >= 800000)  return Rank::_GOLD;
+    if (score >= 700000)  return Rank::_SILVER;
+    if (score >= 600000)  return Rank::_BRONZE;
+    return Rank::_WHITE;
+}
+
 struct Score {
     Crown crown;
     Rank rank;
@@ -104,7 +114,8 @@ public:
 
     int apply_remote_scores(const std::vector<RemoteScore>& scores, const std::string& player_id);
     std::optional<Score> get_score(const std::string& hash, int difficulty, const std::string& player_id);
-    Score save_score(const std::string& hash, int difficulty, const std::string& player_id, Score score, int64_t played_at, const std::string& modifiers_json);
+    // out_score_id (optional) receives the new scores row id, or -1 if the insert failed.
+    Score save_score(const std::string& hash, int difficulty, const std::string& player_id, Score score, int64_t played_at, const std::string& modifiers_json, int64_t* out_score_id = nullptr);
     void add_path_binding(const fs::path& path, const std::array<std::string, 5>& hashes);
     std::array<std::string, 5> get_hashes(const fs::path& path);
     std::string get_single_hash(const fs::path& path);
@@ -119,8 +130,10 @@ public:
     // the loading screen's scan result per chart (key: UTF-8 path), for Navigator::preload
     void set_song_meta(const std::string& path, const SongCacheEntry& entry);
     std::optional<SongCacheEntry> get_song_meta(const std::string& path);
-    std::optional<DanRecord> get_dan_record(const std::string& player_id, const std::string& course_title);
-    void save_dan_record(const std::string& player_id, const std::string& course_title, const DanRecord& rec);
+    // Best-of view over dan_scores for one course (course_id from dan_course_id).
+    std::optional<DanRecord> get_dan_record(const std::string& player_id, const std::string& course_id);
+    // Appends one attempt to dan_scores; each song links to its normal scores row (DanResultSong::score_id).
+    void save_dan_score(const std::string& player_id, const std::string& course_id, const DanResultData& rd, int arrival);
     std::optional<PlayerData> get_player_data(const std::string& player_id);
     void save_player_data(const PlayerData& player);
     void migrate_player_id(const std::string& old_id, const std::string& new_id);
@@ -128,6 +141,12 @@ public:
     bool commit();
     void rollback();
 };
+
+// Chart hash of one dan song (path binding, else parsed from the chart).
+std::string dan_song_hash(const DanSongEntry& song);
+
+// Identity of a dan course: sha256 over its songs' chart hashes + difficulties and its exams.
+std::string dan_course_id(const std::vector<DanSongEntry>& songs, const std::vector<Exam>& exams);
 
 extern ScoresManager* _scores_manager_ptr;
 inline ScoresManager& get_scores_manager() {

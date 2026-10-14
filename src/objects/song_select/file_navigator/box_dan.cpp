@@ -44,7 +44,7 @@ void DanBox::load_text() {
     {
         // rank: 1 = played/failed, 2..7 = passes (7 = rainbow)
         auto rec = scores_manager.get_dan_record(
-            get_player_id(global_data.player_num), dan_title);
+            get_player_id(global_data.player_num), dan_course_id(songs, exams));
         if (rec) clear_mark = rec->rank >= 7 ? 2 : (rec->rank >= 2 ? 1 : 0);
         bool any_hidden = false;
         for (const auto& e : songs) any_hidden |= e.hidden;

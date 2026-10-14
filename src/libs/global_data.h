@@ -135,6 +135,7 @@ struct DanResultSong {
     int drumroll = 0;
     bool hidden = false;
     bool unreached = false;
+    int64_t score_id = -1;
 };
 
 struct DanResultExam {

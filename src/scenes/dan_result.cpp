@@ -102,7 +102,8 @@ void DanResultScreen::apply_reward() {
     if (rd.skipped) return;                       // skipped out: the cabinet records nothing
 
     const std::string pid = get_player_id(global_data.player_num);
-    auto prev = scores_manager.get_dan_record(pid, rd.dan_title);
+    const std::string course_id = dan_course_id(sd.selected_dan, rd.exams);
+    auto prev = scores_manager.get_dan_record(pid, course_id);
     prev_best = prev ? prev->rank : 0;
     prev_best_score = prev ? prev->score : 0;
     prev_arrival    = prev ? prev->arrival : 0;
@@ -137,12 +138,7 @@ void DanResultScreen::apply_reward() {
         }
     }
 
-    DanRecord rec;
-    rec.dan_index = rd.dan_index;
-    rec.rank      = std::max(prev_best, new_rank);
-    rec.score     = std::max(prev_best_score, rd.score);
-    rec.arrival   = std::max(prev ? prev->arrival : 0, arrival);
-    scores_manager.save_dan_record(pid, rd.dan_title, rec);
+    scores_manager.save_dan_score(pid, course_id, rd, arrival);
 }
 
 void DanResultScreen::build_page2_timeline() {

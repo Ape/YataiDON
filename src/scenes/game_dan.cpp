@@ -357,6 +357,44 @@ int DanGameScreen::exam_tier(const Exam& exam, int value) {
     return has_gold && value >= exam.gold ? 2 : 1;
 }
 
+void DanGameScreen::save_song_score(DanResultSong& song_res) {
+    if (players[0]->is_auto_play() || players[0]->is_replay()) return;
+    const SessionData& sd = global_data.session_data[(int)global_data.player_num];
+    const DanSongEntry& entry = sd.selected_dan[song_index];
+    const std::string hash = dan_song_hash(entry);
+    if (hash.empty()) return;
+
+    Score score;
+    score.score     = players[0]->get_score() - prev_score;
+    score.good      = song_res.good;
+    score.ok        = song_res.ok;
+    score.bad       = song_res.bad;
+    score.drumroll  = song_res.drumroll;
+    score.max_combo = song_max_combo;
+
+    if (skipped)                                  score.crown = Crown::NONE;
+    else if (score.ok == 0 && score.bad == 0)     score.crown = Crown::DFC;
+    else if (score.bad == 0)                      score.crown = Crown::FC;
+    else if (!failed_out)                         score.crown = Crown::CLEAR;
+    else                                          score.crown = Crown::NONE;
+    score.rank = skipped ? Rank::_NONE : rank_for_score(score.score);
+    const std::string player_id = get_player_id(global_data.player_num);
+    const int64_t played_at = unix_now();
+    const std::string modifiers_json = modifiers_to_json(players[0]->get_modifiers());
+    scores_manager.save_score(hash, entry.difficulty, player_id, score, played_at, modifiers_json, &song_res.score_id);
+
+    if (global_data.config->general.score_method != ScoreMethod::GEN3) {
+        std::string access_code;
+        if (player_id == scores_manager.player_1) access_code = global_data.config->network.access_code_1;
+        else if (player_id == scores_manager.player_2) access_code = global_data.config->network.access_code_2;
+        if (!access_code.empty()) {
+            PlayerData pd = scores_manager.get_player_data(player_id).value_or(PlayerData{});
+            network.submit_score(hash, entry.difficulty, access_code, score, players[0]->input_log, played_at,
+                                 modifiers_json, pd.chara_is_costume, pd.chara_cos_index);
+        }
+    }
+}
+
 void DanGameScreen::save_result_data(bool all_failed) {
     SessionData& sd = global_data.session_data[(int)global_data.player_num];
     const int course_songs = std::min((int)sd.selected_dan.size(), 3);
@@ -476,6 +514,7 @@ std::optional<Screens> DanGameScreen::update() {
     between.update(current_ms);
     ms_from_start = current_ms - start_ms;
 
+    if (transition->is_finished()) reset_input_lock();  // same as GameScreen; locks left over from the previous screen
     if (transition->is_finished() && between.song_may_start())
         start_song(ms_from_start);
 
@@ -535,6 +574,8 @@ std::optional<Screens> DanGameScreen::update() {
             song_res.ok      = players[0]->get_ok()             - prev_ok;
             song_res.bad     = players[0]->get_bad()            - prev_bad;
             song_res.drumroll= players[0]->get_total_drumroll() - prev_drumroll;
+            save_song_score(song_res);
+            players[0]->input_log.clear();  // each song is submitted with only its own inputs
             sd.dan_result_data.songs.push_back(song_res);
         }
 

@@ -311,20 +311,8 @@ void GameScreen::save_score(const std::string& player_id, PlayerNum player_num) 
         }
         if (run_skipped) {
             score.rank = Rank::_NONE;
-        } else if (score.score >= 1000000) {
-            score.rank = Rank::_RAINBOW;
-        } else if (score.score >= 950000) {
-            score.rank = Rank::_PURPLE;
-        } else if (score.score >= 900000) {
-            score.rank = Rank::_PINK;
-        } else if (score.score >= 800000) {
-            score.rank = Rank::_GOLD;
-        } else if (score.score >= 700000) {
-            score.rank = Rank::_SILVER;
-        } else if (score.score >= 600000) {
-            score.rank = Rank::_BRONZE;
         } else {
-            score.rank = Rank::_WHITE;
+            score.rank = rank_for_score(score.score);
         }
         int64_t played_at = unix_now();
         std::string modifiers_json = modifiers_to_json(target->get_modifiers());

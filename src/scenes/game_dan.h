@@ -81,6 +81,7 @@ private:
     void check_exam_failures(bool course_finished = false, bool song_finished = false);
 
     static int exam_tier(const Exam& exam, int value);
+    void save_song_score(DanResultSong& song_res);
     void save_result_data(bool all_failed);
     void trigger_fail_out(double current_ms);
 
