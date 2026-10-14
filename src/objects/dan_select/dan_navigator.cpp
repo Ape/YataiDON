@@ -12,6 +12,7 @@
 #include "../song_select/file_navigator/navigator.h"
 #include "../../libs/filesystem.h"
 #include <filesystem>
+#include <iterator>
 #include <cmath>
 #include <algorithm>
 #include <climits>
@@ -476,12 +477,26 @@ void DanNavigator::publish(std::vector<DanBoxData>&& data) {
         boxes.push_back(std::move(back));
     }
 
+    if (!restore_selection_path.empty()) {
+        const auto it = std::ranges::find_if(boxes, [&](const auto& box) {
+            return !box->is_back && box->path == restore_selection_path;
+        });
+
+        if (it != boxes.end())
+            selected_index = static_cast<int>(std::ranges::distance(boxes.begin(), it));
+
+        restore_selection_path.clear();
+    }
+
     set_positions(true, 0);
     boxes[selected_index]->expand_box();
     for (auto& b : boxes) b->fade_in(100);
 }
 
 void DanNavigator::begin_init(const std::vector<fs::path>& song_paths) {
+    DanBox* current = get_current();
+    restore_selection_path = current && !current->is_back ? current->path : fs::path{};
+
     t_cursor  = tex.has_texture("box/cursor")  ? tex.get_texture("box/cursor")  : nullptr;
     t_arrow_r = tex.has_texture("box/arrow_r") ? tex.get_texture("box/arrow_r") : nullptr;
     t_arrow_l = tex.has_texture("box/arrow_l") ? tex.get_texture("box/arrow_l") : nullptr;
