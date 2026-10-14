@@ -581,7 +581,7 @@ std::optional<Screens> GameScreen::update() {
     } else if (ms_from_start >= players[0]->end_time) {
         end_song();
     }
-    if (global_data.config->general.song_limit <= 0) return global_keys();
+    if (global_data.config->limits.song_limit <= 0) return global_keys();
 
     return std::nullopt;
 }

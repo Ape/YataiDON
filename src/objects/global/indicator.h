@@ -8,7 +8,8 @@ public:
         SKIP = 0,
         SIDE = 1,
         SELECT = 2,
-        WAIT = 3
+        WAIT = 3,
+        CANCEL = 4
     };
 
 private:

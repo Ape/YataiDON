@@ -84,6 +84,8 @@ public:
 
     void on_screen_start() override;
     Screens on_screen_end(Screens next_screen) override;
+    // Practice replaces the select countdowns with its session timer
+    virtual bool uses_session_timer() const { return false; }
     std::optional<Screens> update() override;
     void draw() override;
 };

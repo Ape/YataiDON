@@ -1,5 +1,6 @@
 #pragma once
 #include "song_select.h"
+#include "../objects/global/practice_timer.h"
 
 class PracticeSongSelectScreen : public SongSelectScreen {
 protected:
@@ -9,4 +10,15 @@ protected:
 
 public:
     PracticeSongSelectScreen() : SongSelectScreen("song_select") {}
+
+    bool uses_session_timer() const override { return true; }
+    void on_screen_start() override {
+        SongSelectScreen::on_screen_start();
+        PracticeTimer::begin_session(get_frame_ms());
+    }
+    Screens on_screen_end(Screens next_screen) override {
+        if (next_screen != Screens::GAME_PRACTICE && next_screen != Screens::PRACTICE_SELECT)
+            PracticeTimer::end_session();
+        return SongSelectScreen::on_screen_end(next_screen);
+    }
 };

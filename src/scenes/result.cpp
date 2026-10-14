@@ -49,7 +49,7 @@ double ResultScreen::reveal_end_ms() {
 
 bool ResultScreen::retry_pending() const {
     const SessionData& session_data = global_data.session_data[(int)global_data.player_num];
-    const bool limit_reached = global_data.config->general.song_limit > 0 && global_data.config->general.song_limit == global_data.songs_played;
+    const bool limit_reached = global_data.config->limits.song_limit > 0 && global_data.config->limits.song_limit == global_data.songs_played;
     return allow_retry && !session_data.result_data.cleared && !limit_reached && script_manager.has_lua_script("retry_game");
 }
 
@@ -123,7 +123,7 @@ std::optional<Screens> ResultScreen::update() {
     } else if (fade_out) {
         fade_out->update(current_time);
         if (fade_out->is_finished) {
-            if (global_data.config->general.song_limit > 0 && global_data.config->general.song_limit == global_data.songs_played) {
+            if (global_data.config->limits.song_limit > 0 && global_data.config->limits.song_limit == global_data.songs_played) {
                 global_data.songs_played = 0;
                 return on_screen_end(Screens::GAME_OVER);
             }

@@ -51,7 +51,6 @@ inline ConfigRef get_config_ref(const std::string& path) {
     if (path == "general/audio_offset")             return &c->general.audio_offset;
     if (path == "general/visual_offset")            return &c->general.visual_offset;
     if (path == "general/language")                 return &c->general.language;
-    if (path == "general/timer_frozen")             return &c->general.timer_frozen;
     if (path == "general/song_timer")               return &c->general.song_timer;
     if (path == "general/judge_counter")            return &c->general.judge_counter;
     if (path == "general/show_timing_offset")       return &c->general.show_timing_offset;
@@ -60,6 +59,10 @@ inline ConfigRef get_config_ref(const std::string& path) {
     if (path == "general/score_method")             return &c->general.score_method;
     if (path == "general/display_bpm")              return &c->general.display_bpm;
     if (path == "general/touch_input")              return &c->general.touch_input;
+    // limits
+    if (path == "limits/timer_frozen")              return &c->limits.timer_frozen;
+    if (path == "limits/song_limit")                return &c->limits.song_limit;
+    if (path == "limits/practice_time_limit")       return &c->limits.practice_time_limit;
     // paths
     if (path == "paths/skin")                        return &c->paths.skin;
     // network

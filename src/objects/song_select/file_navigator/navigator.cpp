@@ -347,7 +347,7 @@ void Navigator::init(std::vector<fs::path> songs_paths) {
         load_all_roots();
         is_init = true;
     } else {
-        if (global_data.config->general.song_limit > 0) {
+        if (global_data.config->limits.song_limit > 0) {
             join_loader();
             is_inline = false;
             inline_state.reset();

@@ -851,7 +851,7 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
     });
 
     tex.set_function("song_limit", []() -> int {
-        return global_data.config->general.song_limit;
+        return global_data.config->limits.song_limit;
     });
 
     tex.set_function("last_input_ms", []() -> double {

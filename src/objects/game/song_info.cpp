@@ -159,7 +159,7 @@ SongNum::SongNum(int song_num, float outline_override) {
         song_format.replace(pos, 3, std::to_string(song_num));
     }
     ray::Color outline_color;
-    if (global_data.config->general.song_limit > 0 && global_data.config->general.song_limit == song_num) {
+    if (global_data.config->limits.song_limit > 0 && global_data.config->limits.song_limit == song_num) {
         outline_color = ray::RED;
     } else {
         outline_color = ray::BLACK;

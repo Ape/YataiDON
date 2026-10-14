@@ -68,7 +68,7 @@ std::optional<Screens> RetryGameScreen::update() {
             return on_screen_end(Screens::SONG_SELECT);
         }
         reset_session();
-        if (global_data.config->general.song_limit > 0 && global_data.config->general.song_limit == global_data.songs_played) {
+        if (global_data.config->limits.song_limit > 0 && global_data.config->limits.song_limit == global_data.songs_played) {
             global_data.songs_played = 0;
             return on_screen_end(Screens::GAME_OVER);
         }

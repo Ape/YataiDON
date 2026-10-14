@@ -3,6 +3,7 @@
 #include "../libs/input.h"
 #include <algorithm>
 #include <cmath>
+#include "../objects/global/practice_timer.h"
 
 // Forward declaration for set_touch_drum_enabled from input.cpp
 extern void set_touch_drum_enabled(bool enabled);
@@ -64,12 +65,14 @@ void PracticeGameScreen::on_screen_start() {
     speed_r_kat_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
     mark_action_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
     mark_finish_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
+    PracticeTimer::begin_session(get_frame_ms());
     ray::HideCursor();  // Hide cursor when entering practice mode
     set_touch_drum_enabled(true);      // Enable touch drum (input + drawing) when entering practice mode
     init_tja_practice(global_data.session_data[(int)global_data.player_num].selected_song);
 }
 
 Screens PracticeGameScreen::on_screen_end(Screens next_screen) {
+    if (next_screen != Screens::GAME_PRACTICE && next_screen != Screens::PRACTICE_SELECT) PracticeTimer::end_session();
     scrobble_index = 0;
     scrobble_time = 0;
     jump_bars.fill(-1);
@@ -680,7 +683,6 @@ std::optional<Screens> PracticeGameScreen::update() {
     for (auto& player : players)
         player->update(ms_from_start, current_ms, background);
     sync_branch_display();
-    song_info.update(current_ms);
 
     scrobble_move->update(current_ms);
     if (scrobble_move->is_started && scrobble_move->is_finished) {
@@ -700,6 +702,14 @@ std::optional<Screens> PracticeGameScreen::update() {
     if (mark_action_anim) mark_action_anim->update(current_ms);
     if (mark_finish_anim) mark_finish_anim->update(current_ms);
     if (jump_arrow_anim) jump_arrow_anim->update(current_ms);
+
+    if (auto* session = PracticeTimer::active()) {
+        session->update(current_ms, !paused);
+        if (session->is_finished()) {
+            if (song_music.has_value()) audio.stop_sound(song_music.value());
+            return on_screen_end(Screens::ENTRY);
+        }
+    }
 
     return std::nullopt;
 }
@@ -974,9 +984,6 @@ void PracticeGameScreen::draw() {
             tex.draw_texture(t_bar_count, {.frame = tot_str[i] - '0', .x = div_x + divw + i * dw, .y = digit_y});
     }
 
-    // The song title goes under the paused veil and the practice menu, not over them.
-    song_info.draw();
-
     if (paused) {
         tex.draw_texture(t_paused, {.fade = 0.5});
         if (menu.open && !menu.editing_marks && !menu.jumping_marks) {
@@ -984,6 +991,8 @@ void PracticeGameScreen::draw() {
             else                                           menu.draw();
         }
     }
+
+    if (auto* session = PracticeTimer::active()) session->draw();
 
     draw_overlay(false);
 }

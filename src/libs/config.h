@@ -13,7 +13,6 @@ struct GeneralConfig {
     int audio_offset = 0;
     int visual_offset = 0;
     std::string language;
-    bool timer_frozen = false;
     bool song_timer = false;
     bool judge_counter = false;
     bool show_timing_offset = false;
@@ -21,11 +20,16 @@ struct GeneralConfig {
     int practice_mode_bar_delay = 0;
     std::string score_method;
     bool display_bpm = false;
-    int song_limit = 0;
     int webcam_number = -1;
     bool touch_input = false;
     bool skin_updater = true;
     bool fast_transitions = false;
+};
+
+struct LimitsConfig {
+    bool timer_frozen = false;
+    int song_limit = 0;
+    int practice_time_limit = 0; // seconds, 0 = unlimited
 };
 
 struct CardReaderConfig {
@@ -114,6 +118,7 @@ struct VideoConfig {
 
 struct Config {
     GeneralConfig general;
+    LimitsConfig limits;
     CardReaderConfig card_reader;
     NetworkConfig network;
     PathsConfig paths;

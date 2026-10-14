@@ -5,6 +5,7 @@
 #include <cmath>
 #include <filesystem>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -221,7 +222,10 @@ struct CameraConfig {
     ray::Color border_color = ray::BLACK;
 };
 
+class PracticeTimer;
+
 struct GlobalData {
+    std::shared_ptr<PracticeTimer> practice_timer; // session countdown, spans practice select + game
     int songs_played = 0;
     std::string current_screen = "LOADING";
     std::string previous_screen;

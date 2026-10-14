@@ -1,6 +1,7 @@
 #include "song_select.h"
 #include "../libs/input.h"
 #include "../libs/network.h"
+#include "../objects/global/practice_timer.h"
 #include <filesystem>
 
 void SongSelectScreen::on_screen_start() {
@@ -240,7 +241,9 @@ void SongSelectScreen::update_selection_ui(double current_time, bool advance_tim
     allnet_indicator.update(current_time);
     diff_fade_out->update(current_time);
     script->update(current_time);
-    if (advance_timers) {
+    if (uses_session_timer()) {
+        if (auto* session = PracticeTimer::active()) session->update(current_time);
+    } else if (advance_timers) {
         select_timer->update(current_time);
         if (diff_select_timer != nullptr) diff_select_timer->update(current_time);
     }
@@ -316,7 +319,12 @@ std::optional<Screens> SongSelectScreen::update() {
         }
     }
 
-    if (check_key_pressed(global_data.config->keys.back_key) && global_data.config->general.song_limit <= 0) {
+    if (uses_session_timer()) {
+        auto* session = PracticeTimer::active();
+        if (session && session->is_finished()) return on_screen_end(Screens::ENTRY);
+    }
+
+    if (check_key_pressed(global_data.config->keys.back_key) && global_data.config->limits.song_limit <= 0) {
         return on_screen_end(Screens::ENTRY);
     }
 
@@ -353,9 +361,13 @@ Screens SongSelectScreen::on_screen_end(Screens next_screen) {
 void SongSelectScreen::draw_overlays() {
     script->draw_overlays(state);
 
-    tex.draw_texture(t_song_num_bg, {.x=-(song_num->width-127), .x2=(song_num->width-127), .fade=0.75});
-    song_num->draw(tex.skin_config[SC::SONG_NUM].x-song_num->width, tex.skin_config[SC::SONG_NUM].y, 1.0);
-    if (state == SongSelectState::SONG_SELECTED) {
+    if (!uses_session_timer()) {
+        tex.draw_texture(t_song_num_bg, {.x=-(song_num->width-127), .x2=(song_num->width-127), .fade=0.75});
+        song_num->draw(tex.skin_config[SC::SONG_NUM].x-song_num->width, tex.skin_config[SC::SONG_NUM].y, 1.0);
+    }
+    if (uses_session_timer()) {
+        if (auto* session = PracticeTimer::active()) session->draw();
+    } else if (state == SongSelectState::SONG_SELECTED) {
         if (diff_select_timer) diff_select_timer->draw();
     } else {
         select_timer->draw();

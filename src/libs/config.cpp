@@ -304,7 +304,6 @@ Config get_config() {
     config.general.audio_offset = config_file["general"]["audio_offset"].value_or(0);
     config.general.visual_offset = config_file["general"]["visual_offset"].value_or(0);
     config.general.language = config_file["general"]["language"].value_or("en");
-    config.general.timer_frozen = config_file["general"]["timer_frozen"].value_or(true);
     config.general.song_timer = config_file["general"]["song_timer"].value_or(false);
     config.general.judge_counter = config_file["general"]["judge_counter"].value_or(false);
     config.general.show_timing_offset = config_file["general"]["show_timing_offset"].value_or(false);
@@ -312,11 +311,17 @@ Config get_config() {
     config.general.practice_mode_bar_delay = config_file["general"]["practice_mode_bar_delay"].value_or(1);
     config.general.score_method = config_file["general"]["score_method"].value_or("shinuchi");
     config.general.display_bpm = config_file["general"]["display_bpm"].value_or(false);
-    config.general.song_limit = config_file["general"]["song_limit"].value_or(0);
     config.general.webcam_number = config_file["general"]["webcam_number"].value_or(-1);
     config.general.touch_input = config_file["general"]["touch_input"].value_or(kDefaultTouchInput);
     config.general.skin_updater = config_file["general"]["skin_updater"].value_or(true);
     config.general.fast_transitions = config_file["general"]["fast_transitions"].value_or(false);
+
+    // limits (timer_frozen / song_limit used to live under [general])
+    config.limits.timer_frozen = config_file["limits"]["timer_frozen"].value_or(
+        config_file["general"]["timer_frozen"].value_or(true));
+    config.limits.song_limit = config_file["limits"]["song_limit"].value_or(
+        config_file["general"]["song_limit"].value_or(0));
+    config.limits.practice_time_limit = config_file["limits"]["practice_time_limit"].value_or(120);
 
     // Migrate old config: access_code -> access_code_1, player_1_id -> access_code_1, player_2_id -> access_code_2
     std::string old_access_code = config_file["network"]["access_code"].value_or(
@@ -459,7 +464,6 @@ void save_config(const Config& config) {
         {"audio_offset", config.general.audio_offset},
         {"visual_offset", config.general.visual_offset},
         {"language", config.general.language},
-        {"timer_frozen", config.general.timer_frozen},
         {"song_timer", config.general.song_timer},
         {"judge_counter", config.general.judge_counter},
         {"show_timing_offset", config.general.show_timing_offset},
@@ -467,11 +471,16 @@ void save_config(const Config& config) {
         {"practice_mode_bar_delay", config.general.practice_mode_bar_delay},
         {"score_method", config.general.score_method},
         {"display_bpm", config.general.display_bpm},
-        {"song_limit", config.general.song_limit},
         {"webcam_number", config.general.webcam_number},
         {"touch_input", config.general.touch_input},
         {"skin_updater", config.general.skin_updater},
         {"fast_transitions", config.general.fast_transitions}
+    });
+
+    config_table.insert("limits", toml::table{
+        {"timer_frozen", config.limits.timer_frozen},
+        {"song_limit", config.limits.song_limit},
+        {"practice_time_limit", config.limits.practice_time_limit}
     });
 
     // Network
