@@ -93,8 +93,8 @@ include(cmake/codegen.cmake)
 ### Source files
 
 # Main source files (excluding platform-specific and optional)
-file(GLOB_RECURSE CppFiles src/*.cpp)
-file(GLOB_RECURSE HeaderFiles
+file(GLOB_RECURSE CppFiles CONFIGURE_DEPENDS src/*.cpp)
+file(GLOB_RECURSE HeaderFiles CONFIGURE_DEPENDS
     src/*.h
     src/*.hpp
 )
