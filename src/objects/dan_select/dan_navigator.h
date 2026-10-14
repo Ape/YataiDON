@@ -112,6 +112,7 @@ private:
     std::atomic<bool>        scan_done{false};
     std::atomic<bool>        scan_abort{false};
     std::atomic<bool>        scan_published{false};
+    fs::path                 restore_selection_path;
     std::mutex               scan_mutex;
     std::vector<DanBoxData>  scan_result;   // guarded by scan_mutex
 };
