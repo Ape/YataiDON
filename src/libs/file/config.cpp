@@ -296,6 +296,7 @@ Config get_config() {
     config.general.touch_drum_size = config_file["general"]["touch_drum_size"].value_or(1.0f);
     config.general.skin_updater = config_file["general"]["skin_updater"].value_or(true);
     config.general.fast_transitions = config_file["general"]["fast_transitions"].value_or(false);
+    config.general.single_player_only = config_file["general"]["single_player_only"].value_or(false);
 
     // limits (timer_frozen / song_limit used to live under [general])
     config.limits.timer_frozen =
@@ -471,7 +472,8 @@ void save_config(const Config& config) {
                                                {"touch_input", config.general.touch_input},
                                                {"touch_drum_size", config.general.touch_drum_size},
                                                {"skin_updater", config.general.skin_updater},
-                                               {"fast_transitions", config.general.fast_transitions}});
+                                               {"fast_transitions", config.general.fast_transitions},
+                                               {"single_player_only", config.general.single_player_only}});
 
     config_table.insert("limits", toml::table{{"timer_frozen", config.limits.timer_frozen},
                                               {"song_limit", config.limits.song_limit},

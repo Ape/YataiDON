@@ -9,5 +9,5 @@ class CoinOverlay : public LuaScript {
 public:
     CoinOverlay();
     void update(double current_ms);
-    void draw(float x = 0, float y = 0);
+    void draw(float x = 0, float y = 0, bool suppress_second_player_prompt = false);
 };
