@@ -41,15 +41,19 @@ void trim(std::string& s) {
     while (!s.empty() && std::isspace(static_cast<unsigned char>(s.back()))) s.pop_back();
 }
 
-cpr::Response get_url(const std::string& url, int32_t timeout_ms, int32_t connect_timeout_ms) {
-    cpr::Session session;
-    session.SetUrl(cpr::Url{url});
-    session.SetTimeout(cpr::Timeout{timeout_ms});
-    session.SetConnectTimeout(cpr::ConnectTimeout{connect_timeout_ms});
+void init_session(cpr::Session& session) {
 #if defined(__ANDROID__)
     session.SetOption(android_ca());
     curl_easy_setopt(session.GetCurlHolder()->handle, CURLOPT_SSL_EC_CURVES, "X25519:P-256:P-384");
+#else
+    (void)session;
 #endif
+}
+
+cpr::Response get_url(cpr::Session& session, const std::string& url, int32_t timeout_ms, int32_t connect_timeout_ms) {
+    session.SetUrl(cpr::Url{url});
+    session.SetTimeout(cpr::Timeout{timeout_ms});
+    session.SetConnectTimeout(cpr::ConnectTimeout{connect_timeout_ms});
     return session.Get();
 }
 
@@ -156,6 +160,9 @@ void SkinUpdater::note_file_updated() {
 void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const std::string& repo_url, const std::string& branch) {
     set_current_skin(skin_dir.filename().string());
 
+    cpr::Session session;
+    init_session(session);
+
     auto raw_url = [&](const std::string& rel_path) {
         return repo_url + "/raw/branch/" + branch + "/" + rel_path;
     };
@@ -166,7 +173,7 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
 
     // a whole manifest or nothing: files it doesn't list get removed below, so a truncated
     // one would delete everything past the cut (and the last line must be complete)
-    cpr::Response checksums = get_url(raw_url("checksums.sha256"), 60000, 5000);
+    cpr::Response checksums = get_url(session, raw_url("checksums.sha256"), 60000, 5000);
     if (!fetched(checksums) || checksums.text.empty() || checksums.text.back() != '\n') {
         spdlog::warn("Skin update ({}): could not fetch a complete checksums.sha256 (HTTP {}, curl error {}: {})",
                      skin_dir.filename().string(), checksums.status_code,
@@ -209,7 +216,7 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
         // File is missing or differs: this pass has at least one real update.
         any_updated_.store(true);
         set_current_file(rel_path);
-        cpr::Response file_resp = get_url(raw_url(rel_path), 15000, 5000);
+        cpr::Response file_resp = get_url(session, raw_url(rel_path), 15000, 5000);
         if (!fetched(file_resp)) {
             spdlog::warn("Skin update ({}): failed to download {} (HTTP {})", skin_dir.filename().string(), rel_path, file_resp.status_code);
             continue;
@@ -218,7 +225,7 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
         if (is_lfs_pointer(file_resp.text)) {
             spdlog::debug("Skin update ({}): {} is an LFS pointer; fetching content from media endpoint",
                           skin_dir.filename().string(), rel_path);
-            cpr::Response lfs_resp = get_url(media_url(rel_path), 60000, 5000);
+            cpr::Response lfs_resp = get_url(session, media_url(rel_path), 60000, 5000);
             if (!fetched(lfs_resp)) {
                 spdlog::warn("Skin update ({}): failed to download LFS content {} (HTTP {})",
                              skin_dir.filename().string(), rel_path, lfs_resp.status_code);
