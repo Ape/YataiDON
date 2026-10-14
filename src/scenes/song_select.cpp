@@ -191,6 +191,10 @@ std::optional<Screens> SongSelectScreen::start_replay(const ReplayData& replay) 
 
 std::optional<Screens> SongSelectScreen::poll_second_player_join(double current_ms) {
     static constexpr double JOIN_WAIT_MS = 1.5 * 1000.0;
+    if (global_data.config->general.single_player_only) {
+        return std::nullopt;
+    }
+
     if (join_request_ms >= 0.0) {
         if (current_ms - join_request_ms < JOIN_WAIT_MS) {
             return std::nullopt;
@@ -427,7 +431,7 @@ void SongSelectScreen::draw_overlays() {
         select_timer->draw();
     }
     allnet_indicator.draw();
-    coin_overlay.draw();
+    coin_overlay.draw(0, 0, global_data.config->general.single_player_only);
     indicator->draw_on("song_select");
 }
 
@@ -461,7 +465,7 @@ void SongSelectScreen::draw() {
     if (game_transition.has_value()) {
         game_transition->draw();
         global_data.in_transition = true;
-        coin_overlay.draw();
+        coin_overlay.draw(0, 0, global_data.config->general.single_player_only);
         global_data.in_transition = false;
     }
     script->draw_top(dan_transition.has_value() ? dan_transition->progress() : -1.0f);

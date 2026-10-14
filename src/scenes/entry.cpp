@@ -13,12 +13,12 @@ void EntryScreen::on_screen_start() {
     Screen::on_screen_start();
     side = 1;
     is_2p = false;
-    box_manager = std::make_unique<BoxManager>(global_data.entry_join_pending);
-    if (global_data.config->network.auto_login) {
-        state = EntryState::SELECT_SIDE;
-    } else {
-        state = EntryState::WAITING;
-    }
+    box_manager =
+        std::make_unique<BoxManager>(global_data.entry_join_pending && !global_data.config->general.single_player_only);
+
+    state = global_data.config->general.single_player_only || !global_data.config->network.auto_login
+                ? EntryState::WAITING
+                : EntryState::SELECT_SIDE;
 
     const bool online = global_data.config->network.online_play;
     pending_card_hex_.clear();
@@ -55,16 +55,7 @@ void EntryScreen::on_screen_start() {
                               pd ? pd->gold : false, pd ? pd->rainbow : false, pd ? pd->title_bg : 0);
     }
 
-    timer = std::make_unique<Timer>(60, get_current_ms(), [this] {
-        if (box_manager->is_costume_box()) {
-            box_manager->open_costume_menu(players[0] ? players[0]->player_num : PlayerNum::P1);
-        } else {
-            if (!box_manager->selection_allowed()) {
-                box_manager->move_left();
-            }
-            box_manager->select_box();
-        }
-    });
+    reset_timer();
 
     lua_entry = std::make_unique<EntryScript>();
     lua_entry->start_side_select();
@@ -76,15 +67,25 @@ void EntryScreen::on_screen_start() {
     players.resize(2);
     audio.play_sound("bgm", VolumePreset::MUSIC);
 
-    // Online: auto_login shows side select right away, otherwise wait for Enter/Don
-    if (online && !global_data.config->network.auto_login && !global_data.entry_join_pending) {
-        state = EntryState::WAITING;
-    }
-
     if (global_data.entry_join_pending) {
         global_data.entry_join_pending = false;
-        start_second_player_join();
+        if (!global_data.config->general.single_player_only) {
+            start_second_player_join();
+        }
     }
+}
+
+void EntryScreen::reset_timer() {
+    timer = std::make_unique<Timer>(60, get_current_ms(), [this] {
+        if (box_manager->is_costume_box()) {
+            box_manager->open_costume_menu(players[0] ? players[0]->player_num : PlayerNum::P1);
+        } else {
+            if (!box_manager->selection_allowed()) {
+                box_manager->move_left();
+            }
+            box_manager->select_box();
+        }
+    });
 }
 
 // Resolve + load the account for the next free login slot (1st login -> access_code_1, 2nd -> access_code_2).
@@ -289,7 +290,6 @@ void EntryScreen::finish_slot(int slot, const PlayerData& pd) {
     }
 }
 
-// Card scan: log in, then show side select. The player still picks the side.
 void EntryScreen::join_with_card(const std::string& card_hex) {
     if (login_ready_) {
         return;
@@ -299,6 +299,11 @@ void EntryScreen::join_with_card(const std::string& card_hex) {
 
 void EntryScreen::on_card_login() {
     login_ready_ = true;
+    if (global_data.config->general.single_player_only) {
+        join_player(PlayerNum::P1);
+        return;
+    }
+
     audio.play_sound("don", VolumePreset::SOUND);
     if (players[0]) {
         // Second player: same screen as pressing Don for the free seat
@@ -392,6 +397,15 @@ bool EntryScreen::seat_joined(PlayerNum player_num) const {
 }
 
 void EntryScreen::join_player(PlayerNum player_num, bool do_login) {
+    if (global_data.config->general.single_player_only && player_num != PlayerNum::P1) {
+        return;
+    }
+    if (seat_joined(player_num)) {
+        return;
+    }
+
+    // Start the login first (it picks the slot from players[0]); the join animation does not wait
+    // for the network. The cloud loops (player->loading) until the real costume/colors are equipped.
     bool loading = false;
     if (do_login && !login_ready_) {
         if (login_pending()) {
@@ -427,6 +441,11 @@ void EntryScreen::join_player(PlayerNum player_num, bool do_login) {
     if (state == EntryState::SELECT_SIDE) {
         lua_entry->decide_side_select(side);
     }
+
+    if (global_data.config->general.single_player_only && state == EntryState::WAITING) {
+        reset_timer();
+    }
+
     state = EntryState::SELECT_MODE;
     audio.play_sound("don", VolumePreset::SOUND);
     if (name_pending_ >= 0 && players[name_pending_]) {
@@ -465,15 +484,19 @@ std::optional<Screens> EntryScreen::handle_input() {
         local_login_ = !enter; // Enter: register/fetch online; Don: local db only
         login_slot("", [this] {
             login_ready_ = true;
-            audio.play_sound("don", VolumePreset::SOUND);
-            state = EntryState::SELECT_SIDE;
-            lua_entry->restart_side_select();
+            if (global_data.config->general.single_player_only) {
+                join_player(PlayerNum::P1);
+            } else {
+                audio.play_sound("don", VolumePreset::SOUND);
+                state = EntryState::SELECT_SIDE;
+                lua_entry->restart_side_select();
+            }
         });
         return std::nullopt;
     }
     // Enter again with one player in: online login (registers placeholder "1") for the free seat
-    if (global_data.config->network.online_play && key_pressed(SDL_SCANCODE_RETURN) &&
-        (state == EntryState::SELECT_SIDE || state == EntryState::SELECT_MODE) &&
+    if (global_data.config->network.online_play && !global_data.config->general.single_player_only &&
+        key_pressed(SDL_SCANCODE_RETURN) && (state == EntryState::SELECT_SIDE || state == EntryState::SELECT_MODE) &&
         seat_joined(PlayerNum::P1) != seat_joined(PlayerNum::P2)) {
         local_login_ = false;
         join_player(seat_joined(PlayerNum::P1) ? PlayerNum::P2 : PlayerNum::P1);
@@ -532,7 +555,8 @@ std::optional<Screens> EntryScreen::handle_input() {
                 join_player(PlayerNum::P1);
                 return std::nullopt;
             }
-            if (!seat_joined(PlayerNum::P2) && (is_l_don_pressed(PlayerNum::P2) || is_r_don_pressed(PlayerNum::P2))) {
+            if (!global_data.config->general.single_player_only && !seat_joined(PlayerNum::P2) &&
+                (is_l_don_pressed(PlayerNum::P2) || is_r_don_pressed(PlayerNum::P2))) {
                 join_player(PlayerNum::P2);
                 return std::nullopt;
             }
@@ -554,6 +578,10 @@ std::optional<Screens> EntryScreen::handle_input() {
                 player->handle_input();
             }
         }
+        if (global_data.config->general.single_player_only) {
+            return std::nullopt;
+        }
+
         if (players[0] && players[0]->player_num == PlayerNum::P1 &&
             (is_l_don_pressed(PlayerNum::P2) || is_r_don_pressed(PlayerNum::P2))) {
             audio.play_sound("don", VolumePreset::SOUND);
@@ -612,7 +640,8 @@ std::optional<Screens> EntryScreen::update() {
     // Case 6: any card while a seat is free (P1 first, then P2)
     if (card_reader_ && card_reader_->is_polling() && !login_ready_ && !login_pending() && !network.probing() &&
         state != EntryState::SELECT_COSTUME && state != EntryState::NAME_ENTRY &&
-        !(seat_joined(PlayerNum::P1) && seat_joined(PlayerNum::P2))) {
+        !(seat_joined(PlayerNum::P1) &&
+          (global_data.config->general.single_player_only || seat_joined(PlayerNum::P2)))) {
         if (current_time - last_card_poll_ms_ >= global_data.config->card_reader.poll_interval_ms) {
             last_card_poll_ms_ = current_time;
             if (card_reader_->poll_once()) {
@@ -626,6 +655,11 @@ std::optional<Screens> EntryScreen::update() {
         }
     }
 #endif
+
+    if (global_data.config->general.single_player_only && global_data.config->network.auto_login &&
+        state == EntryState::WAITING && used_cards_.empty() && !login_pending() && !network.probing()) {
+        join_player(PlayerNum::P1);
+    }
 
     allnet_indicator.update(current_time);
     network_msg.update(current_time);
@@ -723,6 +757,10 @@ bool EntryScreen::mode_select_ready() {
     if (network_msg.available && login_pending()) {
         return false;
     }
+    if (global_data.config->general.single_player_only) {
+        return true;
+    }
+
     for (auto& player : players) {
         if (player && !player->is_cloud_animation_finished()) {
             return false;
@@ -792,6 +830,6 @@ void EntryScreen::draw() {
     network_msg.draw();
     timer->draw();
     entry_overlay.draw(false);
-    coin_overlay.draw();
+    coin_overlay.draw(0, 0, global_data.config->general.single_player_only);
     allnet_indicator.draw();
 }

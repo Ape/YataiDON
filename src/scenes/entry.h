@@ -91,6 +91,7 @@ private:
     void finish_slot(int slot, const PlayerData& pd);
     bool login_pending() const { return pending_login_.valid(); }
     void join_with_card(const std::string& card_hex);
+    void reset_timer();
 
     std::unique_ptr<NameEntry> name_entry_;
     EntryState name_prev_state_ = EntryState::SELECT_SIDE;

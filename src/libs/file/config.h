@@ -24,6 +24,7 @@ struct GeneralConfig {
     bool touch_input = false;
     bool skin_updater = true;
     bool fast_transitions = false;
+    bool single_player_only = false;
 };
 
 struct LimitsConfig {
