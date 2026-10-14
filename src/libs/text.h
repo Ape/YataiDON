@@ -105,6 +105,7 @@ public:
     float height = 0.0f;
     float x_offset = 0.0f;
     float y_offset = 0.0f;
+    int   top_extra = 0;
 
     OutlinedText(std::string text, int font_size,
                  ray::Color color, ray::Color outline_color,

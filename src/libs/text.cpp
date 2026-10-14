@@ -239,9 +239,33 @@ static void blit_over(ray::Image* dst, const ray::Image& src, int x0, int y0) {
     }
 }
 
+static int text_margin(float font_size) { return (int)std::ceil(font_size * 0.25f); }
+
+static ray::Image text_image(const ray::Font& font, const char* text, float font_size, float spacing, int margin) {
+    ray::Vector2 sz = ray::MeasureTextEx(font, text, font_size, spacing);
+    ray::Image im = ray::GenImageColor((int)sz.x, (int)sz.y + margin * 2, ray::BLANK);
+    int x = 0;
+    for (const char* p = text; *p; ) {
+        int n = 0;
+        int cp = ray::GetCodepointNext(p, &n);
+        if (n <= 0) break;
+        p += n;
+        int gi = ray::GetGlyphIndex(font, cp);
+        const ray::GlyphInfo& g = font.glyphs[gi];
+        if (cp != ' ' && cp != '\t') {
+            ray::Rectangle sr = {0, 0, (float)g.image.width, (float)g.image.height};
+            ray::Rectangle dr = {(float)(x + g.offsetX), (float)(margin + g.offsetY), font.recs[gi].width, font.recs[gi].height};
+            ray::ImageDrawImagePro(&im, g.image, sr, dr, {0, 0}, 0.0f, ray::WHITE);
+        }
+        x += (g.advanceX == 0 ? (int)(font.recs[gi].width + spacing) : g.advanceX + (int)spacing);
+    }
+    return im;
+}
+
 static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* text, ray::Vector2 pos,
                             float font_size, float spacing, ray::Color tint) {
-    ray::Image t = ray::ImageTextEx(font, text, font_size, spacing, ray::WHITE);
+    const int m = text_margin(font_size);
+    ray::Image t = text_image(font, text, font_size, spacing, m);
     if (t.data && t.width > 0 && t.height > 0) {
         if (t.format != ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) ray::ImageFormat(&t, ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
         unsigned char* px = (unsigned char*)t.data;
@@ -250,14 +274,15 @@ static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* 
             px[i * 4 + 0] = tint.r; px[i * 4 + 1] = tint.g; px[i * 4 + 2] = tint.b;
             px[i * 4 + 3] = (unsigned char)((px[i * 4 + 3] * (int)tint.a) / 255);
         }
-        blit_over(dst, t, (int)pos.x, (int)pos.y);
+        blit_over(dst, t, (int)pos.x, (int)pos.y - m);
     }
     ray::UnloadImage(t);
 }
 
 static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* text, ray::Vector2 pos,
                           float font_size, float spacing, ray::Color outline_color, float radius) {
-    ray::Image cov = ray::ImageTextEx(font, text, font_size, spacing, ray::WHITE);
+    const int m = text_margin(font_size);
+    ray::Image cov = text_image(font, text, font_size, spacing, m);
     if (!cov.data || cov.width <= 0 || cov.height <= 0) { ray::UnloadImage(cov); return; }
     if (cov.format != ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) ray::ImageFormat(&cov, ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
     const int r  = (int)std::ceil(radius + 0.5f);
@@ -303,7 +328,7 @@ static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* te
     ray::Image o = ray::GenImageColor(OW, OH, ray::Color{outline_color.r, outline_color.g, outline_color.b, 0});
     unsigned char* op = (unsigned char*)o.data;
     for (int i = 0; i < OW * OH; i++) op[i * 4 + 3] = (unsigned char)((out[i] * (int)outline_color.a) / 255);
-    blit_over(dst, o, (int)pos.x - r, (int)pos.y - r);
+    blit_over(dst, o, (int)pos.x - r, (int)pos.y - m - r);
     ray::UnloadImage(o);
     ray::UnloadImage(cov);
 }
@@ -530,13 +555,15 @@ OutlinedText::BuildData OutlinedText::build_horizontal_text(
     }
 
     int pad = (int)outline_thickness + 2;
+
+    top_extra = std::max(0, text_margin(font_size) - pad);
     ray::Image img = ray::GenImageColor(
         (int)max_w + pad * 2,
-        (int)(line_advance * (float)(lines.size() - 1) + line_h) + pad * 2,
+        (int)(line_advance * (float)(lines.size() - 1) + line_h) + pad * 2 + top_extra,
         clear_of(outline_thickness > 0 ? outline_color : color));
 
     for (int li = 0; li < (int)lines.size(); li++) {
-        float y = pad + li * line_advance;
+        float y = pad + top_extra + li * line_advance;
         if (outline_thickness > 0)
             stamp_outline(&img, worker_font, lines[li].c_str(), {(float)pad, y}, font_size, sp, outline_color, outline_thickness);
         draw_text_clean(&img, worker_font, lines[li].c_str(),
@@ -721,7 +748,7 @@ bool OutlinedText::upload_pending() {
 
     texture = tex;
     width   = (float)tex.width;
-    height  = (float)tex.height;
+    height  = (float)tex.height - top_extra;
     return true;
 }
 
@@ -738,7 +765,7 @@ void OutlinedText::draw(const DrawTextureParams& params) {
 
     ray::Rectangle src = params.src.value_or(ray::Rectangle{0, 0, (float)texture->width, (float)texture->height});
     float dx = params.x + x_offset;
-    float dy = params.y + y_offset;
+    float dy = params.y + y_offset - top_extra;
 
     if (params.x2 == 0.0f && params.y2 == 0.0f) {
         dx = roundf(dx);
