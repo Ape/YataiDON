@@ -854,7 +854,7 @@ void PracticeGameScreen::draw() {
         background->draw_back();
     }
 
-    players[0]->draw_practice(ms_from_start, 0, 184 * tex.screen_scale, mask_shader, !paused);
+    players[0]->draw_practice(ms_from_start, 0, 184 * tex.screen_scale, !paused);
 
     if (background.has_value()) background->draw_fore();
 

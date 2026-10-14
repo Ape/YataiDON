@@ -19,7 +19,6 @@ public:
     GameScreen() : Screen("game") {
     }
 
-    ray::Shader mask_shader;
     double start_ms;
     double ms_from_start;
     double start_delay;

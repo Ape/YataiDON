@@ -6,7 +6,6 @@
 
 void DanGameScreen::on_screen_start() {
     Screen::on_screen_start();
-    mask_shader   = load_shader("shader/dummy.vs", "shader/mask.fs");
     ms_from_start = 0;
     start_ms      = 0;
     last_resync_ms = 0;
@@ -21,13 +20,6 @@ void DanGameScreen::on_screen_start() {
     JudgePos::X = tex.skin_config[SC::JUDGE_POS].x;
     JudgePos::Y = tex.skin_config[SC::JUDGE_POS].y;
     TJAParser::jpos_field_width = (tex.screen_width - JudgePos::X) / tex.screen_scale;
-
-    auto rainbow_mask = std::dynamic_pointer_cast<SingleTexture>(tex.textures["balloon/rainbow_mask"]);
-    auto rainbow      = std::dynamic_pointer_cast<SingleTexture>(tex.textures["balloon/rainbow"]);
-    if (rainbow_mask && rainbow) {
-        SetShaderValueTexture(mask_shader, GetShaderLocation(mask_shader, "texture0"), *rainbow_mask->texture);
-        SetShaderValueTexture(mask_shader, GetShaderLocation(mask_shader, "texture1"), *rainbow->texture);
-    }
 
     init_dan();
     load_hitsounds();
@@ -703,7 +695,7 @@ void DanGameScreen::draw() {
     if (dan_gauge) dan_gauge->draw();
     if (background.has_value()) background->draw_gauge(PlayerNum::P1);
     if (players.size() == 1)
-        players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale, mask_shader);
+        players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale);
     between.draw(184 * tex.screen_scale);
     if (background.has_value()) background->draw_fore();
     draw_overlay();

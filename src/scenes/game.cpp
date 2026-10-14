@@ -12,7 +12,6 @@
 
 void GameScreen::on_screen_start() {
     Screen::on_screen_start();
-    mask_shader = load_shader("shader/dummy.vs", "shader/mask.fs");
     ms_from_start = 0;
     start_ms = 0;
     start_delay = 1000.0f;
@@ -24,12 +23,6 @@ void GameScreen::on_screen_start() {
     paused = false;
     score_saved = false;
     pause_time = 0;
-    auto rainbow_mask = std::dynamic_pointer_cast<SingleTexture>(tex.textures["balloon/rainbow_mask"]);
-    auto rainbow = std::dynamic_pointer_cast<SingleTexture>(tex.textures["balloon/rainbow"]);
-    if (rainbow_mask && rainbow) {
-        SetShaderValueTexture(mask_shader, GetShaderLocation(mask_shader, "texture0"), *rainbow_mask->texture);
-        SetShaderValueTexture(mask_shader, GetShaderLocation(mask_shader, "texture1"), *rainbow->texture);
-    }
     SessionData& session_data = global_data.session_data[(int)global_data.player_num];
     if (session_data.selected_song.empty() || !exists(session_data.selected_song)) {
         auto songs = get_song_files(global_data.config->paths.tja_path);
@@ -88,7 +81,6 @@ void GameScreen::on_screen_start() {
 
 Screens GameScreen::on_screen_end(Screens next_screen) {
     song_started = false;
-    ray::UnloadShader(mask_shader);
 
     if (movie.has_value()) {
         movie->stop();
@@ -592,15 +584,15 @@ void GameScreen::draw_overlay(bool with_song_info) {
 
 void GameScreen::draw_players() {
     if (players.size() == 1) {
-        players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale, mask_shader);
+        players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale);
     } else if (players.size() == 2) {
-        players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale, mask_shader);
-        players[1]->draw(ms_from_start, 0, tex.skin_config[SC::GAME_P2_Y].y, mask_shader);
+        players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale);
+        players[1]->draw(ms_from_start, 0, tex.skin_config[SC::GAME_P2_Y].y);
     } else {
         float gap = ((float)tex.screen_height - (players.size() * 176 * tex.screen_scale)) / (players.size() + 1);
         for (int i = 0; i < players.size(); i++) {
             float position = gap + i * ((176 * tex.screen_scale) + gap);
-            players[i]->draw(ms_from_start, 0, position, mask_shader);
+            players[i]->draw(ms_from_start, 0, position);
         }
     }
 }

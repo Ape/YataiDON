@@ -564,7 +564,7 @@ void Player::update(double ms_from_start, double current_ms, std::optional<Backg
     chara->update(current_ms);
 }
 
-void Player::draw(double ms_from_start, float x, float y, ray::Shader& mask_shader) {
+void Player::draw(double ms_from_start, float x, float y) {
     tex.draw_texture(t_lane_background, {.y=y});
     if (player_num == PlayerNum::AI) tex.draw_texture(t_ai_lane_background, {.y=y});
     if (branch_indicator.has_value()) {
@@ -610,14 +610,14 @@ void Player::draw(double ms_from_start, float x, float y, ray::Shader& mask_shad
         anim.draw_text(judge_x, y + judge_y);
     }
 
-    draw_overlays(y, mask_shader);
+    draw_overlays(y);
 
     if (global_data.config->general.song_timer) {
         draw_song_timer(ms_from_start, y);
     }
 }
 
-void Player::draw_practice(double ms_from_start, float x, float y, ray::Shader& mask_shader, bool draw_notes_on) {
+void Player::draw_practice(double ms_from_start, float x, float y, bool draw_notes_on) {
     practice_lyric = true;
     tex.draw_texture(t_lane_background, {.y=y});
     if (player_num == PlayerNum::AI) tex.draw_texture(t_ai_lane_background, {.y=y});
@@ -657,7 +657,7 @@ void Player::draw_practice(double ms_from_start, float x, float y, ray::Shader& 
         anim.draw_text(judge_x, y + judge_y);
     }
 
-    draw_overlays(y, mask_shader);
+    draw_overlays(y);
 
 }
 
@@ -1939,7 +1939,7 @@ void Player::draw_lane_cover(float y) {
 }
 
 
-void Player::draw_overlays(float y, const ray::Shader& mask_shader) {
+void Player::draw_overlays(float y) {
     tex.draw_texture(t_drum, {.y=y});
     if (ending_anim.has_value()) {
         if (ending_background && ending_background->wants_draw_ending())
@@ -1952,7 +1952,7 @@ void Player::draw_overlays(float y, const ray::Shader& mask_shader) {
         anim->draw(y);
     }
     for (NoteArc& anim : draw_arc_list) {
-        anim.draw(y, mask_shader);
+        anim.draw(y);
     }
     for (GaugeHitEffect& anim : gauge_hit_effect) {
         anim.draw(y);

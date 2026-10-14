@@ -124,13 +124,13 @@ public:
 
     void update(double ms_from_start, double current_ms, std::optional<Background>& background);
 
-    void draw(double ms_from_start, float x, float y, ray::Shader& mask_shader);
+    void draw(double ms_from_start, float x, float y);
 
-    void draw_practice(double ms_from_start, float x, float y, ray::Shader& mask_shader, bool draw_notes_on);
+    void draw_practice(double ms_from_start, float x, float y, bool draw_notes_on);
 
     void draw_lyric(float y);   // practice scene draws it after the large drums
 
-    void draw_overlays(float y, const ray::Shader& mask_shader);
+    void draw_overlays(float y);
     void draw_lane_cover(float y);
 
 protected:

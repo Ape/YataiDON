@@ -1,66 +1,9 @@
 #include "note_arc.h"
-#include <cmath>
-
-std::unordered_map<NoteArc::CacheKey, std::vector<std::pair<int, int>>, NoteArc::CacheKeyHash> NoteArc::_arc_points_cache;
 
 NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bool big, bool is_balloon, float start_x, float start_y)
-    : note_type(note_type), start_ms(current_ms), player_num(player_num), is_big(big), is_balloon(is_balloon)
+    : is_balloon(is_balloon), arc_duration(31), current_progress(0), elapsed_ms(0),
+      note_finished_handled(false), start_ms(current_ms), note_type(note_type), is_big(big)
 {
-    arc_points = 100;
-    arc_duration = 31;
-    current_progress = 0;
-    elapsed_ms = 0;
-    note_finished_handled = false;
-
-    float curve_height = tex.skin_config[SC::NOTE_ARC_CURVE_HEIGHT].height;
-    this->start_x = start_x + tex.skin_config[SC::NOTE_ARC_START_X_OFFSET].x;
-    this->start_y = start_y + tex.skin_config[SC::NOTES].y;
-    end_x = tex.skin_config[SC::GAUGE_HIT_EFFECT_NOTE].x;
-    end_y = tex.skin_config[SC::GAUGE_HIT_EFFECT_NOTE].y;
-
-    if (player_num == PlayerNum::P2) {
-        end_y += tex.skin_config[SC::GAUGE_HIT_EFFECT_NOTE].height;
-    }
-
-    if (player_num == PlayerNum::P1) {
-        // Control point influences the curve shape
-        control_x = (this->start_x + end_x) / 2;
-        control_y = std::min(this->start_y, end_y) - curve_height;  // Arc upward
-    } else {
-        control_x = (this->start_x + end_x) / 2;
-        control_y = std::max(this->start_y, end_y) + curve_height;  // Arc downward
-    }
-
-    x_i = this->start_x;
-    y_i = this->start_y;
-
-    // Create cache key
-    CacheKey cache_key = {this->start_x, this->start_y, end_x, end_y, control_x, control_y, arc_points};
-
-    // Check if arc points are already cached
-    if (_arc_points_cache.find(cache_key) == _arc_points_cache.end()) {
-        std::vector<std::pair<int, int>> arc_points_list;
-        arc_points_list.reserve(arc_points + 1);
-
-        for (int i = 0; i <= arc_points; ++i) {
-            float t = (float)i / arc_points;
-            float t_inv = 1.0f - t;
-
-            int x = (int)(t_inv * t_inv * this->start_x +
-                          2 * t_inv * t * control_x +
-                          t * t * end_x);
-            int y = (int)(t_inv * t_inv * this->start_y +
-                          2 * t_inv * t * control_y +
-                          t * t * end_y);
-
-            arc_points_list.emplace_back(x, y);
-        }
-
-        _arc_points_cache[cache_key] = arc_points_list;
-    }
-
-    arc_points_cache = &_arc_points_cache[cache_key];
-
     NoteType texture_note_type = note_type;
     if (big) {
         if (note_type == NoteType::DON) {
@@ -72,109 +15,28 @@ NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bo
     if (note_type == NoteType::BALLOON_HEAD || is_balloon) {
         texture_note_type = NoteType::DON_L;
     }
-    t_note = tex.get_texture("notes/" + std::to_string((int)texture_note_type));
-    if (big) {
-        t_firework = tex.get_texture("hit_effect/firework");
-    }
-    t_rainbow_mask = tex.get_texture("balloon/rainbow_mask");
-}
 
-// cropped sheets are a single texture, so frame_count() alone reports 1
-int NoteArc::firework_frames() const {
-    int n = t_firework->frame_count();
-    if (t_firework->crop_data.has_value()) n = std::max(n, (int)t_firework->crop_data->size());
-    return n;
+    if (load("NoteArc", "note_arc", static_cast<int>(texture_note_type), big, is_balloon,
+             static_cast<int>(player_num), start_x, start_y)) {
+        fn_draw = lua_object["draw"];
+        firework_frames = lua_object["firework_frames"].get_or(0);
+    }
 }
 
 void NoteArc::update(double current_ms) {
     // elapsed_ms keeps running past the arc so trailing fireworks can finish
     elapsed_ms = std::max(0.0, current_ms - start_ms);
     current_progress = std::min(1.0, elapsed_ms / ((double)arc_duration * 16.67));
-
-    if (arc_points_cache == nullptr || arc_points_cache->empty()) return;
-    const std::size_t point_index = (std::size_t)(current_progress * arc_points);
-    if (point_index < arc_points_cache->size()) {
-        x_i = (*arc_points_cache)[point_index].first;
-        y_i = (*arc_points_cache)[point_index].second;
-    } else {
-        x_i = arc_points_cache->back().first;
-        y_i = arc_points_cache->back().second;
-    }
 }
 
-void NoteArc::draw(float y, ray::Shader mask_shader) {
-    if (is_balloon) {
-        const std::shared_ptr<TextureObject>& rainbow = tex.textures["balloon/rainbow"];
-        if (!rainbow || !t_rainbow_mask) {
-            if (current_progress < 1.0) tex.draw_texture(t_note, {.x=x_i, .y=y + y_i});
-            return;
-        }
-        float rainbow_height;
-        if (player_num == PlayerNum::P2) {
-            rainbow_height = -t_rainbow_mask->height;
-        } else {
-            rainbow_height = t_rainbow_mask->height;
-        }
-        float trail_length_ratio = 0.5f;
-        const float raw_progress = elapsed_ms / ((double)arc_duration * 16.67);
-        float trail_start_progress = std::max(0.0f, raw_progress - trail_length_ratio);
-        float trail_end_progress = std::min(raw_progress, 1.0f);
-
-        if (trail_end_progress > trail_start_progress) {
-            float crop_start_x = std::round(trail_start_progress * t_rainbow_mask->width);
-            float crop_end_x = std::round(trail_end_progress * t_rainbow_mask->width);
-            float crop_width = crop_end_x - crop_start_x;
-
-            if (crop_width > 0) {
-                ray::Rectangle src = {crop_start_x, 0, crop_width, rainbow_height};
-                Mirror mirror = Mirror::NONE;
-                float y_pos;
-                if (player_num == PlayerNum::P2) {
-                    y_pos = tex.skin_config[SC::NOTE_ARC_BALLOON_P2_Y].y;
-                } else {
-                    y_pos = 0;
-                }
-                ray::BeginShaderMode(mask_shader);
-                // rlgl clears the extra sampler slots after every batch, so GameScreen's one-time
-                // binding of texture1 (the rainbow's colours) only lasted for the first batch; after
-                // that the shader sampled an empty unit and the trail came out opaque black
-                if (const ray::Texture2D* rt = rainbow->frame_texture(0)) {
-                    ray::SetShaderValueTexture(mask_shader, ray::GetShaderLocation(mask_shader, "texture1"), *rt);
-                }
-                tex.draw_texture(t_rainbow_mask, {.mirror=mirror, .x=crop_start_x, .y=y + y_pos, .x2=-t_rainbow_mask->width + crop_width, .src=src});
-                ray::EndShaderMode();
-            }
-        }
-    } else if (is_big && !is_balloon && t_firework && firework_frames() > 0 &&
-               arc_points_cache && !arc_points_cache->empty()) {
-        const double frame_ms = 16.67;
-        const int frame_count = firework_frames();
-        for (int i = 0; i < 6; ++i) {
-            const double spawn_ms = (6 + 3 * i) * frame_ms;
-            const double age_ms = elapsed_ms - spawn_ms;
-            const int frame = (int)(age_ms / frame_ms);
-            if (age_ms < 0 || frame >= frame_count) continue;
-            const double position_progress = std::min(spawn_ms / ((double)arc_duration * frame_ms), 1.0);
-            const std::size_t point_index = std::min((std::size_t)(position_progress * arc_points),arc_points_cache->size() - 1);
-            const float firework_x = (float)((*arc_points_cache)[point_index].first);
-            const float firework_y = (float)((*arc_points_cache)[point_index].second);
-            tex.draw_texture(t_firework, {
-                .frame=frame,
-                .scale = 0.8,
-                .x=firework_x - (t_note->width*0.6f) / 2.0f,
-                .y=y + firework_y - (t_note->width*0.6f) / 2.0f
-            });
-        }
-    }
-    if (!is_note_finished()) {
-        tex.draw_texture(t_note, {.x=x_i, .y=y + y_i});
-    }
+void NoteArc::draw(float y) {
+    call(fn_draw, "NoteArc:draw", y, elapsed_ms, (double)arc_duration * 16.67);
 }
 
 bool NoteArc::is_finished() const {
     double end_ms = (double)arc_duration * 16.67;
     if (is_balloon) end_ms *= 1.5;
-    if (t_firework) end_ms += firework_frames() * 16.67;
+    end_ms += firework_frames * 16.67;
     return elapsed_ms >= end_ms;
 }
 
