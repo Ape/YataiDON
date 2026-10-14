@@ -348,8 +348,6 @@ bool EntryScreen::seat_joined(PlayerNum player_num) const {
 }
 
 void EntryScreen::join_player(PlayerNum player_num, bool do_login) {
-    // Start the login first (it picks the slot from players[0]); the join animation does not wait
-    // for the network. The cloud loops (player->loading) until the real costume/colors are equipped.
     bool loading = false;
     if (do_login && !login_ready_) {
         if (login_pending()) return;
@@ -369,13 +367,13 @@ void EntryScreen::join_player(PlayerNum player_num, bool do_login) {
 
     if (players[0]) {
         players[1] = std::make_unique<EntryPlayer>(global_data.player_num, side, box_manager.get());
-        players[1]->start_animations(loading);
+        players[1]->start_animations(loading && !network_msg.available);
         global_data.player_num = PlayerNum::P1;
         is_2p = true;
     } else {
         global_data.first_login_player = global_data.player_num;
         players[0] = std::make_unique<EntryPlayer>(global_data.player_num, side, box_manager.get());
-        players[0]->start_animations(loading);
+        players[0]->start_animations(loading && !network_msg.available);
         is_2p = false;
     }
     audio.play_sound("cloud", VolumePreset::SOUND);
@@ -569,6 +567,9 @@ std::optional<Screens> EntryScreen::update() {
 #endif
 
     allnet_indicator.update(current_time);
+    network_msg.update(current_time);
+    if (login_pending() || network.probing()) network_msg.show("clear_reading");
+    else network_msg.hide();
     entry_overlay.update(current_time);
     lua_entry->update(current_time);
     if (name_entry_) name_entry_->update(current_time);
@@ -638,6 +639,7 @@ void EntryScreen::draw_player_drum() {
 }
 
 bool EntryScreen::mode_select_ready() {
+    if (network_msg.available && login_pending()) return false;
     for (auto& player : players) {
         if (player && !player->is_cloud_animation_finished()) return false;
     }
@@ -690,6 +692,7 @@ void EntryScreen::draw() {
         ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::BLACK);
     }
 
+    network_msg.draw();
     timer->draw();
     entry_overlay.draw(0, tex.skin_config[SC::ENTRY_OVERLAY_ENTRY].y);
     coin_overlay.draw();

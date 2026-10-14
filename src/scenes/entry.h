@@ -10,6 +10,7 @@
 #include "../objects/global/nameplate.h"
 #include "../objects/global/coin_overlay.h"
 #include "../objects/global/allnet_indicator.h"
+#include "../objects/global/network_msg.h"
 #include "../objects/global/entry_overlay.h"
 #include "../objects/global/timer.h"
 #include "../objects/global/chara_3d.h"
@@ -30,9 +31,6 @@ enum class EntryState {
     NAME_ENTRY = 4  // a freshly registered account picks its name; resumes name_prev_state_
 };
 
-// The network half of an online login, done on a worker thread so the entry screen keeps running:
-// registration, the server's profile, and the scores to sync. It touches neither the config nor
-// scores.db; EntryScreen::finish_login applies it on the main thread.
 struct RemoteLogin {
     bool ok = false;           // false: a card could not be registered
     std::string code;          // access code to log in with
@@ -53,6 +51,7 @@ private:
     Nameplate nameplate;
     CoinOverlay coin_overlay;
     AllNetIcon allnet_indicator;
+    NetworkMsg network_msg;  // login / probe wait banner
     EntryOverlay entry_overlay;
     std::unique_ptr<Timer> timer;
 
