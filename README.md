@@ -146,6 +146,7 @@ People (in no particular order):
 - [sumandrew](https://github.com/somepin)
 - [WallK](https://github.com/WallK)
 - [dpkgluci](https://github.com/germe-deb)
+- [Ape](https://github.com/Ape)
 - [chuchy](https://github.com/magickale) (osu parser)
 - [churrochef](github.com/churro-chef) (vertical scroll)
 - [cainan](https://github.com/cainan-c/) (3d don chan)
