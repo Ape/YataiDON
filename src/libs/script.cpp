@@ -762,6 +762,7 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
     lua.new_usertype<OutlinedText>("OutlinedText",
         "width",          &OutlinedText::width,
         "height",         &OutlinedText::height,
+        "text",           sol::property([](OutlinedText& self) { return self.get_text(); }),
         "draw",           [](OutlinedText& self, sol::optional<sol::table> params_table) {
             DrawTextureParams params = parse_draw_params(params_table, false);
             self.draw(params);
