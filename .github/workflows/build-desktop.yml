@@ -1,6 +1,7 @@
 name: Build YataiDON Desktop (Release)
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
