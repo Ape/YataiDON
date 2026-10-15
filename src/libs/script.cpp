@@ -342,13 +342,17 @@ void ScriptManager::shutdown() {
 }
 
 // tex.get_texture: "screen/subset/name" -> the texture, loading the subset folder on a miss
+// TODO: Thanks to @Ape, this resolves the crash on latest commit currently, but it's a complete hack
+//       that needs a rewrite.  -QBaraki
 static sol::optional<std::shared_ptr<TextureObject>> resolve_lua_texture(const std::string& path) {
     auto first_slash = path.find('/');
     auto last_slash = path.rfind('/');
-    if (first_slash == std::string::npos || last_slash == first_slash) return sol::nullopt;
+    if (first_slash == std::string::npos) return sol::nullopt;
 
-    std::string screen_name  = path.substr(0, first_slash);
-    std::string subset       = path.substr(first_slash + 1, last_slash - first_slash - 1);
+    std::string screen_name = last_slash == first_slash ? "game" : path.substr(0, first_slash);
+    std::string subset = last_slash == first_slash
+        ? path.substr(0, first_slash)
+        : path.substr(first_slash + 1, last_slash - first_slash - 1);
     std::string texture_name = path.substr(last_slash + 1);
 
     std::string subset_key = fs::path(subset).filename().string();
