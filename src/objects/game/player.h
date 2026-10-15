@@ -27,7 +27,6 @@
 #include "gauge.h"
 #include "judge_counter.h"
 #include "score_counter.h"
-#include "score_counter_animation.h"
 
 namespace JudgePos {
     inline float X = 0.0f;
@@ -264,7 +263,6 @@ private:
     std::optional<BalloonCounter> balloon_counter;
     std::optional<KusudamaCounter> kusudama_counter;
     ScoreCounter score_counter;
-    std::vector<ScoreCounterAnimation> base_score_list;
     std::optional<GogoTime> gogo_time;
     std::optional<Fireworks> fireworks;
     ScrollType scroll_type = ScrollType::NMSCROLL;

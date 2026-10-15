@@ -88,7 +88,7 @@ if(IOS)
 endif()
 
 include(cmake/deps.cmake)
-include(cmake/codegen.cmake)
+set(YATAIDON_SKINS_DIR "${CMAKE_SOURCE_DIR}/Skins" CACHE PATH "Skins used for iOS bundling")
 
 ### Source files
 
@@ -142,7 +142,6 @@ if(ANDROID)
 else()
   add_executable(${PROJECT_NAME} ${CppFiles} ${HeaderFiles})
 endif()
-add_dependencies(${PROJECT_NAME} skin_config_gen)
 
 if(MINGW)
   target_link_options(${PROJECT_NAME} PRIVATE -static-libgcc -static-libstdc++ -static)

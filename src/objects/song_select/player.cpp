@@ -465,28 +465,24 @@ void SongSelectPlayer::draw(SongSelectState state, bool is_half, float diff_fade
     }
 
     float offset = 0.0f;
-    if (neiro_selector.has_value()) {
-        offset = neiro_selector->move->attribute;
-        offset = neiro_selector->is_confirmed
-            ? offset + tex.skin_config[SC::SONG_SELECT_OFFSET].x
-            : -offset;
-    }
-    if (modifier_selector.has_value()) {
-        offset = modifier_selector->move->attribute;
-        offset = modifier_selector->is_confirmed
-            ? offset + tex.skin_config[SC::SONG_SELECT_OFFSET].x
-            : -offset;
-    }
+    if (neiro_selector.has_value())
+        offset = option_panel_offset(neiro_selector->move, neiro_selector->is_confirmed);
+    if (modifier_selector.has_value())
+        offset = option_panel_offset(modifier_selector->move, modifier_selector->is_confirmed);
 
     // a skin that draws the option panel itself keeps the character where it is
     if (option_panel_by_lua) offset = 0.0f;
 
     if (player_num == PlayerNum::P1) {
-        nameplate.draw(tex.skin_config[SC::SONG_SELECT_NAMEPLATE_1P].x, tex.skin_config[SC::SONG_SELECT_NAMEPLATE_1P].y);
-        chara->draw(tex.skin_config[SC::SONG_SELECT_CHARA_1P].x, tex.skin_config[SC::SONG_SELECT_CHARA_1P].y + (offset * 0.6f), 1.0f);
+        auto [nx, ny] = tex.nameplate_xy("song_select_1p");
+        nameplate.draw(nx, ny);
+        auto [cx, cy] = tex.chara_xy("song_select_1p");
+        chara->draw(cx, cy + (offset * 0.6f), 1.0f);
     } else {
-        nameplate.draw(tex.skin_config[SC::SONG_SELECT_NAMEPLATE_2P].x, tex.skin_config[SC::SONG_SELECT_NAMEPLATE_2P].y);
-        chara->draw(tex.skin_config[SC::SONG_SELECT_CHARA_2P].x, tex.skin_config[SC::SONG_SELECT_CHARA_2P].y + (offset * 0.6f), 1.0f);
+        auto [nx, ny] = tex.nameplate_xy("song_select_2p");
+        nameplate.draw(nx, ny);
+        auto [cx, cy] = tex.chara_xy("song_select_2p");
+        chara->draw(cx, cy + (offset * 0.6f), 1.0f);
     }
 
     bool panel_by_lua = false;

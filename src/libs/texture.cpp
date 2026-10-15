@@ -47,10 +47,12 @@ void TextureWrapper::init(const fs::path& skin_path) {
     // skin's (and its parent's) json actually specifies. A key the previous
     // skin set but this one doesn't mention would otherwise survive the
     // switch with the old skin's value.
-    skin_config.clear();
+    skin_info.clear();
     skin_config_by_name.clear();
     options.clear();
     chara_3d_config = Chara3DConfig{};
+    chara_positions.clear();
+    nameplate_positions.clear();
 
     auto skin_config_file = read_json_file(graphics_path / "skin_config.json");
 
@@ -88,7 +90,32 @@ void TextureWrapper::init(const fs::path& skin_path) {
 
         auto sc_it = skin_config_map.find(name);
         if (sc_it != skin_config_map.end()) {
-            skin_config[sc_it->second] = std::move(info);
+            skin_info[sc_it->second] = std::move(info);
+        }
+    };
+
+    // "nameplate": an [x, y] per place the nameplate is drawn, same scaling.
+    // "chara_3d": the model's scale and rotation, plus a [x, y] per place it is drawn ("entry",
+    // "song_select_1p", ...). Positions are scaled like the other skin_config values.
+    auto load_chara = [this](const Value& cfg, float scale) {
+        if (cfg.HasMember("nameplate") && cfg["nameplate"].IsObject()) {
+            for (auto& m : cfg["nameplate"].GetObject()) {
+                if (m.value.IsArray() && m.value.Size() >= 2 && m.value[0].IsNumber() && m.value[1].IsNumber())
+                    nameplate_positions[m.name.GetString()] = { m.value[0].GetFloat() * scale, m.value[1].GetFloat() * scale };
+            }
+        }
+        if (!cfg.HasMember("chara_3d") || !cfg["chara_3d"].IsObject()) return;
+        for (auto& m : cfg["chara_3d"].GetObject()) {
+            std::string name = m.name.GetString();
+            if (m.value.IsNumber()) {
+                float v = m.value.GetFloat();
+                if      (name == "scale") chara_3d_config.scale = v;
+                else if (name == "rot_x") chara_3d_config.rot_x = v;
+                else if (name == "rot_y") chara_3d_config.rot_y = v;
+                else if (name == "rot_z") chara_3d_config.rot_z = v;
+            } else if (m.value.IsArray() && m.value.Size() >= 2 && m.value[0].IsNumber() && m.value[1].IsNumber()) {
+                chara_positions[name] = { m.value[0].GetFloat() * scale, m.value[1].GetFloat() * scale };
+            }
         }
     };
 
@@ -118,22 +145,18 @@ void TextureWrapper::init(const fs::path& skin_path) {
         for (auto& m : ancestor_config.GetObject()) {
             load_entry(m.name.GetString(), m.value, ancestor_scales[i]);
         }
+        load_chara(ancestor_config, ancestor_scales[i]);
     }
 
     // Load child skin_config ??overrides parent defaults.
     for (auto& m : skin_config_file.GetObject()) {
         load_entry(m.name.GetString(), m.value, 1.0f);
     }
+    load_chara(skin_config_file, 1.0f);
 
-    if (skin_config_file.HasMember("screen") && skin_config_file["screen"].HasMember("chara_3d")) {
-        const Value& c3d = skin_config_file["screen"]["chara_3d"];
-        if (c3d.IsObject()) {
-            if (c3d.HasMember("scale"))  chara_3d_config.scale  = c3d["scale"].GetFloat();
-            if (c3d.HasMember("rot_x"))  chara_3d_config.rot_x  = c3d["rot_x"].GetFloat();
-            if (c3d.HasMember("rot_y"))  chara_3d_config.rot_y  = c3d["rot_y"].GetFloat();
-            if (c3d.HasMember("rot_z"))  chara_3d_config.rot_z  = c3d["rot_z"].GetFloat();
-        }
-    }
+    // a skin whose chain defines no value for a required key reads as zeroes
+    for (unsigned int k = 0; k < static_cast<unsigned int>(SC::OPTIONAL_KEYS); k++)
+        skin_info.try_emplace(static_cast<SC>(k));
 
     if (skin_config_file.HasMember("screen") && skin_config_file["screen"].HasMember("options")) {
         const Value& opts = skin_config_file["screen"]["options"];

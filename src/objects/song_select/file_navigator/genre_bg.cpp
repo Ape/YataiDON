@@ -2,7 +2,7 @@
 
 GenreBG::GenreBG(const std::string& text_name, std::optional<ray::Color> color, TextureIndex texture_index, float distance)
 : texture_index(texture_index) {
-    float base_font_size = (float)tex.skin_config[SC::SONG_BOX_NAME].font_size;
+    float base_font_size = (float)tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     float font_size = base_font_size;
     float name_outline = 5.0f;
     if (utf8_char_count(text_name) >= 30) {
@@ -39,8 +39,8 @@ void GenreBG::exit(float left_position, float right_position, FolderBox* center_
     float left_start  = (left_position  < 0.f || left_position  > tex.screen_width) ? 0.f              : left_position;
     float right_start = (right_position < 0.f || right_position > tex.screen_width) ? tex.screen_width : right_position;
 
-    float boundary_left_exit  = tex.skin_config[SC::GENRE_BG_SELECT_BOUNDARY].x;
-    float boundary_right_exit = tex.skin_config[SC::GENRE_BG_SELECT_BOUNDARY].width;
+    float boundary_left_exit  = tex.get_skin_config(SC::SONG_SELECT_GENRE_BG_BOUNDARY)->x;
+    float boundary_right_exit = tex.get_skin_config(SC::SONG_SELECT_GENRE_BG_BOUNDARY)->width;
     int left_distance  = (int)((boundary_left_exit  - left_start)  * tex.screen_scale);
     int right_distance = (int)((boundary_right_exit - right_start) * tex.screen_scale);
 

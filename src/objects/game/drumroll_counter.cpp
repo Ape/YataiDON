@@ -39,7 +39,7 @@ void DrumrollCounter::update_animations(double current_ms) {
 void DrumrollCounter::draw(float y) {
     tex.draw_texture(t_bubble, {.y=y, .fade=fade->attribute});
     std::string counter = std::to_string(drumroll_count);
-    const float margin = tex.skin_config[SC::DRUMROLL_COUNTER_MARGIN].x;
+    const float margin = tex.get_skin_config(SC::GAME_DRUMROLL_COUNTER_MARGIN)->x;
     float total_width = static_cast<float>(counter.length()) * margin;
     for (size_t i = 0; i < counter.size(); i++) {
         char digit = counter[i];

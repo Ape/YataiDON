@@ -10,7 +10,8 @@ public:
     float height = 0.0f;
     SongNum() = default;
     SongNum(int song_num, float outline_override = -1.0f);
-    SongNum(int value, const std::string& config_key);
+    // `config_key`: the name of the text_config / skin_config entry, for its label
+    SongNum(int value, SC key, const std::string& config_key);
 
     void draw(float x, float y, float fade);
 };

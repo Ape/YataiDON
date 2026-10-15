@@ -319,10 +319,10 @@ void DanSelectScreen::draw() {
 
     // Lumen DonModel rests in the same 200x200 box as song select, so share its slots
     const bool p1 = global_data.player_num == PlayerNum::P1;
-    const SkinInfo& chara_pos = tex.skin_config[p1 ? SC::SONG_SELECT_CHARA_1P : SC::SONG_SELECT_CHARA_2P];
-    const SkinInfo& plate_pos = tex.skin_config[p1 ? SC::SONG_SELECT_NAMEPLATE_1P : SC::SONG_SELECT_NAMEPLATE_2P];
-    if (chara) chara->draw(chara_pos.x, chara_pos.y, 1.0f);
-    nameplate.draw(plate_pos.x, plate_pos.y);
+    const auto chara_pos = tex.chara_xy(p1 ? "song_select_1p" : "song_select_2p");
+    const auto plate_pos = tex.nameplate_xy(p1 ? "song_select_1p" : "song_select_2p");
+    if (chara) chara->draw(chara_pos.first, chara_pos.second, 1.0f);
+    nameplate.draw(plate_pos.first, plate_pos.second);
 
     if (state == SongSelectState::SONG_SELECTED) {
         if (scene && confirm_fade->attribute > 0) scene->draw_confirm(confirm_fade->attribute, confirm_index);

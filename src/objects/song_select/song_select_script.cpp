@@ -51,6 +51,15 @@ sol::protected_function cached_skin_module_fn(const char* module, const char* fn
     return fn;
 }
 
+float option_panel_offset(const MoveAnimation* move, bool confirmed) {
+    float v = (float)move->attribute;
+    if (!confirmed) return -v;
+    sol::protected_function slide_out =
+        cached_skin_module_fn("song_select/option_panel", "slide_out", "__option_panel_slide_out");
+    auto r = slide_out.valid() ? slide_out() : sol::protected_function_result();
+    return v + (r.valid() ? r.get<float>() : 0.0f);
+}
+
 sol::protected_function SongSelectScript::load_default_hook(const char* module, const char* fn_name) {
     return load_skin_module_fn(module, fn_name);
 }

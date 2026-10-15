@@ -418,16 +418,14 @@ void DanResultScreen::draw() {
     s.congrats_start_ms = congrats_start_ms;
     draw_seq->draw(s);
 
-    const SkinInfo* c = tex.skin_entry("dan_result_chara");
-    const SkinInfo& cs_default = c ? *c : tex.skin_config[SC::RESULT_CHARA];
-    float cx = cs_default.x, cy = cs_default.y, cscale = 1.0f;
+    auto [cx, cy] = tex.chara_xy("dan_result", "result");
+    float cscale = 1.0f;
     draw_seq->chara_pos(cx, cy, cscale);
     if (chara) chara->draw(cx, cy, cscale);
     draw_seq->draw_overlay(s);
 
-    const SkinInfo* n = tex.skin_entry("dan_result_nameplate");
-    const SkinInfo& ns_default = n ? *n : tex.skin_config[SC::RESULT_NAMEPLATE];
-    float nx = ns_default.x, ny = ns_default.y, nfade = 1.0f;
+    auto [nx, ny] = tex.nameplate_xy("dan_result", "result");
+    float nfade = 1.0f;
     draw_seq->nameplate_pos(nx, ny, nfade);
     nameplate.draw(nx, ny, nfade);
 

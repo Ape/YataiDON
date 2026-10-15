@@ -2,7 +2,7 @@
 
 #include "animation.h"
 #include "ray.h" // IWYU pragma: keep
-#include "skin_config_generated.h"
+#include "skin_config.h"
 #include <cstdint>
 #include <filesystem>
 #include <map>
@@ -174,10 +174,26 @@ public:
     // it every frame. Emptied whenever `textures` changes, and when the language changes.
     std::unordered_map<std::string, std::shared_ptr<TextureObject>> lua_texture_lookup;
     std::string lua_texture_lookup_lang;
-    std::unordered_map<SC, SkinInfo> skin_config;
+    std::unordered_map<SC, SkinInfo> skin_info;   // read through get_skin_config
     std::unordered_map<std::string, SkinInfo> skin_config_by_name;
     std::unordered_map<SCO, bool> options;
     Chara3DConfig chara_3d_config;
+    std::map<std::string, std::pair<float, float>> chara_positions;
+    std::map<std::string, std::pair<float, float>> nameplate_positions;
+
+    std::pair<float, float> chara_xy(const std::string& name, const std::string& fallback = "") const {
+        return lookup_xy(chara_positions, name, fallback);
+    }
+
+    std::pair<float, float> nameplate_xy(const std::string& name, const std::string& fallback = "") const {
+        return lookup_xy(nameplate_positions, name, fallback);
+    }
+    static std::pair<float, float> lookup_xy(const std::map<std::string, std::pair<float, float>>& m,
+                                             const std::string& name, const std::string& fallback) {
+        auto it = m.find(name);
+        if (it == m.end()) it = m.find(fallback);
+        return it == m.end() ? std::pair<float, float>{0.0f, 0.0f} : it->second;
+    }
     fs::path font_path;
     int screen_width;
     int screen_height;
@@ -190,9 +206,9 @@ public:
 
     void init(const fs::path& skin_path);
 
-    const SkinInfo* skin_entry(const std::string& key) const {
-        auto it = skin_config_by_name.find(key);
-        return it == skin_config_by_name.end() ? nullptr : &it->second;
+    const SkinInfo* get_skin_config(SC key) const {
+        auto it = skin_info.find(key);
+        return it == skin_info.end() ? nullptr : &it->second;
     }
 
     // text_config label for `key` in exactly `language` (see font_manager.get_text_label)

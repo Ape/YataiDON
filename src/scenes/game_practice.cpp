@@ -742,8 +742,8 @@ void PracticeGameScreen::draw_bar_scrobble(const Note& bar, double current_ms) c
     float y_off = (float)((bar.hit_ms - current_ms) * (bar.bpm / 240000.0f * bar.scroll_y * ((tex.screen_width - JudgePos::X) / tex.screen_width) * tex.screen_width));
     float angle = (y_off != 0) ? std::atan2(bar.scroll_y, bar.scroll_x) * 180.0f / PI : 0.0f;
     tex.draw_texture(t_notes_0, {.frame = bar.is_branch_start,
-                                  .x = x + tex.skin_config[SC::MOJI_DRUMROLL].x - t_notes_9->width / 2.0f,
-                                  .y = y_off + tex.skin_config[SC::MOJI_DRUMROLL].y + (184 * tex.screen_scale),
+                                  .x = x + tex.get_skin_config(SC::GAME_MOJI_DRUMROLL)->x - t_notes_9->width / 2.0f,
+                                  .y = y_off + tex.get_skin_config(SC::GAME_MOJI_DRUMROLL)->y + (184 * tex.screen_scale),
                                   .rotation = angle});
 }
 
@@ -765,10 +765,10 @@ void PracticeGameScreen::draw_drumroll_scrobble(const Note& head, double current
     bool is_big = (head.type == NoteType::ROLL_HEAD_L);
     int color_val = head.color.value_or(255);
     ray::Color color = {255, (unsigned char)color_val, (unsigned char)color_val, 255};
-    float y_pos = tex.skin_config[SC::NOTES].y + (184 * tex.screen_scale);
-    float moji_y = tex.skin_config[SC::MOJI].y + (184 * tex.screen_scale);
+    float y_pos = tex.get_skin_config(SC::GAME_NOTES)->y + (184 * tex.screen_scale);
+    float moji_y = tex.get_skin_config(SC::GAME_MOJI)->y + (184 * tex.screen_scale);
     if (head.display) {
-        tex.draw_texture(t_notes_8, {.color = color, .frame = is_big, .x = start_pos, .y = y_pos, .x2 = length + tex.skin_config[SC::DRUMROLL_WIDTH_OFFSET].width});
+        tex.draw_texture(t_notes_8, {.color = color, .frame = is_big, .x = start_pos, .y = y_pos, .x2 = length + tex.get_skin_config(SC::GAME_DRUMROLL_WIDTH_OFFSET)->width});
         if (is_big) tex.draw_texture(t_drumroll_big_tail, {.color = color, .x = end_pos, .y = y_pos});
         else        tex.draw_texture(t_drumroll_tail,     {.color = color, .x = end_pos, .y = y_pos});
         TextureObject* head_tex = t_notes[(int)head.type];
@@ -780,7 +780,7 @@ void PracticeGameScreen::draw_drumroll_scrobble(const Note& head, double current
 }
 
 void PracticeGameScreen::draw_balloon_scrobble(const Note& head, double current_ms) const {
-    float offset = tex.skin_config[SC::BALLOON_OFFSET].x;
+    float offset = tex.get_skin_config(SC::GAME_BALLOON_OFFSET)->x;
     float start_pos = get_scrobble_position_x(head, current_ms);
     const Note* tail = nullptr;
     for (const auto& n : scrobble_note_list) {
@@ -789,7 +789,7 @@ void PracticeGameScreen::draw_balloon_scrobble(const Note& head, double current_
     if (!tail) return;
     float end_pos   = get_scrobble_position_x(*tail, current_ms);
     float pause_pos = JudgePos::X;
-    float y_pos = tex.skin_config[SC::NOTES].y + (184 * tex.screen_scale);
+    float y_pos = tex.get_skin_config(SC::GAME_NOTES)->y + (184 * tex.screen_scale);
     float position;
     if (current_ms >= tail->hit_ms)   position = end_pos;
     else if (current_ms >= head.hit_ms) position = pause_pos;
@@ -799,7 +799,7 @@ void PracticeGameScreen::draw_balloon_scrobble(const Note& head, double current_
         tex.draw_texture(head_tex, {.x = position - offset - t_notes_9->width / 2.0f, .y = y_pos});
         tex.draw_texture(t_notes_10, {.x = position - offset + t_notes_10->width - t_notes_9->width / 2.0f, .y = y_pos});
     }
-    float moji_y = tex.skin_config[SC::MOJI].y + (184 * tex.screen_scale);
+    float moji_y = tex.get_skin_config(SC::GAME_MOJI)->y + (184 * tex.screen_scale);
     tex.draw_texture(t_moji, {.frame = head.moji, .x = position - t_moji->width / 2.0f, .y = moji_y});
 }
 
@@ -826,10 +826,10 @@ void PracticeGameScreen::draw_notes_scrobble(double current_ms) const {
             if (note.display) {
                 float x = get_scrobble_position_x(note, current_ms);
                 TextureObject* note_tex = t_notes[(int)note.type];
-                tex.draw_texture(note_tex, {.center = true, .x = x - t_notes_9->width / 2.0f, .y = tex.skin_config[SC::NOTES].y + y});
+                tex.draw_texture(note_tex, {.center = true, .x = x - t_notes_9->width / 2.0f, .y = tex.get_skin_config(SC::GAME_NOTES)->y + y});
             }
             float moji_x = get_scrobble_position_x(note, current_ms) - t_moji->width / 2.0f;
-            tex.draw_texture(t_moji, {.color = moji_judgment_color(note.index), .frame = note.moji, .x = moji_x, .y = tex.skin_config[SC::MOJI].y + y});
+            tex.draw_texture(t_moji, {.color = moji_judgment_color(note.index), .frame = note.moji, .x = moji_x, .y = tex.get_skin_config(SC::GAME_MOJI)->y + y});
         }
     }
 
@@ -839,7 +839,7 @@ void PracticeGameScreen::draw_notes_scrobble(double current_ms) const {
         std::string bar_str = std::to_string(scrobble_index + 1);
         float dw = t_bar_count_bar->x2[0];
         float x  = get_scrobble_position_x(bars[scrobble_index], current_ms) + 4 * tex.screen_scale;
-        float y  = tex.skin_config[SC::NOTES].y + 184 * tex.screen_scale
+        float y  = tex.get_skin_config(SC::GAME_NOTES)->y + 184 * tex.screen_scale
                    + t_bar_count_bar->y2[0] + 2 * tex.screen_scale;
         for (int i = 0; i < (int)bar_str.size(); i++)
             tex.draw_texture(t_bar_count_bar, {.frame = bar_str[i] - '0', .x = x + i * dw, .y = y});
@@ -921,7 +921,7 @@ void PracticeGameScreen::draw() {
     } else {
         progress = players.empty() ? 0.0f : (float)std::min(ms_from_start / players[0]->end_time, 1.0);
     }
-    float bar_width = tex.skin_config[SC::PRACTICE_PROGRESS_BAR_WIDTH].width;
+    float bar_width = tex.get_skin_config(SC::GAME_PRACTICE_PROGRESS_BAR_WIDTH)->width;
     tex.draw_texture(t_progress_bar, {.x2 = progress * bar_width});
 
     if (!bars.empty()) {

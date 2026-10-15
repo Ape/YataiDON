@@ -36,14 +36,14 @@ BaseBox::~BaseBox() {
 }
 
 void BaseBox::preregister_text() {
-    float font_size = tex.skin_config[SC::SONG_BOX_NAME].font_size;
+    float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     if (utf8_char_count(text_name) >= 30)
         font_size -= (int)(10 * tex.screen_scale);
     font_manager.register_text(text_name, (int)font_size);
 }
 
 void BaseBox::load_text() {
-    float font_size = tex.skin_config[SC::SONG_BOX_NAME].font_size;
+    float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     if (utf8_char_count(text_name) >= 30)
         font_size -= (int)(10 * tex.screen_scale);
     name = make_unique<OutlinedText>(text_name, font_size, text_color, fore_color.value(), true);
@@ -155,6 +155,6 @@ void BaseBox::update(double current_time) {
         }
     } else {
         left_bound = position;
-        right_bound = position + folder_texture_left_width + folder_texture_right_width + (tex.skin_config[SC::SONG_BOX_BG].width);
+        right_bound = position + folder_texture_left_width + folder_texture_right_width + (tex.get_skin_config(SC::SONG_SELECT_BOX_BG)->width);
     }
 }

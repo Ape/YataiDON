@@ -1,24 +1,22 @@
 #include "practice_menu.h"
 #include "../../libs/global_data.h"
 
-static std::string skin_text_for(const char* key) {
-    return font_manager.get_text_label(key);
+void PracticeMenu::init_textures() {
+    fn_draw = fn_draw_dialog = fn_hit_test = {};
+    if (!load("PracticeMenu", "practice_menu")) return;
+    fn_draw        = lua_object["draw"];
+    fn_draw_dialog = lua_object["draw_dialog"];
+    fn_hit_test    = lua_object["hit_test"];
 }
 
-void PracticeMenu::init_textures() {
-    t_menu_panel = tex.get_texture("practice/menu_panel");
-    t_menu_bar = tex.get_texture("practice/menu_bar");
-    t_menu_bar_selected = tex.get_texture("practice/menu_bar_selected");
-    t_menu_auto_label = tex.get_texture("practice/menu_auto_label");
-    t_menu_toggle = tex.get_texture("practice/menu_toggle");
-    t_menu_button = tex.get_texture("practice/menu_button");
-    t_menu_button_selected = tex.get_texture("practice/menu_button_selected");
+void PracticeMenu::unload() {
+    fn_draw = fn_draw_dialog = fn_hit_test = {};
+    lua_object = sol::table();
 }
 
 void PracticeMenu::open_menu() {
     open = true;
-    build_text();
-    index = (int)menu_text.size() - 1;
+    index = ROW_COUNT - 1;
 }
 
 void PracticeMenu::close() {
@@ -33,48 +31,7 @@ void PracticeMenu::step(bool right) {
         dialog_sel = right ? 1 : 0;
         return;
     }
-    int n = (int)menu_text.size();
-    if (n == 0) return;
-    index = ((index + (right ? 1 : -1)) % n + n) % n;
-}
-
-void PracticeMenu::build_text() {
-    menu_text.clear();
-
-    static const char* const ROWS[] = {
-        "practice_menu_end_game",
-        "practice_menu_another_song",
-        "practice_menu_restart",
-        "practice_menu_auto_play",
-        "practice_menu_jump_to_mark",
-        "practice_menu_set_mark",
-        "practice_menu_close",
-    };
-
-    for (const char* row : ROWS) {
-        std::string label = skin_text_for(row);
-        int chars = 0;
-        for (unsigned char c : label)
-            if ((c & 0xC0) != 0x80) chars++;
-        int base_fs = (int)(tex.skin_config[SC::SONG_BOX_NAME].font_size);
-        if (base_fs <= 0) base_fs = 1;
-        int   fs    = base_fs;
-        float avail = tex.skin_config[SC::PRACTICE_MENU_LABEL].width;
-        float v     = 1.0f;
-        if (chars > 1) {
-            v = (avail / fs - 1.0f) / (chars - 1);
-            if (v < 0.7f) {
-                v  = 0.7f;
-                fs = (int)(avail / (1.0f + (chars - 1) * 0.7f));
-                if (fs <= 0) fs = 1;
-            } else if (v > 1.0f) {
-                v = 1.0f;
-            }
-        }
-        float outline = 5.0f * ((float)fs / (float)base_fs);
-        menu_text.push_back(std::make_unique<OutlinedText>(label, fs,
-            ray::WHITE, ray::BLACK, true, outline, 2.0f, v));
-    }
+    index = ((index + (right ? 1 : -1)) % ROW_COUNT + ROW_COUNT) % ROW_COUNT;
 }
 
 void PracticeMenu::open_mark_edit() {
@@ -92,36 +49,23 @@ void PracticeMenu::open_jump_mode() {
 void PracticeMenu::open_dialog(Dialog which, bool auto_on) {
     dialog = which;
 
-    const char* title = "practice_menu_confirm_end", *left = "practice_menu_yes", *right = "practice_menu_no";
     switch (which) {
         case Dialog::AUTO:
-            title = "practice_menu_confirm_auto";
-            left  = "practice_menu_auto_on";
-            right = "practice_menu_auto_off";
             dialog_sel = auto_on ? 0 : 1;
             break;
         case Dialog::RESTART:
-            title = "practice_menu_confirm_restart";
             dialog_sel = 0;
             break;
         case Dialog::ANOTHER:
-            title = "practice_menu_confirm_another";
             dialog_sel = 0;
             break;
         case Dialog::END:
-            title = "practice_menu_confirm_end";
             dialog_sel = 0;
             break;
         default:
             dialog = Dialog::NONE;
             return;
     }
-
-    int fs = (int)(tex.skin_config[SC::SONG_BOX_NAME].font_size);
-    if (fs <= 0) fs = 1;
-    dlg_title = std::make_unique<OutlinedText>(skin_text_for(title), fs, ray::WHITE, ray::BLACK, false);
-    dlg_left  = std::make_unique<OutlinedText>(skin_text_for(left),  fs, ray::WHITE, ray::BLACK, false);
-    dlg_right = std::make_unique<OutlinedText>(skin_text_for(right), fs, ray::WHITE, ray::BLACK, false);
 }
 
 PracticeMenu::Action PracticeMenu::activate(bool auto_on) {
@@ -169,163 +113,43 @@ PracticeMenu::Action PracticeMenu::confirm() {
     }
 }
 
+const char* PracticeMenu::dialog_name() const {
+    switch (dialog) {
+        case Dialog::AUTO:    return "auto";
+        case Dialog::RESTART: return "restart";
+        case Dialog::ANOTHER: return "another";
+        case Dialog::END:     return "end";
+        default:              return nullptr;
+    }
+}
+
 // Handle mouse/touch input for menu navigation and selection
 PracticeMenu::Action PracticeMenu::handle_mouse_input(const ray::Camera2D& camera, ray::Vector2 mouse_pos, bool clicked, bool auto_on) {
     if (!open) return Action::NONE;
 
-    int n = (int)menu_text.size();
-    if (n == 0) return Action::NONE;
-
-    float bar_w   = tex.skin_config[SC::PRACTICE_MENU_BAR].width;
-    float bar_h   = tex.skin_config[SC::PRACTICE_MENU_BAR].height;
-    float gap     = tex.skin_config[SC::PRACTICE_MENU_BAR].x;
-    float panel_w = tex.skin_config[SC::PRACTICE_MENU_PANEL].width;
-    float panel_h = tex.skin_config[SC::PRACTICE_MENU_PANEL].height;
-    float panel_x = (tex.screen_width - panel_w) / 2.0f;
-    float panel_y = tex.skin_config[SC::PRACTICE_MENU_PANEL].y;
-    float pad     = (panel_w - n * bar_w - (n - 1) * gap) / 2.0f;
-
     // Convert mouse position from screen coordinates to virtual coordinates
     ray::Vector2 virtual_mouse = ray::GetScreenToWorld2D(mouse_pos, camera);
 
+    const char* name = dialog_name();
+    sol::optional<std::string> dlg = name ? sol::optional<std::string>(name) : sol::nullopt;
+    auto hit = call_r<sol::optional<int>>(fn_hit_test, "PracticeMenu:hit_test", virtual_mouse.x, virtual_mouse.y, dlg);
+    if (!hit || !*hit) return Action::NONE;
+    int i = **hit;
+
     if (dialog != Dialog::NONE) {
-        // Handle dialog buttons
-        float btn_w = tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].width;
-        float btn_h = tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].height;
-        float left_x, right_x, row_y;
-
-        if (dialog == Dialog::AUTO) {
-            float tog_w = tex.skin_config[SC::PRACTICE_MENU_AUTO_TOGGLE].width;
-            float gap_d = tex.skin_config[SC::PRACTICE_MENU_AUTO_TOGGLE].x;
-            float total = btn_w * 2 + tog_w + gap_d * 2;
-            left_x  = panel_x + (panel_w - total) / 2.0f;
-            right_x = left_x + btn_w + gap_d + tog_w + gap_d;
-            row_y   = panel_y + tex.skin_config[SC::PRACTICE_MENU_AUTO_TOGGLE].y;
-        } else {
-            left_x  = panel_x + tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].x;
-            right_x = panel_x + panel_w - tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].x - btn_w;
-            row_y   = panel_y + tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].y;
-        }
-
-        // Check left button (Yes/ON)
-        if (virtual_mouse.x >= left_x && virtual_mouse.x <= left_x + btn_w &&
-            virtual_mouse.y >= row_y && virtual_mouse.y <= row_y + btn_h) {
-            if (clicked) {
-                dialog_sel = 0;
-                return confirm();
-            }
-        }
-        // Check right button (No/OFF)
-        else if (virtual_mouse.x >= right_x && virtual_mouse.x <= right_x + btn_w &&
-                 virtual_mouse.y >= row_y && virtual_mouse.y <= row_y + btn_h) {
-            if (clicked) {
-                dialog_sel = 1;
-                return confirm();
-            }
-        }
-        return Action::NONE;
+        if (!clicked) return Action::NONE;
+        dialog_sel = i;
+        return confirm();
     }
 
-    // Handle main menu items
-    for (int i = 0; i < n; i++) {
-        float x = panel_x + pad + i * (bar_w + gap);
-        float y = panel_y + (panel_h - bar_h) / 2.0f;
-
-        if (virtual_mouse.x >= x && virtual_mouse.x <= x + bar_w &&
-            virtual_mouse.y >= y && virtual_mouse.y <= y + bar_h) {
-            if (clicked) {
-                index = i;
-                return activate(auto_on);
-            }
-            // Hover effect - update index
-            index = i;
-            break;
-        }
-    }
-
-    return Action::NONE;
+    index = i;   // hover selects
+    return clicked ? activate(auto_on) : Action::NONE;
 }
 
-void PracticeMenu::draw() const {
-    int n = (int)menu_text.size();
-    if (n == 0) return;
-
-    float bar_w   = tex.skin_config[SC::PRACTICE_MENU_BAR].width;
-    float bar_h   = tex.skin_config[SC::PRACTICE_MENU_BAR].height;
-    float gap     = tex.skin_config[SC::PRACTICE_MENU_BAR].x;
-    float panel_w = tex.skin_config[SC::PRACTICE_MENU_PANEL].width;
-    float panel_h = tex.skin_config[SC::PRACTICE_MENU_PANEL].height;
-    float panel_x = (tex.screen_width - panel_w) / 2.0f;
-    float panel_y = tex.skin_config[SC::PRACTICE_MENU_PANEL].y;
-    float pad     = (panel_w - n * bar_w - (n - 1) * gap) / 2.0f;
-
-    tex.draw_texture(t_menu_panel, {.x = panel_x, .y = panel_y});
-
-    for (int i = 0; i < n; i++) {
-        float x = panel_x + pad + i * (bar_w + gap);
-        float y = panel_y + (panel_h - bar_h) / 2.0f;
-        bool selected = (i == index);
-
-        tex.draw_texture(selected ? t_menu_bar_selected : t_menu_bar,
-                         {.x = x, .y = y});
-
-        OutlinedText* text = menu_text[i].get();
-        float tx = x + (bar_w - text->width) / 2.0f;
-        float ty = y + tex.skin_config[SC::PRACTICE_MENU_LABEL].y;   // top-aligned like the arcade, not centred
-        text->draw({.x = tx, .y = ty});
-    }
+void PracticeMenu::draw() {
+    call(fn_draw, "PracticeMenu:draw", index);
 }
 
-void PracticeMenu::draw_dialog() const {
-    float panel_w = tex.skin_config[SC::PRACTICE_MENU_PANEL].width;
-    float panel_x = (tex.screen_width - panel_w) / 2.0f;
-    float panel_y = tex.skin_config[SC::PRACTICE_MENU_PANEL].y;
-
-    tex.draw_texture(t_menu_panel, {.x = panel_x, .y = panel_y});
-
-    // The auto dialog stacks a label chip and the toggle row below its
-    // title, so the title sits high; the yes/no confirms sit lower.
-    float title_y = (dialog == Dialog::AUTO) ? tex.skin_config[SC::PRACTICE_MENU_DIALOG_TITLE_AUTO].y
-                                              : tex.skin_config[SC::PRACTICE_MENU_DIALOG_TITLE].y;
-    if (dlg_title)
-        dlg_title->draw({.x = panel_x + (panel_w - dlg_title->width) / 2.0f,
-                         .y = panel_y + title_y});
-
-    float btn_w = tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].width;
-    float btn_h = tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].height;
-    float left_x, right_x, row_y;
-
-    if (dialog == Dialog::AUTO) {
-        // Don chip above an ON | slider | OFF row, like the arcade's.
-        float label_w = tex.skin_config[SC::PRACTICE_MENU_AUTO_LABEL].width;
-        tex.draw_texture(t_menu_auto_label,
-                         {.x = panel_x + (panel_w - label_w) / 2.0f,
-                          .y = panel_y + tex.skin_config[SC::PRACTICE_MENU_AUTO_LABEL].y});
-        float tog_w = tex.skin_config[SC::PRACTICE_MENU_AUTO_TOGGLE].width;
-        float gap   = tex.skin_config[SC::PRACTICE_MENU_AUTO_TOGGLE].x;
-        float total = btn_w * 2 + tog_w + gap * 2;
-        left_x  = panel_x + (panel_w - total) / 2.0f;
-        right_x = left_x + btn_w + gap + tog_w + gap;
-        row_y   = panel_y + tex.skin_config[SC::PRACTICE_MENU_AUTO_TOGGLE].y;
-        // The red knob slides toward whichever side is picked.
-        tex.draw_texture(t_menu_toggle,
-                         {.mirror = dialog_sel == 1 ? Mirror::HORIZONTAL : Mirror::NONE,
-                          .x = left_x + btn_w + gap, .y = row_y + 6 * tex.screen_scale});
-    } else {
-        left_x  = panel_x + tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].x;
-        right_x = panel_x + panel_w - tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].x - btn_w;
-        row_y   = panel_y + tex.skin_config[SC::PRACTICE_MENU_DIALOG_BUTTON].y;
-    }
-
-    tex.draw_texture(dialog_sel == 0 ? t_menu_button_selected : t_menu_button,
-                     {.x = left_x, .y = row_y});
-    tex.draw_texture(dialog_sel == 1 ? t_menu_button_selected : t_menu_button,
-                     {.x = right_x, .y = row_y});
-
-    if (dlg_left)
-        dlg_left->draw({.x = left_x + (btn_w - dlg_left->width) / 2.0f,
-                        .y = row_y + (btn_h - dlg_left->height) / 2.0f});
-    if (dlg_right)
-        dlg_right->draw({.x = right_x + (btn_w - dlg_right->width) / 2.0f,
-                         .y = row_y + (btn_h - dlg_right->height) / 2.0f});
+void PracticeMenu::draw_dialog() {
+    if (const char* name = dialog_name()) call(fn_draw_dialog, "PracticeMenu:draw_dialog", std::string(name), dialog_sel);
 }

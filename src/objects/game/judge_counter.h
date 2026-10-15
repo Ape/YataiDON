@@ -1,28 +1,24 @@
 #pragma once
 
-#include "../../libs/texture.h"
-#include "../../libs/ray.h"
+#include "../../libs/script.h"
 
-class JudgeCounter {
+// Keeps the judgment counts; the skin's JudgeCounter (game/judge_counter.lua) draws them.
+class JudgeCounter : public LuaScript {
 private:
-    int good;
-    int ok;
-    int bad;
-    int drumrolls;
-    ray::Color orange;
-    ray::Color white;
-    TextureObject* t_counter = nullptr;
-    TextureObject* t_bg = nullptr;
-    TextureObject* t_total_percent = nullptr;
-    TextureObject* t_judgments = nullptr;
-    TextureObject* t_drumrolls = nullptr;
-    TextureObject* t_percent = nullptr;
-
-    void draw_counter(float counter, float x, float y, float margin, ray::Color color);
+    int good = 0, ok = 0, bad = 0, drumrolls = 0;
+    sol::protected_function fn_draw;
 
 public:
-    JudgeCounter();
+    JudgeCounter() {
+        if (load("JudgeCounter", "judge_counter")) fn_draw = lua_object["draw"];
+    }
 
-    void update(int good, int ok, int bad, int drumrolls);
-    void draw();
+    void update(int good, int ok, int bad, int drumrolls) {
+        this->good = good;
+        this->ok = ok;
+        this->bad = bad;
+        this->drumrolls = drumrolls;
+    }
+
+    void draw() { call(fn_draw, "JudgeCounter:draw", good, ok, bad, drumrolls); }
 };

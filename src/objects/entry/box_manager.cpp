@@ -20,8 +20,7 @@ BoxManager::BoxManager(bool two_player)
 
 void BoxManager::build_board_list() {
     const std::string lang = global_data.config->general.language;
-    auto& skin = tex.skin_config;
-    int font_size = skin[SC::ENTRY_BOX_TEXT].font_size;
+    int font_size = tex.get_skin_config(SC::ENTRY_BOX_TEXT)->font_size;
 
     if (script_manager.lua) (*script_manager.lua)["__hss_entry_reset"] = true;
 
@@ -55,8 +54,8 @@ void BoxManager::build_board_list() {
         }
     }
 
-    float spacing_x = skin[SC::ENTRY_BOX_SPACING].x;
-    float spacing_y = skin[SC::ENTRY_BOX_SPACING].y;
+    float spacing_x = tex.get_skin_config(SC::ENTRY_BOX_SPACING)->x;
+    float spacing_y = tex.get_skin_config(SC::ENTRY_BOX_SPACING)->y;
     is_vertical = spacing_y > 0;
 
     if (is_vertical) {

@@ -72,7 +72,7 @@ protected:
 
     virtual void draw_overlays();
 
-    virtual bool hides_dan() { return tex.skin_entry("entry_dan") != nullptr; }
+    virtual bool hides_dan() { return tex.get_skin_config(SC::ENTRY_DAN) != nullptr; }
     virtual bool is_2p_screen() { return false; }
     virtual Screens get_game_screen_target() { return Screens::GAME; }
 

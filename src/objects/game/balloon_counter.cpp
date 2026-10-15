@@ -41,8 +41,8 @@ void BalloonCounter::update(double current_ms, int count) {
 }
 
 void BalloonCounter::draw(float y) {
-    const SkinInfo* p2 = tex.skin_entry("balloon_counter_2p_offset");
-    const bool have_p2_key = is_2p && p2;
+    const SkinInfo* p2 = is_2p ? tex.get_skin_config(SC::GAME_BALLOON_COUNTER_2P_OFFSET) : nullptr;
+    const bool have_p2_key = p2 != nullptr;
 
     const float legacy_y = is_2p ? 230 * tex.screen_scale : 0.0f;
     const float rig_x = have_p2_key ? p2->x : 0.0f;
@@ -66,14 +66,14 @@ void BalloonCounter::draw(float y) {
         if (stage == 0) balloon_index = t < 83 ? 0 : (t < 167 ? 1 : 2);
         else if (t < 167) balloon_index = STAGE_ART[stage - 1];
         float shake = 0.0f;
-        if (tex.skin_entry("balloon_pop_shake")) shake = (std::fmod(now_ms, 133.0) < 67 ? -2.0f : 1.0f) * tex.screen_scale;
+        if (tex.get_skin_config(SC::GAME_BALLOON_POP_SHAKE)) shake = (std::fmod(now_ms, 133.0) < 67 ? -2.0f : 1.0f) * tex.screen_scale;
         tex.draw_texture(t_pop, {.frame=balloon_index, .x=body_x + shake, .y=y + body_y, .fade=fade->attribute});
     }
     if (balloon_count > 0) {
         tex.draw_texture(t_bubble, {.mirror = bubble_mirror, .x=x_offset, .y=y + y_offset, .fade=fade->attribute});
         std::string counter = std::to_string(std::max(0, balloon_total - balloon_count));
-        float margin = tex.skin_config[SC::DRUMROLL_COUNTER_MARGIN].x;
-        if (const SkinInfo* m = tex.skin_entry("balloon_counter_margin"); m && m->x > 0)
+        float margin = tex.get_skin_config(SC::GAME_DRUMROLL_COUNTER_MARGIN)->x;
+        if (const SkinInfo* m = tex.get_skin_config(SC::GAME_BALLOON_COUNTER_MARGIN); m && m->x > 0)
             margin = m->x;
         float total_width = counter.length() * margin;
         for (int i = 0; i < (int)counter.size(); i++) {

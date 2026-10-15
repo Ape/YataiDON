@@ -198,8 +198,8 @@ void ResultPlayer::draw_song_info(const std::string& title, const std::string& s
 
 void ResultPlayer::draw() {
     call(fn_draw, "ResultPlayer:draw");
-    float cx = tex.skin_config[SC::RESULT_CHARA].x;
-    float cy = tex.skin_config[SC::RESULT_CHARA].y + ((int)is_2p * tex.screen_height / 2);
+    auto [cx, cy] = tex.chara_xy("result");
+    cy += (int)is_2p * tex.screen_height / 2;
     float cs = 1.0f;
     if (fn_chara_pos.valid()) {
         auto pos_opt = call_r<sol::table>(fn_chara_pos, "ResultPlayer:chara_pos");
@@ -214,9 +214,7 @@ void ResultPlayer::draw() {
     chara->draw(cx, cy, cs);
     if (fn_draw_front.valid()) call(fn_draw_front, "ResultPlayer:draw_front");
     call(fn_draw_gauge, "ResultPlayer:draw_gauge");
-    float nx = tex.skin_config[SC::RESULT_NAMEPLATE].x;
-    float ny = tex.skin_config[SC::RESULT_NAMEPLATE].y
-             + (is_2p * tex.skin_config[SC::RESULT_NAMEPLATE].height);
+    auto [nx, ny] = tex.nameplate_xy(is_2p ? "result_2p" : "result", "result");
     float nf = 1.0f;
     if (fn_nameplate_pos.valid()) {
         auto pos_opt = call_r<sol::table>(fn_nameplate_pos, "ResultPlayer:nameplate_pos");

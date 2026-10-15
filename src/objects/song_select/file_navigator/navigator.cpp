@@ -2147,13 +2147,12 @@ void Navigator::set_positions(bool init, float duration) {
             float fixed_x      = 640 * tex.screen_scale;
             float expand_gap   = 90 * tex.screen_scale;
             float horizontal_spacing = 30 * tex.screen_scale;
-            if (const SkinInfo* pitch = tex.skin_entry("song_select_row_pitch")) {
+            if (const SkinInfo* pitch = tex.get_skin_config(SC::SONG_SELECT_ROW_PITCH)) {
                 if (pitch->x > 0) base_spacing = pitch->x;
                 if (pitch->y > 0) expand_gap   = pitch->y;
             }
-            if (const SkinInfo* curve = tex.skin_entry("song_select_row_curve")) {
-                if (curve->x > 0) horizontal_spacing = curve->x;
-            }
+            if (const SkinInfo* curve = tex.get_skin_config(SC::SONG_SELECT_ROW_CURVE); curve && curve->x > 0)
+                horizontal_spacing = curve->x;
             position = center_y + offset * base_spacing;
             if (offset > 0)      position += expand_gap;
             else if (offset < 0) position -= expand_gap;

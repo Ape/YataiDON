@@ -1,35 +1,20 @@
 #pragma once
 
-#include "../../libs/animation.h"
-#include "../../libs/texture.h"
-#include <array>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
+#include "../../libs/script.h"
 
-class Combo {
+// The combo counter on the lane. The skin's Combo (game/combo.lua) owns the animations and draws it.
+class Combo : public LuaScript {
 private:
-    int combo = 0;
-    TextStretchAnimation* stretch = nullptr;
-    std::vector<ray::Color> color;
-    std::array<int, 3> glimmer_map;
-    int total_time;
-    int cycle_time;
-    std::vector<double> start_times;
-    TextureObject* t_counter = nullptr;
-    TextureObject* t_counter_gold = nullptr;
-    TextureObject* t_counter_100 = nullptr;
-    TextureObject* t_gleam = nullptr;
-    TextureObject* t_combo = nullptr;
-    TextureObject* t_combo_100 = nullptr;
+    sol::protected_function fn_update, fn_draw;
 
-    void update_count(int new_combo);
 public:
     Combo() = default;
-    Combo(int combo, double current_ms);
+    Combo(int combo, double current_ms) {
+        if (!load("Combo", "combo", combo, current_ms)) return;
+        fn_update = lua_object["update"];
+        fn_draw   = lua_object["draw"];
+    }
 
-    void update(double current_ms, int curr_combo);
-
-    void draw(float y);
+    void update(double current_ms, int curr_combo) { call(fn_update, "Combo:update", current_ms, curr_combo); }
+    void draw(float y) { call(fn_draw, "Combo:draw", y); }
 };

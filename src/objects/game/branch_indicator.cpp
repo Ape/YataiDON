@@ -76,5 +76,5 @@ void BranchIndicator::draw(float y) {
 
     tex.draw_texture(t_diff[(int)diff_2], {.y = y + (float)(diff_down->attribute - diff_up->attribute) * direction, .fade = diff_fade->attribute});
 
-    tex.draw_texture(t_diff[(int)difficulty], {.y = y + (float)(diff_up->attribute * (direction * -1)) - (tex.skin_config[SC::BRANCH_INDICATOR_Y_OFFSET].y * direction * -1), .fade = 1 - diff_fade->attribute});
+    tex.draw_texture(t_diff[(int)difficulty], {.y = y + (float)(diff_up->attribute * (direction * -1)) - (tex.get_skin_config(SC::GAME_BRANCH_INDICATOR_Y_OFFSET)->y * direction * -1), .fade = 1 - diff_fade->attribute});
 }

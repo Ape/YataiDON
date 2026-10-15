@@ -7,6 +7,11 @@ sol::protected_function load_skin_module_fn(const char* module, const char* fn_n
 // Lua state (which dies on a skin reload). Look it up again each frame; it is a table read.
 sol::protected_function cached_skin_module_fn(const char* module, const char* fn_name, const char* global_name);
 
+// The y the option panel (and the character) sit at while it slides in (negative) or out: the
+// skin's song_select/option_panel `slide_out()` is how far past the top it leaves.
+class MoveAnimation;
+float option_panel_offset(const MoveAnimation* move, bool confirmed);
+
 class BaseBox;
 class SongSelectPlayer;
 class Navigator;

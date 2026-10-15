@@ -32,7 +32,7 @@ Player::Player(std::optional<SongParser>& parser_ref, PlayerNum player_num_param
     , autoplay_hit_side(Side::LEFT)
     , last_subdivision(-1)
     , combo_display(combo, 0)
-    , score_counter(0, is_2p)
+    , score_counter(is_2p, player_num)
 {
     init_player_textures();
     reset_chart();
@@ -487,20 +487,7 @@ void Player::update(double ms_from_start, double current_ms, std::optional<Backg
             ++it;
         }
     }
-    for (auto it = base_score_list.begin(); it != base_score_list.end(); ) {
-        it->update(current_ms);
-        if (it->is_finished()) {
-            it = base_score_list.erase(it);
-            if (tex.options[SCO::DELAY_SCORE_ADDITION])
-                score_counter.update_count(score);
-        } else {
-            ++it;
-        }
-    }
-    if (!tex.options[SCO::DELAY_SCORE_ADDITION]) {
-        score_counter.update_count(score);
-    }
-    score_counter.update(current_ms);
+    score_counter.update(current_ms, score);
     autoplay_manager(ms_from_start, current_ms, background);
     handle_input(ms_from_start, current_ms, background);
     nameplate.update(current_ms);
@@ -572,7 +559,7 @@ void Player::draw(double ms_from_start, float x, float y) {
     }
     if (gauge.has_value()) {
         if (arc_player() == PlayerNum::P2) {   // the bottom gauge only when two play
-            gauge->draw(y + tex.skin_config[SC::GAUGE_2P_OFFSET].y);
+            gauge->draw(y + tex.get_skin_config(SC::GAME_GAUGE_2P_OFFSET)->y);
         } else {
             gauge->draw(y);
         }
@@ -814,7 +801,7 @@ void Player::reset_chart() {
         for (const TimelineObject& t : this->timeline)
             if (t.lyric.has_value()) all_lyrics += t.lyric.value();
         if (!all_lyrics.empty()) {
-            const SkinInfo* lyric_cfg = tex.skin_entry("lyric");
+            const SkinInfo* lyric_cfg = tex.get_skin_config(SC::LYRIC);
             int lyric_font = (lyric_cfg && lyric_cfg->font_size > 0) ? lyric_cfg->font_size
                                                                      : static_cast<int>(40 * tex.screen_scale);
             font_manager.register_text(all_lyrics, lyric_font);
@@ -1082,7 +1069,7 @@ void Player::handle_lyric(double ms_from_start, const TimelineObject& timeline_o
         current_lyric.reset();
     }
 
-    const SkinInfo* lyric_cfg = tex.skin_entry("lyric");
+    const SkinInfo* lyric_cfg = tex.get_skin_config(SC::LYRIC);
     int font_size = (lyric_cfg && lyric_cfg->font_size > 0) ? lyric_cfg->font_size
                                                              : static_cast<int>(40 * tex.screen_scale);
     float outline = (lyric_cfg && lyric_cfg->outline >= 0) ? lyric_cfg->outline : 4.0f * tex.screen_scale;
@@ -1326,7 +1313,7 @@ void Player::note_correct(const Note& note, double current_ms) {
         }
         if (combo % 100 == 0 && score_method == ScoreMethod::GEN3) {
             score += 10000;
-            base_score_list.push_back(ScoreCounterAnimation(player_num, 10000, is_2p));
+            score_counter.add_popup(10000);
         }
     }
 
@@ -1349,9 +1336,7 @@ void Player::check_drumroll(double current_ms, DrumType drum_type, std::optional
     branch_r_count++;
     if (background.has_value()) background->handle_drumroll(PlayerNum(is_2p + 1));
     score += 100;
-    if (base_score_list.size() < 5) {
-        base_score_list.push_back(ScoreCounterAnimation(player_num, 100, is_2p));
-    }
+    score_counter.add_popup(100, true);
     if (draw_note_buffer.empty()) return;
     if (!other_notes.empty()) {
         int active_drumroll_index = other_notes[0].index;
@@ -1382,7 +1367,7 @@ void Player::check_balloon(double current_ms, DrumType drum_type, const Note& ba
     curr_balloon_count++;
     total_drumroll++;
     score += 100;
-    base_score_list.push_back(ScoreCounterAnimation(player_num, 100, is_2p));
+    score_counter.add_popup(100);
     if (curr_balloon_count == balloon.count.value()) {
         is_balloon = false;
         balloon_counter->update(current_ms, curr_balloon_count);
@@ -1407,7 +1392,7 @@ void Player::check_kusudama(double current_ms, DrumType drum_type, const Note& b
     if (background.has_value()) background->handle_kusudama(PlayerNum(is_2p + 1));
     total_drumroll++;
     score += 100;
-    base_score_list.push_back(ScoreCounterAnimation(player_num, 100, is_2p));
+    score_counter.add_popup(100);
     owner->kusudama_shared_hits++;
     owner->kusudama_counter->update(current_ms, owner->kusudama_shared_hits);
 
@@ -1518,9 +1503,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
             note_judgments[curr_note.index] = Judgments::GOOD;
             good_count++;
             score += base_score;
-            if (base_score_list.size() < 5) {
-                base_score_list.push_back(ScoreCounterAnimation(player_num, base_score, is_2p));
-            }
+            score_counter.add_popup(base_score, true);
             if (lane_pos != 0) lane.erase(lane.begin() + lane_pos);
             note_correct(curr_note, current_ms);
             if (dan_gauge) dan_gauge->add_good();
@@ -1536,9 +1519,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
             note_judgments[curr_note.index] = Judgments::OK;
             ok_count++;
             score += 10 * std::floor(base_score / 2 / 10);
-            if (base_score_list.size() < 5) {
-                base_score_list.push_back(ScoreCounterAnimation(player_num, 10 * std::floor(base_score / 2 / 10), is_2p));
-            }
+            score_counter.add_popup(10 * std::floor(base_score / 2 / 10), true);
             if (lane_pos != 0) lane.erase(lane.begin() + lane_pos);
             note_correct(curr_note, current_ms);
             if (dan_gauge) dan_gauge->add_ok();
@@ -1599,7 +1580,7 @@ void Player::balloon_counter_manager(double current_ms) {
         if (balloon_counter->is_finished()) {
             if (score_method == ScoreMethod::GEN3) {
                 score += 5000;
-                base_score_list.push_back(ScoreCounterAnimation(player_num, 5000, is_2p));
+                score_counter.add_popup(5000);
             }
             balloon_counter.reset();
             chara->set_anim(rest_anim());
@@ -1712,7 +1693,7 @@ void Player::draw_bar(double current_ms, float y, const Note& bar) {
     } else {
         angle = 0;
     }
-    tex.draw_texture(t_notes_0, {.frame=bar.is_branch_start, .x=x_position+tex.skin_config[SC::MOJI_DRUMROLL].x - (t_notes_9->width/2.0f), .y=y_position+tex.skin_config[SC::MOJI_DRUMROLL].y, .rotation=angle});
+    tex.draw_texture(t_notes_0, {.frame=bar.is_branch_start, .x=x_position+tex.get_skin_config(SC::GAME_MOJI_DRUMROLL)->x - (t_notes_9->width/2.0f), .y=y_position+tex.get_skin_config(SC::GAME_MOJI_DRUMROLL)->y, .rotation=angle});
 }
 
 void Player::draw_drumroll(double current_ms, float y, const Note& head, int current_eighth, bool moji_pass) {
@@ -1735,10 +1716,10 @@ void Player::draw_drumroll(double current_ms, float y, const Note& head, int cur
     float end_position = get_position_x(tail, current_ms);
     float length = end_position - start_position;
     ray::Color color = ray::Color{255, (unsigned char)head.color.value(), (unsigned char)head.color.value(), 255};
-    float y_pos = y + tex.skin_config[SC::NOTES].y + get_position_y(head, current_ms) + judge_y;
+    float y_pos = y + tex.get_skin_config(SC::GAME_NOTES)->y + get_position_y(head, current_ms) + judge_y;
     start_position += judge_x;
     end_position += judge_x;
-    float moji_y = y + tex.skin_config[SC::MOJI].y;
+    float moji_y = y + tex.get_skin_config(SC::GAME_MOJI)->y;
     if (moji_pass) {
         tex.draw_texture(t_moji_drumroll_mid, {.x=start_position, .y=moji_y+judge_y, .x2=length});
         tex.draw_texture(t_moji, {.frame=head.moji, .x=start_position - (t_moji->width/2.0f), .y=moji_y+judge_y});
@@ -1747,7 +1728,7 @@ void Player::draw_drumroll(double current_ms, float y, const Note& head, int cur
     }
 
     if (head.display) {
-        tex.draw_texture(t_notes_8, {.color=color, .frame=is_big, .x=start_position, .y=y_pos, .x2=length+tex.skin_config[SC::DRUMROLL_WIDTH_OFFSET].width});
+        tex.draw_texture(t_notes_8, {.color=color, .frame=is_big, .x=start_position, .y=y_pos, .x2=length+tex.get_skin_config(SC::GAME_DRUMROLL_WIDTH_OFFSET)->width});
         if (is_big) {
             tex.draw_texture(t_drumroll_big_tail, {.color=color, .x=end_position, .y=y_pos});
         } else {
@@ -1758,7 +1739,7 @@ void Player::draw_drumroll(double current_ms, float y, const Note& head, int cur
 }
 
 void Player::draw_balloon(double current_ms, float y, const Note& head, int current_eighth, bool moji_pass) {
-    float offset = tex.skin_config[SC::BALLOON_OFFSET].x;
+    float offset = tex.get_skin_config(SC::GAME_BALLOON_OFFSET)->x;
     if (head.sudden_appear_ms.has_value() && head.sudden_moving_ms.has_value()) {
         double appear_ms = head.hit_ms - head.sudden_appear_ms.value();
         double moving_start_ms = head.hit_ms - head.sudden_moving_ms.value();
@@ -1776,8 +1757,8 @@ void Player::draw_balloon(double current_ms, float y, const Note& head, int curr
     auto& tail = *it;
     float end_position = get_position_x(tail, current_ms);
     float pause_position = JudgePos::X + judge_x;
-    float y_pos = y + tex.skin_config[SC::NOTES].y + get_position_y(head, current_ms) + judge_y;
-    float moji_y = y + tex.skin_config[SC::MOJI].y + get_position_y(head, current_ms) + judge_y;
+    float y_pos = y + tex.get_skin_config(SC::GAME_NOTES)->y + get_position_y(head, current_ms) + judge_y;
+    float moji_y = y + tex.get_skin_config(SC::GAME_MOJI)->y + get_position_y(head, current_ms) + judge_y;
     start_position += judge_x;
     end_position += judge_x;
     float position;
@@ -1855,7 +1836,7 @@ void Player::draw_notes(double current_ms, float y) {
         } else if (note.type == NoteType::BALLOON_HEAD) {
             draw_balloon(current_ms, y, note, current_eighth, false);
         } else if (note.display) {
-            tex.draw_texture(note_tex_ids[(int)note.type], {.frame=current_eighth % 2, .center=true, .x=pos->first - (t_notes_9->width/2.0f), .y=pos->second+tex.skin_config[SC::NOTES].y});
+            tex.draw_texture(note_tex_ids[(int)note.type], {.frame=current_eighth % 2, .center=true, .x=pos->first - (t_notes_9->width/2.0f), .y=pos->second+tex.get_skin_config(SC::GAME_NOTES)->y});
         }
     }
 
@@ -1870,15 +1851,15 @@ void Player::draw_notes(double current_ms, float y) {
         } else if (note.type == NoteType::BALLOON_HEAD) {
             draw_balloon(current_ms, y, note, current_eighth, true);
         } else {
-            tex.draw_texture(t_moji, {.frame=note.moji, .x=pos->first - (t_moji->width/2.0f), .y=tex.skin_config[SC::MOJI].y + pos->second});
+            tex.draw_texture(t_moji, {.frame=note.moji, .x=pos->first - (t_moji->width/2.0f), .y=tex.get_skin_config(SC::GAME_MOJI)->y + pos->second});
         }
     }
 }
 
 void Player::draw_song_timer(double current_ms, float y) {
     float progress = end_time > 0 ? (float)(current_ms / end_time) : 0.0f;
-    float width = tex.skin_config[SC::SONG_TIMER].width * std::max(std::min(progress, 1.0f), 0.0f);
-    ray::DrawRectangle(tex.skin_config[SC::SONG_TIMER].x, y + tex.skin_config[SC::SONG_TIMER].y, width, tex.skin_config[SC::SONG_TIMER].height, ray::Color(0, 255, 158, 255));
+    float width = tex.get_skin_config(SC::GAME_SONG_TIMER)->width * std::max(std::min(progress, 1.0f), 0.0f);
+    ray::DrawRectangle(tex.get_skin_config(SC::GAME_SONG_TIMER)->x, y + tex.get_skin_config(SC::GAME_SONG_TIMER)->y, width, tex.get_skin_config(SC::GAME_SONG_TIMER)->height, ray::Color(0, 255, 158, 255));
     tex.draw_texture(t_timer, {.y=y});
 }
 
@@ -1888,7 +1869,7 @@ void Player::draw_modifiers(float y) {
         float cover_h = (float)t_lane_score_cover->y2[0];
         float json_y  = (float)id->y[0];
         float icon_h  = (float)id->y2[0];
-        return y + tex.skin_config[SC::SCORE_COUNTER_2P_Y_OFFSET].y
+        return y + tex.get_skin_config(SC::GAME_SCORE_COUNTER_2P_Y_OFFSET)->y
                  + cover_h - icon_h - 2.0f * json_y;
     };
 
@@ -1896,7 +1877,7 @@ void Player::draw_modifiers(float y) {
     // and score_method are fixed for this Player's lifetime).
     const std::vector<TextureObject*>& badges = t_badges;
 
-    const SkinInfo* grid = tex.skin_entry("mod_badge_grid");
+    const SkinInfo* grid = tex.get_skin_config(SC::MOD_BADGE_GRID);
     if (grid && grid->width > 0) {
         // Sequential slots on the skin's grid (columns in font_size, default 3).
         const int cols = grid->font_size > 0 ? grid->font_size : 3;
@@ -1908,7 +1889,7 @@ void Player::draw_modifiers(float y) {
             if (is_2p) {
                 float cover_h = (float)t_lane_score_cover->y2[0];
                 float icon_h  = (float)id->y2[0];
-                by = y + tex.skin_config[SC::SCORE_COUNTER_2P_Y_OFFSET].y + cover_h - icon_h - 2.0f * gy;
+                by = y + tex.get_skin_config(SC::GAME_SCORE_COUNTER_2P_Y_OFFSET)->y + cover_h - icon_h - 2.0f * gy;
             }
             tex.draw_texture(id, {.x = gx - (float)id->x[0], .y = by - (float)id->y[0]});
             slot++;
@@ -1929,9 +1910,11 @@ void Player::draw_modifiers(float y) {
 void Player::draw_lane_cover(float y) {
     if (!is_balloon || (balloon_idle && !balloon_counter.has_value())) {
         if (is_2p) {
-            chara->draw(tex.skin_config[SC::GAME_CHARA_P2].x, y + tex.skin_config[SC::GAME_CHARA_P2].y, 1.0f);
+            auto [cx, cy] = tex.chara_xy("game_p2");
+            chara->draw(cx, y + cy, 1.0f);
         } else {
-            chara->draw(tex.skin_config[SC::GAME_CHARA_P1].x, y + tex.skin_config[SC::GAME_CHARA_P1].y, 1.0f);
+            auto [cx, cy] = tex.chara_xy("game_p1");
+            chara->draw(cx, y + cy, 1.0f);
         }
     }
     tex.draw_texture(lane_cover_tex_id, {.y=y});
@@ -1958,13 +1941,10 @@ void Player::draw_overlays(float y) {
         anim.draw(y);
     }
     score_counter.draw(y);
-    for (ScoreCounterAnimation& anim : base_score_list) {
-        anim.draw(y);
-    }
 
     combo_display.draw(y);
     if (combo_announce.has_value()) {
-        combo_announce->draw(y + (tex.skin_config[SC::COMBO_ANNOUNCE_P2_Y_OFFSET].y * is_2p));
+        combo_announce->draw(y + (tex.get_skin_config(SC::GAME_COMBO_ANNOUNCE_P2_Y_OFFSET)->y * is_2p));
     }
     tex.draw_texture(lane_icon_tex_id, {.y=y, .index=is_2p});
     int frame = is_dan ? 6 : difficulty;
@@ -1979,24 +1959,27 @@ void Player::draw_overlays(float y) {
         tex.draw_texture(t_auto_icon, {.y=y, .index=is_2p});
     } else {
         if (is_2p) {
-            nameplate.draw(tex.skin_config[SC::GAME_NAMEPLATE_2P].x, y + tex.skin_config[SC::GAME_NAMEPLATE_2P].y);
+            auto [nx, ny] = tex.nameplate_xy("game_p2");
+            nameplate.draw(nx, y + ny);
         } else {
-            nameplate.draw(tex.skin_config[SC::GAME_NAMEPLATE_1P].x, y + tex.skin_config[SC::GAME_NAMEPLATE_1P].y);
+            auto [nx, ny] = tex.nameplate_xy("game_p1");
+            nameplate.draw(nx, y + ny);
         }
     }
     if (is_balloon) {
         float rig_2p_y = 0.0f;
         if (is_2p && balloon_counter.has_value()) {
-            if (const SkinInfo* p2 = tex.skin_entry("balloon_counter_2p_offset"))
+            if (const SkinInfo* p2 = tex.get_skin_config(SC::GAME_BALLOON_COUNTER_2P_OFFSET))
                 rig_2p_y = p2->y;
         }
         if (!balloon_idle || balloon_counter.has_value()) {
-            chara->draw(tex.skin_config[SC::GAME_CHARA_BALLOON].x, y + tex.skin_config[SC::GAME_CHARA_BALLOON].y + rig_2p_y, 1.0f);
+            auto [cx, cy] = tex.chara_xy("game_balloon");
+            chara->draw(cx, y + cy + rig_2p_y, 1.0f);
         }
     }
 
     if (drumroll_counter.has_value()) {
-        drumroll_counter->draw(y + (tex.skin_config[SC::COMBO_ANNOUNCE_P2_Y_OFFSET].y * is_2p));
+        drumroll_counter->draw(y + (tex.get_skin_config(SC::GAME_COMBO_ANNOUNCE_P2_Y_OFFSET)->y * is_2p));
     }
     if (balloon_counter.has_value()) {
         balloon_counter->draw(y);
@@ -2011,7 +1994,7 @@ void Player::draw_overlays(float y) {
 void Player::draw_lyric(float y) {
     (void)y;
     if (!current_lyric.has_value()) return;
-    const SkinInfo* lyric_cfg = tex.skin_entry("lyric");
+    const SkinInfo* lyric_cfg = tex.get_skin_config(SC::LYRIC);
     float lyric_y = (lyric_cfg && lyric_cfg->y > 0) ? lyric_cfg->y
                                                     : static_cast<float>(tex.screen_height - (int)(current_lyric->height*1.5));
     current_lyric->draw({.x=(int)(tex.screen_width/2) - current_lyric->width/2, .y=lyric_y});

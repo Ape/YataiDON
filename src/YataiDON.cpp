@@ -396,8 +396,8 @@ static void run_frame() {
         screen->_do_draw();
     }
     if (L.screen_fade_start > 0.0) {
-        const SkinInfo* cfg = tex.skin_entry("screen_fade_ms");
-        const double dur = (cfg && cfg->x > 0) ? cfg->x : 500.0;
+        const SkinInfo* fade_cfg = tex.get_skin_config(SC::SCREEN_FADE_MS);
+        const double dur = (fade_cfg && fade_cfg->x > 0) ? fade_cfg->x : 500.0;
         const double t = (g_frame_ms - L.screen_fade_start) / dur;
         if (t >= 1.0) {
             L.screen_fade_start = 0.0;
@@ -410,7 +410,7 @@ static void run_frame() {
     if (next_screen.has_value()) {
         spdlog::info("Screen changed from {} to {}", L.current_screen, next_screen.value());
         clear_input_buffers();
-        if (tex.skin_entry("screen_fade_ms") && screen_fade_applies(L.current_screen, next_screen.value()))
+        if (tex.get_skin_config(SC::SCREEN_FADE_MS) && screen_fade_applies(L.current_screen, next_screen.value()))
             L.screen_fade_start = g_frame_ms;
         else
             L.screen_fade_start = 0.0;

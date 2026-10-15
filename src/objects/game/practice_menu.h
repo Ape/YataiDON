@@ -1,17 +1,18 @@
 #pragma once
 
 #include <array>
-#include <memory>
-#include <vector>
-#include "../../libs/text.h"
+#include "../../libs/script.h"
 
-class PracticeMenu {
+// The practice pause menu. This keeps the state (selected row, dialog, selected button) and the
+// actions; the skin's PracticeMenu (game/practice_menu.lua) draws it and hit-tests the pointer.
+class PracticeMenu : public LuaScript {
 public:
     enum class Dialog { NONE, AUTO, RESTART, ANOTHER, END };
 
     enum class Action { NONE, END_GAME, ANOTHER_SONG, RESTART, JUMP_TO_MARK, SET_MARK, AUTO_ON, AUTO_OFF };
 
     static constexpr int MARK_SLOTS = 5;
+    static constexpr int ROW_COUNT  = 7;
 
     bool open = false;
     int index = 0;
@@ -21,7 +22,8 @@ public:
     bool editing_marks = false;
     bool jumping_marks = false;
 
-    void init_textures();
+    void init_textures();   // loads the skin script
+    void unload();          // drops the Lua object before the Lua state can go away
 
     void open_menu();
     void close();
@@ -42,21 +44,12 @@ public:
     // Free-roam jump-point navigation, entered from the JUMP_TO_MARK menu row.
     void open_jump_mode();
 
-    void draw() const;
-    void draw_dialog() const;
+    void draw();
+    void draw_dialog();
 
 private:
-    std::vector<std::unique_ptr<OutlinedText>> menu_text;
-    std::unique_ptr<OutlinedText> dlg_title, dlg_left, dlg_right;
-
-    void build_text();
     void open_dialog(Dialog which, bool auto_on);
+    const char* dialog_name() const;
 
-    TextureObject* t_menu_panel = nullptr;
-    TextureObject* t_menu_bar = nullptr;
-    TextureObject* t_menu_bar_selected = nullptr;
-    TextureObject* t_menu_auto_label = nullptr;
-    TextureObject* t_menu_toggle = nullptr;
-    TextureObject* t_menu_button = nullptr;
-    TextureObject* t_menu_button_selected = nullptr;
+    sol::protected_function fn_draw, fn_draw_dialog, fn_hit_test;
 };

@@ -584,7 +584,8 @@ void ScriptManager::register_lua_bindings() {
     tex.set_function("get_animation", [](double anim_id, sol::object second_arg) -> BaseAnimation* {
         if (second_arg.get_type() == sol::type::string)
             return ::tex.get_animation(static_cast<int>(anim_id), second_arg.as<std::string>());
-        return ::tex.get_animation(static_cast<int>(anim_id), false);
+        // true: a private copy of the current screen's animation
+        return ::tex.get_animation(static_cast<int>(anim_id), second_arg.is<bool>() && second_arg.as<bool>());
     });
 
     tex.set_function("load_folder", [](const std::string& screen_name, const std::string& subset) {
@@ -797,7 +798,10 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
             if (cfg) {
                 text = font_manager.get_text_label(skin_config_key);
             } else {   // a position-only skin_config entry draws empty text
-                cfg = script_manager.tex.skin_entry(skin_config_key);
+                cfg = [&]() -> const SkinInfo* {
+                    auto it = script_manager.tex.skin_config_by_name.find(skin_config_key);
+                    return it == script_manager.tex.skin_config_by_name.end() ? nullptr : &it->second;
+                }();
                 if (!cfg) {
                     spdlog::error("Skin config key not found: {}", skin_config_key);
                     throw sol::error("Skin config key not found: " + skin_config_key);

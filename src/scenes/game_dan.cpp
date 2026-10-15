@@ -17,8 +17,8 @@ void DanGameScreen::on_screen_start() {
     song_index    = 0;
     prev_good = prev_ok = prev_bad = prev_drumroll = 0;
 
-    JudgePos::X = tex.skin_config[SC::JUDGE_POS].x;
-    JudgePos::Y = tex.skin_config[SC::JUDGE_POS].y;
+    JudgePos::X = tex.get_skin_config(SC::GAME_JUDGE_POS)->x;
+    JudgePos::Y = tex.get_skin_config(SC::GAME_JUDGE_POS)->y;
     TJAParser::jpos_field_width = (tex.screen_width - JudgePos::X) / tex.screen_scale;
 
     init_dan();
@@ -172,8 +172,8 @@ void DanGameScreen::fill_unplayed_songs() {
 }
 
 const SkinInfo& DanGameScreen::dan_exam_info() {
-    if (const SkinInfo* e = tex.skin_entry("dan_exam_info_game")) return *e;
-    return tex.skin_config[SC::DAN_EXAM_INFO];
+    if (const SkinInfo* e = tex.get_skin_config(SC::GAME_DAN_EXAM_INFO)) return *e;
+    return *tex.get_skin_config(SC::DAN_SELECT_EXAM_INFO);
 }
 
 int DanGameScreen::get_exam_progress(const Exam& exam) {
@@ -737,7 +737,7 @@ void DanGameScreen::poll_skip_dan() {
     }
 
     const bool skin_draws = background.has_value() && background->wants_skip();
-    const SkinInfo* pos = skin_draws ? nullptr : tex.skin_entry("skip_counter");
+    const SkinInfo* pos = skin_draws ? nullptr : tex.get_skin_config(SC::SKIP_COUNTER);
     if (pos) {
         skip_text = std::make_unique<OutlinedText>(
             std::to_string(skip_count) + "/" + std::to_string(SKIP_HITS),
@@ -751,7 +751,7 @@ void DanGameScreen::poll_skip_dan() {
 void DanGameScreen::do_skip_dan() {
     skipped = true;
     const bool skin_draws = background.has_value() && background->wants_skip();
-    const SkinInfo* used = skin_draws ? nullptr : tex.skin_entry("skip_used_text");
+    const SkinInfo* used = skin_draws ? nullptr : tex.get_skin_config(SC::SKIP_USED_TEXT);
     if (used) {
         skip_text = std::make_unique<OutlinedText>(
             tex.skin_text("skip_used", global_data.config->general.language, ""),

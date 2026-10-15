@@ -110,7 +110,7 @@ public:
 
     OutlinedText* horizontal_name() {
         if (!horizontal_name_cache) {
-            float font_size = tex.skin_config[SC::SONG_BOX_NAME].font_size;
+            float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
             if (utf8_char_count(text_name) >= 30)
                 font_size -= (int)(10 * tex.screen_scale);
             horizontal_name_cache = std::make_unique<OutlinedText>(text_name, font_size, text_color, fore_color.value_or(text_color), false);
@@ -120,7 +120,7 @@ public:
 
     OutlinedText* horizontal_name_large() {
         if (!horizontal_name_large_cache) {
-            float font_size = tex.skin_config[SC::SONG_BOX_NAME].font_size;
+            float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
             if (utf8_char_count(text_name) >= 30)
                 font_size -= (int)(10 * tex.screen_scale);
             horizontal_name_large_cache = std::make_unique<OutlinedText>(text_name, (int)(font_size * 1.5f), text_color, fore_color.value_or(text_color), false, 6);

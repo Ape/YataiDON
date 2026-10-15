@@ -16,8 +16,8 @@ void GameScreen::on_screen_start() {
     start_ms = 0;
     start_delay = 1000.0f;
     last_resync_ms = 0;
-    JudgePos::X = tex.skin_config[SC::JUDGE_POS].x;
-    JudgePos::Y = tex.skin_config[SC::JUDGE_POS].y;
+    JudgePos::X = tex.get_skin_config(SC::GAME_JUDGE_POS)->x;
+    JudgePos::Y = tex.get_skin_config(SC::GAME_JUDGE_POS)->y;
     TJAParser::jpos_field_width = (tex.screen_width - JudgePos::X) / tex.screen_scale;
     song_started = false;
     paused = false;
@@ -461,7 +461,7 @@ void GameScreen::poll_skip() {
     }
 
     const bool skin_draws = background.has_value() && background->wants_skip();
-    const SkinInfo* pos = skin_draws ? nullptr : tex.skin_entry("skip_counter");
+    const SkinInfo* pos = skin_draws ? nullptr : tex.get_skin_config(SC::SKIP_COUNTER);
     if (pos) {
         skip_text = std::make_unique<OutlinedText>(
             std::to_string(skip_count) + "/" + std::to_string(SKIP_HITS),
@@ -475,7 +475,7 @@ void GameScreen::poll_skip() {
 void GameScreen::do_skip() {
     skipped = true;
     const bool skin_draws = background.has_value() && background->wants_skip();
-    const SkinInfo* used = skin_draws ? nullptr : tex.skin_entry("skip_used_text");
+    const SkinInfo* used = skin_draws ? nullptr : tex.get_skin_config(SC::SKIP_USED_TEXT);
     if (used) {
         skip_text = std::make_unique<OutlinedText>(
             tex.skin_text("skip_used", global_data.config->general.language, ""),
@@ -494,7 +494,7 @@ void GameScreen::do_skip() {
 void GameScreen::draw_skip() {
     if (background.has_value() && background->wants_skip()) return;
     if (!skip_text || skip_count <= 0) return;
-    const SkinInfo* pos = tex.skin_entry(skipped ? "skip_used_text" : "skip_counter");
+    const SkinInfo* pos = tex.get_skin_config(skipped ? SC::SKIP_USED_TEXT : SC::SKIP_COUNTER);
     if (!pos) return;
     skip_text->draw({.x = pos->x - skip_text->width / 2.0f, .y = pos->y});
 }
@@ -587,7 +587,7 @@ void GameScreen::draw_players() {
         players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale);
     } else if (players.size() == 2) {
         players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale);
-        players[1]->draw(ms_from_start, 0, tex.skin_config[SC::GAME_P2_Y].y);
+        players[1]->draw(ms_from_start, 0, tex.get_skin_config(SC::GAME_P2_Y)->y);
     } else {
         float gap = ((float)tex.screen_height - (players.size() * 176 * tex.screen_scale)) / (players.size() + 1);
         for (int i = 0; i < players.size(); i++) {

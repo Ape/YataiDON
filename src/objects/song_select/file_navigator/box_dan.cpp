@@ -22,10 +22,10 @@ static float dan_shrink_font(float font_size) {
 void DanBox::load_text() {
     if (is_back) { text_loaded = true; return; }
     BaseBox::load_text();  // populates name (vertical) for closed state
-    const SkinInfo* chip_slot = tex.skin_entry("dan_chip_name");
+    const SkinInfo* chip_slot = tex.get_skin_config(SC::DAN_SELECT_CHIP_NAME);
     float base_font = (chip_slot && chip_slot->font_size > 0)
                     ? (float)chip_slot->font_size
-                    : (float)tex.skin_config[SC::SONG_BOX_NAME].font_size;
+                    : (float)tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     float name_outline = 5.0f;
     if (utf8_char_count(text_name) >= 30) {
         float shrunk = dan_shrink_font(base_font);
@@ -37,7 +37,7 @@ void DanBox::load_text() {
                                           chip_black ? ray::BLACK : ray::WHITE,
                                           ray::BLACK, true,
                                           chip_black ? 0.0f : name_outline);
-    int font_size = tex.skin_config[SC::DAN_TITLE].font_size;
+    int font_size = tex.get_skin_config(SC::DAN_SELECT_TITLE)->font_size;
     hori_name = std::make_unique<OutlinedText>(dan_title, font_size, ray::WHITE, ray::BLACK, false);
 
     int revealed = 0;
@@ -73,7 +73,7 @@ void DanBox::load_text() {
         }
         song_idx++;
 
-        int base_sub_font = tex.skin_config[SC::DAN_SUBTITLE].font_size;
+        int base_sub_font = tex.get_skin_config(SC::DAN_SELECT_SUBTITLE)->font_size;
         int sub_font = base_sub_font;
         float sub_outline = 5.0f;
         if (utf8_char_count(sub_str) >= 30) {

@@ -6,6 +6,7 @@
 #include "genre_bg.h"
 #include "navigator.h"
 #include "../player.h"
+#include "../song_select_script.h"
 #include "../diff_sort.h"
 #include "../../../libs/script.h"
 #include "../../game/exam_caption.h"
@@ -57,11 +58,6 @@ sol::table neiro_change_table(const NeiroSelector& n) {
     return t;
 }
 
-// slide-in y of the option panel while it opens (negative) / leaves (past SONG_SELECT_OFFSET)
-float option_panel_offset(const MoveAnimation* move, bool confirmed) {
-    float v = (float)move->attribute;
-    return confirmed ? v + tex.skin_config[SC::SONG_SELECT_OFFSET].x : -v;
-}
 }  // namespace
 
 void register_song_select_lua_bindings(sol::state& lua) {

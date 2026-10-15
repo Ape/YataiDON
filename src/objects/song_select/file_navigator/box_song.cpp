@@ -102,18 +102,18 @@ std::vector<Difficulty> SongBox::get_diffs() {
 
 void SongBox::preregister_text() {
     BaseBox::preregister_text();
-    float base_sub_font = (float)tex.skin_config[SC::YB_SUBTITLE].font_size;
+    float base_sub_font = (float)tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size;
     float sub_font = utf8_char_count(text_subtitle) >= 30 ? base_sub_font - 10.0f * tex.screen_scale : base_sub_font;
     font_manager.register_text(text_subtitle, (int)sub_font);
-    float base_name_font = (float)tex.skin_config[SC::SONG_BOX_NAME].font_size;
+    float base_name_font = (float)tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     float name_font = utf8_char_count(text_name) >= 30 ? base_name_font - 10.0f * tex.screen_scale : base_name_font;
     font_manager.register_text(text_name, (int)name_font);
-    font_manager.register_text("BPM\n0123456789", tex.skin_config[SC::SONG_BOX_BPM].font_size);
+    font_manager.register_text("BPM\n0123456789", tex.get_skin_config(SC::SONG_SELECT_BOX_BPM)->font_size);
 }
 
 void SongBox::load_text() {
     BaseBox::load_text();
-    bpm_text = make_unique<OutlinedText>("BPM\n" + std::to_string(static_cast<int>(parser.metadata.bpm)), tex.skin_config[SC::SONG_BOX_BPM].font_size, ray::WHITE, ray::BLACK, false);
+    bpm_text = make_unique<OutlinedText>("BPM\n" + std::to_string(static_cast<int>(parser.metadata.bpm)), tex.get_skin_config(SC::SONG_SELECT_BOX_BPM)->font_size, ray::WHITE, ray::BLACK, false);
     if (exists(parser.metadata.preimage)) {
         if (preimage.has_value()) ray::UnloadTexture(preimage.value());
         preimage = ray::LoadTexture(parser.metadata.preimage.string().c_str());

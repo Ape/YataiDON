@@ -10,7 +10,7 @@ GogoTime::GogoTime() {
         throw std::runtime_error("gogo time: animation 24 is not a resize animation");
 
     int change_anim = 25;
-    if (const SkinInfo* a = tex.skin_entry("gogo_fire_anim"); a && a->x > 0 && tex.has_animation((int)a->x))
+    if (const SkinInfo* a = tex.get_skin_config(SC::GAME_GOGO_FIRE_ANIM); a && a->x > 0 && tex.has_animation((int)a->x))
         change_anim = (int)a->x;
     if (!tex.has_animation(change_anim))
         throw std::runtime_error("gogo time: animation " + std::to_string(change_anim) + " is missing");
@@ -18,7 +18,7 @@ GogoTime::GogoTime() {
     if (!fire_change)
         throw std::runtime_error("gogo time: animation " + std::to_string(change_anim) + " is not a change animation");
     fire_fade = 0.5f;
-    if (const SkinInfo* f = tex.skin_entry("gogo_fire_fade"); f && f->x > 0)
+    if (const SkinInfo* f = tex.get_skin_config(SC::GAME_GOGO_FIRE_FADE); f && f->x > 0)
         fire_fade = std::clamp((float)f->x, 0.0f, 1.0f);
 
     fire_resize->start();

@@ -11,16 +11,16 @@ static float skin_outline(const SkinInfo& s) { return s.outline >= 0 ? s.outline
 SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bool show_subtitle, int genre, int song_num, int song_total, const std::string& genre_label)
     : song_name(song_name), genre(genre >= 0 && genre < 9 ? genre : 0) {
 
-    song_title = std::make_unique<OutlinedText>(song_name, tex.skin_config[SC::SONG_INFO].font_size, ray::WHITE, ray::BLACK, false,
-                                                skin_outline(tex.skin_config[SC::SONG_INFO]));
+    song_title = std::make_unique<OutlinedText>(song_name, tex.get_skin_config(SC::GAME_SONG_INFO)->font_size, ray::WHITE, ray::BLACK, false,
+                                                skin_outline(*tex.get_skin_config(SC::GAME_SONG_INFO)));
     if (show_subtitle && !subtitle.empty()) {
-        song_subtitle = std::make_unique<OutlinedText>(subtitle, tex.skin_config[SC::SONG_INFO_SUBTITLE].font_size, ray::WHITE, ray::BLACK, false, 5);
+        song_subtitle = std::make_unique<OutlinedText>(subtitle, tex.get_skin_config(SC::GAME_SONG_INFO_SUBTITLE)->font_size, ray::WHITE, ray::BLACK, false, 5);
     }
-    const SkinInfo* plate_cfg = tex.skin_entry("song_num_game");
+    const SkinInfo* plate_cfg = tex.get_skin_config(SC::SONG_NUM_GAME);
     this->song_num = std::make_unique<SongNum>(
         song_num, plate_cfg ? plate_cfg->outline : -1.0f);
-    if (song_total > 0 && tex.skin_entry("song_num_max_game"))
-        song_max = std::make_unique<SongNum>(song_total, "song_num_max_game");
+    if (song_total > 0 && tex.get_skin_config(SC::SONG_NUM_MAX_GAME))
+        song_max = std::make_unique<SongNum>(song_total, SC::SONG_NUM_MAX_GAME, "song_num_max_game");
     fade = dynamic_cast<FadeAnimation*>(tex.get_animation(3));
     if (!fade) throw std::runtime_error("SongInfo: animation 3 has an unexpected type");
 
@@ -84,25 +84,25 @@ void SongInfo::update(double current_ms) {
 
 void SongInfo::draw() {
     if (!fade) return;
-    float text_x = tex.skin_config[SC::SONG_INFO].x;
-    float text_y = tex.skin_config[SC::SONG_INFO].y - song_title->height / 2.0f;
+    float text_x = tex.get_skin_config(SC::GAME_SONG_INFO)->x;
+    float text_y = tex.get_skin_config(SC::GAME_SONG_INFO)->y - song_title->height / 2.0f;
 
-    // Optional skin key song_info_max_width: a longer title is squeezed horizontally to fit.
+    // Optional skin key game_song_info_max_width: a longer title is squeezed horizontally to fit.
     float title_w = song_title->width;
     float title_x2 = 0.0f;
-    if (const SkinInfo* m = tex.skin_entry("song_info_max_width")) {
+    if (const SkinInfo* m = tex.get_skin_config(SC::GAME_SONG_INFO_MAX_WIDTH)) {
         if (m->width > 0 && title_w > m->width) {
             title_x2 = m->width - title_w;
             title_w = m->width;
         }
     }
     float title_x = text_x - title_w;
-    if (const SkinInfo* c = tex.skin_entry("song_info_center")) {
+    if (const SkinInfo* c = tex.get_skin_config(SC::GAME_SONG_INFO_CENTER)) {
         if (c->width > 0 && title_w <= c->width)
             title_x = c->x - title_w / 2.0f;
     }
 
-    if (const SkinInfo* plate = tex.skin_entry("song_num_game")) {
+    if (const SkinInfo* plate = tex.get_skin_config(SC::SONG_NUM_GAME)) {
         song_title->draw({.x=title_x, .y=text_y, .x2=title_x2, .fade=1 - fade->attribute});
         if (genre_text && t_genre) {
             if (genre_shader_loaded) ray::BeginShaderMode(genre_shader);
@@ -116,10 +116,8 @@ void SongInfo::draw() {
             tex.draw_texture(t_song_num_plate, {.fade = fade->attribute});
         }
         song_num->draw(plate->x - song_num->width / 2.0f, plate->y - song_num->height / 2.0f, fade->attribute);
-        if (song_max) {
-            if (const SkinInfo* m = tex.skin_entry("song_num_max_game"))
-                song_max->draw(m->x - song_max->width / 2.0f,
-                               m->y - song_max->height / 2.0f, fade->attribute);
+        if (const SkinInfo* m = tex.get_skin_config(SC::SONG_NUM_MAX_GAME); song_max && m) {
+            song_max->draw(m->x - song_max->width / 2.0f, m->y - song_max->height / 2.0f, fade->attribute);
         }
         return;
     }
@@ -129,7 +127,7 @@ void SongInfo::draw() {
     song_title->draw({.x=title_x, .y=text_y, .x2=title_x2, .fade=1 - fade->attribute});
 
     if (song_subtitle) {
-        float sub_y = tex.skin_config[SC::SONG_INFO_SUBTITLE].y - song_subtitle->height / 2.0f;
+        float sub_y = tex.get_skin_config(SC::GAME_SONG_INFO_SUBTITLE)->y - song_subtitle->height / 2.0f;
         song_subtitle->draw({.x=text_x - song_subtitle->width, .y=sub_y, .fade=1 - fade->attribute});
     }
 
@@ -167,8 +165,8 @@ SongNum::SongNum(int song_num, float outline_override) {
     height = text->height;
 }
 
-SongNum::SongNum(int value, const std::string& config_key) {
-    const SkinInfo* cfg = tex.skin_entry(config_key);
+SongNum::SongNum(int value, SC key, const std::string& config_key) {
+    const SkinInfo* cfg = tex.get_skin_config(key);
     if (!cfg) {
         width = 0.0f;
         height = 0.0f;

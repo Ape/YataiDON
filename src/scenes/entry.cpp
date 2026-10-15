@@ -619,16 +619,16 @@ void EntryScreen::draw_background() {
 }
 
 void EntryScreen::draw_side_select(float fade) {
-    auto& skin = tex.skin_config;
     lua_entry->draw_side_select();
 
     const bool show_preview = !arcade_credit() || seat_joined(PlayerNum::P1) || seat_joined(PlayerNum::P2);
     if (show_preview) {
-        chara->draw(tex.skin_config[SC::CHARA_ENTRY].x, tex.skin_config[SC::CHARA_ENTRY].y);
+        chara->draw(tex.chara_xy("entry").first, tex.chara_xy("entry").second);
     }
     lua_entry->draw_side_select_buttons(side);
     if (show_preview) {
-        nameplate.draw(skin[SC::NAMEPLATE_ENTRY].x, skin[SC::NAMEPLATE_ENTRY].y, fade);
+        auto [nx, ny] = tex.nameplate_xy("entry");
+        nameplate.draw(nx, ny, fade);
     }
 }
 

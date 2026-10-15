@@ -22,7 +22,7 @@ void Fireworks::update(double current_ms) {
 void Fireworks::draw() {
     if (!explosion_anim) return;
     if (!explosion_anim->is_finished) {
-        if (const SkinInfo* t = tex.skin_entry("gogo_explosion_tilt"); t && std::isfinite(t->x) && t->x > 0) {
+        if (const SkinInfo* t = tex.get_skin_config(SC::GAME_GOGO_EXPLOSION_TILT); t && std::isfinite(t->x) && t->x > 0) {
             static constexpr int ANGLE[6] = {2, 1, 0, 0, -1, -2};
             for (int i = 0; i < 6; i++) {
                 float w = (float)t_explosion->x2[i], h = (float)t_explosion->y2[i];
@@ -39,7 +39,7 @@ void Fireworks::draw() {
         int slots = 5;
         int mirror_from = -1;
         constexpr int MAX_EXPLOSION_SLOTS = 32;
-        if (const SkinInfo* s = tex.skin_entry("gogo_explosion_slots"); s && std::isfinite(s->x) && s->x > 0) {
+        if (const SkinInfo* s = tex.get_skin_config(SC::GAME_GOGO_EXPLOSION_SLOTS); s && std::isfinite(s->x) && s->x > 0) {
             slots = static_cast<int>(std::clamp(s->x, 1.0f, static_cast<float>(MAX_EXPLOSION_SLOTS)));
             if (std::isfinite(s->y) && s->y > 0) mirror_from = static_cast<int>(std::min(s->y, static_cast<float>(slots)));
         }

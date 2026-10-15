@@ -4,8 +4,8 @@
 Transition::Transition(const std::string& title, const std::string& subtitle, bool is_second) :
     is_second(is_second) {
 
-    this->title = std::make_unique<OutlinedText>(title, global_tex.skin_config[SC::TRANSITION_TITLE].font_size, ray::WHITE, ray::BLACK, false, 5);
-    this->subtitle = std::make_unique<OutlinedText>(subtitle, global_tex.skin_config[SC::TRANSITION_SUBTITLE].font_size, ray::WHITE, ray::BLACK, false, 5);
+    this->title = std::make_unique<OutlinedText>(title, global_tex.get_skin_config(SC::TRANSITION_TITLE)->font_size, ray::WHITE, ray::BLACK, false, 5);
+    this->subtitle = std::make_unique<OutlinedText>(subtitle, global_tex.get_skin_config(SC::TRANSITION_SUBTITLE)->font_size, ray::WHITE, ray::BLACK, false, 5);
 
     t_rainbow_text_bg = global_tex.get_texture("rainbow_transition/text_bg");
 
@@ -45,7 +45,7 @@ void Transition::set_dan(int color, const std::string& rank_name) {
     t_loading_dan_plaque = global_tex.get_texture("loading_dan/plaque");
     if (!rank_name.empty()) {
         dan_rank_text = std::make_unique<OutlinedText>(
-            rank_name, global_tex.skin_config[SC::DAN_TITLE].font_size,
+            rank_name, global_tex.get_skin_config(SC::DAN_SELECT_TITLE)->font_size,
             ray::WHITE, ray::BLACK, true);
     }
 }
@@ -62,7 +62,7 @@ void Transition::draw_dan(float total_offset) {
         global_tex.draw_texture(t_loading_dan_plaque,
                                 {.frame = std::clamp(dan_color, 0, 6), .y = dy, .fade = a});
         if (dan_rank_text) {
-            const SkinInfo* p = global_tex.skin_entry("dan_loading_rank");
+            const SkinInfo* p = global_tex.get_skin_config(SC::DAN_LOADING_RANK);
             const float rx = p ? p->x : 1697.0f;
             const float ry = p ? p->y : 290.0f;
             dan_rank_text->draw({.x = rx - dan_rank_text->width / 2.0f,
@@ -107,22 +107,22 @@ void Transition::draw_song_info() {
     if (is_second) {
         fade_1 = cur_fade_out;
         fade_2 = std::min(0.70, cur_fade_out);
-        offset = global_tex.skin_config[SC::TRANSITION_OFFSET].y - cur_rainbow;
+        offset = global_tex.get_skin_config(SC::TRANSITION_OFFSET)->y - cur_rainbow;
     }
     global_tex.draw_texture(t_rainbow_text_bg, {.y=(float)-cur_rainbow - offset, .fade=fade_2});
 
     float x = (float)global_tex.screen_width/2 - title->width/2;
-    float y = global_tex.skin_config[SC::TRANSITION_TITLE].y - title->height/2 - cur_rainbow - offset;
+    float y = global_tex.get_skin_config(SC::TRANSITION_TITLE)->y - title->height/2 - cur_rainbow - offset;
     title->draw({.x = x, .y = y, .fade = fade_1});
 
     x = (float)global_tex.screen_width/2 - subtitle->width/2;
-    y = global_tex.skin_config[SC::TRANSITION_SUBTITLE].y - subtitle->height/2 - cur_rainbow - offset;
+    y = global_tex.get_skin_config(SC::TRANSITION_SUBTITLE)->y - subtitle->height/2 - cur_rainbow - offset;
     subtitle->draw({.x = x, .y = y, .fade = fade_1});
 }
 
 void Transition::draw() {
     float total_offset = 0;
-    if (is_second) total_offset = global_tex.skin_config[SC::TRANSITION_OFFSET].y;
+    if (is_second) total_offset = global_tex.get_skin_config(SC::TRANSITION_OFFSET)->y;
     // the dan loading art (loading_dan/night, plaque) is optional: without it a dan course has no transition
     if (dan_color >= 0) {
         if (global_tex.has_texture("loading_dan/night")) draw_dan(total_offset);
@@ -143,7 +143,7 @@ void Transition::draw() {
     }
     if (loading_graphic.has_value()) {
         ray::Rectangle src = {0, 0, (float)loading_graphic.value().width, (float)loading_graphic.value().height};
-        ray::Rectangle dst = {0, global_tex.screen_height + (global_tex.skin_config[SC::TRANSITION_OFFSET].y - global_tex.screen_height) - (float)cur_rainbow - total_offset, (float)global_tex.screen_width, (float)global_tex.screen_height};
+        ray::Rectangle dst = {0, global_tex.screen_height + (global_tex.get_skin_config(SC::TRANSITION_OFFSET)->y - global_tex.screen_height) - (float)cur_rainbow - total_offset, (float)global_tex.screen_width, (float)global_tex.screen_height};
         ray::DrawTexturePro(loading_graphic.value(), src, dst, {0,0}, 0, ray::WHITE);
     }
 
