@@ -1,4 +1,5 @@
 #include "costume_menu.h"
+#include "../../libs/text.h"
 #include "../../libs/texture.h"
 #include "../../libs/input.h"
 #include "../../libs/audio.h"
@@ -7,11 +8,10 @@
 #include <spdlog/spdlog.h>
 
 CostumeMenu::CostumeMenu(PlayerNum player_num) : player_num(player_num), is_2p(player_num == PlayerNum::P2) {
-    auto& info = tex.skin_config[SC::ENTRY_COSTUME_TEXT];
-    std::string lang = global_data.config->general.language;
-    std::string text_str = info.text[lang];
-    float title_x = info.x;
-    float title_y = info.y;
+    const SkinInfo* info = font_manager.get_text_info("entry_costume_text");
+    std::string text_str = font_manager.get_text_label("entry_costume_text");
+    float title_x = info ? info->x : 0.0f;
+    float title_y = info ? info->y : 0.0f;
 
     t_item_box = is_2p ? tex.get_texture("costume_select/item_box_2p") : tex.get_texture("costume_select/item_box_1p");
 
@@ -19,6 +19,11 @@ CostumeMenu::CostumeMenu(PlayerNum player_num) : player_num(player_num), is_2p(p
     fn_update  = lua_object["update"];
     fn_draw_bg = lua_object["draw_bg"];
     fn_draw_fg = lua_object["draw_fg"];
+    fn_get_position = lua_object["position"];
+    if (auto pos = call_r<sol::table>(fn_get_position, "CostumeMenu:position")) {
+        pos_x = (*pos)[1].get_or(0.0f);
+        pos_y = (*pos)[2].get_or(0.0f);
+    }
     fn_is_ready = lua_object["is_ready"];
 }
 
@@ -251,7 +256,8 @@ void CostumeMenu::handle_input() {
     }
 }
 
-void CostumeMenu::draw(float x, float y) {
+void CostumeMenu::draw() {
+    const float x = pos_x, y = pos_y;
     call(fn_draw_bg, "CostumeMenu:draw_bg", x, y, selected_index, costume_select_mode, preset_seq, static_cast<int>(pick_stage));
 
     constexpr float ITEM_W = 80.0f;

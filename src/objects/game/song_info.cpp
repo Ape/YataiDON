@@ -146,14 +146,10 @@ void SongInfo::draw() {
 
 SongNum::SongNum(int song_num, float outline_override) {
     static const SkinInfo default_info{};
-    auto cfg_it = tex.skin_config.find(SC::SONG_NUM);
-    const SkinInfo& cfg = cfg_it != tex.skin_config.end() ? cfg_it->second : default_info;
+    const SkinInfo* cfg_ptr = font_manager.get_text_info("song_num");
+    const SkinInfo& cfg = cfg_ptr ? *cfg_ptr : default_info;
 
-    std::string song_format;
-    auto it = cfg.text.find(global_data.config->general.language);
-    if (it != cfg.text.end()) song_format = it->second;
-    else if (!cfg.text.empty()) song_format = cfg.text.begin()->second;
-    else song_format = "{0}";
+    std::string song_format = cfg.text.empty() ? "{0}" : font_manager.get_text_label("song_num");
     size_t pos = song_format.find("{0}");
     if (pos != std::string::npos) {
         song_format.replace(pos, 3, std::to_string(song_num));
@@ -178,11 +174,8 @@ SongNum::SongNum(int value, const std::string& config_key) {
         height = 0.0f;
         return;
     }
-    std::string fmt;
-    auto it = cfg->text.find(global_data.config->general.language);
-    if (it != cfg->text.end()) fmt = it->second;
-    else if (!cfg->text.empty()) fmt = cfg->text.begin()->second;
-    else fmt = "{0}";
+    const SkinInfo* text_cfg = font_manager.get_text_info(config_key);
+    std::string fmt = text_cfg && !text_cfg->text.empty() ? font_manager.get_text_label(config_key) : "{0}";
     size_t pos = fmt.find("{0}");
     if (pos != std::string::npos) fmt.replace(pos, 3, std::to_string(value));
     text = std::make_unique<OutlinedText>(fmt, cfg->font_size, ray::WHITE, ray::BLACK, false, skin_outline(*cfg));

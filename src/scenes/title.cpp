@@ -17,7 +17,7 @@ void TitleScreen::on_screen_start() {
     reset_attract_objects();
     load_videos();
     state = TitleState::OP_VIDEO;
-    hit_taiko_text = std::make_unique<OutlinedText>(tex.skin_config[SC::HIT_TAIKO_TO_START].text[global_data.config->general.language], tex.skin_config[SC::HIT_TAIKO_TO_START].font_size, ray::WHITE, ray::BLACK, false, 4);
+    hit_taiko_text = std::make_unique<OutlinedText>(font_manager.get_text_label("hit_taiko_to_start"), font_manager.get_text_info("hit_taiko_to_start")->font_size, ray::WHITE, ray::BLACK, false, 4);
     fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(13));
     text_overlay_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(14));
     if (text_overlay_fade) text_overlay_fade->start();
@@ -236,8 +236,8 @@ void TitleScreen::draw() {
     ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::WHITE, fade_out->attribute));
     coin_overlay.draw();
     allnet_indicator.draw();
-    entry_overlay.draw(tex.skin_config[SC::ENTRY_OVERLAY_TITLE].x, tex.skin_config[SC::ENTRY_OVERLAY_TITLE].y);
+    entry_overlay.draw(true);
 
-    hit_taiko_text->draw({.x=(float)(tex.screen_width*0.25 - hit_taiko_text->width/2), .y=tex.skin_config[SC::HIT_TAIKO_TO_START].y, .fade=text_overlay_fade->attribute});
-    hit_taiko_text->draw({.x=(float)(tex.screen_width*0.75 - hit_taiko_text->width/2), .y=tex.skin_config[SC::HIT_TAIKO_TO_START].y, .fade=text_overlay_fade->attribute});
+    hit_taiko_text->draw({.x=(float)(tex.screen_width*0.25 - hit_taiko_text->width/2), .y=font_manager.get_text_info("hit_taiko_to_start")->y, .fade=text_overlay_fade->attribute});
+    hit_taiko_text->draw({.x=(float)(tex.screen_width*0.75 - hit_taiko_text->width/2), .y=font_manager.get_text_info("hit_taiko_to_start")->y, .fade=text_overlay_fade->attribute});
 }

@@ -1,4 +1,5 @@
 ﻿#include "box_manager.h"
+#include "../../libs/text.h"
 #include "../../libs/global_data.h"
 
 static constexpr int ENTRY_FADE_OUT_ANIM_ID = 9;
@@ -30,18 +31,19 @@ void BoxManager::build_board_list() {
     dan_box_index = (dan_available && !is_2p) ? 1 : -1;
 
     box_locations = {Screens::SONG_SELECT};
-    boxes.push_back(std::make_unique<Box>(skin[SC::ENTRY_GAME].text[lang], font_size, Screens::SONG_SELECT));
+    boxes.push_back(std::make_unique<Box>(font_manager.get_text_label("entry_game"), font_size, Screens::SONG_SELECT));
     if (dan_box_index >= 0) {
         box_locations.push_back(Screens::DAN_SELECT);
         boxes.push_back(std::make_unique<Box>(dan_text, font_size, Screens::DAN_SELECT));
     }
-    for (auto [screen, sc] : {std::pair{Screens::PRACTICE_SELECT, SC::ENTRY_PRACTICE},
-                              std::pair{Screens::ENTRY,           SC::ENTRY_COSTUME},
-                              std::pair{Screens::SETTINGS,        SC::ENTRY_SETTINGS}}) {
+    for (auto [screen, sc] : {std::pair{Screens::PRACTICE_SELECT, "entry_practice"},
+                              std::pair{Screens::ENTRY,           "entry_costume"},
+                              std::pair{Screens::SETTINGS,        "entry_settings"}}) {
         // like the dan board: a skin that blanks the board's text leaves the board out
-        if (skin[sc].text[lang].empty()) continue;
+        std::string label = font_manager.get_text_label(sc);
+        if (label.empty()) continue;
         box_locations.push_back(screen);
-        boxes.push_back(std::make_unique<Box>(skin[sc].text[lang], font_size, screen));
+        boxes.push_back(std::make_unique<Box>(label, font_size, screen));
     }
 
     num_boxes = boxes.size();

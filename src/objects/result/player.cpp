@@ -91,6 +91,7 @@ ResultPlayer::ResultPlayer(PlayerNum player_num, bool has_2p, bool is_2p)
     fn_draw_front = lua_object["draw_front"];
     fn_chara_pos  = lua_object["chara_pos"];
     fn_nameplate_pos = lua_object["nameplate_pos"];
+    fn_draw_song_info = lua_object["draw_song_info"];
 }
 
 void ResultPlayer::assign_field(const std::string& field_name, const std::string& value) {
@@ -184,6 +185,15 @@ double ResultPlayer::reveal_end_ms() {
         if (from_lua && from_lua.value() > 0) return from_lua.value();
     }
     return rows_done_ms;
+}
+
+void ResultPlayer::draw_song_info(const std::string& title, const std::string& subtitle, int song_number) {
+    if (!fn_draw_song_info.valid()) return;
+    sol::table info = script_manager.lua->create_table();
+    info["title"]    = title;
+    info["subtitle"] = subtitle;
+    info["number"]   = song_number;
+    call(fn_draw_song_info, "ResultPlayer:draw_song_info", info);
 }
 
 void ResultPlayer::draw() {

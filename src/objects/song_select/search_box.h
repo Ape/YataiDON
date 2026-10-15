@@ -5,15 +5,16 @@
 
 #include "../../libs/texture.h"
 
+class SongSelectScript;
+
 class SearchBox {
 private:
     FadeAnimation* diff_fade_in = nullptr;
     TextureResizeAnimation* bg_resize = nullptr;
-    TextureObject* t_background = nullptr;
 
 public:
     std::string current_search;
     SearchBox();
     void update(double current_ms);
-    void draw();
+    void draw(SongSelectScript* script);   // painted by the skin's SongSelect:draw_search_box
 };

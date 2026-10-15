@@ -1,4 +1,6 @@
 #include "loading.h"
+#include "../libs/script.h"
+#include "../objects/song_select/song_select_script.h"
 #include <unordered_set>
 #include "../libs/global_data.h"
 #include "../libs/scores.h"
@@ -48,8 +50,16 @@ void LoadingScreen::init_visuals() {
     allnet_indicator.emplace();
     t_warning = tex.get_texture("kidou/warning");
 
-    countdown_ms = tex.skin_config[SC::LOADING_COUNTDOWN].height * 1000.0;
-    t_countdown = (countdown_ms > 0.0) ? tex.get_texture("kidou/countdown") : nullptr;
+    countdown_ms = 0.0;
+    if (tex.options[SCO::LOADING_COUNTDOWN] && script_manager.lua) {
+        sol::protected_function require = (*script_manager.lua)["require"];
+        auto r = require("loading/loading_countdown");
+        if (r.valid()) {
+            sol::table module = r;
+            countdown_ms = module.get_or("seconds", 0.0) * 1000.0;
+        }
+    }
+    has_countdown = countdown_ms > 0.0;
 }
 
 void LoadingScreen::load_song_hashes() {
@@ -203,7 +213,7 @@ std::optional<Screens> LoadingScreen::update() {
         try {
             allnet_indicator.reset();
             t_warning = nullptr;
-            t_countdown = nullptr;
+            has_countdown = false;
             drop_other_screens_for_skin_reload();
             navigator.reset_for_skin_reload();
             unload_skin();
@@ -246,17 +256,12 @@ void LoadingScreen::draw() {
     }
     tex.draw_texture(t_warning);
 
-    if (t_countdown) {
-        const SkinInfo& cd = tex.skin_config[SC::LOADING_COUNTDOWN];
-        const double left = std::max(0.0, countdown_ms - (get_current_ms() - start_ms));
-        const int secs = static_cast<int>(left / 1000.0);
-        const int hundredths = static_cast<int>(left / 10.0) % 100;
-        std::vector<int> frames;
-        for (char c : std::to_string(secs)) frames.push_back(c - '0');
-        frames.insert(frames.end(), {10, hundredths / 10, hundredths % 10});
-        const float x0 = cd.x - cd.width * frames.size() / 2.0f;
-        for (size_t i = 0; i < frames.size(); i++) {
-            tex.draw_texture(t_countdown, {.frame = frames[i], .x = x0 + cd.width * i, .y = cd.y});
+    if (has_countdown) {
+        sol::protected_function draw_countdown =
+            cached_skin_module_fn("loading/loading_countdown", "draw", "__loading_countdown_draw");
+        if (draw_countdown.valid()) {
+            auto r = draw_countdown(std::max(0.0, countdown_ms - (get_current_ms() - start_ms)));
+            if (!r.valid()) { sol::error err = r; spdlog::error("Lua error in loading_countdown.draw: {}", err.what()); }
         }
     }
 

@@ -122,8 +122,7 @@ void SettingsScreen::draw() {
     tex.draw_texture(t_background);
     box_manager->draw();
     tex.draw_texture(t_footer);
-    indicator->draw(tex.skin_config[SC::SONG_SELECT_INDICATOR].x,
-                    tex.skin_config[SC::SONG_SELECT_INDICATOR].y);
+    indicator->draw_on("song_select");
     coin_overlay->draw();
     allnet_indicator->draw();
 }

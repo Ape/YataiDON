@@ -9,7 +9,7 @@
 #include "../../libs/global_data.h"
 
 class ResultPlayer : public LuaScript {
-    sol::protected_function fn_update, fn_draw, fn_draw_gauge, fn_draw_front, fn_chara_pos, fn_nameplate_pos;
+    sol::protected_function fn_update, fn_draw, fn_draw_gauge, fn_draw_front, fn_chara_pos, fn_nameplate_pos, fn_draw_song_info;
     PlayerNum player_num = PlayerNum::P1;
     bool has_2p = false;
     bool is_2p  = false;
@@ -36,5 +36,7 @@ public:
     ResultPlayer(PlayerNum player_num, bool has_2p, bool is_2p);
     void update(double current_ms, bool fade_in_finished, bool is_skipped);
     void draw();
+    // the song number, title and subtitle at the top of the screen (the skin places and draws them)
+    void draw_song_info(const std::string& title, const std::string& subtitle, int song_number);
     double reveal_end_ms();
 };

@@ -22,10 +22,9 @@ private:
 
     TextureObject* t_warning = nullptr;
 
-    // skin_config "loading_countdown": x = centre, y = top, width = digit pitch, height = seconds
-    // (0 = none). The screen stays at least that long; kidou/countdown frames 0-9 are the digits,
-    // frame 10 the separator, drawn as S"CC (seconds, hundredths) counting down.
-    TextureObject* t_countdown = nullptr;
+    // Screen option loading_countdown: the skin's loading/loading_countdown module gives `seconds`, how
+    // long the screen stays at least, and draw(left_ms), which paints the countdown.
+    bool has_countdown = false;
     double countdown_ms = 0.0;
     double start_ms = 0.0;
     // a don (1P / 2P: F J / X C by default) skips the rest of the countdown; the song scan still

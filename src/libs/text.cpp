@@ -1,6 +1,7 @@
 #include "text.h"
 #include "han_fold_table.h"
 #include "script.h"
+#include "global_data.h"
 #include "filesystem.h"
 #include <vector>
 #include <cmath>
@@ -40,6 +41,69 @@ void FontManager::init(const fs::path& font_path) {
         sentinel_texture = ray::LoadTextureFromImage(px);
         ray::UnloadImage(px);
     }
+}
+
+static std::unordered_map<std::string, SkinInfo> text_entries;
+
+static double json_member(const rapidjson::Value& o, const char* key, double fallback) {
+    return o.HasMember(key) && o[key].IsNumber() ? o[key].GetDouble() : fallback;
+}
+
+static void read_text_entries(const fs::path& file, float scale) {
+    if (!fs::exists(file)) return;
+    try {
+        auto doc = read_json_file(file);
+        if (!doc.IsObject()) return;
+        for (auto& m : doc.GetObject()) {
+            const auto& v = m.value;
+            if (!v.IsObject() || !v.HasMember("text") || !v["text"].IsObject()) continue;
+            std::map<std::string, std::string> labels;
+            for (auto& t : v["text"].GetObject())
+                if (t.value.IsString()) labels[t.name.GetString()] = t.value.GetString();
+            text_entries[m.name.GetString()] = SkinInfo(
+                (float)json_member(v, "x", 0.0) * scale, (float)json_member(v, "y", 0.0) * scale,
+                (int)(json_member(v, "font_size", 0) * scale),
+                (float)json_member(v, "width", 0.0) * scale, (float)json_member(v, "height", 0.0) * scale,
+                labels, (float)json_member(v, "outline", -1.0));
+        }
+    } catch (const std::exception& e) {
+        spdlog::warn("text_config {}: {}", file.string(), e.what());
+    }
+}
+
+void FontManager::load_text_config(const fs::path& skin_root) {
+    text_entries.clear();
+    std::vector<fs::path> roots = skin_ancestor_roots();   // nearest first
+    roots.insert(roots.begin(), skin_root);
+    for (size_t i = roots.size(); i-- > 0;) {              // farthest first so nearer skins override
+        float scale = 1.0f;
+        if (i > 0) {
+            float aw = 1280.0f;
+            try {
+                auto cfg = read_json_file(roots[i] / "Graphics" / "skin_config.json");
+                if (cfg.HasMember("screen") && cfg["screen"].HasMember("width") && cfg["screen"]["width"].IsNumber())
+                    aw = cfg["screen"]["width"].GetFloat();
+            } catch (const std::exception&) {}
+            scale = (float)tex.screen_width / aw;
+        }
+        read_text_entries(roots[i] / "Graphics" / "skin_config.json", scale);
+        read_text_entries(roots[i] / "text_config.json", scale);
+    }
+}
+
+const SkinInfo* FontManager::get_text_info(const std::string& key) {
+    auto it = text_entries.find(key);
+    return it == text_entries.end() ? nullptr : &it->second;
+}
+
+std::string FontManager::get_text_label(const std::string& key) {
+    auto it = text_entries.find(key);
+    if (it == text_entries.end()) {
+        spdlog::warn("text_config: missing key '{}'", key);
+        return "";
+    }
+    return localized_text(it->second.text, global_data.config->general.language,
+                          LocalizedTextFallback::ENGLISH_OR_FIRST);
 }
 
 void FontManager::unload() {

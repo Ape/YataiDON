@@ -1,13 +1,6 @@
 #include "modifier.h"
 #include "../../libs/audio.h"
 
-const std::map<std::string, std::string> ModifierSelector::TEX_MAP = {
-    {"auto",    "mod_auto"},
-    {"speed",   "mod_baisaku"},
-    {"display", "mod_doron"},
-    {"inverse", "mod_abekobe"},
-    {"random",  "mod_kimagure"}
-};
 const std::array<std::string, 5> ModifierSelector::BASE_MOD_NAMES = {
     "auto", "speed", "display", "inverse", "random"
 };
@@ -29,11 +22,9 @@ void ModifierSelector::set_bool(int mod_index, bool value) {
     else if (n == "skip")    player->modifier_skip    = value;
 }
 
-std::unique_ptr<OutlinedText> ModifierSelector::make_text(const std::string& str) {
-    return std::make_unique<OutlinedText>(str, tex.skin_config[SC::MODIFIER_TEXT].font_size, ray::WHITE, ray::BLACK, false, 3.5f);
-}
-
 ModifierSelector::ModifierSelector(PlayerNum player_num, PlayerData* player) : player_num(player_num), player(player) {
+    static int next_instance_id = 0;
+    instance_id = ++next_instance_id;
     current_mod_index = 0;
     is_confirmed = false;
     is_finished = false;
@@ -56,50 +47,6 @@ ModifierSelector::ModifierSelector(PlayerNum player_num, PlayerData* player) : p
     fade_sideways   = (FadeAnimation*)tex.get_animation(32, true);
 
     audio.play_sound("voice_options_" + std::to_string((int)player_num) + "p", VolumePreset::VOICE);
-
-    t_top = tex.get_texture("modifier/top");
-    t_player_p = tex.get_texture("modifier/" + std::to_string((int)player_num) + "p");
-    t_bottom = tex.get_texture("modifier/bottom");
-    t_background = tex.get_texture("modifier/background");
-    t_mod_bg = tex.get_texture("modifier/mod_bg");
-    t_mod_bg_highlight = tex.get_texture("modifier/mod_bg_highlight");
-    t_mod_box = tex.get_texture("modifier/mod_box");
-    t_mod_yonbai = tex.get_texture("modifier/mod_yonbai");
-    t_mod_sanbai = tex.get_texture("modifier/mod_sanbai");
-    t_mod_detarame = tex.get_texture("modifier/mod_detarame");
-    t_blue_arrow = tex.get_texture("modifier/blue_arrow");
-    t_mod_icons.clear();
-    for (const auto& [name, icon] : TEX_MAP)
-        t_mod_icons[icon] = tex.get_texture("modifier/" + icon);
-
-    static const std::array<SC, 5> MOD_NAME_KEYS = {
-        SC::MODIFIER_NAME_AUTO, SC::MODIFIER_NAME_SPEED, SC::MODIFIER_NAME_DISPLAY,
-        SC::MODIFIER_NAME_INVERSE, SC::MODIFIER_NAME_RANDOM
-    };
-    for (const auto& key : MOD_NAME_KEYS)
-        text_name.push_back(make_text(tex.skin_config[key].text.at(language)));
-
-    if (has_row("skip"))
-        text_name.push_back(make_text(tex.skin_config[SC::MODIFIER_NAME_SKIP].text.at(language)));
-    if (has_neiro_row())
-        text_name.push_back(make_text(tex.skin_config[SC::MODIFIER_NAME_NEIRO].text.at(language)));
-
-    text_true      = make_text(tex.skin_config[SC::MODIFIER_TEXT_TRUE].text.at(language));
-    text_false     = make_text(tex.skin_config[SC::MODIFIER_TEXT_FALSE].text.at(language));
-    text_speed     = make_text(std::format("{:.1f}", player->modifier_speed / 10.0f));
-    text_kimagure  = make_text(tex.skin_config[SC::MODIFIER_TEXT_KIMAGURE].text.at(language));
-    text_detarame  = make_text(tex.skin_config[SC::MODIFIER_TEXT_DETARAME].text.at(language));
-
-    text_true_2     = make_text(tex.skin_config[SC::MODIFIER_TEXT_TRUE].text.at(language));
-    text_false_2    = make_text(tex.skin_config[SC::MODIFIER_TEXT_FALSE].text.at(language));
-    text_speed_2    = make_text(std::format("{:.1f}", player->modifier_speed / 10.0f));
-    text_kimagure_2 = make_text(tex.skin_config[SC::MODIFIER_TEXT_KIMAGURE].text.at(language));
-    text_detarame_2 = make_text(tex.skin_config[SC::MODIFIER_TEXT_DETARAME].text.at(language));
-
-    if (has_neiro_row()) {
-        text_neiro   = make_text(neiro_names[neiro_index]);
-        text_neiro_2 = make_text(neiro_names[neiro_index]);
-    }
 }
 
 ModifierSelector::~ModifierSelector() {
@@ -168,32 +115,7 @@ void ModifierSelector::start_text_animation(int dir) {
     move_sideways->start();
     fade_sideways->start();
     direction = dir;
-
-    const std::string& mod_name = mod_names[current_mod_index];
-    if (mod_name == "speed") {
-        text_speed_2 = std::move(text_speed);
-        text_speed = make_text(std::format("{:.1f}", player->modifier_speed / 10.0f));
-    } else if (mod_name == "neiro") {
-        text_neiro_2 = std::move(text_neiro);
-        text_neiro = make_text(neiro_names[neiro_index]);
-    } else if (mod_name == "random") {
-        if (player->modifier_random == 1) {
-            text_kimagure_2 = std::move(text_kimagure);
-            text_kimagure = make_text(tex.skin_config[SC::MODIFIER_TEXT_KIMAGURE].text.at(language));
-        } else if (player->modifier_random == 2) {
-            text_detarame_2 = std::move(text_detarame);
-            text_detarame = make_text(tex.skin_config[SC::MODIFIER_TEXT_DETARAME].text.at(language));
-        }
-    } else {
-        // bool mod
-        if (get_bool(current_mod_index)) {
-            text_true_2 = std::move(text_true);
-            text_true = make_text(tex.skin_config[SC::MODIFIER_TEXT_TRUE].text.at(language));
-        } else {
-            text_false_2 = std::move(text_false);
-            text_false = make_text(tex.skin_config[SC::MODIFIER_TEXT_FALSE].text.at(language));
-        }
-    }
+    change_seq++;
 }
 
 static int speed_step(int value, int dir) {
@@ -249,103 +171,14 @@ void ModifierSelector::right() {
     }
 }
 
-void ModifierSelector::draw_animated_text(const std::unique_ptr<OutlinedText>& primary, const std::unique_ptr<OutlinedText>& secondary, float x, float y, bool should_animate) {
-    if (should_animate && !move_sideways->is_finished) {
-        primary->draw({
-            .x = x + ((float)move_sideways->attribute * direction),
-            .y = y,
-            .fade = fade_sideways->attribute});
-        secondary->draw({
-            .x = (direction * -tex.skin_config[SC::OPTION_TEXT_IN].x) + x + ((float)move_sideways->attribute * direction),
-            .y = y,
-            .fade = 1.0f - fade_sideways->attribute});
-    } else {
-        primary->draw({.x = x, .y = y});
-    }
-}
-
-void ModifierSelector::draw() {
-    float move_val = is_confirmed
-        ? move->attribute + tex.skin_config[SC::SONG_SELECT_OFFSET].x
-        : -move->attribute;
-    float x = ((int)player_num - 1) * tex.skin_config[SC::OPTION_P2].x;
-    float mod_offset_y = tex.skin_config[SC::MODIFIER_OFFSET].y;
-
-    tex.draw_texture(t_top,    {.x=x, .y=move_val});
-    tex.draw_texture(t_player_p, {.x=x, .y=move_val});
-    tex.draw_texture(t_bottom, {.x=x, .y=move_val + ((int)mod_names.size() * mod_offset_y)});
-
-    for (int i = 0; i < (int)mod_names.size(); i++) {
-        float row_y = move_val + (i * mod_offset_y);
-        const std::string& mod_name = mod_names[i];
-        bool is_current = (i == current_mod_index);
-
-        tex.draw_texture(t_background,                              {.x=x, .y=row_y});
-        tex.draw_texture(is_current ? t_mod_bg_highlight : t_mod_bg, {.x=x, .y=row_y});
-        tex.draw_texture(t_mod_box,                                 {.x=x, .y=row_y});
-
-        text_name[i]->draw({
-            .x = tex.skin_config[SC::MODIFIER_OFFSET_2].x + x,
-            .y = tex.skin_config[SC::MODIFIER_TEXT].y + row_y
-        });
-
-        float text_base_x = tex.skin_config[SC::MODIFIER_TEXT].x;
-        float text_y = tex.skin_config[SC::MODIFIER_TEXT].y + row_y;
-
-        if (mod_name == "speed") {
-            float tx = text_base_x - (text_speed->width / 2.0f);
-            draw_animated_text(text_speed, text_speed_2, tx + x, text_y, is_current);
-
-            float spd = player->modifier_speed;
-            if      (spd >= 40) tex.draw_texture(t_mod_yonbai, {.x=x, .y=row_y});
-            else if (spd >= 30) tex.draw_texture(t_mod_sanbai, {.x=x, .y=row_y});
-            else if (spd >  10) tex.draw_texture(t_mod_icons.at(TEX_MAP.at(mod_name)), {.x=x, .y=row_y});
-
-        } else if (mod_name == "neiro") {
-            float tx = text_base_x - (text_neiro->width / 2.0f);
-            draw_animated_text(text_neiro, text_neiro_2, tx + x, text_y, is_current);
-
-        } else if (mod_name == "random") {
-            if (player->modifier_random == 1) {
-                float tx = text_base_x - (text_kimagure->width / 2.0f);
-                draw_animated_text(text_kimagure, text_kimagure_2, tx + x, text_y, is_current);
-                tex.draw_texture(t_mod_icons.at(TEX_MAP.at(mod_name)), {.x=x, .y=row_y});
-            } else if (player->modifier_random == 2) {
-                float tx = text_base_x - (text_detarame->width / 2.0f);
-                draw_animated_text(text_detarame, text_detarame_2, tx + x, text_y, is_current);
-                tex.draw_texture(t_mod_detarame, {.x=x, .y=row_y});
-            } else {
-                float tx = text_base_x - (text_false->width / 2.0f);
-                draw_animated_text(text_false, text_false_2, tx + x, text_y, is_current);
-            }
-
-        } else {
-            // bool mod
-            bool val = get_bool(i);
-            auto icon = TEX_MAP.find(mod_name);
-            if (val && icon != TEX_MAP.end())
-                tex.draw_texture(t_mod_icons.at(icon->second), {.x=x, .y=row_y});
-            const auto& primary   = val ? text_true   : text_false;
-            const auto& secondary = val ? text_true_2 : text_false_2;
-            float tx = text_base_x - (primary->width / 2.0f);
-            draw_animated_text(primary, secondary, tx + x, text_y, is_current);
-        }
-
-        if (is_current) {
-            tex.draw_texture(t_blue_arrow, {.x=x - (float)blue_arrow_move->attribute, .y=row_y, .fade=blue_arrow_fade->attribute});
-            tex.draw_texture(t_blue_arrow, {.mirror=Mirror::HORIZONTAL, .x=x + tex.skin_config[SC::MODIFIER_OFFSET_2].y + (float)blue_arrow_move->attribute, .y=row_y, .fade=blue_arrow_fade->attribute});
-        }
-    }
-}
-
 std::string ModifierSelector::row_label(const std::string& n) const {
-    if (n == "auto")    return tex.skin_config[SC::MODIFIER_NAME_AUTO].text.at(language);
-    if (n == "speed")   return tex.skin_config[SC::MODIFIER_NAME_SPEED].text.at(language);
-    if (n == "display") return tex.skin_config[SC::MODIFIER_NAME_DISPLAY].text.at(language);
-    if (n == "inverse") return tex.skin_config[SC::MODIFIER_NAME_INVERSE].text.at(language);
-    if (n == "random")  return tex.skin_config[SC::MODIFIER_NAME_RANDOM].text.at(language);
-    if (n == "skip")    return tex.skin_config[SC::MODIFIER_NAME_SKIP].text.at(language);
-    if (n == "neiro")   return tex.skin_config[SC::MODIFIER_NAME_NEIRO].text.at(language);
+    if (n == "auto")    return font_manager.get_text_label("modifier_name_auto");
+    if (n == "speed")   return font_manager.get_text_label("modifier_name_speed");
+    if (n == "display") return font_manager.get_text_label("modifier_name_display");
+    if (n == "inverse") return font_manager.get_text_label("modifier_name_inverse");
+    if (n == "random")  return font_manager.get_text_label("modifier_name_random");
+    if (n == "skip")    return font_manager.get_text_label("modifier_name_skip");
+    if (n == "neiro")   return font_manager.get_text_label("modifier_name_neiro");
     return std::string();
 }
 
@@ -372,18 +205,18 @@ std::vector<ModifierSelector::ModRow> ModifierSelector::lua_rows() {
             r.changed = player->neiro_index != 0;
         } else if (n == "random") {
             if (player->modifier_random == 1)
-                r.value = tex.skin_config[SC::MODIFIER_TEXT_KIMAGURE].text.at(language);
+                r.value = font_manager.get_text_label("modifier_text_kimagure");
             else if (player->modifier_random == 2)
-                r.value = tex.skin_config[SC::MODIFIER_TEXT_DETARAME].text.at(language);
+                r.value = font_manager.get_text_label("modifier_text_detarame");
             else
-                r.value = tex.skin_config[SC::MODIFIER_TEXT_FALSE].text.at(language);
+                r.value = font_manager.get_text_label("modifier_text_false");
             r.state   = player->modifier_random;
             r.changed = player->modifier_random != 0;
         } else {
             bool v    = get_bool(i);
             r.state   = v ? 1 : 0;
-            r.value   = v ? tex.skin_config[SC::MODIFIER_TEXT_TRUE].text.at(language)
-                          : tex.skin_config[SC::MODIFIER_TEXT_FALSE].text.at(language);
+            r.value   = v ? font_manager.get_text_label("modifier_text_true")
+                          : font_manager.get_text_label("modifier_text_false");
             r.changed = v;
         }
         r.enabled = !is_confirmed && i >= current_mod_index;

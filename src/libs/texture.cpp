@@ -2,6 +2,7 @@
 #include "profiler.h"
 #include "global_data.h"
 #include "script.h"
+#include "text.h"
 #include "filesystem.h"
 #include <spdlog/spdlog.h>
 #include <charconv>
@@ -26,6 +27,14 @@ inline double json_member(const Value& o, const char* key, double fallback) {
 }
 
 }  // namespace
+
+std::string TextureWrapper::skin_text(const std::string& key, const std::string& language,
+                                      const std::string& fallback) const {
+    const SkinInfo* info = font_manager.get_text_info(key);
+    if (!info) return fallback;
+    auto t = info->text.find(language);
+    return t == info->text.end() ? fallback : t->second;
+}
 
 void TextureWrapper::init(const fs::path& skin_path) {
     graphics_path = skin_path;

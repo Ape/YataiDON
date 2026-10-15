@@ -29,6 +29,8 @@ private:
     sol::protected_function fn_is_cloud_finished;
     sol::protected_function fn_get_nameplate_fade;
     sol::protected_function fn_finish_cloud;
+    sol::protected_function fn_get_overlay_pos;
+    float nameplate_x = 0.0f, nameplate_y = 0.0f, indicator_x = 0.0f, indicator_y = 0.0f;
     bool loading = false;
 
 public:

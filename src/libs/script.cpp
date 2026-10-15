@@ -632,6 +632,21 @@ void ScriptManager::register_lua_bindings() {
         ray::DrawRectangle(sx, sy, ex - sx, ey - sy, ray::Color{to_u8(r), to_u8(g), to_u8(b), to_u8(a)});
     });
 
+// rounded rectangle with an outline; roundness is raylib's 0..1 corner factor, the outline thickness is in pixels
+    tex.set_function("draw_rounded_rect", [](float x, float y, float w, float h, float roundness,
+                                             std::array<double, 4> fill, double thickness, std::array<double, 4> line) {
+        auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
+        int sx = virtual_to_screen_x(x);
+        int ex = virtual_to_screen_x(x + w);
+        int sy = virtual_to_screen_y(y);
+        int ey = virtual_to_screen_y(y + h);
+        ray::Rectangle r{(float)sx, (float)sy, (float)(ex - sx), (float)(ey - sy)};
+        ray::DrawRectangleRounded(r, roundness, 16, ray::Color{to_u8(fill[0]), to_u8(fill[1]), to_u8(fill[2]), to_u8(fill[3])});
+        if (thickness > 0)
+            ray::DrawRectangleRoundedLinesEx(r, roundness, 16, (float)thickness,
+                                             ray::Color{to_u8(line[0]), to_u8(line[1]), to_u8(line[2]), to_u8(line[3])});
+    });
+
 tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
         int sx = virtual_to_screen_x(x);
         int ex = virtual_to_screen_x(x + w);
@@ -645,12 +660,16 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
     });
 
     tex.set_function("get_skin_config", [](const std::string& config_key) -> sol::optional<sol::table> {
-        auto config_it = script_manager.tex.skin_config_by_name.find(config_key);
-        if (config_it == script_manager.tex.skin_config_by_name.end()) {
-            return sol::nullopt;
+        const SkinInfo* skin_ptr = font_manager.get_text_info(config_key);
+        if (!skin_ptr) {
+            auto config_it = script_manager.tex.skin_config_by_name.find(config_key);
+            if (config_it == script_manager.tex.skin_config_by_name.end()) {
+                return sol::nullopt;
+            }
+            skin_ptr = &config_it->second;
         }
 
-        const auto& skin_info = config_it->second;
+        const auto& skin_info = *skin_ptr;
 
         sol::table info = script_manager.lua->create_table();
         info["x"] = skin_info.x;
@@ -745,9 +764,9 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
 
     tex.set_function("language", []() { return global_data.config->general.language; });
     tex.set_function("skin_text", [](const std::string& key, sol::optional<std::string> lang_opt) -> std::string {
-        auto it = script_manager.tex.skin_config_by_name.find(key);
-        if (it == script_manager.tex.skin_config_by_name.end()) return "";
-        const auto& m = it->second.text;
+        const SkinInfo* info = font_manager.get_text_info(key);
+        if (!info) return "";
+        const auto& m = info->text;
         for (const std::string& l : {lang_opt.value_or(global_data.config->general.language), std::string("ja"), std::string("en")}) {
             auto t = m.find(l);
             if (t != m.end() && !t->second.empty()) return t->second;
@@ -773,18 +792,18 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
     text.set_function("create_text", [](const std::string& skin_config_key, std::array<double, 4> color,
         std::array<double, 4> outline_color, bool is_vertical, float outline_thickness, float spacing,
         sol::optional<std::string> font) -> std::unique_ptr<OutlinedText> {
-            auto config_it = script_manager.tex.skin_config_by_name.find(skin_config_key);
-            if (config_it == script_manager.tex.skin_config_by_name.end()) {
-                spdlog::error("Skin config key not found: {}", skin_config_key);
-                throw sol::error("Skin config key not found: " + skin_config_key);
-            }
-            int font_size = config_it->second.font_size;
+            const SkinInfo* cfg = font_manager.get_text_info(skin_config_key);
             std::string text;
-            const auto& text_map = config_it->second.text;
-            for (const std::string& l : {global_data.config->general.language, std::string("ja"), std::string("en")}) {
-                auto t = text_map.find(l);
-                if (t != text_map.end() && !t->second.empty()) { text = t->second; break; }
+            if (cfg) {
+                text = font_manager.get_text_label(skin_config_key);
+            } else {   // a position-only skin_config entry draws empty text
+                cfg = script_manager.tex.skin_entry(skin_config_key);
+                if (!cfg) {
+                    spdlog::error("Skin config key not found: {}", skin_config_key);
+                    throw sol::error("Skin config key not found: " + skin_config_key);
+                }
             }
+            int font_size = cfg->font_size;
             auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
             ray::Color color_val;
             color_val.r = to_u8(color[0]);
@@ -797,8 +816,8 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
             outline_color_val.b = to_u8(outline_color[2]);
             outline_color_val.a = to_u8(outline_color[3]);
             std::unique_ptr<OutlinedText> ptr = std::make_unique<OutlinedText>(text, font_size, color_val, outline_color_val, is_vertical, outline_thickness, spacing, 1.0f, font.value_or(""));
-            ptr->x_offset = config_it->second.x;
-            ptr->y_offset = config_it->second.y;
+            ptr->x_offset = cfg->x;
+            ptr->y_offset = cfg->y;
             return ptr;
     });
 

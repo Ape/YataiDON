@@ -27,43 +27,6 @@ private:
     FadeAnimation* blue_arrow_fade;
     MoveAnimation* blue_arrow_move;
 
-    void draw_statistics();
-    void draw_diff_select();
-    void draw_level_select();
-
-    // Fixed-path textures resolved once in the constructor instead of calling
-    // tex.get_texture() every frame from the draw_*() methods.
-    TextureObject* t_stat_bg = nullptr;   // player-num-specific, fixed per instance
-    TextureObject* t_stat_overlay = nullptr;
-    TextureObject* t_stat_diff = nullptr;
-    TextureObject* t_stat_starx = nullptr;
-    TextureObject* t_stat_prev = nullptr;
-    TextureObject* t_stat_num_star = nullptr;
-    TextureObject* t_stat_num = nullptr;
-    TextureObject* t_stat_num_small = nullptr;
-    TextureObject* t_background = nullptr;
-    TextureObject* t_box_highlight = nullptr;
-    TextureObject* t_box_text_highlight = nullptr;
-    TextureObject* t_box = nullptr;
-    TextureObject* t_box_text = nullptr;
-    TextureObject* t_back_outline = nullptr;
-    TextureObject* t_box_outline = nullptr;
-    TextureObject* t_box_diff = nullptr;
-    TextureObject* t_star_select_prompt = nullptr;
-    TextureObject* t_star_select_text = nullptr;
-    TextureObject* t_star_limit = nullptr;
-    TextureObject* t_level_box = nullptr;
-    TextureObject* t_diff = nullptr;
-    TextureObject* t_star_num = nullptr;
-    TextureObject* t_star = nullptr;
-    TextureObject* t_small_box_highlight = nullptr;
-    TextureObject* t_small_box_text_highlight = nullptr;
-    TextureObject* t_small_box_outline = nullptr;
-    TextureObject* t_small_box = nullptr;
-    TextureObject* t_small_box_text = nullptr;
-    TextureObject* t_pongos = nullptr;
-    TextureObject* t_arrow = nullptr;
-
     bool one_menu_sort = false;
     SongSelectScript* script = nullptr;
     int session = 0;
@@ -93,9 +56,28 @@ public:
     std::optional<std::pair<int, int>> input_select();
     void input_left();
     void input_right();
-    void draw();
+    void draw();   // the skin's SongSelect:draw_sort_window (or the default sort_window module)
 
     std::optional<std::array<int, 3>> take_result();
+
+    // state the Lua sort window draws from
+    bool lua_one_menu() const        { return one_menu_sort; }
+    int  lua_box() const             { return selected_box; }          // -1 = back, 0..4 = course, 5 = previous
+    int  lua_level() const           { return selected_level; }
+    bool lua_in_level() const        { return in_level_select; }
+    bool lua_confirmation() const    { return confirmation; }
+    int  lua_confirm_index() const   { return confirm_index; }
+    int  lua_num_boxes() const       { return num_boxes; }
+    int  lua_prev_diff() const       { return prev_diff; }
+    int  lua_prev_level() const      { return prev_level; }
+    int  lua_limit(int box) const    { return (box >= 0 && box < (int)limits.size()) ? limits[box] : 0; }
+    CourseStats lua_stats(int diff, int level) { return statistics[diff][level]; }
+    std::array<int, 3> lua_sums(int diff)      { return diff_sort_sum_stat[diff]; }   // total, clears, full combos
+    // the classic window's animations: bg_resize, diff_fade_in, box_flicker, bounce, arrow_fade, arrow_move
+    std::array<double, 6> lua_anim() const {
+        return { bg_resize->attribute, diff_fade_in->attribute, box_flicker->attribute,
+                 confirmation_bounce->attribute, blue_arrow_fade->attribute, blue_arrow_move->attribute };
+    }
 
     int  lua_session() const     { return session; }         // 0..2 (3 = all decided)
     int  lua_diff() const        { return sort_param[0]; }   // 1..5 (5 = oni-ura)

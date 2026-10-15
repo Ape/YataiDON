@@ -4,11 +4,10 @@
 void ResultScreen::on_screen_start() {
     Screen::on_screen_start();
     SessionData& session_data = global_data.session_data[(int)global_data.player_num];
-    song_info = std::make_unique<OutlinedText>(session_data.song_title, tex.skin_config[SC::SONG_INFO_RESULT].font_size, ray::WHITE, ray::BLACK, false, 5);
-    song_info_subtitle.reset();
-    if (session_data.song_subtitle_full_display && !session_data.song_subtitle.empty()) {
-        song_info_subtitle = std::make_unique<OutlinedText>(session_data.song_subtitle, tex.skin_config[SC::SONG_INFO_RESULT_SUBTITLE].font_size, ray::WHITE, ray::BLACK, false, 5);
-    }
+    song_title = session_data.song_title;
+    song_subtitle = (session_data.song_subtitle_full_display && !session_data.song_subtitle.empty())
+        ? session_data.song_subtitle : std::string();
+    song_number = global_data.songs_played + 1;
     audio.play_sound("bgm", VolumePreset::MUSIC);
     fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(0));
     retry_message.reset();
@@ -30,7 +29,6 @@ void ResultScreen::on_screen_start() {
         background.emplace(global_data.player_num, tex.screen_width);
     }
     player_1.emplace(global_data.player_num, false, false);
-    song_num = std::make_unique<SongNum>(global_data.songs_played + 1);
 }
 
 Screens ResultScreen::on_screen_end(Screens next_screen) {
@@ -143,15 +141,7 @@ void ResultScreen::draw_overlay() {
 }
 
 void ResultScreen::draw_song_info() {
-    song_num->draw(tex.skin_config[SC::SONG_NUM_RESULT].x, tex.skin_config[SC::SONG_NUM_RESULT].y, 1.0);
-    const SkinInfo& info = tex.skin_config[SC::SONG_INFO_RESULT];
-    float box_width = info.width;
-    float text_x = box_width > 0 ? info.x + (box_width - song_info->width) / 2 : info.x - song_info->width;
-    song_info->draw({.x=text_x, .y=info.y - song_info->height / 2, .fade=1.0});
-    if (song_info_subtitle) {
-        float sub_text_x = box_width > 0 ? info.x + (box_width - song_info_subtitle->width) / 2 : info.x - song_info_subtitle->width;
-        song_info_subtitle->draw({.x=sub_text_x, .y=tex.skin_config[SC::SONG_INFO_RESULT_SUBTITLE].y - song_info_subtitle->height / 2, .fade=1.0});
-    }
+    if (player_1.has_value()) player_1->draw_song_info(song_title, song_subtitle, song_number);
 }
 
 void ResultScreen::draw() {

@@ -75,6 +75,7 @@ public:
     void register_lua_bindings();
     void refresh_method_cache();
 
+
     bool script_executed(const std::string& script_name) const { return executed_scripts.count(script_name) != 0; }
     void mark_script_executed(const std::string& script_name) { executed_scripts.insert(script_name); }
 };

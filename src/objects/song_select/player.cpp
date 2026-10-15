@@ -5,35 +5,8 @@
 #include "../../libs/scores.h"
 #include "../../libs/text.h"
 
-namespace {
-    OutlinedText* selected_diff_label(int diff) {
-        static std::array<std::unique_ptr<OutlinedText>, 4> cache;
-        static std::string cached_lang;
-        const std::string& lang = global_data.config->general.language;
-        if (lang != cached_lang) {
-            static constexpr std::array<SC, 4> keys = {
-                SC::DIFF_TOWER_EASY, SC::DIFF_TOWER_NORMAL, SC::DIFF_TOWER_HARD, SC::DIFF_TOWER_ONI,
-            };
-            std::array<std::string, 4> labels;
-            for (size_t i = 0; i < 4; i++) {
-                const SkinInfo& cfg = tex.skin_config[keys[i]];
-                auto it = cfg.text.find(lang);
-                labels[i] = it != cfg.text.end() ? it->second
-                          : !cfg.text.empty()    ? cfg.text.begin()->second
-                                                  : "";
-            }
-            const SkinInfo& box_cfg = tex.skin_config[SC::SELECTED_DIFF_TEXT_BOX];
-            int font_size = (int)box_cfg.height;
-            for (size_t i = 0; i < 4; i++)
-                cache[i] = std::make_unique<OutlinedText>(labels[i], font_size, ray::WHITE, ray::BLACK, false);
-            cached_lang = lang;
-        }
-        return cache[diff].get();
-    }
-}
-
 void SongSelectPlayer::try_lua_selector(bool is_half, float fade_in, int pass) {
-    selector_handled_by_lua = script && script->draw_selector(this, is_half, fade_in, pass);
+    if (script) script->draw_selector(this, is_half, fade_in, pass);
 }
 
 SongSelectPlayer::SongSelectPlayer(PlayerNum player_num)
@@ -73,17 +46,6 @@ SongSelectPlayer::SongSelectPlayer(PlayerNum player_num)
     selected_diff_highlight_fade  = (FadeAnimation*)tex.get_animation(35, true);
     selected_diff_text_resize     = (TextureResizeAnimation*)tex.get_animation(36, true);
     selected_diff_text_fadein     = (FadeAnimation*)tex.get_animation(37, true);
-
-    std::string p = std::to_string((int)player_num) + "p";
-    t_balloon           = tex.get_texture("diff_select/" + p + "_balloon");
-    t_balloon_half       = tex.get_texture("diff_select/" + p + "_balloon_half");
-    t_outline            = tex.get_texture("diff_select/" + p + "_outline");
-    t_outline_half       = tex.get_texture("diff_select/" + p + "_outline_half");
-    t_outline_back       = tex.get_texture("diff_select/" + p + "_outline_back");
-    t_outline_back_half  = tex.get_texture("diff_select/" + p + "_outline_back_half");
-    t_background_diff = tex.get_texture("global/background_diff");
-    t_background_diff_highlight = tex.get_texture("global/background_diff_highlight");
-    t_bg_diff_text_bg = tex.get_texture("global/bg_diff_text_bg");
 }
 
 void SongSelectPlayer::update(double current_time) {
@@ -491,95 +453,16 @@ void SongSelectPlayer::toggle_ura_mode() {
     if (song) song->is_ura = is_ura;
 }
 
-void SongSelectPlayer::draw_selector(bool is_half, float fade_in) {
-    if (fade_in < 1.0f) return;
-    float fade = (neiro_selector.has_value() || modifier_selector.has_value())
-        ? 0.5f : fade_in;
-    float direction = diff_select_move_right ? 1.0f : -1.0f;
-    float offset = tex.skin_config[SC::SELECTOR_OFFSET].x;
-    float balloon_offset_1 = tex.skin_config[SC::SELECTOR_BALLOON_OFFSET_1].x;
-    float balloon_offset_2 = tex.skin_config[SC::SELECTOR_BALLOON_OFFSET_2].x;
-
-    TextureObject* balloon = is_half ? t_balloon_half : t_balloon;
-    TextureObject* outline = is_half ? t_outline_half : t_outline;
-    TextureObject* outline_back = is_half ? t_outline_back_half : t_outline_back;
-
-    if (selected_difficulty <= Difficulty::NEIRO || prev_diff == Difficulty::NEIRO) {
-        if (prev_diff == Difficulty::NEIRO && selected_difficulty >= Difficulty::EASY) {
-            if (!diff_selector_move_2->is_finished) {
-                float bx = (((int)prev_diff + 3) * balloon_offset_2) + balloon_offset_1 + (diff_selector_move_2->attribute * direction);
-                tex.draw_texture(balloon,      {.x=bx, .fade=fade});
-                tex.draw_texture(outline_back, {.x=(((int)prev_diff + 3) * balloon_offset_2) + ((float)diff_selector_move_2->attribute * direction)});
-            } else {
-                Difficulty difficulty = std::min(Difficulty::ONI, selected_difficulty);
-                tex.draw_texture(balloon, {.x=((int)difficulty * offset), .fade=fade});
-                tex.draw_texture(outline, {.x=((int)difficulty * offset)});
-            }
-        } else if (!diff_selector_move_2->is_finished) {
-            if (selected_difficulty != Difficulty::BACK) {
-                tex.draw_texture(outline_back, {.x=(((int)prev_diff + 3) * balloon_offset_2) + ((float)diff_selector_move_2->attribute * direction)});
-                float bx = (((int)prev_diff + 3) * balloon_offset_2) + balloon_offset_1 + (diff_selector_move_2->attribute * direction);
-                tex.draw_texture(balloon, {.x=bx, .fade=fade});
-            } else {
-                tex.draw_texture(outline_back, {.x=(((int)prev_diff + 3) * balloon_offset_2) + ((float)diff_selector_move_2->attribute * direction), .fade=fade});
-            }
-        } else {
-            if (selected_difficulty != Difficulty::BACK) {
-                tex.draw_texture(outline_back, {.x=(((int)selected_difficulty + 3) * balloon_offset_2)});
-                float bx = (((int)selected_difficulty + 3) * balloon_offset_2) + balloon_offset_1;
-                tex.draw_texture(balloon, {.x=bx, .fade=fade});
-            } else {
-                tex.draw_texture(outline_back, {.x=(((int)selected_difficulty + 3) * balloon_offset_2), .fade=fade});
-            }
-        }
-    } else {
-        if (prev_diff == Difficulty::NEIRO) return;
-        if (!diff_selector_move_1->is_finished) {
-            Difficulty difficulty = std::min(Difficulty::ONI, prev_diff);
-            float bx = ((int)difficulty * offset) + (diff_selector_move_1->attribute * direction);
-            tex.draw_texture(balloon, {.x=bx, .fade=fade});
-            tex.draw_texture(outline, {.x=bx});
-        } else {
-            Difficulty difficulty = std::min(Difficulty::ONI, selected_difficulty);
-            tex.draw_texture(balloon, {.x=((int)difficulty * offset), .fade=fade});
-            tex.draw_texture(outline, {.x=((int)difficulty * offset)});
-        }
-    }
-}
-
 void SongSelectPlayer::draw_background_diffs(SongSelectState state) {
     if (!selected_song || state != SongSelectState::SONG_SELECTED || selected_difficulty < Difficulty::EASY)
         return;
-
-    float x_offset = ((int)player_num == 2) ? tex.skin_config[SC::SONG_SELECT_BG_DIFF_P2_OFFSET].x : 0.0f;
-    float bounce_y  = -selected_diff_bounce->attribute;
-    float bounce_y2 =  selected_diff_bounce->attribute;
-    int diff_frame     = (int)(std::min(Difficulty::URA, selected_difficulty));
-    int diff_frame_oni = (int)(std::min(Difficulty::ONI, selected_difficulty));
-
-    tex.draw_texture(t_background_diff, {.frame=diff_frame, .x=x_offset, .y=bounce_y,  .y2=bounce_y2, .fade=std::min(0.5f, (float)selected_diff_fadein->attribute)});
-    if (selected_diff_highlight_fade->is_reversing || selected_diff_highlight_fade->is_finished)
-        tex.draw_texture(t_background_diff, {.frame=diff_frame, .x=x_offset, .y=bounce_y, .y2=bounce_y2});
-    tex.draw_texture(t_background_diff_highlight,  {.frame=diff_frame_oni, .x=x_offset, .fade=selected_diff_highlight_fade->attribute});
-    tex.draw_texture(t_bg_diff_text_bg, {.scale=(float)selected_diff_text_resize->attribute, .center=true, .x=x_offset, .fade=std::min(0.5f, (float)selected_diff_text_fadein->attribute)});
-
-    OutlinedText* diff_label = selected_diff_label(diff_frame_oni);
-    const SkinInfo& diff_text_pos = tex.skin_config[SC::SELECTED_DIFF_TEXT_BOX];
-    diff_label->draw({
-        .scale = (float)selected_diff_text_resize->attribute,
-        .center = true,
-        .x = diff_text_pos.x + x_offset - diff_label->width / 2.0f,
-        .y = diff_text_pos.y - diff_label->height / 2.0f,
-        .fade = selected_diff_text_fadein->attribute
-    });
+    if (script) script->draw_background_diffs(this);
 }
 
 void SongSelectPlayer::draw(SongSelectState state, bool is_half, float diff_fade_in) {
     if (selected_song && state == SongSelectState::SONG_SELECTED) {
         try_lua_selector(is_half, diff_fade_in, 1);
-        if (!selector_handled_by_lua) draw_selector(is_half, diff_fade_in);
     }
-    selector_handled_by_lua = false;
 
     float offset = 0.0f;
     if (neiro_selector.has_value()) {
@@ -607,16 +490,10 @@ void SongSelectPlayer::draw(SongSelectState state, bool is_half, float diff_fade
     }
 
     bool panel_by_lua = false;
-    if (neiro_selector.has_value()) {
-        bool by_lua = script && script->draw_option_panel(this, 2);
-        if (!by_lua) neiro_selector->draw();
-        panel_by_lua = panel_by_lua || by_lua;
-    }
-    if (modifier_selector.has_value()) {
-        bool by_lua = script && script->draw_option_panel(this, 1);
-        if (!by_lua) modifier_selector->draw();
-        panel_by_lua = panel_by_lua || by_lua;
-    }
+    if (neiro_selector.has_value() && script)
+        panel_by_lua = script->draw_option_panel(this, 2) || panel_by_lua;
+    if (modifier_selector.has_value() && script)
+        panel_by_lua = script->draw_option_panel(this, 1) || panel_by_lua;
     option_panel_by_lua = panel_by_lua;
     if (ura_switch.has_value()) ura_switch->draw();
 }

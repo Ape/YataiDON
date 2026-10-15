@@ -1,20 +1,17 @@
 #pragma once
 
-#include <algorithm>
-#include <cmath>
-#include <memory>
 #include <string>
 
 #include "../../libs/audio.h"
-#include "../../libs/screen.h"
-#include "../../libs/text.h"
-#include "../../libs/texture.h"
+#include "../../libs/script.h"
 
-class DanBetween {
+// The song intro between dan courses: doors close over the lane, the song title shows, the doors open
+// on the next chart. This keeps the timing and the door sounds; the skin's DanBetween
+// (game/dan_between.lua) draws the frame for the time elapsed so far.
+class DanBetween : public LuaScript {
 public:
     static constexpr double FPS     = 60.0;
     static constexpr double F_START = 2.0;
-    static constexpr double F_TEXT  = 120.0;
     static constexpr double F_OPEN  = 201.0;
     static constexpr double F_END   = 366.0;
 
@@ -36,40 +33,8 @@ private:
     bool   open_fired = false;
     double start_ms   = 0.0;
     double elapsed    = 0.0;
-    std::unique_ptr<OutlinedText> title_text;
-    std::unique_ptr<OutlinedText> subtitle_text;
-
-    double clip_frame() const;
-    double text_alpha() const;
-    double door_tx() const;
+    sol::protected_function fn_draw;
 };
-
-
-namespace dan_between_detail {
-
-inline float skin_outline(const SkinInfo& s) { return s.outline >= 0 ? s.outline : 4.0f; }
-
-inline double fallback_tx(double f) {
-    auto lerp = [](double a, double b, double t) { return a + (b - a) * t; };
-    double px;
-    if (f <= 2.0)       px = 714.0;
-    else if (f < 3.0)   px = lerp(714.0, 588.2, f - 2.0);
-    else if (f < 19.0) {
-        const double k = (f - 3.0) / 16.0;
-        px = lerp(588.2, 291.4, (1.0 - (std::exp(-3.0 * k) - std::exp(-3.0)) / (1.0 - std::exp(-3.0))));
-    }
-    else if (f < 51.0)  px = lerp(291.4, 272.5, (f - 19.0) / 32.0);
-    else if (f < 64.0)  px = lerp(272.5, 240.0, (f - 51.0) / 13.0);
-    else if (f <= DanBetween::F_OPEN) px = 240.0;
-    else if (f < DanBetween::F_OPEN + 15.0) {
-        const double k = (f - DanBetween::F_OPEN) / 15.0;
-        px = lerp(240.0, 714.0, k * (2.0 - k));
-    }
-    else px = 714.0;
-    return px / 480.0;
-}
-
-}  // namespace dan_between_detail
 
 inline void DanBetween::start(double now, const std::string& title,
                               const std::string& subtitle, bool show_subtitle) {
@@ -78,19 +43,11 @@ inline void DanBetween::start(double now, const std::string& title,
     start_ms   = now;
     elapsed    = 0.0;
 
-    const SkinInfo* t = tex.skin_entry("dan_between_title");
-    const SkinInfo* s = tex.skin_entry("dan_between_sub");
-    title_text.reset();
-    subtitle_text.reset();
-    if (t && !title.empty()) {
-        title_text = std::make_unique<OutlinedText>(
-            title, t->font_size > 0 ? t->font_size : 54, ray::WHITE, ray::BLACK,
-            false, dan_between_detail::skin_outline(*t));
-    }
-    if (s && show_subtitle && !subtitle.empty()) {
-        subtitle_text = std::make_unique<OutlinedText>(
-            subtitle, s->font_size > 0 ? s->font_size : 30, ray::WHITE, ray::BLACK,
-            false, dan_between_detail::skin_outline(*s));
+    fn_draw = {};
+    if (load("DanBetween", "dan_between")) {
+        fn_draw = lua_object["draw"];
+        sol::protected_function fn_start = lua_object["start"];
+        call(fn_start, "DanBetween:start", title, subtitle, show_subtitle);
     }
 
     audio.play_sound("fusuma_close", VolumePreset::SOUND);
@@ -100,8 +57,8 @@ inline void DanBetween::stop() {
     active     = false;
     open_fired = false;
     elapsed    = 0.0;
-    title_text.reset();
-    subtitle_text.reset();
+    fn_draw    = {};
+    lua_object = sol::table();   // never outlive the Lua state across a skin reload
 }
 
 inline void DanBetween::update(double now) {
@@ -114,80 +71,7 @@ inline void DanBetween::update(double now) {
     if (elapsed >= TOTAL_MS) stop();
 }
 
-inline double DanBetween::clip_frame() const {
-    return F_START + elapsed * FPS / 1000.0;
-}
-
-inline double DanBetween::door_tx() const {
-    return dan_between_detail::fallback_tx(clip_frame());
-}
-
-inline double DanBetween::text_alpha() const {
-    const double f = clip_frame();
-    if (f < F_TEXT) return 0.0;
-    if (f < 337.0)  return 1.0;
-    return std::clamp((365.0 - f) / 28.0, 0.0, 1.0);
-}
-
 inline void DanBetween::draw(float lane_y) {
     if (!active) return;
-    const double f = clip_frame();
-    if (f >= F_END) return;
-    if (!tex.has_texture("lane/dan_between_fusuma")) return;
-
-    TextureObject* door_id = tex.get_texture("lane/dan_between_fusuma");
-    const TextureObject& door = *door_id;
-
-    const double a = text_alpha();
-    if (a > 0.0) {
-        if (title_text) {
-            if (const SkinInfo* c = tex.skin_entry("dan_between_title")) {
-                title_text->draw({.x = c->x - title_text->width / 2.0f,
-                                  .y = c->y - title_text->height / 2.0f + lane_y,
-                                  .fade = a});
-            }
-        }
-        if (subtitle_text) {
-            if (const SkinInfo* c = tex.skin_entry("dan_between_sub")) {
-                subtitle_text->draw({.x = c->x - subtitle_text->width / 2.0f,
-                                     .y = c->y - subtitle_text->height / 2.0f + lane_y,
-                                     .fade = a});
-            }
-        }
-    }
-
-    float mask_x = 498.0f, mask_y = 12.0f, mask_h = 195.0f;
-    if (tex.has_texture("lane/dan_between_fill")) {
-        TextureObject* fill = tex.get_texture("lane/dan_between_fill");
-        mask_x = (float)fill->x[0];
-        mask_y = (float)fill->y[0];
-        mask_h = (float)fill->y2[0];
-    }
-
-    const int scissor_x = virtual_to_screen_x(mask_x);
-    const int win_w = ray::GetRenderWidth();
-    ray::BeginScissorMode(scissor_x, 0, std::max(0, win_w - scissor_x), ray::GetRenderHeight());
-
-    const float door_y = (float)door.y[0];
-    const float door_h = (float)door.y2[0];
-    const float crop_top = std::max(0.0f, mask_y - door_y);
-    const float crop_h =
-        std::max(0.0f, std::min(door_h - crop_top, (mask_y + mask_h) - (door_y + crop_top)));
-
-    const float sc = (door.height > 0 && door_h > 0) ? door_h / (float)door.height : 1.0f;
-    const float src_top = crop_top / sc;
-    const float src_h   = crop_h / sc;
-
-    const float tx = (float)door_tx() * (float)door.x2[0];
-    tex.draw_texture(door_id, {.x = tx, .y = lane_y + crop_top,
-                               .y2 = crop_h - door_h,
-                               .src = ray::Rectangle{0, src_top,
-                                                     (float)door.width, src_h}});
-    tex.draw_texture(door_id, {.x = -tx, .y = lane_y + crop_top,
-                               .y2 = crop_h - door_h,
-                               .src = ray::Rectangle{0, src_top,
-                                                     -(float)door.width, src_h}});
-
-    ray::EndScissorMode();
-
+    call(fn_draw, "DanBetween:draw", lane_y, elapsed);
 }

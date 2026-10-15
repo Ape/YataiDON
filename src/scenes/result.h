@@ -12,8 +12,9 @@
 
 class ResultScreen : public Screen {
 protected:
-    std::unique_ptr<OutlinedText> song_info;
-    std::unique_ptr<OutlinedText> song_info_subtitle;
+    std::string song_title;
+    std::string song_subtitle;   // empty when the chart hides it
+    int song_number = 0;
     FadeAnimation* fade_out = nullptr;
     // after the fade out of a failed run: the revive message, then the retry mini-game
     std::optional<ResultRetryMessage> retry_message;
@@ -34,7 +35,6 @@ protected:
     double skip_enabled_ms = 0;
     std::optional<ResultPlayer> player_1;
     std::optional<FadeIn> fade_in;
-    std::unique_ptr<SongNum> song_num;
 
     void handle_input(double current_ms);
 

@@ -556,22 +556,6 @@ void DanNavigator::init(const std::vector<fs::path>& song_paths) {
     poll_init();
 }
 
-DanNavigator::RibbonLayout DanNavigator::ribbon_layout() const {
-    RibbonLayout r;
-    if (const SkinInfo* e = tex.skin_entry("dan_ribbon")) {
-        r.legacy = false;
-        if (e->x != 0)     r.center  = e->x;
-        if (e->width != 0) r.spacing = e->width;
-        r.side_l = 0;
-        r.side_r = 0;
-    }
-    if (const SkinInfo* e = tex.skin_entry("dan_ribbon_side")) {
-        r.side_l = e->x;
-        r.side_r = e->y;
-    }
-    return r;
-}
-
 void DanNavigator::set_positions(bool init, float duration) {
     int n = (int)boxes.size();
     if (n == 0) return;

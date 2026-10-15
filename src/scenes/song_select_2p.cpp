@@ -160,7 +160,7 @@ void SongSelect2PScreen::draw() {
     if (screen_init && !popup_open) navigator.draw_score_history();
 
     if (diff_sort_selector) diff_sort_selector->draw();
-    if (search_box) search_box->draw();
+    if (search_box) search_box->draw(script.get());
     if (game_transition.has_value()) {
         game_transition->draw();
         global_data.in_transition = true;

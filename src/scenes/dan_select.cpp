@@ -1,6 +1,7 @@
 #include "dan_select.h"
 #include "../libs/input.h"
 #include "../libs/script.h"
+#include "../objects/song_select/song_select_script.h"
 #include <filesystem>
 #include <algorithm>
 
@@ -13,6 +14,9 @@ void DanSelectScreen::on_screen_start() {
     Screen::on_screen_start();
     scene.emplace();
     if (!scene->valid()) scene.reset();
+    if (scene) {
+        if (auto r = scene->ribbon()) dan_navigator.set_ribbon((*r)[0], (*r)[1], (*r)[2], (*r)[3]);
+    }
     audio.play_sound("bgm", VolumePreset::MUSIC);
     audio.play_sound("dan_select", VolumePreset::VOICE);
 
@@ -322,10 +326,17 @@ void DanSelectScreen::draw() {
 
     if (state == SongSelectState::SONG_SELECTED) {
         if (scene && confirm_fade->attribute > 0) scene->draw_confirm(confirm_fade->attribute, confirm_index);
-        if (modifier_selector.has_value()) modifier_selector->draw();
+        if (modifier_selector.has_value()) {
+            sol::protected_function fn_draw_modifier =
+                cached_skin_module_fn("song_select/option_panel", "draw_modifier", "__option_panel_draw_modifier");
+            if (fn_draw_modifier.valid()) {
+                auto r = fn_draw_modifier(&modifier_selector.value());
+                if (!r.valid()) { sol::error err = r; spdlog::error("Lua error in option_panel.draw_modifier: {}", err.what()); }
+            }
+        }
     }
 
-    indicator->draw(tex.skin_config[SC::DAN_SELECT_INDICATOR].x, tex.skin_config[SC::DAN_SELECT_INDICATOR].y);
+    indicator->draw_on("dan_select");
     if (scene) scene->draw_title();
     allnet_indicator.draw();
 

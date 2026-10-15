@@ -13,7 +13,6 @@
 
 class ModifierSelector {
 private:
-    static const std::map<std::string, std::string> TEX_MAP;
     static const std::array<std::string, 5> BASE_MOD_NAMES;
 
     std::vector<std::string> mod_names;
@@ -29,24 +28,11 @@ private:
     MoveAnimation* move_sideways;
     FadeAnimation* fade_sideways;
 
-    std::vector<std::unique_ptr<OutlinedText>> text_name;
-    std::unique_ptr<OutlinedText> text_true;
-    std::unique_ptr<OutlinedText> text_false;
-    std::unique_ptr<OutlinedText> text_speed;
-    std::unique_ptr<OutlinedText> text_kimagure;
-    std::unique_ptr<OutlinedText> text_detarame;
-
-    std::unique_ptr<OutlinedText> text_true_2;
-    std::unique_ptr<OutlinedText> text_false_2;
-    std::unique_ptr<OutlinedText> text_speed_2;
-    std::unique_ptr<OutlinedText> text_kimagure_2;
-    std::unique_ptr<OutlinedText> text_detarame_2;
-
     std::vector<std::string> neiro_names;
     int neiro_index = 0;
     std::string neiro_preview;
-    std::unique_ptr<OutlinedText> text_neiro;
-    std::unique_ptr<OutlinedText> text_neiro_2;
+    int change_seq = 0;
+    int instance_id = 0;
 
     bool has_row(const std::string& name) const {
         return std::find(mod_names.begin(), mod_names.end(), name) != mod_names.end();
@@ -59,26 +45,7 @@ private:
     bool get_bool(int mod_index);
     void set_bool(int mod_index, bool value);
 
-    std::unique_ptr<OutlinedText> make_text(const std::string& str);
     void start_text_animation(int direction);
-    void draw_animated_text(const std::unique_ptr<OutlinedText>& text_primary, const std::unique_ptr<OutlinedText>& text_secondary, float x, float y, bool should_animate);
-
-    // Textures resolved once in the constructor, after load_screen_textures() has run,
-    // instead of calling tex.get_texture() every frame from draw().
-    TextureObject* t_top = nullptr;
-    TextureObject* t_player_p = nullptr;
-    TextureObject* t_bottom = nullptr;
-    TextureObject* t_background = nullptr;
-    TextureObject* t_mod_bg = nullptr;
-    TextureObject* t_mod_bg_highlight = nullptr;
-    TextureObject* t_mod_box = nullptr;
-    TextureObject* t_mod_yonbai = nullptr;
-    TextureObject* t_mod_sanbai = nullptr;
-    TextureObject* t_mod_detarame = nullptr;
-    TextureObject* t_blue_arrow = nullptr;
-    // TEX_MAP value (e.g. "mod_auto") -> resolved icon, one per row's fixed mod_name.
-    std::unordered_map<std::string, TextureObject*> t_mod_icons;
-
 public:
     struct ModRow {
         std::string name;
@@ -96,6 +63,12 @@ public:
     int   lua_change_dir() const { return direction; }
     float lua_change_fade() const { return (float)fade_sideways->attribute; }
     bool  lua_change_active() const { return !move_sideways->is_finished; }
+    int    lua_change_seq() const { return change_seq; }
+    double lua_change_move() const { return move_sideways->attribute; }
+    double lua_arrow_fade() const { return blue_arrow_fade->attribute; }
+    double lua_arrow_move() const { return blue_arrow_move->attribute; }
+    int    lua_id() const { return instance_id; }
+    PlayerNum lua_player() const { return player_num; }
 
     bool is_finished;
     bool is_confirmed;
@@ -112,5 +85,4 @@ public:
     void confirm();
     void left();
     void right();
-    void draw();
 };

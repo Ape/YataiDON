@@ -29,6 +29,14 @@ struct DanBoxData {
 
 class DanNavigator {
 public:
+    // the skin's ribbon: box centre, spacing between boxes, and the extra gap left / right of the selection
+    void set_ribbon(float center, float spacing, float side_l, float side_r) {
+        ribbon.legacy = false;
+        if (center != 0)  ribbon.center  = center;
+        if (spacing != 0) ribbon.spacing = spacing;
+        ribbon.side_l = side_l;
+        ribbon.side_r = side_r;
+    }
     std::vector<std::unique_ptr<DanBox>> boxes;
     int selected_index = 0;
 
@@ -74,7 +82,8 @@ private:
         float side_l  = SIDE_OFFSET_L;
         float side_r  = SIDE_OFFSET_R;
     };
-    RibbonLayout ribbon_layout() const;
+    RibbonLayout ribbon;   // legacy defaults until the skin gives its own (set_ribbon)
+    RibbonLayout ribbon_layout() const { return ribbon; }
 
     void set_positions(bool init, float duration);
 

@@ -50,6 +50,12 @@ public:
     ray::Font get_font(const std::string& text, int font_size);
     ray::Font copy_font(const std::string& text, int font_size);
     void register_text(const std::string& text, int font_size);
+
+    void load_text_config(const fs::path& skin_root);
+
+    std::string get_text_label(const std::string& key);
+
+    const SkinInfo* get_text_info(const std::string& key);
 };
 
 enum class LocalizedTextFallback {

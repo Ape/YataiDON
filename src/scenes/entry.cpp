@@ -694,7 +694,7 @@ void EntryScreen::draw() {
 
     network_msg.draw();
     timer->draw();
-    entry_overlay.draw(0, tex.skin_config[SC::ENTRY_OVERLAY_ENTRY].y);
+    entry_overlay.draw(false);
     coin_overlay.draw();
     allnet_indicator.draw();
 }

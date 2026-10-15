@@ -195,13 +195,9 @@ public:
         return it == skin_config_by_name.end() ? nullptr : &it->second;
     }
 
+    // text_config label for `key` in exactly `language` (see font_manager.get_text_label)
     std::string skin_text(const std::string& key, const std::string& language,
-                          const std::string& fallback = "") const {
-        auto it = skin_config_by_name.find(key);
-        if (it == skin_config_by_name.end()) return fallback;
-        auto t = it->second.text.find(language);
-        return t == it->second.text.end() ? fallback : t->second;
-    }
+                          const std::string& fallback = "") const;
 
     fs::path skin_root()   const { return graphics_path.parent_path(); }
     fs::path parent_root() const { return parent_graphics_path.parent_path(); }

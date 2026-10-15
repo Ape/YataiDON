@@ -71,6 +71,7 @@ void load_skin() {
         global_tex.load_screen_textures("global");
         script_manager.init(root_skin_path / "Scripts");
         font_manager.init(font_path);
+        font_manager.load_text_config(root_skin_path);
         audio.init_audio_device(root_skin_path / "Sounds", global_data.config->audio, global_data.config->volume);
         debug_menu.load_fonts();
     } catch (...) {

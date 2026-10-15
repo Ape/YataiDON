@@ -24,7 +24,7 @@ public:
     ~CostumeMenu();
     void update(double current_time_ms);
     void handle_input();
-    void draw(float x = 0.0f, float y = 0.0f);
+    void draw();
     std::optional<int> get_index();
     std::string get_costume_name() const;
 
@@ -38,6 +38,9 @@ private:
     sol::protected_function fn_update;
     sol::protected_function fn_draw_bg;
     sol::protected_function fn_draw_fg;
+    sol::protected_function fn_get_position;
+    float pos_x = 0.0f;
+    float pos_y = 0.0f;
     sol::protected_function fn_is_ready;
 
     std::vector<ray::Texture2D> costume_icons;

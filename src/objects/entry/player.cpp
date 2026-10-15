@@ -39,6 +39,13 @@ EntryPlayer::EntryPlayer(PlayerNum player_num, int side, BoxManager* box_manager
     fn_is_cloud_finished  = lua_object["is_cloud_finished"];
     fn_get_nameplate_fade = lua_object["get_nameplate_fade"];
     fn_finish_cloud       = lua_object["finish_cloud"];
+    fn_get_overlay_pos    = lua_object["nameplate_indicator_pos"];
+    if (auto pos = call_r<sol::table>(fn_get_overlay_pos, "EntryPlayer:nameplate_indicator_pos")) {
+        nameplate_x = (*pos)[1].get_or(0.0f);
+        nameplate_y = (*pos)[2].get_or(0.0f);
+        indicator_x = (*pos)[3].get_or(0.0f);
+        indicator_y = (*pos)[4].get_or(0.0f);
+    }
 }
 
 void EntryPlayer::finish_loading() {
@@ -92,19 +99,12 @@ void EntryPlayer::draw_drum() {
 
 void EntryPlayer::draw_costume_menu() {
     if (!costume_menu) return;
-    auto sc = (player_num == PlayerNum::P2) ? SC::ENTRY_COSTUME_MENU_2P : SC::ENTRY_COSTUME_MENU_1P;
-    auto& info = tex.skin_config[sc];
-    costume_menu->draw(info.x, info.y);
+    costume_menu->draw();
 }
 
 void EntryPlayer::draw_nameplate_and_indicator(float fade) {
-    if (side == 0) {
-        nameplate->draw(tex.skin_config[SC::NAMEPLATE_ENTRY_LEFT].x, tex.skin_config[SC::NAMEPLATE_ENTRY_LEFT].y, fade);
-        indicator->draw(tex.skin_config[SC::INDICATOR_ENTRY_LEFT].x, tex.skin_config[SC::INDICATOR_ENTRY_LEFT].y, fade);
-    } else {
-        nameplate->draw(tex.skin_config[SC::NAMEPLATE_ENTRY_RIGHT].x, tex.skin_config[SC::NAMEPLATE_ENTRY_RIGHT].y, fade);
-        indicator->draw(tex.skin_config[SC::INDICATOR_ENTRY_RIGHT].x, tex.skin_config[SC::INDICATOR_ENTRY_RIGHT].y, fade);
-    }
+    nameplate->draw(nameplate_x, nameplate_y, fade);
+    indicator->draw(indicator_x, indicator_y, fade);
 }
 
 bool EntryPlayer::is_cloud_animation_finished() {

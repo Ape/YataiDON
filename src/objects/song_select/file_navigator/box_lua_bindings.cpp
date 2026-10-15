@@ -13,6 +13,57 @@
 
 #include <algorithm>
 
+namespace {
+sol::table modifier_rows_table(ModifierSelector& m) {
+    sol::table out = script_manager.lua->create_table();
+    auto rows = m.lua_rows();
+    for (int i = 0; i < (int)rows.size(); i++) {
+        sol::table r = script_manager.lua->create_table();
+        r["name"]    = rows[i].name;
+        r["value"]   = rows[i].value;
+        r["label"]   = rows[i].label;
+        r["state"]   = rows[i].state;
+        r["changed"] = rows[i].changed;
+        r["enabled"] = rows[i].enabled;
+        r["greyed"]  = rows[i].greyed;
+        out[i + 1]   = r;
+    }
+    return out;
+}
+
+sol::table modifier_change_table(const ModifierSelector& m) {
+    sol::table t = script_manager.lua->create_table();
+    t["dir"]    = m.lua_change_dir();
+    t["fade"]   = m.lua_change_fade();
+    t["active"] = m.lua_change_active();
+    t["move"]   = m.lua_change_move();
+    t["seq"]    = m.lua_change_seq();
+    t["id"]     = m.lua_id();
+    t["arrow_fade"] = m.lua_arrow_fade();
+    t["arrow_move"] = m.lua_arrow_move();
+    return t;
+}
+
+sol::table neiro_change_table(const NeiroSelector& n) {
+    sol::table t = script_manager.lua->create_table();
+    t["dir"]    = n.lua_change_dir();
+    t["fade"]   = n.lua_change_fade();
+    t["active"] = n.lua_change_active();
+    t["move"]   = n.lua_change_move();
+    t["seq"]    = n.lua_change_seq();
+    t["id"]     = n.lua_id();
+    t["arrow_fade"] = n.lua_arrow_fade();
+    t["arrow_move"] = n.lua_arrow_move();
+    return t;
+}
+
+// slide-in y of the option panel while it opens (negative) / leaves (past SONG_SELECT_OFFSET)
+float option_panel_offset(const MoveAnimation* move, bool confirmed) {
+    float v = (float)move->attribute;
+    return confirmed ? v + tex.skin_config[SC::SONG_SELECT_OFFSET].x : -v;
+}
+}  // namespace
+
 void register_song_select_lua_bindings(sol::state& lua) {
     lua.new_usertype<BaseBox>("BaseBox",
         "box_x",           &BaseBox::box_x,
@@ -86,11 +137,11 @@ void register_song_select_lua_bindings(sol::state& lua) {
             return t;
         },
         "has_preimage", [](SongBox& self) { return self.preimage.has_value(); },
-        "draw_preimage", [](SongBox& self, float bx, float by, float fade) {
+        // the song's own image scaled into the rectangle (x, y, width, height)
+        "draw_preimage", [](SongBox& self, float x, float y, float width, float height, float fade) {
             if (!self.preimage.has_value()) return;
-            const SkinInfo& cfg = tex.skin_config[SC::PREIMAGE];
             ray::Rectangle src{0, 0, (float)self.preimage->width, (float)self.preimage->height};
-            ray::Rectangle dest{bx + cfg.x, cfg.y + by, cfg.width, cfg.height};
+            ray::Rectangle dest{x, y, width, height};
             ray::DrawTexturePro(self.preimage.value(), src, dest, ray::Vector2{0, 0}, 0, ray::Fade(ray::WHITE, fade));
         }
     );
@@ -215,37 +266,80 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "song_num",     [](DiffSortSelect& s) { return s.lua_song_num(); },
         "phase",        [](DiffSortSelect& s) { return s.lua_phase(); },
         "alpha",        [](DiffSortSelect& s) { return s.lua_alpha(); },
-        "arrow_offset", [](DiffSortSelect& s, double row) { return s.lua_arrow_offset(static_cast<int>(row)); }
+        "arrow_offset", [](DiffSortSelect& s, double row) { return s.lua_arrow_offset(static_cast<int>(row)); },
+        // classic (non one-menu) window
+        "one_menu",     [](DiffSortSelect& s) { return s.lua_one_menu(); },
+        "box",          [](DiffSortSelect& s) { return s.lua_box(); },
+        "level",        [](DiffSortSelect& s) { return s.lua_level(); },
+        "in_level",     [](DiffSortSelect& s) { return s.lua_in_level(); },
+        "confirmation", [](DiffSortSelect& s) { return s.lua_confirmation(); },
+        "confirm_index", [](DiffSortSelect& s) { return s.lua_confirm_index(); },
+        "num_boxes",    [](DiffSortSelect& s) { return s.lua_num_boxes(); },
+        "prev_diff",    [](DiffSortSelect& s) { return s.lua_prev_diff(); },
+        "prev_level",   [](DiffSortSelect& s) { return s.lua_prev_level(); },
+        "limit",        [](DiffSortSelect& s, double box) { return s.lua_limit(static_cast<int>(box)); },
+        // total, clears, full combos of a course at one star level
+        "stats",        [](DiffSortSelect& s, double diff, double level) {
+            CourseStats c = s.lua_stats(static_cast<int>(diff), static_cast<int>(level));
+            sol::table t = script_manager.lua->create_table();
+            t["total"] = c.total; t["clears"] = c.clears; t["full_combos"] = c.full_combos;
+            return t;
+        },
+        // the same, summed over every level of a course
+        "sums",         [](DiffSortSelect& s, double diff) {
+            auto c = s.lua_sums(static_cast<int>(diff));
+            sol::table t = script_manager.lua->create_table();
+            t["total"] = c[0]; t["clears"] = c[1]; t["full_combos"] = c[2];
+            return t;
+        },
+        "anim",         [](DiffSortSelect& s) {
+            auto a = s.lua_anim();
+            sol::table t = script_manager.lua->create_table();
+            t["bg_resize"] = a[0]; t["fade_in"] = a[1]; t["flicker"] = a[2];
+            t["bounce"] = a[3]; t["arrow_fade"] = a[4]; t["arrow_move"] = a[5];
+            return t;
+        }
     );
 
     lua.new_usertype<SongSelectPlayer>("SongSelectPlayer",
         "selected_difficulty", [](SongSelectPlayer& self) { return (int)self.selected_difficulty; },
         "player_num",           [](SongSelectPlayer& self) { return (int)self.player_num; },
         "difficulty_decided",   [](SongSelectPlayer& self) { return self.difficulty_decided(); },
+        // state for the cursor drawn under the wheel
+        "selector_state", [](SongSelectPlayer& self) {
+            sol::table t = script_manager.lua->create_table();
+            t["selected"]   = (int)self.selected_difficulty;
+            t["prev"]       = (int)self.prev_diff;
+            t["move_right"] = self.diff_select_move_right;
+            t["move1"]      = self.diff_selector_move_1->attribute;
+            t["move1_done"] = self.diff_selector_move_1->is_finished;
+            t["move2"]      = self.diff_selector_move_2->attribute;
+            t["move2_done"] = self.diff_selector_move_2->is_finished;
+            t["panel"]      = self.neiro_selector.has_value() || self.modifier_selector.has_value();
+            return t;
+        },
+        // state for the difficulty banner behind the wheel
+        "bg_diff_state", [](SongSelectPlayer& self) {
+            sol::table t = script_manager.lua->create_table();
+            t["selected"]       = (int)self.selected_difficulty;
+            t["bounce"]         = self.selected_diff_bounce->attribute;
+            t["fade_in"]        = self.selected_diff_fadein->attribute;
+            t["highlight_fade"] = self.selected_diff_highlight_fade->attribute;
+            t["highlight_on"]   = self.selected_diff_highlight_fade->is_reversing || self.selected_diff_highlight_fade->is_finished;
+            t["text_resize"]    = self.selected_diff_text_resize->attribute;
+            t["text_fade_in"]   = self.selected_diff_text_fadein->attribute;
+            return t;
+        },
         "neiro_active",         [](SongSelectPlayer& self) { return self.neiro_selector.has_value(); },
         "modifier_active",      [](SongSelectPlayer& self) { return self.modifier_selector.has_value(); },
         "modifier_offset",      [](SongSelectPlayer& self) -> sol::optional<float> {
             if (!self.modifier_selector.has_value()) return sol::nullopt;
             const auto& m = self.modifier_selector.value();
-            float v = (float)m.move->attribute;
-            return m.is_confirmed ? v + tex.skin_config[SC::SONG_SELECT_OFFSET].x : -v;
+            return option_panel_offset(m.move, m.is_confirmed);
         },
         "modifier_rows", [](SongSelectPlayer& self) -> sol::object {
             if (!self.modifier_selector.has_value()) return sol::lua_nil;
-            sol::table out = script_manager.lua->create_table();
-            auto rows = self.modifier_selector.value().lua_rows();
-            for (int i = 0; i < (int)rows.size(); i++) {
-                sol::table r = script_manager.lua->create_table();
-                r["name"]    = rows[i].name;
-                r["value"]   = rows[i].value;
-                r["label"]   = rows[i].label;
-                r["state"]   = rows[i].state;
-                r["changed"] = rows[i].changed;
-                r["enabled"] = rows[i].enabled;
-                r["greyed"]  = rows[i].greyed;
-                out[i + 1]   = r;
-            }
-            return out;
+            return modifier_rows_table(self.modifier_selector.value());
         },
         "modifier_index", [](SongSelectPlayer& self) -> sol::optional<int> {
             if (!self.modifier_selector.has_value()) return sol::nullopt;
@@ -257,18 +351,12 @@ void register_song_select_lua_bindings(sol::state& lua) {
         },
         "modifier_change", [](SongSelectPlayer& self) -> sol::object {
             if (!self.modifier_selector.has_value()) return sol::lua_nil;
-            const auto& m = self.modifier_selector.value();
-            sol::table t = script_manager.lua->create_table();
-            t["dir"]    = m.lua_change_dir();
-            t["fade"]   = m.lua_change_fade();
-            t["active"] = m.lua_change_active();
-            return t;
+            return modifier_change_table(self.modifier_selector.value());
         },
         "neiro_offset", [](SongSelectPlayer& self) -> sol::optional<float> {
             if (!self.neiro_selector.has_value()) return sol::nullopt;
             const auto& n = self.neiro_selector.value();
-            float v = (float)n.move->attribute;
-            return n.is_confirmed ? v + tex.skin_config[SC::SONG_SELECT_OFFSET].x : -v;
+            return option_panel_offset(n.move, n.is_confirmed);
         },
         "neiro_names", [](SongSelectPlayer& self) -> sol::object {
             if (!self.neiro_selector.has_value()) return sol::lua_nil;
@@ -280,7 +368,40 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "neiro_index", [](SongSelectPlayer& self) -> sol::optional<int> {
             if (!self.neiro_selector.has_value()) return sol::nullopt;
             return self.neiro_selector.value().lua_index() + 1;
+        },
+        "neiro_change", [](SongSelectPlayer& self) -> sol::object {
+            if (!self.neiro_selector.has_value()) return sol::lua_nil;
+            return neiro_change_table(self.neiro_selector.value());
+        },
+        // the selectors themselves, for the default option panel (see ModifierPanel / NeiroPanel)
+        "modifier_panel", [](SongSelectPlayer& self) -> ModifierSelector* {
+            return self.modifier_selector.has_value() ? &self.modifier_selector.value() : nullptr;
+        },
+        "neiro_panel", [](SongSelectPlayer& self) -> NeiroSelector* {
+            return self.neiro_selector.has_value() ? &self.neiro_selector.value() : nullptr;
         }
+    );
+
+    lua.new_usertype<ModifierSelector>("ModifierPanel",
+        "player_num", [](ModifierSelector& m) { return (int)m.lua_player(); },
+        "offset",     [](ModifierSelector& m) { return option_panel_offset(m.move, m.is_confirmed); },
+        "rows",       [](ModifierSelector& m) { return modifier_rows_table(m); },
+        "index",      [](ModifierSelector& m) { return m.lua_index() + 1; },
+        "confirmed",  [](ModifierSelector& m) { return m.is_confirmed; },
+        "change",     [](ModifierSelector& m) { return modifier_change_table(m); }
+    );
+
+    lua.new_usertype<NeiroSelector>("NeiroPanel",
+        "player_num", [](NeiroSelector& n) { return (int)n.lua_player(); },
+        "offset",     [](NeiroSelector& n) { return option_panel_offset(n.move, n.is_confirmed); },
+        "names",      [](NeiroSelector& n) {
+            sol::table out = script_manager.lua->create_table();
+            const auto& names = n.lua_names();
+            for (int i = 0; i < (int)names.size(); i++) out[i + 1] = names[i];
+            return out;
+        },
+        "index",      [](NeiroSelector& n) { return n.lua_index() + 1; },
+        "change",     [](NeiroSelector& n) { return neiro_change_table(n); }
     );
 
     lua.new_usertype<Navigator>("Navigator",

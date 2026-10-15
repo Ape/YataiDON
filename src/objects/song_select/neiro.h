@@ -18,23 +18,24 @@ private:
     MoveAnimation* move_sideways;
     FadeAnimation* fade_sideways;
 
-    std::unique_ptr<OutlinedText> text;
-    std::unique_ptr<OutlinedText> text_2;
-
     void load_sound();
 
-    // Textures resolved once in the constructor, after load_screen_textures() has run,
-    // instead of calling tex.get_texture() every frame from draw().
-    TextureObject* t_background = nullptr;
-    TextureObject* t_player_p = nullptr;
-    TextureObject* t_divisor = nullptr;
-    TextureObject* t_music_note = nullptr;
-    TextureObject* t_blue_arrow = nullptr;
-    TextureObject* t_counter = nullptr;
+    int change_seq = 0;
+    int instance_id = 0;
 
 public:
     const std::vector<std::string>& lua_names() const { return sounds; }
     int lua_index() const { return selected_sound; }
+    int lua_id() const { return instance_id; }
+    PlayerNum lua_player() const { return player_num; }
+    // the sideways-slide animation of the name text: passed to the Lua panel each frame
+    int    lua_change_dir() const    { return direction; }
+    int    lua_change_seq() const    { return change_seq; }
+    double lua_change_move() const   { return move_sideways->attribute; }
+    double lua_change_fade() const   { return fade_sideways->attribute; }
+    bool   lua_change_active() const { return !move_sideways->is_finished; }
+    double lua_arrow_fade() const    { return blue_arrow_fade->attribute; }
+    double lua_arrow_move() const    { return blue_arrow_move->attribute; }
 
     bool is_finished;
     bool is_confirmed;
@@ -46,5 +47,4 @@ public:
     void left();
     void right();
     void confirm();
-    void draw();
 };

@@ -11,4 +11,4 @@ void EntryOverlay::update(double current_ms) {
     online = network.is_online();
     call(fn_update, "EntryOverlay:update", current_ms, online);
 }
-void EntryOverlay::draw(float x, float y)    { call(fn_draw,   "EntryOverlay:draw", x, y); }
+void EntryOverlay::draw(bool title_screen)   { call(fn_draw,   "EntryOverlay:draw", title_screen); }

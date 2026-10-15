@@ -364,7 +364,7 @@ void SongSelectScreen::draw_overlays() {
 
     if (!uses_session_timer()) {
         tex.draw_texture(t_song_num_bg, {.x=-(song_num->width-127), .x2=(song_num->width-127), .fade=0.75});
-        song_num->draw(tex.skin_config[SC::SONG_NUM].x-song_num->width, tex.skin_config[SC::SONG_NUM].y, 1.0);
+        song_num->draw(font_manager.get_text_info("song_num")->x-song_num->width, font_manager.get_text_info("song_num")->y, 1.0);
     }
     if (uses_session_timer()) {
         if (auto* session = PracticeTimer::active()) session->draw();
@@ -375,7 +375,7 @@ void SongSelectScreen::draw_overlays() {
     }
     allnet_indicator.draw();
     coin_overlay.draw();
-    indicator->draw(tex.skin_config[SC::SONG_SELECT_INDICATOR].x, tex.skin_config[SC::SONG_SELECT_INDICATOR].y);
+    indicator->draw_on("song_select");
 }
 
 void SongSelectScreen::draw() {
@@ -398,7 +398,7 @@ void SongSelectScreen::draw() {
     if (screen_init && !popup_open) navigator.draw_score_history();
 
     if (diff_sort_selector) diff_sort_selector->draw();
-    if (search_box) search_box->draw();
+    if (search_box) search_box->draw(script.get());
     if (game_transition.has_value()) {
         game_transition->draw();
         global_data.in_transition = true;

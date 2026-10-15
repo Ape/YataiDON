@@ -1,11 +1,8 @@
 #include "practice_menu.h"
 #include "../../libs/global_data.h"
 
-static std::string skin_text_for(SC key, const std::string& lang) {
-    const auto& texts = tex.skin_config[key].text;
-    auto it = texts.find(lang);
-    if (it == texts.end()) it = texts.find("en");
-    return (it != texts.end()) ? it->second : std::string();
+static std::string skin_text_for(const char* key) {
+    return font_manager.get_text_label(key);
 }
 
 void PracticeMenu::init_textures() {
@@ -44,20 +41,18 @@ void PracticeMenu::step(bool right) {
 void PracticeMenu::build_text() {
     menu_text.clear();
 
-    const std::string& lang = global_data.config->general.language;
-
-    static const SC ROWS[] = {
-        SC::PRACTICE_MENU_END_GAME,
-        SC::PRACTICE_MENU_ANOTHER_SONG,
-        SC::PRACTICE_MENU_RESTART,
-        SC::PRACTICE_MENU_AUTO_PLAY,
-        SC::PRACTICE_MENU_JUMP_TO_MARK,
-        SC::PRACTICE_MENU_SET_MARK,
-        SC::PRACTICE_MENU_CLOSE,
+    static const char* const ROWS[] = {
+        "practice_menu_end_game",
+        "practice_menu_another_song",
+        "practice_menu_restart",
+        "practice_menu_auto_play",
+        "practice_menu_jump_to_mark",
+        "practice_menu_set_mark",
+        "practice_menu_close",
     };
 
-    for (SC row : ROWS) {
-        std::string label = skin_text_for(row, lang);
+    for (const char* row : ROWS) {
+        std::string label = skin_text_for(row);
         int chars = 0;
         for (unsigned char c : label)
             if ((c & 0xC0) != 0x80) chars++;
@@ -97,25 +92,24 @@ void PracticeMenu::open_jump_mode() {
 void PracticeMenu::open_dialog(Dialog which, bool auto_on) {
     dialog = which;
 
-    const std::string& lang = global_data.config->general.language;
-    SC title = SC::PRACTICE_MENU_CONFIRM_END, left = SC::PRACTICE_MENU_YES, right = SC::PRACTICE_MENU_NO;
+    const char* title = "practice_menu_confirm_end", *left = "practice_menu_yes", *right = "practice_menu_no";
     switch (which) {
         case Dialog::AUTO:
-            title = SC::PRACTICE_MENU_CONFIRM_AUTO;
-            left  = SC::PRACTICE_MENU_AUTO_ON;
-            right = SC::PRACTICE_MENU_AUTO_OFF;
+            title = "practice_menu_confirm_auto";
+            left  = "practice_menu_auto_on";
+            right = "practice_menu_auto_off";
             dialog_sel = auto_on ? 0 : 1;
             break;
         case Dialog::RESTART:
-            title = SC::PRACTICE_MENU_CONFIRM_RESTART;
+            title = "practice_menu_confirm_restart";
             dialog_sel = 0;
             break;
         case Dialog::ANOTHER:
-            title = SC::PRACTICE_MENU_CONFIRM_ANOTHER;
+            title = "practice_menu_confirm_another";
             dialog_sel = 0;
             break;
         case Dialog::END:
-            title = SC::PRACTICE_MENU_CONFIRM_END;
+            title = "practice_menu_confirm_end";
             dialog_sel = 0;
             break;
         default:
@@ -125,9 +119,9 @@ void PracticeMenu::open_dialog(Dialog which, bool auto_on) {
 
     int fs = (int)(tex.skin_config[SC::SONG_BOX_NAME].font_size);
     if (fs <= 0) fs = 1;
-    dlg_title = std::make_unique<OutlinedText>(skin_text_for(title, lang), fs, ray::WHITE, ray::BLACK, false);
-    dlg_left  = std::make_unique<OutlinedText>(skin_text_for(left, lang),  fs, ray::WHITE, ray::BLACK, false);
-    dlg_right = std::make_unique<OutlinedText>(skin_text_for(right, lang), fs, ray::WHITE, ray::BLACK, false);
+    dlg_title = std::make_unique<OutlinedText>(skin_text_for(title), fs, ray::WHITE, ray::BLACK, false);
+    dlg_left  = std::make_unique<OutlinedText>(skin_text_for(left),  fs, ray::WHITE, ray::BLACK, false);
+    dlg_right = std::make_unique<OutlinedText>(skin_text_for(right), fs, ray::WHITE, ray::BLACK, false);
 }
 
 PracticeMenu::Action PracticeMenu::activate(bool auto_on) {

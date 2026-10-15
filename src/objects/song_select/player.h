@@ -46,7 +46,6 @@ public:
     Nameplate nameplate;
 
     SongSelectScript* script = nullptr;
-    bool selector_handled_by_lua = false;
 
     bool option_panel_by_lua = false;
 
@@ -66,7 +65,6 @@ public:
     std::optional<std::pair<int,int>> handle_input_diff_sort(DiffSortSelect* diff_sort_selector);
     std::optional<std::string> handle_input_search();
 
-    void draw_selector(bool is_half, float fade_in);
     void try_lua_selector(bool is_half, float fade_in, int pass);
     void draw_background_diffs(SongSelectState state);
     void draw(SongSelectState state, bool is_half, float diff_fade_in);
@@ -77,14 +75,4 @@ private:
     void navigate_difficulty_right();
     void toggle_ura_mode();
     void start_background_diffs();
-
-    TextureObject* t_balloon = nullptr;
-    TextureObject* t_balloon_half = nullptr;
-    TextureObject* t_outline = nullptr;
-    TextureObject* t_outline_half = nullptr;
-    TextureObject* t_outline_back = nullptr;
-    TextureObject* t_outline_back_half = nullptr;
-    TextureObject* t_background_diff = nullptr;
-    TextureObject* t_background_diff_highlight = nullptr;
-    TextureObject* t_bg_diff_text_bg = nullptr;
 };
