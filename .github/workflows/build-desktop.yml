@@ -1,0 +1,398 @@
+name: Build YataiDON Desktop (Release)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-linux:
+    name: Build on Linux
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure Git credentials
+        run: |
+          git config --global url."https://${{ secrets.GITEA_USER }}:${{ secrets.GITEA_TOKEN }}@ese.tjadataba.se/".insteadOf "https://ese.tjadataba.se/"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Install dependencies
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          NEEDRESTART_MODE: a
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            ninja-build \
+            pkg-config \
+            patchelf \
+            libx11-dev \
+            libxrandr-dev \
+            libxinerama-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libxtst-dev \
+            libgl1-mesa-dev \
+            libasound2-dev \
+            libpulse-dev \
+            libjack-dev \
+            liblua5.4-dev \
+            libavcodec-dev \
+            libavformat-dev \
+            libavutil-dev \
+            libswscale-dev \
+            libswresample-dev \
+            libavfilter-dev \
+            libavdevice-dev \
+            libogg-dev \
+            libvorbis-dev \
+            libflac-dev \
+            libopus-dev \
+            libmp3lame-dev \
+            libmpg123-dev \
+            libspeex-dev \
+            libdw-dev
+
+      - name: Setup SDL3
+        id: sdl
+        uses: libsdl-org/setup-sdl@main
+        with:
+          install-linux-dependencies: true
+          version: 3-head
+          build-type: Release
+
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=g++ \
+            -DCMAKE_C_COMPILER=gcc \
+            -DNETWORK_URL="${{ secrets.NETWORK_URL }}" \
+            -DNETWORK_AUTH_KEY="${{ secrets.NETWORK_AUTH_KEY }}"
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Prepare release package
+        run: |
+          mkdir -p release/YataiDON-Linux
+          cp build/bin/YataiDON release/YataiDON-Linux/
+          cp -r shader release/YataiDON-Linux/
+          cp -r Songs release/YataiDON-Linux/
+          cp update.sh release/YataiDON-Linux/
+          chmod +x release/YataiDON-Linux/YataiDON release/YataiDON-Linux/update.sh
+
+          # Bundle FFmpeg shared libraries into lib/
+          mkdir -p release/YataiDON-Linux/lib
+          ldd build/bin/YataiDON | grep -E "(libav|libsw).*=>" | awk '{print $3}' | \
+            xargs -I{} cp -L {} release/YataiDON-Linux/lib/
+
+          # Bundle sndfile codec dependencies (ogg, vorbis, FLAC, opus, mp3, etc.)
+          ldd build/bin/YataiDON | grep -E "(libsndfile|libogg|libvorbis|libFLAC|libopus|libmp3lame|libmpg123|libspeex).*=>" | awk '{print $3}' | \
+            grep -v "^$" | xargs -I{} cp -L {} release/YataiDON-Linux/lib/ 2>/dev/null || true
+
+          # Bundle SDL3 shared library
+          ldd build/bin/YataiDON | grep -E "libSDL3.*=>" | awk '{print $3}' | \
+            grep -v "^$" | xargs -I{} cp -L {} release/YataiDON-Linux/lib/ 2>/dev/null || true
+
+          # Bundle transitive deps of FFmpeg AND sndfile codec libs
+          for so in release/YataiDON-Linux/lib/lib{av,sw,ogg,vorbis,FLAC,opus,mp3lame,mpg123,speex,SDL3}*.so*; do
+            ldd "$so" 2>/dev/null | grep "=>" | awk '{print $3}' | grep -v "^$" | \
+              grep -vE "lib(c\.so|m\.so|dl\.so|rt\.so|pthread\.so|gcc_s\.so|stdc\+\+\.so|X11\.so|GL\.so|asound\.so|pulse\.so|jack\.so|Xi\.so|Xrandr\.so|xcb)" | \
+              grep -v "ld-linux" | \
+              xargs -I{} cp -L {} release/YataiDON-Linux/lib/ 2>/dev/null || true
+          done
+
+          # Patch rpath: binary looks in $ORIGIN/lib, bundled .so files look in $ORIGIN
+          patchelf --set-rpath '$ORIGIN/lib' release/YataiDON-Linux/YataiDON
+          for so in release/YataiDON-Linux/lib/*.so*; do
+            [ -f "$so" ] && patchelf --set-rpath '$ORIGIN' "$so" 2>/dev/null || true
+          done
+
+          # Checksums — binary + updater + shader + lib
+          (
+            cd release/YataiDON-Linux
+            sha256sum YataiDON update.sh
+            find shader -type f | sort | xargs sha256sum
+            [ -d lib ] && find lib -type f | sort | xargs sha256sum || true
+          ) > release/YataiDON-Linux/checksums-linux.sha256
+
+      - name: Upload Linux package
+        uses: actions/upload-artifact@v4
+        with:
+          name: YataiDON-Linux
+          path: release/YataiDON-Linux/
+          include-hidden-files: true
+          if-no-files-found: error
+
+  build-windows:
+    name: Build on Windows
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Configure Git credentials
+        shell: bash
+        run: |
+          git config --global url."https://${{ secrets.GITEA_USER }}:${{ secrets.GITEA_TOKEN }}@ese.tjadataba.se/".insteadOf "https://ese.tjadataba.se/"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cppwinrt
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-libsndfile
+            mingw-w64-x86_64-libsamplerate
+            mingw-w64-x86_64-lua
+            mingw-w64-x86_64-ffmpeg
+            mingw-w64-x86_64-sdl3
+            mingw-w64-x86_64-libidn2
+            mingw-w64-x86_64-opus
+            git
+            make
+
+      - name: Configure CMake
+        run: |
+          cmake -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=g++ \
+            -DCMAKE_C_COMPILER=gcc \
+            -DNETWORK_URL="${{ secrets.NETWORK_URL }}" \
+            -DNETWORK_AUTH_KEY="${{ secrets.NETWORK_AUTH_KEY }}"
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Prepare release package
+        shell: bash
+        run: |
+          mkdir -p release/YataiDON-Windows
+          cp build/bin/YataiDON.exe release/YataiDON-Windows/
+          cp build/bin/*.dll release/YataiDON-Windows/ 2>/dev/null || true
+          cp -r shader release/YataiDON-Windows/
+          cp -r Songs release/YataiDON-Windows/
+          cp update.ps1 update.bat release/YataiDON-Windows/
+
+          # Checksums — binary + updater + dlls + shader
+          (
+            cd release/YataiDON-Windows
+            sha256sum YataiDON.exe update.ps1 update.bat
+            find shader -type f | sort | xargs sha256sum
+            find . -maxdepth 1 -name "*.dll" | sort | xargs sha256sum
+          ) > release/YataiDON-Windows/checksums-windows.sha256
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v4
+        with:
+          name: YataiDON-Windows
+          include-hidden-files: true
+          path: release/YataiDON-Windows/
+          if-no-files-found: error
+
+  build-macos:
+    name: Build on macOS
+    runs-on: macos-latest
+
+    steps:
+      - name: Configure Git credentials
+        run: |
+          git config --global credential.helper ""
+          git config --global url."https://${{ secrets.GITEA_USER }}:${{ secrets.GITEA_TOKEN }}@ese.tjadataba.se/".insteadOf "https://ese.tjadataba.se/"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Install dependencies
+        run: |
+          brew install \
+            cmake \
+            ninja \
+            pkg-config \
+            ffmpeg \
+            sdl3 \
+            dylibbundler \
+            libogg \
+            libvorbis \
+            flac \
+            opus \
+            lame \
+            mpg123 \
+            speex \
+            libsndfile \
+            libidn2
+
+      - name: Configure CMake
+        run: |
+          export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+          cmake -B build \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_CXX_COMPILER=clang++ \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_PREFIX_PATH="$(brew --prefix)" \
+            -DCMAKE_EXE_LINKER_FLAGS="-L$(brew --prefix)/lib" \
+            -DNETWORK_URL="${{ secrets.NETWORK_URL }}" \
+            -DNETWORK_AUTH_KEY="${{ secrets.NETWORK_AUTH_KEY }}"
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Prepare release package
+        run: |
+          mkdir -p release/YataiDON-macOS
+          cp build/bin/YataiDON release/YataiDON-macOS/
+          cp -r shader release/YataiDON-macOS/
+          cp -r Songs release/YataiDON-macOS/
+          cp update.sh release/YataiDON-macOS/
+          chmod +x release/YataiDON-macOS/YataiDON release/YataiDON-macOS/update.sh
+
+          # Bundle non-system dylib dependencies
+          mkdir -p release/YataiDON-macOS/lib
+          dylibbundler -od -b \
+            -x release/YataiDON-macOS/YataiDON \
+            -d release/YataiDON-macOS/lib \
+            -p @executable_path/lib
+
+          # Checksums — binary + updater + shader + lib
+          (
+            cd release/YataiDON-macOS
+            shasum -a 256 YataiDON update.sh
+            find shader -type f | sort | xargs shasum -a 256
+            [ -d lib ] && find lib -type f | sort | xargs shasum -a 256 || true
+          ) > release/YataiDON-macOS/checksums-macos.sha256
+
+      - name: Upload macOS package
+        uses: actions/upload-artifact@v4
+        with:
+          name: YataiDON-macOS
+          include-hidden-files: true
+          path: release/YataiDON-macOS/
+          if-no-files-found: error
+
+  release:
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Configure Git credentials
+        run: |
+          git config --global url."https://${{ secrets.GITEA_USER }}:${{ secrets.GITEA_TOKEN }}@ese.tjadataba.se/".insteadOf "https://ese.tjadataba.se/"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Get skin heads
+        id: skins
+        run: |
+          for s in PyTaikoGreen YataiDONRed YataiDONNijiiro; do
+            echo "$s=$(git ls-remote https://ese.tjadataba.se/Yonokid/$s.git HEAD | cut -f1)" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Cache skins
+        id: cache-skins
+        uses: actions/cache@v4
+        with:
+          path: |
+            Skins/PyTaikoGreen
+            Skins/YataiDONRed
+            Skins/YataiDONNijiiro
+          key: skins-${{ steps.skins.outputs.PyTaikoGreen }}-${{ steps.skins.outputs.YataiDONRed }}-${{ steps.skins.outputs.YataiDONNijiiro }}
+
+      - name: Clone skins
+        if: steps.cache-skins.outputs.cache-hit != 'true'
+        run: |
+          for s in PyTaikoGreen YataiDONRed YataiDONNijiiro; do
+            git clone --depth 1 https://ese.tjadataba.se/Yonokid/$s.git Skins/$s
+          done
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: YataiDON-Linux
+          path: linux/
+
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: YataiDON-Windows
+          path: windows/
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: YataiDON-macOS
+          path: macos/
+
+      - name: Package release assets
+        run: |
+          # Skins are bundled here, not in the build jobs (the binary doesn't need them to compile)
+          for d in linux windows macos; do cp -r Skins $d/; done
+
+          # Full zips for manual download
+          (cd linux   && zip -r ../YataiDON-Linux.zip .)
+          (cd windows && zip -r ../YataiDON-Windows.zip .)
+          (cd macos   && zip -r ../YataiDON-macOS.zip .)
+
+          # Metadata files
+          cp linux/checksums-linux.sha256     ./checksums-linux.sha256
+          cp windows/checksums-windows.sha256 ./checksums-windows.sha256
+          cp macos/checksums-macos.sha256     ./checksums-macos.sha256
+
+          # Linux update package: binary + updater + shader + lib
+          UPDATE_LINUX="YataiDON update.sh shader/"
+          [ -d linux/lib ] && UPDATE_LINUX="$UPDATE_LINUX lib/"
+          tar -czf update-linux.tar.gz -C linux $UPDATE_LINUX
+
+          # Windows update package: binary + updater + dlls + shader
+          UPDATE_WIN="YataiDON.exe update.ps1 update.bat shader/"
+          for dll in windows/*.dll; do
+            [ -f "$dll" ] && UPDATE_WIN="$UPDATE_WIN $(basename "$dll")"
+          done
+          tar -czf update-windows.tar.gz -C windows $UPDATE_WIN
+
+          # macOS update package: binary + updater + shader + lib
+          UPDATE_MACOS="YataiDON update.sh shader/"
+          [ -d macos/lib ] && UPDATE_MACOS="$UPDATE_MACOS lib/"
+          tar -czf update-macos.tar.gz -C macos $UPDATE_MACOS
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            YataiDON-Linux.zip
+            YataiDON-Windows.zip
+            YataiDON-macOS.zip
+            update-linux.tar.gz
+            update-windows.tar.gz
+            update-macos.tar.gz
+            checksums-linux.sha256
+            checksums-windows.sha256
+            checksums-macos.sha256
+          name: "YataiDON [Latest Release]"
+          tag_name: "latest"
+          make_latest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+

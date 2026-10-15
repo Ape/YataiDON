@@ -6,7 +6,7 @@ A TJA player and Taiko simulator written in C++ using the [raylib](https://www.r
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20iOS-blue)
 [![GitHub Stars](https://img.shields.io/github/stars/Yonokid/YataiDON?style=flat&label=stars)](https://github.com/Yonokid/YataiDON/stargazers)
 [![Discord Members](https://img.shields.io/discord/722513061419810946.svg?label=Discord&logo=discord)](https://discord.gg/XHcVYKW)
-[![Builds](https://github.com/Yonokid/YataiDON/actions/workflows/build.yml/badge.svg)](https://github.com/Yonokid/YataiDON/actions/workflows/build.yml)
+[![Builds](https://github.com/Yonokid/YataiDON/actions/workflows/build-desktop.yml/badge.svg)](https://github.com/Yonokid/YataiDON/actions/workflows/build-desktop.yml)
 
 ## Features
 

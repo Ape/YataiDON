@@ -60,7 +60,7 @@ appropriate signing, artwork, and rights to the assets you include.
 
 ## Build an unsigned IPA with GitHub Actions
 
-The existing [Release workflow](../.github/workflows/build.yml) includes a
+The existing [Release workflow](../.github/workflows/build-mobile.yml) includes a
 `build-ios` job. In GitHub, open **Actions → Build YataiDON (Release) → Run workflow**
 and select the branch containing the iOS changes. This runs all platform builds.
 

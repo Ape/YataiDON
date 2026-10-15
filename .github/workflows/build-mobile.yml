@@ -1,0 +1,283 @@
+name: Build YataiDON Mobile (Release)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure Git credentials
+        run: |
+          git config --global url."https://${{ secrets.GITEA_USER }}:${{ secrets.GITEA_TOKEN }}@ese.tjadataba.se/".insteadOf "https://ese.tjadataba.se/"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Get skin heads
+        id: skins
+        run: |
+          for s in PyTaikoGreen YataiDONRed YataiDONNijiiro; do
+            echo "$s=$(git ls-remote https://ese.tjadataba.se/Yonokid/$s.git HEAD | cut -f1)" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Cache skins
+        id: cache-skins
+        uses: actions/cache@v4
+        with:
+          path: |
+            Skins/PyTaikoGreen
+            Skins/YataiDONRed
+            Skins/YataiDONNijiiro
+          key: skins-${{ steps.skins.outputs.PyTaikoGreen }}-${{ steps.skins.outputs.YataiDONRed }}-${{ steps.skins.outputs.YataiDONNijiiro }}
+
+      - name: Clone skins
+        if: steps.cache-skins.outputs.cache-hit != 'true'
+        run: |
+          for s in PyTaikoGreen YataiDONRed YataiDONNijiiro; do
+            git clone --depth 1 https://ese.tjadataba.se/Yonokid/$s.git Skins/$s
+          done
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+
+      - name: Install NDK r27d and CMake 3.31.6
+        run: |
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          yes | $SDKMANAGER --licenses >/dev/null 2>&1 || true
+          $SDKMANAGER "ndk;27.3.13750724" "cmake;3.31.6"
+
+      - name: Cache FFmpeg for Android arm64
+        id: cache-ffmpeg
+        uses: actions/cache@v4
+        with:
+          path: .android-ffmpeg
+          key: android-ffmpeg-${{ hashFiles('tools/build_ffmpeg_android.sh') }}
+
+      - name: Build FFmpeg for Android
+        if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
+        run: |
+          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.3.13750724
+          bash tools/build_ffmpeg_android.sh
+
+      - name: Build OpenSSL for Android
+        run: |
+          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.3.13750724
+          bash tools/build_openssl_android.sh
+
+      - name: Cache CMake dependencies
+        uses: actions/cache@v4
+        with:
+          path: .cmake-deps
+          key: android-cmake-deps-${{ hashFiles('cmake/deps.cmake') }}
+          restore-keys: android-cmake-deps-
+
+      - name: Write local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          echo "cmake.dir=$ANDROID_SDK_ROOT/cmake/3.31.6" >> android/local.properties
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/yataidon-release.jks
+          printf 'storeFile=yataidon-release.jks\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            "${{ secrets.ANDROID_KEY_ALIAS }}" \
+            "${{ secrets.ANDROID_KEY_PASSWORD }}" \
+            > android/keystore.properties
+
+      - name: Build Release APK
+        working-directory: android
+        env:
+          NETWORK_URL: ${{ secrets.NETWORK_URL }}
+          NETWORK_AUTH_KEY: ${{ secrets.NETWORK_AUTH_KEY }}
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: YataiDON-Android
+          include-hidden-files: true
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+      - name: Build Release APK (update, no bundled assets)
+        working-directory: android
+        env:
+          NETWORK_URL: ${{ secrets.NETWORK_URL }}
+          NETWORK_AUTH_KEY: ${{ secrets.NETWORK_AUTH_KEY }}
+        run: ./gradlew assembleRelease --no-daemon -PbundleGameData=false
+
+      - name: Upload update APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: YataiDON-Android-Update
+          include-hidden-files: true
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+
+  build-ios:
+    name: Build unsigned iOS IPA
+    runs-on: macos-15
+    env:
+      CONFIGURATION: Release
+      IOS_DEPLOYMENT_TARGET: "16.3"
+      IOS_BUNDLE_IDENTIFIER: com.yataidon.app
+      # build_ios.sh disables signing when no development team is supplied.
+      IOS_DEVELOPMENT_TEAM: ""
+
+    steps:
+      - name: Configure Git credentials
+        env:
+          GITEA_USER: ${{ secrets.GITEA_USER }}
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        run: |
+          git config --global credential.helper ""
+          git config --global url."https://${GITEA_USER}:${GITEA_TOKEN}@ese.tjadataba.se/".insteadOf "https://ese.tjadataba.se/"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Get skin heads
+        id: skins
+        run: |
+          for s in PyTaikoGreen YataiDONRed YataiDONNijiiro; do
+            echo "$s=$(git ls-remote https://ese.tjadataba.se/Yonokid/$s.git HEAD | cut -f1)" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Cache skins
+        id: cache-skins
+        uses: actions/cache@v4
+        with:
+          path: |
+            Skins/PyTaikoGreen
+            Skins/YataiDONRed
+            Skins/YataiDONNijiiro
+          key: skins-${{ steps.skins.outputs.PyTaikoGreen }}-${{ steps.skins.outputs.YataiDONRed }}-${{ steps.skins.outputs.YataiDONNijiiro }}
+
+      - name: Clone skins
+        if: steps.cache-skins.outputs.cache-hit != 'true'
+        run: |
+          for s in PyTaikoGreen YataiDONRed YataiDONNijiiro; do
+            git clone --depth 1 https://ese.tjadataba.se/Yonokid/$s.git Skins/$s
+          done
+
+      - name: Install build tools
+        run: |
+          if ! command -v cmake >/dev/null; then
+            brew install cmake
+          fi
+          cmake --version
+          python3 --version
+
+      - name: Inspect iOS toolchain
+        id: toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+          echo "xcode=$(xcodebuild -version | shasum -a 256 | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Cache FFmpeg for iOS arm64
+        uses: actions/cache@v4
+        with:
+          path: .ios-ffmpeg/iphoneos-arm64
+          key: ios-ffmpeg-${{ runner.os }}-${{ runner.arch }}-iphoneos-arm64-${{ env.IOS_DEPLOYMENT_TARGET }}-${{ steps.toolchain.outputs.xcode }}-${{ hashFiles('tools/build_ffmpeg_ios.sh') }}
+
+      - name: Build unsigned iOS app
+        env:
+          NETWORK_URL: ${{ secrets.NETWORK_URL }}
+          NETWORK_AUTH_KEY: ${{ secrets.NETWORK_AUTH_KEY }}
+        run: |
+          ./build_ios.sh device \
+            -DNETWORK_URL="$NETWORK_URL" \
+            -DNETWORK_AUTH_KEY="$NETWORK_AUTH_KEY"
+
+      - name: Package unsigned IPA
+        run: |
+          APP_PATH="$GITHUB_WORKSPACE/build-ios-device/bin/Release/YataiDON.app"
+          test -f "$APP_PATH/Info.plist"
+          test -x "$APP_PATH/YataiDON"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleSupportedPlatforms:0' "$APP_PATH/Info.plist")" = "iPhoneOS"
+          xcrun lipo "$APP_PATH/YataiDON" -verify_arch arm64
+
+          IPA_STAGE="$(mktemp -d "$RUNNER_TEMP/yataidon-ipa.XXXXXX")"
+          trap 'rm -rf "$IPA_STAGE"' EXIT
+          mkdir -p "$IPA_STAGE/Payload" "$GITHUB_WORKSPACE/release"
+          ditto --norsrc "$APP_PATH" "$IPA_STAGE/Payload/YataiDON.app"
+          ditto -c -k --norsrc --keepParent "$IPA_STAGE/Payload" "$GITHUB_WORKSPACE/release/YataiDON-iOS-unsigned.ipa"
+          (
+            cd "$GITHUB_WORKSPACE/release"
+            shasum -a 256 YataiDON-iOS-unsigned.ipa > checksums-ios.sha256
+          )
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: YataiDON-iOS
+          path: |
+            release/YataiDON-iOS-unsigned.ipa
+            release/checksums-ios.sha256
+          compression-level: 0
+          include-hidden-files: true
+          if-no-files-found: error
+
+  release:
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Download Android artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: YataiDON-Android
+          path: android-out/
+
+      - name: Download Android update artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: YataiDON-Android-Update
+          path: android-update-out/
+
+      - name: Download iOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: YataiDON-iOS
+          path: ios-out/
+
+      - name: Package release assets
+        run: |
+          cp android-out/app-release.apk YataiDON-Android.apk
+          cp android-update-out/app-release.apk YataiDON-Android-Update.apk
+          cp ios-out/YataiDON-iOS-unsigned.ipa YataiDON-iOS-unsigned.ipa
+          cp ios-out/checksums-ios.sha256 ./checksums-ios.sha256
+
+          # Android in-app updater compares against this (the "latest" tag is a
+          # fixed rolling release, so it can't tell apart which build is newer).
+          # It downloads YataiDON-Android-Update.apk (no bundled Skins/Songs --
+          # those are already on disk and kept current separately), so hash that
+          # one, not the full YataiDON-Android.apk.
+          sha256sum YataiDON-Android-Update.apk | awk '{print $1}' > checksums-android.sha256
+
+      - name: Upload Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            YataiDON-Android.apk
+            YataiDON-Android-Update.apk
+            YataiDON-iOS-unsigned.ipa
+            checksums-ios.sha256
+            checksums-android.sha256
+          name: "YataiDON [Latest Release]"
+          tag_name: "latest"
+          make_latest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
