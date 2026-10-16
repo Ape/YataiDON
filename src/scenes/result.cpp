@@ -48,7 +48,8 @@ double ResultScreen::reveal_end_ms() {
 bool ResultScreen::retry_pending() const {
     const SessionData& session_data = global_data.session_data[(int)global_data.player_num];
     const bool limit_reached = global_data.config->limits.song_limit > 0 && global_data.config->limits.song_limit == global_data.songs_played;
-    return allow_retry && !session_data.result_data.cleared && !limit_reached && script_manager.has_lua_script("retry_game");
+    return allow_retry && !tex.options[SCO::DISABLE_RETRY_GAME] && !session_data.result_data.cleared && !limit_reached &&
+           script_manager.has_lua_script("retry_game");
 }
 
 bool ResultScreen::exiting() const {

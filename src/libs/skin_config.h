@@ -138,6 +138,7 @@ enum class SCO : unsigned int {
     DISABLE_CHARA_3D,
     CROP_RESULT_SCREENSHOT,
     LOADING_COUNTDOWN,
+    DISABLE_RETRY_GAME,
 };
 
 namespace std {
@@ -159,4 +160,5 @@ const std::unordered_map<std::string, SCO> screen_options_map {
     {"disable_chara_3d", SCO::DISABLE_CHARA_3D},
     {"crop_result_screenshot", SCO::CROP_RESULT_SCREENSHOT},
     {"loading_countdown", SCO::LOADING_COUNTDOWN},
+    {"disable_retry_game", SCO::DISABLE_RETRY_GAME},
 };
