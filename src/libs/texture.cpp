@@ -477,13 +477,10 @@ std::unordered_set<std::string> overridden_names(const fs::path& child_folder) {
     return names;
 }
 
-// Decodes a screen's PNGs ahead of load_folder on worker threads, in the order the folders
-// get loaded, so decoding overlaps the uploads and no folder waits on its slowest image.
-// Decoded images not yet taken are capped at a byte budget; a folder's leftovers (names the
-// child skin overrides) are dropped once that folder is done.
 class ImagePrefetch {
 public:
-    ImagePrefetch(const std::vector<std::vector<fs::path>>& groups, size_t budget_bytes)
+    ImagePrefetch(const std::vector<std::vector<fs::path>>& groups,
+                  const std::unordered_set<std::string>& border_keys, size_t budget_bytes)
         : budget(budget_bytes) {
         for (size_t g = 0; g < groups.size(); ++g) {
             for (const fs::path& p : groups[g]) {
@@ -491,6 +488,7 @@ public:
                 if (index.count(key)) continue;
                 index.emplace(key, items.size());
                 items.push_back(Item{p, g});
+                items.back().want_border = border_keys.count(key) > 0;
             }
         }
         unsigned hw = std::thread::hardware_concurrency();
@@ -511,7 +509,7 @@ public:
 
     // The decoded image for path when it's part of this prefetch (waiting for a worker that
     // has started it, decoding it here if none has); false when it isn't.
-    bool take(const fs::path& path, ray::Image& image, ray::Rectangle& border) {
+    bool take(const fs::path& path, ray::Image& image, ray::Rectangle& border, bool& has_border) {
         std::unique_lock<std::mutex> lock(mutex);
         auto found = index.find(image_key(path));
         if (found == index.end()) return false;
@@ -520,12 +518,13 @@ public:
         if (it.state == State::Pending) {
             it.state = State::Taken;
             lock.unlock();
-            decode(it.path, image, border);
+            has_border = decode(it.path, it.want_border, image, border);
             return true;
         }
         if (it.state != State::Done) return false;
         image = it.image;
         border = it.border;
+        has_border = it.has_border;
         it.image = ray::Image{};
         it.state = State::Taken;
         held -= it.bytes;
@@ -560,17 +559,23 @@ private:
         State state = State::Pending;
         ray::Image image{};
         ray::Rectangle border{};
+        bool want_border = false;
+        bool has_border = false;
         size_t bytes = 0;
     };
 
-    static void decode(const fs::path& path, ray::Image& image, ray::Rectangle& border) {
+    // true when border was computed
+    static bool decode(const fs::path& path, bool want_border, ray::Image& image, ray::Rectangle& border) {
         try {
             image = ray::LoadImage(path.string().c_str());
         } catch (const std::exception& e) {
             spdlog::error("Failed to decode image {}: {}", path.string(), e.what());
             image = ray::Image{};
         }
-        border = image.data ? ray::GetImageAlphaBorder(image, 0.0f) : ray::Rectangle{};
+        border = ray::Rectangle{};
+        if (!want_border || !image.data) return false;
+        border = ray::GetImageAlphaBorder(image, 0.0f);
+        return true;
     }
 
     void work() {
@@ -584,7 +589,7 @@ private:
             lock.unlock();
             ray::Image image;
             ray::Rectangle border;
-            decode(it.path, image, border);
+            const bool has_border = decode(it.path, it.want_border, image, border);
             lock.lock();
             if (finished_groups > it.group) {   // its folder was loaded while this one decoded
                 if (image.data) ray::UnloadImage(image);
@@ -593,6 +598,7 @@ private:
             }
             it.image = image;
             it.border = border;
+            it.has_border = has_border;
             it.bytes = image.data ? static_cast<size_t>(ray::GetPixelDataSize(image.width, image.height, image.format)) : 0;
             it.state = State::Done;
             held += it.bytes;
@@ -711,8 +717,9 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
             std::vector<fs::path> rest;
             std::vector<size_t> rest_index;
             for (size_t i = 0; i < files.size(); ++i) {
-                if (image_prefetch && image_prefetch->take(files[i], images[i], borders[i])) {
-                    has_border[i] = 1;
+                bool got_border = false;
+                if (image_prefetch && image_prefetch->take(files[i], images[i], borders[i], got_border)) {
+                    has_border[i] = got_border;
                 } else {
                     rest.push_back(files[i]);
                     rest_index.push_back(i);
@@ -884,10 +891,23 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
 
     // every PNG those folders hold (frame folders included), one group per subset
     std::vector<std::vector<fs::path>> groups(subsets.size());
+    std::unordered_set<std::string> border_keys;
     for (size_t g = 0; g < subsets.size(); ++g) {
         for (const fs::path& root : roots) {
             const fs::path dir = root / screen_name / subsets[g];
             if (!fs::exists(dir / "texture.json")) continue;
+
+            try {
+                auto cfg = read_json_file(dir / "texture.json");
+                for (auto& m : cfg.GetObject()) {
+                    if (!m.value.IsObject() || m.value.HasMember("x2") || m.value.HasMember("crop")) continue;
+                    const bool file_override = m.value.HasMember("file") && m.value["file"].IsString();
+                    const std::string name = m.name.GetString();
+                    if (!file_override && fs::is_directory(dir / name)) continue;
+                    border_keys.insert(ImagePrefetch::image_key(
+                        dir / (file_override ? std::string(m.value["file"].GetString()) : name + ".png")));
+                }
+            } catch (const std::exception&) {}
             std::error_code ec;
             for (const auto& entry : fs::directory_iterator(dir, ec)) {
                 const fs::path& p = entry.path();
@@ -903,7 +923,7 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     }
 
     {
-        ImagePrefetch prefetch(groups, kPrefetchBudgetBytes);
+        ImagePrefetch prefetch(groups, border_keys, kPrefetchBudgetBytes);
         image_prefetch = &prefetch;
         struct Reset { ImagePrefetch*& p; ~Reset() { p = nullptr; } } reset{image_prefetch};
         for (size_t g = 0; g < subsets.size(); ++g) {
@@ -918,9 +938,7 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
 void TextureWrapper::clear_screen(const ray::Color& color) {
     ray::ClearBackground(color);
 }
-// Language-suffixed textures (`combo/combo_<lang>`): a skin rarely ships every language, so
-// a name ending in the current language falls back to the `_ja` and then the `_en` variant
-// instead of the warning placeholder. Names without the suffix are returned unchanged.
+
 std::vector<std::string> TextureWrapper::language_variants(const std::string& name) const {
     std::vector<std::string> out{name};
     if (!global_data.config) return out;
@@ -934,11 +952,13 @@ std::vector<std::string> TextureWrapper::language_variants(const std::string& na
 }
 
 TextureObject* TextureWrapper::get_texture(const std::string& name) {
+    auto it = textures.find(name);
+    if (it != textures.end()) return it->second.get();
     return get_texture_shared(name).get();
 }
 
 std::shared_ptr<TextureObject> TextureWrapper::get_texture_shared(const std::string& name) {
-    // first variant that is actually loaded, else fall back to the warning placeholder
+    if (auto hit = textures.find(name); hit != textures.end()) return hit->second;
     for (const auto& v : language_variants(name)) {
         auto it = textures.find(v);
         if (it != textures.end()) return it->second;
@@ -949,6 +969,7 @@ std::shared_ptr<TextureObject> TextureWrapper::get_texture_shared(const std::str
 }
 
 bool TextureWrapper::has_texture(const std::string& name) {
+    if (textures.find(name) != textures.end()) return true;
     for (const auto& v : language_variants(name)) {
         if (textures.find(v) != textures.end()) return true;
     }
