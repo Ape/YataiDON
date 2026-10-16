@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../libs/global_data.h"
 #include "../../libs/animation.h"
+#include "../../libs/global_data.h"
 #include "../../libs/script.h"
 
 class ResultTransition : public LuaScript {

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "../../libs/script.h"
-#include "../../libs/global_data.h"
 #include <vector>
+
+#include "../../libs/global_data.h"
+#include "../../libs/script.h"
 
 struct DanResultRowSchedule {
     double land = 0, fill0 = 0, filld = 0, numin = 0;
@@ -17,10 +18,11 @@ class DanResultDraw : public LuaScript {
     sol::protected_function fn_draw_overlay;
     sol::protected_function fn_chara_pos;
     sol::protected_function fn_nameplate_pos;
+
 public:
     DanResultDraw() = default;
-    DanResultDraw(const DanResultData& rd, int prev_arrival, int prev_best_score, bool best_score_show,
-                  int gauge_exam, int gauge_value, int gauge_border);
+    DanResultDraw(const DanResultData& rd, int prev_arrival, int prev_best_score, bool best_score_show, int gauge_exam,
+                  int gauge_value, int gauge_border);
 
     struct FrameState {
         double now = 0;

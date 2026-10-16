@@ -1,4 +1,5 @@
 #include "drumroll_counter.h"
+
 #include <algorithm>
 #include <stdexcept>
 
@@ -6,13 +7,14 @@ static constexpr int DRUMROLL_COUNTER_FADE_ANIM_ID = 8;
 static constexpr int DRUMROLL_COUNTER_STRETCH_ANIM_ID = 9;
 
 DrumrollCounter::DrumrollCounter() {
-     drumroll_count = 0;
-     fade = dynamic_cast<FadeAnimation*>(tex.get_animation(DRUMROLL_COUNTER_FADE_ANIM_ID));
-     stretch = dynamic_cast<TextStretchAnimation*>(tex.get_animation(DRUMROLL_COUNTER_STRETCH_ANIM_ID));
-     if (!fade || !stretch)
-         throw std::runtime_error("DrumrollCounter: animation 8/9 has an unexpected type");
-     t_bubble = tex.get_texture("drumroll_counter/bubble");
-     t_counter = tex.get_texture("drumroll_counter/counter");
+    drumroll_count = 0;
+    fade = dynamic_cast<FadeAnimation*>(tex.get_animation(DRUMROLL_COUNTER_FADE_ANIM_ID));
+    stretch = dynamic_cast<TextStretchAnimation*>(tex.get_animation(DRUMROLL_COUNTER_STRETCH_ANIM_ID));
+    if (!fade || !stretch) {
+        throw std::runtime_error("DrumrollCounter: animation 8/9 has an unexpected type");
+    }
+    t_bubble = tex.get_texture("drumroll_counter/bubble");
+    t_counter = tex.get_texture("drumroll_counter/counter");
 }
 
 void DrumrollCounter::update_count(int count) {
@@ -37,14 +39,20 @@ void DrumrollCounter::update_animations(double current_ms) {
 }
 
 void DrumrollCounter::draw(float y) {
-    tex.draw_texture(t_bubble, {.y=y, .fade=fade->attribute});
+    tex.draw_texture(t_bubble, {.y = y, .fade = fade->attribute});
     std::string counter = std::to_string(drumroll_count);
     const float margin = tex.get_skin_config(SC::GAME_DRUMROLL_COUNTER_MARGIN)->x;
     float total_width = static_cast<float>(counter.length()) * margin;
     for (size_t i = 0; i < counter.size(); i++) {
         char digit = counter[i];
-        if (digit < '0' || digit > '9') continue;
-        tex.draw_texture(t_counter, {.frame=digit - '0', .x=-(total_width/2.0f)+(i*margin), .y=y -(float)stretch->attribute, .y2=(float)stretch->attribute, .fade=fade->attribute});
+        if (digit < '0' || digit > '9') {
+            continue;
+        }
+        tex.draw_texture(t_counter, {.frame = digit - '0',
+                                     .x = -(total_width / 2.0f) + (i * margin),
+                                     .y = y - (float)stretch->attribute,
+                                     .y2 = (float)stretch->attribute,
+                                     .fade = fade->attribute});
     }
 }
 

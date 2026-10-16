@@ -1,30 +1,37 @@
 #include "box_song.h"
-#include "../../../libs/text.h"
-#include "navigator.h"
-#include "../../../libs/audio.h"
+
 #include <thread>
 
+#include "../../../libs/audio.h"
+#include "../../../libs/text.h"
+#include "navigator.h"
+
 namespace {
-    double bgm_resume_at   = 0.0;   // 0 = nothing pending
-    int    preview_holders = 0;     // focused song boxes that own the bgm slot
-}
+    double bgm_resume_at = 0.0; // 0 = nothing pending
+    int preview_holders = 0;    // focused song boxes that own the bgm slot
+} // namespace
 
 void SongBox::reset_bgm_slot() {
-    bgm_resume_at   = 0.0;
+    bgm_resume_at = 0.0;
     preview_holders = 0;
 }
 
 void SongBox::service_bgm_resume(double current_ms) {
-    if (bgm_resume_at <= 0.0) return;
-    if (preview_holders > 0) { bgm_resume_at = 0.0; return; }   // a song took it
-    if (current_ms < bgm_resume_at) return;
+    if (bgm_resume_at <= 0.0) {
+        return;
+    }
+    if (preview_holders > 0) {
+        bgm_resume_at = 0.0;
+        return;
+    } // a song took it
+    if (current_ms < bgm_resume_at) {
+        return;
+    }
     bgm_resume_at = 0.0;
     audio.play_sound("bgm", VolumePreset::MUSIC);
 }
 
-SongBox::SongBox(const fs::path& path, const BoxDef& box_def, SongParser parser)
-    : BaseBox(path, box_def)
-{
+SongBox::SongBox(const fs::path& path, const BoxDef& box_def, SongParser parser) : BaseBox(path, box_def) {
     song_genre_index = genre_index;
     song_genre_label = box_def.genre_label;
 
@@ -51,28 +58,31 @@ void SongBox::refresh_scores() {
     bool cheap_hash = true;
 #endif
     for (const auto& [course, course_data] : parser.metadata.course_data) {
-        if (course < 0 || course >= static_cast<int>(hashes.size()))
+        if (course < 0 || course >= static_cast<int>(hashes.size())) {
             continue;
-        if (hashes[course].empty() && cheap_hash)
+        }
+        if (hashes[course].empty() && cheap_hash) {
             hashes[course] = parser.get_diff_hash(course);
+        }
     }
     for (int i = 0; i < 5; i++) {
         const std::string& p1_id = global_data.config->network.access_code_1;
         const std::string& p2_id = global_data.config->network.access_code_2;
         scores[i] = scores_manager.get_score(hashes[i], i, p1_id);
-        scores_p2[i] = navigator.is_2p
-            ? scores_manager.get_score(hashes[i], i, p2_id)
-            : std::nullopt;
+        scores_p2[i] = navigator.is_2p ? scores_manager.get_score(hashes[i], i, p2_id) : std::nullopt;
     }
     score_history.reset();
 }
 
 std::string SongBox::hash_for(int difficulty) {
-    if (difficulty < 0 || difficulty >= (int)hashes.size()) return "";
+    if (difficulty < 0 || difficulty >= (int)hashes.size()) {
+        return "";
+    }
     if (hashes[difficulty].empty()) {
         hashes[difficulty] = parser.get_diff_hash(difficulty);
-        if (!hashes[difficulty].empty())
+        if (!hashes[difficulty].empty()) {
             scores_manager.add_path_binding(path, hashes);
+        }
     }
     return hashes[difficulty];
 }
@@ -84,7 +94,9 @@ void SongBox::reset() {
         audio.unload_music_stream("preview");
     }
     music_playing = false;
-    if (preview_thread.joinable()) preview_thread.join();
+    if (preview_thread.joinable()) {
+        preview_thread.join();
+    }
     preview_load.reset();
     preview_attempted = false;
     release_preview_slot();
@@ -113,9 +125,13 @@ void SongBox::preregister_text() {
 
 void SongBox::load_text() {
     BaseBox::load_text();
-    bpm_text = make_unique<OutlinedText>("BPM\n" + std::to_string(static_cast<int>(parser.metadata.bpm)), tex.get_skin_config(SC::SONG_SELECT_BOX_BPM)->font_size, ray::WHITE, ray::BLACK, false);
+    bpm_text = make_unique<OutlinedText>("BPM\n" + std::to_string(static_cast<int>(parser.metadata.bpm)),
+                                         tex.get_skin_config(SC::SONG_SELECT_BOX_BPM)->font_size, ray::WHITE,
+                                         ray::BLACK, false);
     if (exists(parser.metadata.preimage)) {
-        if (preimage.has_value()) ray::UnloadTexture(preimage.value());
+        if (preimage.has_value()) {
+            ray::UnloadTexture(preimage.value());
+        }
         preimage = ray::LoadTexture(parser.metadata.preimage.string().c_str());
         ray::GenTextureMipmaps(&preimage.value());
         ray::SetTextureFilter(preimage.value(), ray::TEXTURE_FILTER_TRILINEAR);
@@ -142,11 +158,13 @@ void SongBox::update(double current_time) {
     // wait that long rather than polling the animation, which the Lua skin now drives.
     bool box_opened = get_current_ms() - bar_open_started_at > 350;
 
-    if (is_bank && yellow_box_active && !music_playing && !preview_load &&
-        !preview_attempted && get_current_ms() - bar_open_started_at > 250) {
+    if (is_bank && yellow_box_active && !music_playing && !preview_load && !preview_attempted &&
+        get_current_ms() - bar_open_started_at > 250) {
         preview_attempted = true;
         preview_load = std::make_shared<PreviewLoad>();
-        if (preview_thread.joinable()) preview_thread.join();
+        if (preview_thread.joinable()) {
+            preview_thread.join();
+        }
         preview_thread = std::thread([state = preview_load, wave = parser.metadata.wave] {
             state->ok = audio.prepare_nus3bank_pcm(wave, state->pcm, true);
             state->done.store(true, std::memory_order_release);
@@ -163,13 +181,11 @@ void SongBox::update(double current_time) {
         }
     }
 
-    if (preview_load && preview_load->done.load(std::memory_order_acquire) &&
-        yellow_box_active && box_opened && !music_playing) {
+    if (preview_load && preview_load->done.load(std::memory_order_acquire) && yellow_box_active && box_opened &&
+        !music_playing) {
         auto state = std::move(preview_load);
         if (state->ok) {
-            float demo_start = state->pcm.preview_ms > 0
-                             ? state->pcm.preview_ms / 1000.0f
-                             : parser.metadata.demostart;
+            float demo_start = state->pcm.preview_ms > 0 ? state->pcm.preview_ms / 1000.0f : parser.metadata.demostart;
             audio.load_music_stream_prepared(std::move(state->pcm), "preview");
             if (audio.is_music_stream_valid("preview")) {
                 music_playing = true;
@@ -189,8 +205,9 @@ void SongBox::update(double current_time) {
         }
     }
 
-    if (score_history)
+    if (score_history) {
         score_history->update(current_time);
+    }
 }
 
 void SongBox::expand_box() {
@@ -203,15 +220,21 @@ void SongBox::expand_box() {
 }
 
 void SongBox::release_preview_slot() {
-    if (!holds_preview_slot) return;
+    if (!holds_preview_slot) {
+        return;
+    }
     holds_preview_slot = false;
-    if (preview_holders > 0) preview_holders--;
+    if (preview_holders > 0) {
+        preview_holders--;
+    }
 }
 
 void SongBox::close_box() {
     BaseBox::close_box();
     box_opened_at = 0.0;
-    if (preview_thread.joinable()) preview_thread.join();
+    if (preview_thread.joinable()) {
+        preview_thread.join();
+    }
     preview_load.reset();
     preview_attempted = false;
     release_preview_slot();
@@ -226,9 +249,15 @@ void SongBox::close_box() {
 }
 
 void SongBox::draw_score_history() {
-    if (!score_history) return;
-    if (!yellow_box_opened) return;
-    if (get_current_ms() < box_opened_at + 3000.0) return;
+    if (!score_history) {
+        return;
+    }
+    if (!yellow_box_opened) {
+        return;
+    }
+    if (get_current_ms() < box_opened_at + 3000.0) {
+        return;
+    }
     score_history->draw();
 }
 

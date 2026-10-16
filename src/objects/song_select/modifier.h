@@ -1,15 +1,16 @@
 #pragma once
 
-#include "../../libs/global_data.h"
-#include "../../libs/parsers/tja.h"
-#include "../../libs/scores.h"
-#include "../../libs/text.h"
 #include <algorithm>
 #include <array>
 #include <map>
 #include <memory>
 #include <unordered_map>
 #include <vector>
+
+#include "../../libs/global_data.h"
+#include "../../libs/parsers/tja.h"
+#include "../../libs/scores.h"
+#include "../../libs/text.h"
 
 class ModifierSelector {
 private:
@@ -46,28 +47,29 @@ private:
     void set_bool(int mod_index, bool value);
 
     void start_text_animation(int direction);
+
 public:
     struct ModRow {
         std::string name;
         std::string value;
         std::string label;
-        int  state;
+        int state;
         bool changed;
         bool enabled;
         bool greyed;
     };
     bool row_greyed(const std::string& name) const;
     std::vector<ModRow> lua_rows();
-    int  lua_index() const { return current_mod_index; }
-    int  lua_row_count() const { return (int)mod_names.size(); }
-    int   lua_change_dir() const { return direction; }
+    int lua_index() const { return current_mod_index; }
+    int lua_row_count() const { return (int)mod_names.size(); }
+    int lua_change_dir() const { return direction; }
     float lua_change_fade() const { return (float)fade_sideways->attribute; }
-    bool  lua_change_active() const { return !move_sideways->is_finished; }
-    int    lua_change_seq() const { return change_seq; }
+    bool lua_change_active() const { return !move_sideways->is_finished; }
+    int lua_change_seq() const { return change_seq; }
     double lua_change_move() const { return move_sideways->attribute; }
     double lua_arrow_fade() const { return blue_arrow_fade->attribute; }
     double lua_arrow_move() const { return blue_arrow_move->attribute; }
-    int    lua_id() const { return instance_id; }
+    int lua_id() const { return instance_id; }
     PlayerNum lua_player() const { return player_num; }
 
     bool is_finished;

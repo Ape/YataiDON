@@ -65,4 +65,6 @@ void ios_on_foreground();
 void ios_suspend_audio(bool suspended);
 
 // Checks if we're on iOS (for compile-time platform detection).
-constexpr bool ios_is_ios_platform() { return true; }
+constexpr bool ios_is_ios_platform() {
+    return true;
+}

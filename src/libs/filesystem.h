@@ -1,10 +1,11 @@
 #pragma once
 
-#include "rapidjson/document.h"
+#include <filesystem>
 #include <rapidjson/istreamwrapper.h>
 #include <string>
 #include <vector>
-#include <filesystem>
+
+#include "rapidjson/document.h"
 
 namespace fs = std::filesystem;
 
@@ -43,6 +44,5 @@ std::vector<fs::path> skin_ancestor_roots();
 bool skin_has_parent();
 
 fs::path parent_skin_root();
-
 
 fs::path resolve_skin_path(const fs::path& relative_path);

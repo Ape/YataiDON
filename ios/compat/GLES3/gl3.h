@@ -12,7 +12,7 @@ static inline void yataidon_glBindFramebuffer(GLenum target, GLuint framebuffer)
         SDL_Window* window = SDL_GL_GetCurrentWindow();
         if (window) {
             framebuffer = (GLuint)SDL_GetNumberProperty(SDL_GetWindowProperties(window),
-                SDL_PROP_WINDOW_UIKIT_OPENGL_FRAMEBUFFER_NUMBER, 0);
+                                                        SDL_PROP_WINDOW_UIKIT_OPENGL_FRAMEBUFFER_NUMBER, 0);
         }
     }
     glBindFramebuffer(target, framebuffer);
@@ -26,7 +26,7 @@ static inline void yataidon_glBindRenderbuffer(GLenum target, GLuint renderbuffe
         SDL_Window* window = SDL_GL_GetCurrentWindow();
         if (window) {
             renderbuffer = (GLuint)SDL_GetNumberProperty(SDL_GetWindowProperties(window),
-                SDL_PROP_WINDOW_UIKIT_OPENGL_RENDERBUFFER_NUMBER, 0);
+                                                         SDL_PROP_WINDOW_UIKIT_OPENGL_RENDERBUFFER_NUMBER, 0);
         }
     }
     glBindRenderbuffer(target, renderbuffer);

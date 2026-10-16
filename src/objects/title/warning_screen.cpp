@@ -1,9 +1,11 @@
 #include "warning_screen.h"
 
 WarningScreen::WarningScreen(double current_ms) {
-    if (!load("WarningScreen", "warning_screen", current_ms)) return;
-    fn_update      = lua_object["update"];
-    fn_draw        = lua_object["draw"];
+    if (!load("WarningScreen", "warning_screen", current_ms)) {
+        return;
+    }
+    fn_update = lua_object["update"];
+    fn_draw = lua_object["draw"];
     fn_is_finished = lua_object["is_finished"];
 }
 

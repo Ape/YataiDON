@@ -1,37 +1,51 @@
 #include "texture.h"
-#include "profiler.h"
-#include "global_data.h"
-#include "script.h"
-#include "text.h"
-#include "filesystem.h"
-#include <spdlog/spdlog.h>
-#include <charconv>
-#include <thread>
+
 #include <atomic>
+#include <charconv>
 #include <condition_variable>
 #include <mutex>
+#include <spdlog/spdlog.h>
+#include <thread>
+
+#include "filesystem.h"
+#include "global_data.h"
+#include "profiler.h"
+#include "script.h"
+#include "text.h"
 
 namespace {
 
-inline double json_number(const Value& v, double fallback = 0.0) {
-    if (v.IsInt())    return static_cast<double>(v.GetInt());
-    if (v.IsInt64())  return static_cast<double>(v.GetInt64());
-    if (v.IsUint())   return static_cast<double>(v.GetUint());
-    if (v.IsUint64()) return static_cast<double>(v.GetUint64());
-    if (v.IsNumber()) return v.GetDouble();
-    return fallback;
-}
+    inline double json_number(const Value& v, double fallback = 0.0) {
+        if (v.IsInt()) {
+            return static_cast<double>(v.GetInt());
+        }
+        if (v.IsInt64()) {
+            return static_cast<double>(v.GetInt64());
+        }
+        if (v.IsUint()) {
+            return static_cast<double>(v.GetUint());
+        }
+        if (v.IsUint64()) {
+            return static_cast<double>(v.GetUint64());
+        }
+        if (v.IsNumber()) {
+            return v.GetDouble();
+        }
+        return fallback;
+    }
 
-inline double json_member(const Value& o, const char* key, double fallback) {
-    return o.HasMember(key) ? json_number(o[key], fallback) : fallback;
-}
+    inline double json_member(const Value& o, const char* key, double fallback) {
+        return o.HasMember(key) ? json_number(o[key], fallback) : fallback;
+    }
 
-}  // namespace
+} // namespace
 
 std::string TextureWrapper::skin_text(const std::string& key, const std::string& language,
                                       const std::string& fallback) const {
     const SkinInfo* info = font_manager.get_text_info(key);
-    if (!info) return fallback;
+    if (!info) {
+        return fallback;
+    }
     auto t = info->text.find(language);
     return t == info->text.end() ? fallback : t->second;
 }
@@ -59,16 +73,20 @@ void TextureWrapper::init(const fs::path& skin_path) {
     // Derive screen dimensions from child config first so screen_scale is known.
     {
         float w = skin_config_file.HasMember("screen") && skin_config_file["screen"].HasMember("width")
-                      ? skin_config_file["screen"]["width"].GetFloat() : 1280.0f;
+                      ? skin_config_file["screen"]["width"].GetFloat()
+                      : 1280.0f;
         float h = skin_config_file.HasMember("screen") && skin_config_file["screen"].HasMember("height")
-                      ? skin_config_file["screen"]["height"].GetFloat() : 720.0f;
-        screen_width  = static_cast<int>(w);
+                      ? skin_config_file["screen"]["height"].GetFloat()
+                      : 720.0f;
+        screen_width = static_cast<int>(w);
         screen_height = static_cast<int>(h);
-        screen_scale  = w / 1280.0f;
+        screen_scale = w / 1280.0f;
     }
 
     auto load_entry = [this](const std::string& name, const Value& v, float scale) {
-        if (!v.IsObject()) return;
+        if (!v.IsObject()) {
+            return;
+        }
         float x = static_cast<float>(json_member(v, "x", 0.0)) * scale;
         float y = static_cast<float>(json_member(v, "y", 0.0)) * scale;
         int font_size = static_cast<int>(json_member(v, "font_size", 0) * scale);
@@ -100,21 +118,30 @@ void TextureWrapper::init(const fs::path& skin_path) {
     auto load_chara = [this](const Value& cfg, float scale) {
         if (cfg.HasMember("nameplate") && cfg["nameplate"].IsObject()) {
             for (auto& m : cfg["nameplate"].GetObject()) {
-                if (m.value.IsArray() && m.value.Size() >= 2 && m.value[0].IsNumber() && m.value[1].IsNumber())
-                    nameplate_positions[m.name.GetString()] = { m.value[0].GetFloat() * scale, m.value[1].GetFloat() * scale };
+                if (m.value.IsArray() && m.value.Size() >= 2 && m.value[0].IsNumber() && m.value[1].IsNumber()) {
+                    nameplate_positions[m.name.GetString()] = {m.value[0].GetFloat() * scale,
+                                                               m.value[1].GetFloat() * scale};
+                }
             }
         }
-        if (!cfg.HasMember("chara_3d") || !cfg["chara_3d"].IsObject()) return;
+        if (!cfg.HasMember("chara_3d") || !cfg["chara_3d"].IsObject()) {
+            return;
+        }
         for (auto& m : cfg["chara_3d"].GetObject()) {
             std::string name = m.name.GetString();
             if (m.value.IsNumber()) {
                 float v = m.value.GetFloat();
-                if      (name == "scale") chara_3d_config.scale = v;
-                else if (name == "rot_x") chara_3d_config.rot_x = v;
-                else if (name == "rot_y") chara_3d_config.rot_y = v;
-                else if (name == "rot_z") chara_3d_config.rot_z = v;
+                if (name == "scale") {
+                    chara_3d_config.scale = v;
+                } else if (name == "rot_x") {
+                    chara_3d_config.rot_x = v;
+                } else if (name == "rot_y") {
+                    chara_3d_config.rot_y = v;
+                } else if (name == "rot_z") {
+                    chara_3d_config.rot_z = v;
+                }
             } else if (m.value.IsArray() && m.value.Size() >= 2 && m.value[0].IsNumber() && m.value[1].IsNumber()) {
-                chara_positions[name] = { m.value[0].GetFloat() * scale, m.value[1].GetFloat() * scale };
+                chara_positions[name] = {m.value[0].GetFloat() * scale, m.value[1].GetFloat() * scale};
             }
         }
     };
@@ -130,8 +157,9 @@ void TextureWrapper::init(const fs::path& skin_path) {
             float aw = 1280.0f;
             try {
                 auto cfg = read_json_file(chain[i] / "skin_config.json");
-                if (cfg.HasMember("screen") && cfg["screen"].HasMember("width") && cfg["screen"]["width"].IsNumber())
+                if (cfg.HasMember("screen") && cfg["screen"].HasMember("width") && cfg["screen"]["width"].IsNumber()) {
                     aw = cfg["screen"]["width"].GetFloat();
+                }
             } catch (const std::exception& e) {
                 spdlog::warn("skin ancestor {}: {}", chain[i].string(), e.what());
             }
@@ -155,8 +183,9 @@ void TextureWrapper::init(const fs::path& skin_path) {
     load_chara(skin_config_file, 1.0f);
 
     // a skin whose chain defines no value for a required key reads as zeroes
-    for (unsigned int k = 0; k < static_cast<unsigned int>(SC::OPTIONAL_KEYS); k++)
+    for (unsigned int k = 0; k < static_cast<unsigned int>(SC::OPTIONAL_KEYS); k++) {
         skin_info.try_emplace(static_cast<SC>(k));
+    }
 
     if (skin_config_file.HasMember("screen") && skin_config_file["screen"].HasMember("options")) {
         const Value& opts = skin_config_file["screen"]["options"];
@@ -226,7 +255,9 @@ BaseAnimation* TextureWrapper::get_animation(const int id, const std::string& sc
     }
 
     auto new_anim = it->second->copy();
-    if (it->second->isStarted()) new_anim->start();
+    if (it->second->isStarted()) {
+        new_anim->start();
+    }
     copied_animations.push_back(std::move(new_anim));
     return copied_animations.back().get();
 }
@@ -234,10 +265,8 @@ BaseAnimation* TextureWrapper::get_animation(const int id, const std::string& sc
 void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* tex_obj, float scale) {
     if (tex_mapping.IsArray()) {
         // Check if crop data exists in the first mapping (index 0)
-        bool has_crop_in_first = tex_mapping.Size() > 0 &&
-                                 tex_mapping[0].IsObject() &&
-                                 tex_mapping[0].HasMember("crop") &&
-                                 tex_mapping[0]["crop"].IsArray() &&
+        bool has_crop_in_first = tex_mapping.Size() > 0 && tex_mapping[0].IsObject() &&
+                                 tex_mapping[0].HasMember("crop") && tex_mapping[0]["crop"].IsArray() &&
                                  !tex_mapping[0]["crop"].Empty();
 
         std::vector<ray::Rectangle> crops;
@@ -249,10 +278,8 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
                     spdlog::error("Invalid crop entry {} for texture {}", j, tex_obj->name);
                     continue;
                 }
-                crops.push_back(ray::Rectangle{
-                    crop[0].GetFloat(), crop[1].GetFloat(),
-                    crop[2].GetFloat(), crop[3].GetFloat()
-                });
+                crops.push_back(
+                    ray::Rectangle{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
             }
             if (crops.empty()) {
                 has_crop_in_first = false;
@@ -313,10 +340,8 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
                     spdlog::error("Invalid crop entry {} for texture {}", j, tex_obj->name);
                     continue;
                 }
-                crops.push_back(ray::Rectangle{
-                    crop[0].GetFloat(), crop[1].GetFloat(),
-                    crop[2].GetFloat(), crop[3].GetFloat()
-                });
+                crops.push_back(
+                    ray::Rectangle{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
             }
             if (!crops.empty()) {
                 tex_obj->crop_data = crops;
@@ -364,21 +389,32 @@ bool TextureWrapper::read_screen_animations(const std::string& screen_name, Docu
     }
     for (size_t i = 0; i < ancestor_graphics_paths.size(); i++) {
         fs::path file = ancestor_graphics_paths[i] / screen_name / "animation.json";
-        if (!fs::exists(file)) continue;
+        if (!fs::exists(file)) {
+            continue;
+        }
         out = read_json_file(file);
         const float scale = ancestor_scales[i];
         auto scale_number = [scale](Value& v) {
-            if (v.IsInt()) v.SetInt(static_cast<int>(json_number(v) * scale));
-            else if (v.IsDouble()) v.SetDouble(v.GetDouble() * scale);
+            if (v.IsInt()) {
+                v.SetInt(static_cast<int>(json_number(v) * scale));
+            } else if (v.IsDouble()) {
+                v.SetDouble(v.GetDouble() * scale);
+            }
         };
         if (out.IsArray()) {
             for (SizeType k = 0; k < out.Size(); k++) {
                 Value& anim = out[k];
-                if (anim.HasMember("total_distance") && !anim["total_distance"].IsObject()) scale_number(anim["total_distance"]);
-                if (anim.HasMember("start_position") && !anim["start_position"].IsObject()) scale_number(anim["start_position"]);
+                if (anim.HasMember("total_distance") && !anim["total_distance"].IsObject()) {
+                    scale_number(anim["total_distance"]);
+                }
+                if (anim.HasMember("start_position") && !anim["start_position"].IsObject()) {
+                    scale_number(anim["start_position"]);
+                }
                 if (anim.HasMember("waypoints") && anim["waypoints"].IsArray()) {
                     for (auto& wp : anim["waypoints"].GetArray()) {
-                        if (wp.IsObject() && wp.HasMember("value")) scale_number(wp["value"]);
+                        if (wp.IsObject() && wp.HasMember("value")) {
+                            scale_number(wp["value"]);
+                        }
                     }
                 }
             }
@@ -405,23 +441,26 @@ std::unordered_map<std::string, std::weak_ptr<TextureObject>>& tex_object_cache(
 }
 
 std::shared_ptr<ray::Texture2D> shared_texture(ray::Texture2D tex) {
-    return std::shared_ptr<ray::Texture2D>(
-        new ray::Texture2D(tex),
-        [](ray::Texture2D* p) {
-            if (p->id != 0) ray::UnloadTexture(*p);
-            delete p;
-        });
+    return std::shared_ptr<ray::Texture2D>(new ray::Texture2D(tex), [](ray::Texture2D* p) {
+        if (p->id != 0) {
+            ray::UnloadTexture(*p);
+        }
+        delete p;
+    });
 }
 
 void decode_images_parallel(const std::vector<fs::path>& files, std::vector<ray::Image>& out) {
     out.assign(files.size(), ray::Image{});
-    if (files.empty()) return;
+    if (files.empty()) {
+        return;
+    }
 
     unsigned hw = std::thread::hardware_concurrency();
     size_t workers = std::min<size_t>(files.size(), hw ? hw : 4);
     if (workers <= 1) {
-        for (size_t i = 0; i < files.size(); ++i)
+        for (size_t i = 0; i < files.size(); ++i) {
             out[i] = ray::LoadImage(files[i].string().c_str());
+        }
         return;
     }
 
@@ -440,13 +479,18 @@ void decode_images_parallel(const std::vector<fs::path>& files, std::vector<ray:
             }
         });
     }
-    for (auto& t : pool) t.join();
+    for (auto& t : pool) {
+        t.join();
+    }
 }
 
 std::vector<fs::path> sorted_frames(const fs::path& dir) {
     std::vector<fs::path> frames;
-    for (const auto& entry : fs::directory_iterator(dir))
-        if (entry.is_regular_file()) frames.push_back(entry.path());
+    for (const auto& entry : fs::directory_iterator(dir)) {
+        if (entry.is_regular_file()) {
+            frames.push_back(entry.path());
+        }
+    }
     std::sort(frames.begin(), frames.end(), [](const fs::path& a, const fs::path& b) {
         const std::string as = a.stem().string(), bs = b.stem().string();
         int an = 0, bn = 0;
@@ -454,8 +498,12 @@ std::vector<fs::path> sorted_frames(const fs::path& dir) {
         auto br = std::from_chars(bs.data(), bs.data() + bs.size(), bn);
         bool a_ok = ar.ec == std::errc() && ar.ptr == as.data() + as.size();
         bool b_ok = br.ec == std::errc() && br.ptr == bs.data() + bs.size();
-        if (a_ok && b_ok) return an < bn;
-        if (a_ok != b_ok) return a_ok;
+        if (a_ok && b_ok) {
+            return an < bn;
+        }
+        if (a_ok != b_ok) {
+            return a_ok;
+        }
         return as < bs;
     });
     return frames;
@@ -467,8 +515,9 @@ std::unordered_set<std::string> overridden_names(const fs::path& child_folder) {
         auto cfg = read_json_file(child_folder / "texture.json");
         for (auto& m : cfg.GetObject()) {
             std::string n = m.name.GetString();
-            if (fs::is_directory(child_folder / n) || fs::exists(child_folder / (n + ".png")))
+            if (fs::is_directory(child_folder / n) || fs::exists(child_folder / (n + ".png"))) {
                 names.insert(n);
+            }
         }
     } catch (const std::exception&) {
         // Unreadable child config - fall back to loading everything from the parent.
@@ -479,13 +528,15 @@ std::unordered_set<std::string> overridden_names(const fs::path& child_folder) {
 
 class ImagePrefetch {
 public:
-    ImagePrefetch(const std::vector<std::vector<fs::path>>& groups,
-                  const std::unordered_set<std::string>& border_keys, size_t budget_bytes)
+    ImagePrefetch(const std::vector<std::vector<fs::path>>& groups, const std::unordered_set<std::string>& border_keys,
+                  size_t budget_bytes)
         : budget(budget_bytes) {
         for (size_t g = 0; g < groups.size(); ++g) {
             for (const fs::path& p : groups[g]) {
                 std::string key = image_key(p);
-                if (index.count(key)) continue;
+                if (index.count(key)) {
+                    continue;
+                }
                 index.emplace(key, items.size());
                 items.push_back(Item{p, g});
                 items.back().want_border = border_keys.count(key) > 0;
@@ -493,7 +544,9 @@ public:
         }
         unsigned hw = std::thread::hardware_concurrency();
         size_t workers = std::min<size_t>(items.size(), std::clamp<unsigned>(hw ? hw - 1 : 3, 1, 16));
-        for (size_t w = 0; w < workers; ++w) pool.emplace_back([this]() { work(); });
+        for (size_t w = 0; w < workers; ++w) {
+            pool.emplace_back([this]() { work(); });
+        }
     }
 
     ~ImagePrefetch() {
@@ -502,9 +555,14 @@ public:
             stop = true;
         }
         cv.notify_all();
-        for (auto& t : pool) t.join();
-        for (Item& it : items)
-            if (it.state == State::Done && it.image.data) ray::UnloadImage(it.image);
+        for (auto& t : pool) {
+            t.join();
+        }
+        for (Item& it : items) {
+            if (it.state == State::Done && it.image.data) {
+                ray::UnloadImage(it.image);
+            }
+        }
     }
 
     // The decoded image for path when it's part of this prefetch (waiting for a worker that
@@ -512,7 +570,9 @@ public:
     bool take(const fs::path& path, ray::Image& image, ray::Rectangle& border, bool& has_border) {
         std::unique_lock<std::mutex> lock(mutex);
         auto found = index.find(image_key(path));
-        if (found == index.end()) return false;
+        if (found == index.end()) {
+            return false;
+        }
         Item& it = items[found->second];
         cv.wait(lock, [&]() { return it.state != State::Decoding; });
         if (it.state == State::Pending) {
@@ -521,7 +581,9 @@ public:
             has_border = decode(it.path, it.want_border, image, border);
             return true;
         }
-        if (it.state != State::Done) return false;
+        if (it.state != State::Done) {
+            return false;
+        }
         image = it.image;
         border = it.border;
         has_border = it.has_border;
@@ -537,10 +599,15 @@ public:
         std::lock_guard<std::mutex> lock(mutex);
         finished_groups = std::max(finished_groups, g + 1);
         for (Item& it : items) {
-            if (it.group > g) continue;
-            if (it.state == State::Pending) it.state = State::Dropped;
-            else if (it.state == State::Done) {
-                if (it.image.data) ray::UnloadImage(it.image);
+            if (it.group > g) {
+                continue;
+            }
+            if (it.state == State::Pending) {
+                it.state = State::Dropped;
+            } else if (it.state == State::Done) {
+                if (it.image.data) {
+                    ray::UnloadImage(it.image);
+                }
                 it.image = ray::Image{};
                 held -= it.bytes;
                 it.state = State::Dropped;
@@ -552,7 +619,13 @@ public:
     static std::string image_key(const fs::path& p) { return p.lexically_normal().generic_string(); }
 
 private:
-    enum class State { Pending, Decoding, Done, Taken, Dropped };
+    enum class State {
+        Pending,
+        Decoding,
+        Done,
+        Taken,
+        Dropped
+    };
     struct Item {
         fs::path path;
         size_t group;
@@ -573,7 +646,9 @@ private:
             image = ray::Image{};
         }
         border = ray::Rectangle{};
-        if (!want_border || !image.data) return false;
+        if (!want_border || !image.data) {
+            return false;
+        }
         border = ray::GetImageAlphaBorder(image, 0.0f);
         return true;
     }
@@ -582,8 +657,12 @@ private:
         std::unique_lock<std::mutex> lock(mutex);
         while (true) {
             cv.wait(lock, [&]() { return stop || held < budget; });
-            while (next < items.size() && items[next].state != State::Pending) ++next;
-            if (stop || next >= items.size()) return;
+            while (next < items.size() && items[next].state != State::Pending) {
+                ++next;
+            }
+            if (stop || next >= items.size()) {
+                return;
+            }
             Item& it = items[next++];
             it.state = State::Decoding;
             lock.unlock();
@@ -591,15 +670,18 @@ private:
             ray::Rectangle border;
             const bool has_border = decode(it.path, it.want_border, image, border);
             lock.lock();
-            if (finished_groups > it.group) {   // its folder was loaded while this one decoded
-                if (image.data) ray::UnloadImage(image);
+            if (finished_groups > it.group) { // its folder was loaded while this one decoded
+                if (image.data) {
+                    ray::UnloadImage(image);
+                }
                 it.state = State::Dropped;
                 continue;
             }
             it.image = image;
             it.border = border;
             it.has_border = has_border;
-            it.bytes = image.data ? static_cast<size_t>(ray::GetPixelDataSize(image.width, image.height, image.format)) : 0;
+            it.bytes =
+                image.data ? static_cast<size_t>(ray::GetPixelDataSize(image.width, image.height, image.format)) : 0;
             it.state = State::Done;
             held += it.bytes;
             cv.notify_all();
@@ -613,7 +695,7 @@ private:
     std::condition_variable cv;
     size_t next = 0;
     size_t held = 0;
-    size_t finished_groups = 0;   // groups below this are done with
+    size_t finished_groups = 0; // groups below this are done with
     const size_t budget;
     bool stop = false;
 };
@@ -624,7 +706,9 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
     const std::string subset_key = fs::path(subset).filename().string();
     const std::string dedup_key = screen_name + "/" + subset_key;
 
-    if (loaded_subsets.count(dedup_key)) return;
+    if (loaded_subsets.count(dedup_key)) {
+        return;
+    }
 
     int loaded_count = 0;
     std::unordered_set<std::string> ids_this_call;
@@ -640,10 +724,11 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
         bool framed;
     };
 
-    auto load_from_path = [&](const fs::path& folder, float tex_scale,
-                              const std::unordered_set<std::string>* skip) {
+    auto load_from_path = [&](const fs::path& folder, float tex_scale, const std::unordered_set<std::string>* skip) {
         fs::path tex_json = folder / "texture.json";
-        if (!fs::exists(tex_json)) return;
+        if (!fs::exists(tex_json)) {
+            return;
+        }
 
         try {
             auto tex_config = read_json_file(tex_json);
@@ -655,7 +740,9 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
             auto push_file = [&](const fs::path& path) -> size_t {
                 std::string key = path.string();
                 auto it = file_index.find(key);
-                if (it != file_index.end()) return it->second;
+                if (it != file_index.end()) {
+                    return it->second;
+                }
                 size_t idx = files.size();
                 files.push_back(path);
                 file_index.emplace(std::move(key), idx);
@@ -665,7 +752,9 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
             for (auto& m : tex_config.GetObject()) {
                 std::string tex_name = m.name.GetString();
 
-                if (skip && skip->count(tex_name)) continue;
+                if (skip && skip->count(tex_name)) {
+                    continue;
+                }
 
                 std::string tex_id = subset_key + "/" + tex_name;
 
@@ -685,18 +774,20 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                 fs::path tex_file = folder / (tex_name + ".png");
                 // "file" lets several keys share one atlas PNG, distinguished by "crop".
                 bool file_override = m.value.IsObject() && m.value.HasMember("file") && m.value["file"].IsString();
-                if (file_override) tex_file = folder / m.value["file"].GetString();
+                if (file_override) {
+                    tex_file = folder / m.value["file"].GetString();
+                }
 
                 if (!file_override && fs::is_directory(tex_dir)) {
                     auto frames = sorted_frames(tex_dir);
                     size_t first = files.size();
-                    for (const auto& frame : frames) push_file(frame);
-                    pending.push_back({tex_id, tex_name, &m.value, cache_key,
-                                       first, frames.size(), true});
+                    for (const auto& frame : frames) {
+                        push_file(frame);
+                    }
+                    pending.push_back({tex_id, tex_name, &m.value, cache_key, first, frames.size(), true});
                 } else if (fs::exists(tex_file)) {
                     size_t first = push_file(tex_file);
-                    pending.push_back({tex_id, tex_name, &m.value, cache_key,
-                                       first, size_t{1}, false});
+                    pending.push_back({tex_id, tex_name, &m.value, cache_key, first, size_t{1}, false});
                 } else {
                     auto existing = textures.find(tex_id);
                     if (existing != textures.end()) {
@@ -704,8 +795,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                         ids_this_call.insert(tex_id);
                         ++loaded_count;
                     } else {
-                        spdlog::error("Texture {} was not found in {}",
-                               tex_name, folder.string());
+                        spdlog::error("Texture {} was not found in {}", tex_name, folder.string());
                     }
                 }
             }
@@ -727,7 +817,9 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
             }
             std::vector<ray::Image> decoded;
             decode_images_parallel(rest, decoded);
-            for (size_t k = 0; k < rest.size(); ++k) images[rest_index[k]] = decoded[k];
+            for (size_t k = 0; k < rest.size(); ++k) {
+                images[rest_index[k]] = decoded[k];
+            }
 
             try {
                 // GPU textures indexed by file, so keys that share one atlas PNG
@@ -758,20 +850,25 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                         }
                         texs.push_back(std::move(tex));
                     }
-                    if (!ok) continue;
+                    if (!ok) {
+                        continue;
+                    }
 
                     std::shared_ptr<TextureObject> obj;
-                    if (p.framed) obj = std::make_shared<FramedTexture>(p.id, std::move(texs));
-                    else          obj = std::make_shared<SingleTexture>(p.id, texs[0]);
+                    if (p.framed) {
+                        obj = std::make_shared<FramedTexture>(p.id, std::move(texs));
+                    } else {
+                        obj = std::make_shared<SingleTexture>(p.id, texs[0]);
+                    }
 
                     read_tex_obj_data(*p.mapping, obj.get(), tex_scale);
 
-                    if (!p.framed && !obj->crop_data.has_value() &&
-                        p.mapping->IsObject() && !p.mapping->HasMember("x2")) {
+                    if (!p.framed && !obj->crop_data.has_value() && p.mapping->IsObject() &&
+                        !p.mapping->HasMember("x2")) {
                         const ray::Image& img = images[p.first_file];
                         if (img.data) {
-                            const ray::Rectangle border = has_border[p.first_file]
-                                ? borders[p.first_file] : ray::GetImageAlphaBorder(img, 0.0f);
+                            const ray::Rectangle border =
+                                has_border[p.first_file] ? borders[p.first_file] : ray::GetImageAlphaBorder(img, 0.0f);
                             if (border.width > 0.0f) {
                                 obj->opaque_right = (border.x + border.width) * tex_scale;
                             }
@@ -784,19 +881,24 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                     ++loaded_count;
                 }
             } catch (...) {
-                for (auto& img : images)
-                    if (img.data) ray::UnloadImage(img);
+                for (auto& img : images) {
+                    if (img.data) {
+                        ray::UnloadImage(img);
+                    }
+                }
                 throw;
             }
 
-            for (auto& img : images)
-                if (img.data) ray::UnloadImage(img);
+            for (auto& img : images) {
+                if (img.data) {
+                    ray::UnloadImage(img);
+                }
+            }
 
             spdlog::debug("Textures loaded from folder: {}", folder.string());
 
         } catch (const std::exception& e) {
-            spdlog::error("Failed to load textures from folder {}: {}",
-                   folder.string(), e.what());
+            spdlog::error("Failed to load textures from folder {}: {}", folder.string(), e.what());
         }
     };
 
@@ -806,16 +908,23 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
     const bool child_has_folder = ancestor_graphics_paths.empty() || fs::exists(own_dir / "texture.json");
     std::vector<std::unordered_set<std::string>> skips(ancestor_graphics_paths.size());
     std::unordered_set<std::string> claimed;
-    if (child_has_folder && !ancestor_graphics_paths.empty()) claimed = overridden_names(own_dir);
+    if (child_has_folder && !ancestor_graphics_paths.empty()) {
+        claimed = overridden_names(own_dir);
+    }
     for (size_t i = 0; i < ancestor_graphics_paths.size(); i++) {
         const fs::path dir = ancestor_graphics_paths[i] / screen_name / subset;
         skips[i] = claimed;
-        if (fs::exists(dir / "texture.json"))
-            for (const std::string& n : overridden_names(dir)) claimed.insert(n);
+        if (fs::exists(dir / "texture.json")) {
+            for (const std::string& n : overridden_names(dir)) {
+                claimed.insert(n);
+            }
+        }
     }
     for (size_t i = ancestor_graphics_paths.size(); i-- > 0;) {
         const fs::path dir = ancestor_graphics_paths[i] / screen_name / subset;
-        if (fs::exists(dir / "texture.json")) load_from_path(dir, ancestor_scales[i], &skips[i]);
+        if (fs::exists(dir / "texture.json")) {
+            load_from_path(dir, ancestor_scales[i], &skips[i]);
+        }
     }
     if (child_has_folder) {
         load_from_path(own_dir, 1.0f, nullptr);
@@ -826,7 +935,9 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
     } else {
         loaded_subsets.insert(dedup_key);
         subset_loaded_ids[dedup_key] = ids_this_call;
-        for (const std::string& id : ids_this_call) ++tex_id_refcount[id];
+        for (const std::string& id : ids_this_call) {
+            ++tex_id_refcount[id];
+        }
     }
 }
 
@@ -835,7 +946,9 @@ void TextureWrapper::unload_folder(const std::string& screen_name, const std::st
     const std::string subset_key = fs::path(subset).filename().string();
     const std::string dedup_key = screen_name + "/" + subset_key;
 
-    if (!loaded_subsets.count(dedup_key)) return;
+    if (!loaded_subsets.count(dedup_key)) {
+        return;
+    }
 
     // A subset name can be shared by several screens (they resolve to the same
     // "subset/name" keys), so only drop a texture once every
@@ -845,7 +958,9 @@ void TextureWrapper::unload_folder(const std::string& screen_name, const std::st
     if (ids_it != subset_loaded_ids.end()) {
         for (const std::string& id : ids_it->second) {
             auto rc_it = refcount.find(id);
-            if (rc_it == refcount.end()) continue;
+            if (rc_it == refcount.end()) {
+                continue;
+            }
             if (--rc_it->second <= 0) {
                 textures.erase(id);
                 refcount.erase(rc_it);
@@ -867,8 +982,11 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     std::vector<fs::path> roots{graphics_path};
     roots.insert(roots.end(), ancestor_graphics_paths.begin(), ancestor_graphics_paths.end());
     std::vector<fs::path> screen_dirs;
-    for (const fs::path& root : roots)
-        if (fs::exists(root / screen_name)) screen_dirs.push_back(root / screen_name);
+    for (const fs::path& root : roots) {
+        if (fs::exists(root / screen_name)) {
+            screen_dirs.push_back(root / screen_name);
+        }
+    }
 
     if (screen_dirs.empty()) {
         spdlog::warn("Textures for Screen {} do not exist", screen_name);
@@ -882,10 +1000,13 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     std::unordered_set<std::string> seen;
     for (const fs::path& dir : screen_dirs) {
         for (const auto& entry : fs::directory_iterator(dir)) {
-            if (!entry.is_directory()) continue;
+            if (!entry.is_directory()) {
+                continue;
+            }
             std::string name = entry.path().filename().string();
-            if (seen.insert(name).second && !loaded_subsets.count(screen_name + "/" + name))
+            if (seen.insert(name).second && !loaded_subsets.count(screen_name + "/" + name)) {
                 subsets.push_back(std::move(name));
+            }
         }
     }
 
@@ -895,26 +1016,36 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     for (size_t g = 0; g < subsets.size(); ++g) {
         for (const fs::path& root : roots) {
             const fs::path dir = root / screen_name / subsets[g];
-            if (!fs::exists(dir / "texture.json")) continue;
+            if (!fs::exists(dir / "texture.json")) {
+                continue;
+            }
 
             try {
                 auto cfg = read_json_file(dir / "texture.json");
                 for (auto& m : cfg.GetObject()) {
-                    if (!m.value.IsObject() || m.value.HasMember("x2") || m.value.HasMember("crop")) continue;
+                    if (!m.value.IsObject() || m.value.HasMember("x2") || m.value.HasMember("crop")) {
+                        continue;
+                    }
                     const bool file_override = m.value.HasMember("file") && m.value["file"].IsString();
                     const std::string name = m.name.GetString();
-                    if (!file_override && fs::is_directory(dir / name)) continue;
+                    if (!file_override && fs::is_directory(dir / name)) {
+                        continue;
+                    }
                     border_keys.insert(ImagePrefetch::image_key(
                         dir / (file_override ? std::string(m.value["file"].GetString()) : name + ".png")));
                 }
-            } catch (const std::exception&) {}
+            } catch (const std::exception&) {
+            }
             std::error_code ec;
             for (const auto& entry : fs::directory_iterator(dir, ec)) {
                 const fs::path& p = entry.path();
                 if (entry.is_directory()) {
                     std::error_code sub_ec;
-                    for (const auto& frame : fs::directory_iterator(p, sub_ec))
-                        if (frame.is_regular_file() && frame.path().extension() == ".png") groups[g].push_back(frame.path());
+                    for (const auto& frame : fs::directory_iterator(p, sub_ec)) {
+                        if (frame.is_regular_file() && frame.path().extension() == ".png") {
+                            groups[g].push_back(frame.path());
+                        }
+                    }
                 } else if (p.extension() == ".png") {
                     groups[g].push_back(p);
                 }
@@ -925,7 +1056,10 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     {
         ImagePrefetch prefetch(groups, border_keys, kPrefetchBudgetBytes);
         image_prefetch = &prefetch;
-        struct Reset { ImagePrefetch*& p; ~Reset() { p = nullptr; } } reset{image_prefetch};
+        struct Reset {
+            ImagePrefetch*& p;
+            ~Reset() { p = nullptr; }
+        } reset{image_prefetch};
         for (size_t g = 0; g < subsets.size(); ++g) {
             load_folder(screen_name, subsets[g]);
             prefetch.finish_group(g);
@@ -941,27 +1075,40 @@ void TextureWrapper::clear_screen(const ray::Color& color) {
 
 std::vector<std::string> TextureWrapper::language_variants(const std::string& name) const {
     std::vector<std::string> out{name};
-    if (!global_data.config) return out;
+    if (!global_data.config) {
+        return out;
+    }
     const std::string& lang = global_data.config->general.language;
     const std::string suffix = "_" + lang;
-    if (name.size() <= suffix.size() || name.compare(name.size() - suffix.size(), suffix.size(), suffix) != 0) return out;
+    if (name.size() <= suffix.size() || name.compare(name.size() - suffix.size(), suffix.size(), suffix) != 0) {
+        return out;
+    }
     const std::string base = name.substr(0, name.size() - suffix.size());
-    for (const char* fb : {"ja", "en"})   // the cabinet's own order: untranslated rows draw from the Japanese set
-        if (lang != fb) out.push_back(base + "_" + fb);
+    for (const char* fb : {"ja", "en"}) { // the cabinet's own order: untranslated rows draw from the Japanese set
+        if (lang != fb) {
+            out.push_back(base + "_" + fb);
+        }
+    }
     return out;
 }
 
 TextureObject* TextureWrapper::get_texture(const std::string& name) {
     auto it = textures.find(name);
-    if (it != textures.end()) return it->second.get();
+    if (it != textures.end()) {
+        return it->second.get();
+    }
     return get_texture_shared(name).get();
 }
 
 std::shared_ptr<TextureObject> TextureWrapper::get_texture_shared(const std::string& name) {
-    if (auto hit = textures.find(name); hit != textures.end()) return hit->second;
+    if (auto hit = textures.find(name); hit != textures.end()) {
+        return hit->second;
+    }
     for (const auto& v : language_variants(name)) {
         auto it = textures.find(v);
-        if (it != textures.end()) return it->second;
+        if (it != textures.end()) {
+            return it->second;
+        }
     }
     spdlog::warn("Texture not found: {}", name);
     auto it = textures.find("kidou/warning");
@@ -969,15 +1116,21 @@ std::shared_ptr<TextureObject> TextureWrapper::get_texture_shared(const std::str
 }
 
 bool TextureWrapper::has_texture(const std::string& name) {
-    if (textures.find(name) != textures.end()) return true;
+    if (textures.find(name) != textures.end()) {
+        return true;
+    }
     for (const auto& v : language_variants(name)) {
-        if (textures.find(v) != textures.end()) return true;
+        if (textures.find(v) != textures.end()) {
+            return true;
+        }
     }
     return false;
 }
 
 void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParams& params) {
-    if (!tex_obj) return;
+    if (!tex_obj) {
+        return;
+    }
 
     const float mirror_x = (params.mirror == Mirror::HORIZONTAL) ? -1.0f : 1.0f;
     const float mirror_y = (params.mirror == Mirror::VERTICAL) ? -1.0f : 1.0f;
@@ -990,11 +1143,11 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
     } else if (tex_obj->crop_data.has_value()) {
         try {
             source_rect = tex_obj->crop_data->at(params.frame);
-            source_rect.width  -= 1.0f;
+            source_rect.width -= 1.0f;
             source_rect.height -= 1.0f;
             source_rect.x += mirror_x < 0 ? -0.5f : 0.5f;
             source_rect.y += mirror_y < 0 ? -0.5f : 0.5f;
-            source_rect.width  *= mirror_x;
+            source_rect.width *= mirror_x;
             source_rect.height *= mirror_y;
         } catch (const std::out_of_range& e) {
             spdlog::error("Frame index out of range for texture {}", tex_obj->name);
@@ -1025,26 +1178,26 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
         const float scaled_half_width = (x2v * params.scale) * 0.5f;
         const float scaled_half_height = (y2v * params.scale) * 0.5f;
 
-        dest_rect = ray::Rectangle{
-            base_x + draw_offset_x + half_width - scaled_half_width + params.x,
-            base_y + draw_offset_y + half_height - scaled_half_height + params.y,
-            x2v * params.scale + params.x2,
-            y2v * params.scale + params.y2
-        };
+        dest_rect = ray::Rectangle{base_x + draw_offset_x + half_width - scaled_half_width + params.x,
+                                   base_y + draw_offset_y + half_height - scaled_half_height + params.y,
+                                   x2v * params.scale + params.x2, y2v * params.scale + params.y2};
     } else {
-        dest_rect = ray::Rectangle{
-            base_x + draw_offset_x + params.x,
-            base_y + draw_offset_y + params.y,
-            tex_obj->x2[params.index] * params.scale + params.x2,
-            tex_obj->y2[params.index] * params.scale + params.y2
-        };
+        dest_rect = ray::Rectangle{base_x + draw_offset_x + params.x, base_y + draw_offset_y + params.y,
+                                   tex_obj->x2[params.index] * params.scale + params.x2,
+                                   tex_obj->y2[params.index] * params.scale + params.y2};
     }
 
     if (debug_log_draws) {
-        debug_draw_log.push_back({.name = tex_obj->name, .rect = dest_rect, .tex_obj = tex_obj,
-                                  .index = params.index, .offset_x = params.x, .offset_y = params.y,
-                                  .scale = params.scale, .center = params.center,
-                                  .origin = params.origin, .rotation = params.rotation});
+        debug_draw_log.push_back({.name = tex_obj->name,
+                                  .rect = dest_rect,
+                                  .tex_obj = tex_obj,
+                                  .index = params.index,
+                                  .offset_x = params.x,
+                                  .offset_y = params.y,
+                                  .scale = params.scale,
+                                  .center = params.center,
+                                  .origin = params.origin,
+                                  .rotation = params.rotation});
         log_lua_site(debug_draw_log.back(), script_lua_state());
     }
 
@@ -1052,13 +1205,11 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
     if (frame_tex) {
         if (params.blend.has_value()) {
             ray::BeginBlendMode(params.blend.value());
-            DrawTexturePro(*frame_tex, source_rect, dest_rect,
-                          params.origin, params.rotation, final_color);
+            DrawTexturePro(*frame_tex, source_rect, dest_rect, params.origin, params.rotation, final_color);
             ray::EndBlendMode();
             return;
         }
-        DrawTexturePro(*frame_tex, source_rect, dest_rect,
-                      params.origin, params.rotation, final_color);
+        DrawTexturePro(*frame_tex, source_rect, dest_rect, params.origin, params.rotation, final_color);
     }
 }
 

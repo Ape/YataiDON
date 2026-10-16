@@ -1,14 +1,19 @@
 #pragma once
 
-#include "../../libs/script.h"
-#include "../../libs/global_data.h" // IWYU pragma: keep
 #include <array>
 #include <optional>
 #include <string>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
-enum class CostumePickStage { NONE, HEAD, BODY };
+#include "../../libs/global_data.h" // IWYU pragma: keep
+#include "../../libs/script.h"
+
+enum class CostumePickStage {
+    NONE,
+    HEAD,
+    BODY
+};
 
 class CostumeMenu : public LuaScript {
 public:
@@ -73,12 +78,7 @@ private:
 
     static constexpr int NUM_ITEMS = 7;
     static constexpr std::array<const char*, NUM_ITEMS> ITEMS = {
-        "costume_select/costume",
-        "costume_select/default",
-        "costume_select/head_body",
-        "costume_select/preset_1",
-        "costume_select/preset_2",
-        "costume_select/preset_3",
-        "costume_select/random_item",
+        "costume_select/costume",  "costume_select/default",  "costume_select/head_body",   "costume_select/preset_1",
+        "costume_select/preset_2", "costume_select/preset_3", "costume_select/random_item",
     };
 };

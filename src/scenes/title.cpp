@@ -1,10 +1,12 @@
 #include "title.h"
+
+#include <random>
+
+#include "../libs/config.h"
+#include "../libs/filesystem.h"
 #include "../libs/global_data.h"
 #include "../libs/input.h"
-#include "../libs/filesystem.h"
-#include "../libs/config.h"
 #include "../libs/network.h"
-#include <random>
 
 #ifdef CARD_READER_ENABLED
 #include "../libs/optional/card_reader.h"
@@ -17,15 +19,22 @@ void TitleScreen::on_screen_start() {
     reset_attract_objects();
     load_videos();
     state = TitleState::OP_VIDEO;
-    hit_taiko_text = std::make_unique<OutlinedText>(font_manager.get_text_label("hit_taiko_to_start"), font_manager.get_text_info("hit_taiko_to_start")->font_size, ray::WHITE, ray::BLACK, false, 4);
+    hit_taiko_text = std::make_unique<OutlinedText>(font_manager.get_text_label("hit_taiko_to_start"),
+                                                    font_manager.get_text_info("hit_taiko_to_start")->font_size,
+                                                    ray::WHITE, ray::BLACK, false, 4);
     fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(13));
     text_overlay_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(14));
-    if (text_overlay_fade) text_overlay_fade->start();
+    if (text_overlay_fade) {
+        text_overlay_fade->start();
+    }
 
     // Session over: undo card-login access code overrides
     for (int i = 0; i < 2; i++) {
-        if (!global_data.card_override[i]) continue;
-        (i == 0 ? global_data.config->network.access_code_1 : global_data.config->network.access_code_2) = global_data.card_prev_code[i];
+        if (!global_data.card_override[i]) {
+            continue;
+        }
+        (i == 0 ? global_data.config->network.access_code_1 : global_data.config->network.access_code_2) =
+            global_data.card_prev_code[i];
         global_data.card_override[i] = false;
     }
     scores_manager.player_1 = global_data.config->network.access_code_1;
@@ -37,7 +46,8 @@ void TitleScreen::on_screen_start() {
     // Card reader only matters when online (case 4: offline scan does nothing)
     // Opened on a worker thread; update() starts polling once it is ready
     if (global_data.config && global_data.config->network.online_play && global_data.config->card_reader.enabled) {
-        card_reader::reader_opener().request(global_data.config->card_reader.port, global_data.config->card_reader.baudrate);
+        card_reader::reader_opener().request(global_data.config->card_reader.port,
+                                             global_data.config->card_reader.baudrate);
     }
 #endif
 }
@@ -49,8 +59,9 @@ void TitleScreen::load_videos() {
         fs::path op_path = resolve_skin_path("Videos/op_videos");
         if (fs::exists(op_path)) {
             for (const auto& entry : fs::recursive_directory_iterator(op_path)) {
-                if (entry.path().extension() == ".mp4")
+                if (entry.path().extension() == ".mp4") {
                     op_video_list.push_back(entry.path());
+                }
             }
         } else {
             spdlog::warn("op_videos folder not found");
@@ -63,8 +74,9 @@ void TitleScreen::load_videos() {
         fs::path attract_path = resolve_skin_path("Videos/attract_videos");
         if (fs::exists(attract_path)) {
             for (const auto& entry : fs::recursive_directory_iterator(attract_path)) {
-                if (entry.path().extension() == ".mp4")
+                if (entry.path().extension() == ".mp4") {
                     attract_video_list.push_back(entry.path());
+                }
             }
         } else {
             spdlog::warn("attract_videos folder not found");
@@ -101,7 +113,10 @@ Screens TitleScreen::on_screen_end(Screens next_screen) {
 void TitleScreen::scene_manager(double current_ms) {
     if (state == TitleState::OP_VIDEO) {
         if (!op_video.has_value()) {
-            if (op_video_list.empty()) { state = TitleState::WARNING; return; }
+            if (op_video_list.empty()) {
+                state = TitleState::WARNING;
+                return;
+            }
             std::mt19937 rng(std::random_device{}());
             std::uniform_int_distribution<size_t> dist(0, op_video_list.size() - 1);
             fs::path chosen = op_video_list[dist(rng)];
@@ -126,7 +141,10 @@ void TitleScreen::scene_manager(double current_ms) {
         }
     } else if (state == TitleState::ATTRACT_VIDEO) {
         if (!attract_video.has_value()) {
-            if (attract_video_list.empty()) { state = TitleState::ATTRACT_CAMERA; return; }
+            if (attract_video_list.empty()) {
+                state = TitleState::ATTRACT_CAMERA;
+                return;
+            }
             std::mt19937 rng(std::random_device{}());
             std::uniform_int_distribution<size_t> dist(0, attract_video_list.size() - 1);
             fs::path chosen = attract_video_list[dist(rng)];
@@ -171,7 +189,7 @@ std::optional<Screens> TitleScreen::update() {
             g_card_reader = std::move(*opened);
             if (g_card_reader) {
                 g_card_reader->start_polling();
-                g_card_reader->set_led_color(255, 255, 255);  // White for polling
+                g_card_reader->set_led_color(255, 255, 255); // White for polling
                 g_last_card_poll_ms = current_ms;
                 spdlog::info("Card reader initialized and polling started");
             } else {
@@ -192,8 +210,7 @@ std::optional<Screens> TitleScreen::update() {
                     global_data.card_reader_card_id_hex = card_info.card_id_hex;
                     global_data.card_reader_card_valid = true;
 
-                    spdlog::info("Card detected (hex: {}), transitioning to entry screen",
-                                 card_info.card_id_hex);
+                    spdlog::info("Card detected (hex: {}), transitioning to entry screen", card_info.card_id_hex);
 
                     // Green LED for success
                     g_card_reader->set_led_color(0, 255, 0);
@@ -215,7 +232,9 @@ std::optional<Screens> TitleScreen::update() {
 
     scene_manager(current_ms);
     if (is_l_don_pressed() || is_r_don_pressed()) {
-        if (!fade_out->is_started) fade_out->start();
+        if (!fade_out->is_started) {
+            fade_out->start();
+        }
         fade_out->unlock_input();
         audio.play_sound("don", VolumePreset::SOUND);
     }
@@ -238,6 +257,10 @@ void TitleScreen::draw() {
     allnet_indicator.draw();
     entry_overlay.draw(true);
 
-    hit_taiko_text->draw({.x=(float)(tex.screen_width*0.25 - hit_taiko_text->width/2), .y=font_manager.get_text_info("hit_taiko_to_start")->y, .fade=text_overlay_fade->attribute});
-    hit_taiko_text->draw({.x=(float)(tex.screen_width*0.75 - hit_taiko_text->width/2), .y=font_manager.get_text_info("hit_taiko_to_start")->y, .fade=text_overlay_fade->attribute});
+    hit_taiko_text->draw({.x = (float)(tex.screen_width * 0.25 - hit_taiko_text->width / 2),
+                          .y = font_manager.get_text_info("hit_taiko_to_start")->y,
+                          .fade = text_overlay_fade->attribute});
+    hit_taiko_text->draw({.x = (float)(tex.screen_width * 0.75 - hit_taiko_text->width / 2),
+                          .y = font_manager.get_text_info("hit_taiko_to_start")->y,
+                          .fade = text_overlay_fade->attribute});
 }

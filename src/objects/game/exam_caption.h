@@ -1,74 +1,79 @@
 #pragma once
 
-#include "../../libs/text.h"
-#include "../../libs/global_data.h"
-
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
 
-inline std::string exam_threshold_text(const TextureWrapper& tex,
-                                       const std::string& type,
-                                       const std::string& range,
-                                       const std::string& num,
-                                       const std::string& lang) {
+#include "../../libs/global_data.h"
+#include "../../libs/text.h"
+
+inline std::string exam_threshold_text(const TextureWrapper& tex, const std::string& type, const std::string& range,
+                                       const std::string& num, const std::string& lang) {
     const bool gauge = (type == "gauge");
-    const bool less  = (range == "less");
-    const char* key = gauge ? (less ? "dan_exam_text_gauge_less" : "dan_exam_text_gauge")
-                    : less  ? "dan_exam_text_less"
-                            : "dan_exam_text_more";
-    const char* jp  = gauge ? (less ? "%s \xEF\xBC\x85\xE6\x9C\xAA\xE6\xBA\x80"   // "%s ％未満" (invented)
-                                    : "%s \xEF\xBC\x85\xE4\xBB\xA5\xE4\xB8\x8A")  // "%s ％以上"
-                    : less  ? "%s \xE6\x9C\xAA\xE6\xBA\x80"                       // "%s 未満"
-                            : "%s \xE4\xBB\xA5\xE4\xB8\x8A";                      // "%s 以上"
+    const bool less = (range == "less");
+    const char* key = gauge  ? (less ? "dan_exam_text_gauge_less" : "dan_exam_text_gauge")
+                      : less ? "dan_exam_text_less"
+                             : "dan_exam_text_more";
+    const char* jp = gauge  ? (less ? "%s \xEF\xBC\x85\xE6\x9C\xAA\xE6\xBA\x80"  // "%s ％未満" (invented)
+                                    : "%s \xEF\xBC\x85\xE4\xBB\xA5\xE4\xB8\x8A") // "%s ％以上"
+                     : less ? "%s \xE6\x9C\xAA\xE6\xBA\x80"                      // "%s 未満"
+                            : "%s \xE4\xBB\xA5\xE4\xB8\x8A";                     // "%s 以上"
     std::string fmt = tex.skin_text(key, lang, tex.skin_text(key, "ja", jp));
     // Only "%s" is substituted; "%%" is an escaped percent (the en rows use it).
     std::string out;
     for (size_t i = 0; i < fmt.size(); i++) {
-        if (fmt[i] == '%' && i + 1 < fmt.size() && fmt[i + 1] == 's') { out += num; i++; }
-        else if (fmt[i] == '%' && i + 1 < fmt.size() && fmt[i + 1] == '%') { out += '%'; i++; }
-        else out += fmt[i];
+        if (fmt[i] == '%' && i + 1 < fmt.size() && fmt[i + 1] == 's') {
+            out += num;
+            i++;
+        } else if (fmt[i] == '%' && i + 1 < fmt.size() && fmt[i + 1] == '%') {
+            out += '%';
+            i++;
+        } else {
+            out += fmt[i];
+        }
     }
     return out;
 }
 
-inline std::string exam_threshold_text(const TextureWrapper& tex, const std::string& type,
-                                       const std::string& range, int value, const std::string& lang) {
+inline std::string exam_threshold_text(const TextureWrapper& tex, const std::string& type, const std::string& range,
+                                       int value, const std::string& lang) {
     return exam_threshold_text(tex, type, range, std::to_string(value), lang);
 }
 
 // "154/28/0 以上" for a per-song border, the plain number otherwise.
 inline std::string exam_border_text(const TextureWrapper& tex, const Exam& exam, const std::string& lang) {
-    if (!exam.per_song()) return exam_threshold_text(tex, exam.type, exam.range, exam.red, lang);
+    if (!exam.per_song()) {
+        return exam_threshold_text(tex, exam.type, exam.range, exam.red, lang);
+    }
     std::string num;
-    for (size_t i = 0; i < exam.song_red.size(); i++) num += (i ? "/" : "") + std::to_string(exam.song_red[i]);
+    for (size_t i = 0; i < exam.song_red.size(); i++) {
+        num += (i ? "/" : "") + std::to_string(exam.song_red[i]);
+    }
     return exam_threshold_text(tex, exam.type, exam.range, num, lang);
 }
 
 class ExamCaptionCache {
 public:
-    OutlinedText* get(const std::string& s, int size, float outline,
-                      ray::Color fill = ray::WHITE, ray::Color ol = ray::BLACK) {
-        if (s.empty() || size <= 0) return nullptr;
-        const std::string k = s + "\x1f" + std::to_string(size) + "\x1f"
-                            + std::to_string((int)(outline * 100)) + "\x1f"
-                            + std::to_string(fill.r) + "," + std::to_string(fill.g) + ","
-                            + std::to_string(fill.b) + "," + std::to_string(fill.a) + "\x1f"
-                            + std::to_string(ol.r) + "," + std::to_string(ol.g) + ","
-                            + std::to_string(ol.b) + "," + std::to_string(ol.a);
+    OutlinedText* get(const std::string& s, int size, float outline, ray::Color fill = ray::WHITE,
+                      ray::Color ol = ray::BLACK) {
+        if (s.empty() || size <= 0) {
+            return nullptr;
+        }
+        const std::string k = s + "\x1f" + std::to_string(size) + "\x1f" + std::to_string((int)(outline * 100)) +
+                              "\x1f" + std::to_string(fill.r) + "," + std::to_string(fill.g) + "," +
+                              std::to_string(fill.b) + "," + std::to_string(fill.a) + "\x1f" + std::to_string(ol.r) +
+                              "," + std::to_string(ol.g) + "," + std::to_string(ol.b) + "," + std::to_string(ol.a);
         auto it = items.find(k);
-        if (it == items.end())
-            it = items.emplace(k, std::make_unique<OutlinedText>(
-                     s, size, fill, ol, false, outline)).first;
+        if (it == items.end()) {
+            it = items.emplace(k, std::make_unique<OutlinedText>(s, size, fill, ol, false, outline)).first;
+        }
         return it->second.get();
     }
 
     void clear() { items.clear(); }
 
-    static float pad_for(float outline, float screen_scale) {
-        return (float)((int)(outline * screen_scale) + 2);
-    }
+    static float pad_for(float outline, float screen_scale) { return (float)((int)(outline * screen_scale) + 2); }
 
 private:
     std::map<std::string, std::unique_ptr<OutlinedText>> items;

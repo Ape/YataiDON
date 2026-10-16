@@ -1,10 +1,12 @@
 #include "bottom_characters.h"
 
 BottomCharacters::BottomCharacters() {
-    if (!load("BottomCharacters", "bottom_characters")) return;
-    fn_start      = lua_object["start"];
-    fn_update     = lua_object["update"];
-    fn_draw       = lua_object["draw"];
+    if (!load("BottomCharacters", "bottom_characters")) {
+        return;
+    }
+    fn_start = lua_object["start"];
+    fn_update = lua_object["update"];
+    fn_draw = lua_object["draw"];
     fn_is_finished = lua_object["is_finished"];
 }
 

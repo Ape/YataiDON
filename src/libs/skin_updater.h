@@ -9,12 +9,12 @@
 class SkinUpdater {
 public:
     struct Status {
-        bool running = false;       // a pass is currently in progress
-        bool finished = false;      // a pass has completed (true even when disabled)
-        bool any_updated = false;   // the current pass identified >= 1 file to update
-        std::string current_skin;   // skin being processed ("" between skins)
-        std::string current_file;   // file being downloaded ("" while scanning)
-        int files_updated = 0;      // running total of files written this pass
+        bool running = false;     // a pass is currently in progress
+        bool finished = false;    // a pass has completed (true even when disabled)
+        bool any_updated = false; // the current pass identified >= 1 file to update
+        std::string current_skin; // skin being processed ("" between skins)
+        std::string current_file; // file being downloaded ("" while scanning)
+        int files_updated = 0;    // running total of files written this pass
     };
 
     void start();
@@ -33,8 +33,7 @@ public:
 
 private:
     void scan_skins();
-    void update_one_skin(const std::filesystem::path& skin_dir,
-                         const std::string& repo_url, const std::string& branch);
+    void update_one_skin(const std::filesystem::path& skin_dir, const std::string& repo_url, const std::string& branch);
     void set_current_skin(const std::string& name);
     void set_current_file(const std::string& file);
     void note_file_updated();

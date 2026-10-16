@@ -3,12 +3,12 @@
 #include <memory>
 #include <optional>
 
+#include "../../libs/script.h"
+#include "../global/chara_3d.h"
+#include "../global/indicator.h"
+#include "../global/nameplate.h"
 #include "box_manager.h"
 #include "costume_menu.h"
-#include "../global/nameplate.h"
-#include "../global/indicator.h"
-#include "../global/chara_3d.h"
-#include "../../libs/script.h"
 
 class EntryPlayer : public LuaScript {
 private:
@@ -48,5 +48,5 @@ public:
     float get_nameplate_fadein();
     void handle_input();
     void refresh_from_player_data();
-    void finish_loading();  // data equipped: let the held cloud fade away
+    void finish_loading(); // data equipped: let the held cloud fade away
 };

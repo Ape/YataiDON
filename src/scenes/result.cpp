@@ -1,4 +1,5 @@
 #include "result.h"
+
 #include "../libs/input.h"
 
 void ResultScreen::on_screen_start() {
@@ -6,7 +7,8 @@ void ResultScreen::on_screen_start() {
     SessionData& session_data = global_data.session_data[(int)global_data.player_num];
     song_title = session_data.song_title;
     song_subtitle = (session_data.song_subtitle_full_display && !session_data.song_subtitle.empty())
-        ? session_data.song_subtitle : std::string();
+                        ? session_data.song_subtitle
+                        : std::string();
     song_number = global_data.songs_played + 1;
     audio.play_sound("bgm", VolumePreset::MUSIC);
     fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(0));
@@ -15,7 +17,8 @@ void ResultScreen::on_screen_start() {
     fade_in.emplace(global_data.player_num);
     skipped_time = 0;
     skip_enabled_ms = 0;
-    fs::path loading_graphic_path = global_data.session_data[(int)global_data.player_num].selected_song.parent_path() / "Loading.png";
+    fs::path loading_graphic_path =
+        global_data.session_data[(int)global_data.player_num].selected_song.parent_path() / "Loading.png";
     background.reset();
     if (exists(loading_graphic_path)) {
         ray::Texture2D loaded = ray::LoadTexture(loading_graphic_path.string().c_str());
@@ -37,7 +40,9 @@ Screens ResultScreen::on_screen_end(Screens next_screen) {
         loading_graphic.reset();
     }
     // the retry mini-game restarts the song from this session
-    if (next_screen != Screens::RETRY_GAME) reset_session();
+    if (next_screen != Screens::RETRY_GAME) {
+        reset_session();
+    }
     return Screen::on_screen_end(next_screen);
 }
 
@@ -47,9 +52,10 @@ double ResultScreen::reveal_end_ms() {
 
 bool ResultScreen::retry_pending() const {
     const SessionData& session_data = global_data.session_data[(int)global_data.player_num];
-    const bool limit_reached = global_data.config->limits.song_limit > 0 && global_data.config->limits.song_limit == global_data.songs_played;
-    return allow_retry && !tex.options[SCO::DISABLE_RETRY_GAME] && !session_data.result_data.cleared && !limit_reached &&
-           script_manager.has_lua_script("retry_game");
+    const bool limit_reached =
+        global_data.config->limits.song_limit > 0 && global_data.config->limits.song_limit == global_data.songs_played;
+    return allow_retry && !tex.options[SCO::DISABLE_RETRY_GAME] && !session_data.result_data.cleared &&
+           !limit_reached && script_manager.has_lua_script("retry_game");
 }
 
 bool ResultScreen::exiting() const {
@@ -67,10 +73,14 @@ void ResultScreen::begin_exit() {
 }
 
 void ResultScreen::handle_input(double current_ms) {
-    if (!fade_out) return;
+    if (!fade_out) {
+        return;
+    }
     bool l = is_l_don_pressed();
     bool r = is_r_don_pressed();
-    if (!(l || r)) return;
+    if (!(l || r)) {
+        return;
+    }
 
     double reveal_end = reveal_end_ms();
     if (reveal_end == 0) {
@@ -80,8 +90,8 @@ void ResultScreen::handle_input(double current_ms) {
         }
         return;
     }
-    const double advance_delay = global_data.config->general.fast_transitions
-        ? kFastInputDelayMs : kWaitEffectEndMs + kWaitNextSceneMs;
+    const double advance_delay =
+        global_data.config->general.fast_transitions ? kFastInputDelayMs : kWaitEffectEndMs + kWaitNextSceneMs;
     if (current_ms >= reveal_end + advance_delay && !exiting()) {
         begin_exit();
         audio.play_sound("don", VolumePreset::SOUND);
@@ -89,17 +99,21 @@ void ResultScreen::handle_input(double current_ms) {
 }
 
 void ResultScreen::update_input_and_timeout(double current_ms) {
-    if (!fade_out || exiting()) return;
+    if (!fade_out || exiting()) {
+        return;
+    }
 
-    if (skip_enabled_ms == 0 && fade_in.has_value() && fade_in->is_finished())
-        skip_enabled_ms = current_ms + (global_data.config->general.fast_transitions
-            ? kFastInputDelayMs : kEnableSkipMs);
+    if (skip_enabled_ms == 0 && fade_in.has_value() && fade_in->is_finished()) {
+        skip_enabled_ms =
+            current_ms + (global_data.config->general.fast_transitions ? kFastInputDelayMs : kEnableSkipMs);
+    }
 
-    if (skip_enabled_ms > 0 && current_ms >= skip_enabled_ms) handle_input(current_ms);
+    if (skip_enabled_ms > 0 && current_ms >= skip_enabled_ms) {
+        handle_input(current_ms);
+    }
 
     double reveal_end = reveal_end_ms();
-    if (reveal_end > 0 && !exiting()
-        && current_ms >= reveal_end + kWaitEffectEndMs + kAutoNextSceneMs) {
+    if (reveal_end > 0 && !exiting() && current_ms >= reveal_end + kWaitEffectEndMs + kAutoNextSceneMs) {
         begin_exit();
     }
 }
@@ -108,21 +122,30 @@ std::optional<Screens> ResultScreen::update() {
     Screen::update();
     double current_time = get_current_ms();
     allnet_indicator.update(current_time);
-    if (fade_in.has_value()) fade_in->update(current_time);
-    if (player_1.has_value()) player_1->update(current_time, fade_in.has_value() && fade_in->is_finished(), skipped_time > 0);
+    if (fade_in.has_value()) {
+        fade_in->update(current_time);
+    }
+    if (player_1.has_value()) {
+        player_1->update(current_time, fade_in.has_value() && fade_in->is_finished(), skipped_time > 0);
+    }
 
     update_input_and_timeout(current_time);
 
     if (retrying) {
         if (fade_in->is_finished()) {
-            if (!retry_message) retry_message.emplace();
+            if (!retry_message) {
+                retry_message.emplace();
+            }
             retry_message->update(current_time);
-            if (retry_message->is_finished()) return on_screen_end(Screens::RETRY_GAME);
+            if (retry_message->is_finished()) {
+                return on_screen_end(Screens::RETRY_GAME);
+            }
         }
     } else if (fade_out) {
         fade_out->update(current_time);
         if (fade_out->is_finished) {
-            if (global_data.config->limits.song_limit > 0 && global_data.config->limits.song_limit == global_data.songs_played) {
+            if (global_data.config->limits.song_limit > 0 &&
+                global_data.config->limits.song_limit == global_data.songs_played) {
                 global_data.songs_played = 0;
                 return on_screen_end(Screens::GAME_OVER);
             }
@@ -134,25 +157,37 @@ std::optional<Screens> ResultScreen::update() {
 }
 
 void ResultScreen::draw_overlay() {
-    if (fade_in.has_value()) fade_in->draw();
-    if (fade_out) ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::BLACK, fade_out->attribute));
-    if (retry_message) retry_message->draw();
+    if (fade_in.has_value()) {
+        fade_in->draw();
+    }
+    if (fade_out) {
+        ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::BLACK, fade_out->attribute));
+    }
+    if (retry_message) {
+        retry_message->draw();
+    }
     coin_overlay.draw();
     allnet_indicator.draw();
 }
 
 void ResultScreen::draw_song_info() {
-    if (player_1.has_value()) player_1->draw_song_info(song_title, song_subtitle, song_number);
+    if (player_1.has_value()) {
+        player_1->draw_song_info(song_title, song_subtitle, song_number);
+    }
 }
 
 void ResultScreen::draw() {
-    if (background.has_value()) background->draw();
+    if (background.has_value()) {
+        background->draw();
+    }
     if (loading_graphic.has_value()) {
         ray::Rectangle src = {0, 0, (float)loading_graphic.value().width, (float)loading_graphic.value().height};
         ray::Rectangle dst = {0, 0, (float)tex.screen_width, (float)tex.screen_height};
-        ray::DrawTexturePro(loading_graphic.value(), src, dst, {0,0}, 0, ray::WHITE);
+        ray::DrawTexturePro(loading_graphic.value(), src, dst, {0, 0}, 0, ray::WHITE);
     }
     draw_song_info();
-    if (player_1.has_value()) player_1->draw();
+    if (player_1.has_value()) {
+        player_1->draw();
+    }
     draw_overlay();
 }

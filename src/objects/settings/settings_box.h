@@ -1,26 +1,27 @@
 #pragma once
 
-#include "../../libs/text.h"
-#include "option_box.h"
 #include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
+#include "../../libs/text.h"
+#include "option_box.h"
+
 class SettingsBox {
 private:
-    std::unique_ptr<OutlinedText>   label;
-    float           x;
-    float           y;
-    float           start_position;
-    float           wrap_bottom;
-    float           target_position;
-    int             direction;
-    BaseAnimation*  move_anim;
-    FadeAnimation*  blue_arrow_fade;
-    MoveAnimation*  blue_arrow_move;
-    bool            is_selected;
-    int             option_index;
+    std::unique_ptr<OutlinedText> label;
+    float x;
+    float y;
+    float start_position;
+    float wrap_bottom;
+    float target_position;
+    int direction;
+    BaseAnimation* move_anim;
+    FadeAnimation* blue_arrow_fade;
+    MoveAnimation* blue_arrow_move;
+    bool is_selected;
+    int option_index;
     std::vector<std::unique_ptr<BaseOptionBox>> options;
 
     TextureObject* t_box = nullptr;
@@ -33,10 +34,9 @@ private:
 
 public:
     std::string box_name;
-    bool        in_box;
+    bool in_box;
 
-    SettingsBox(const std::string& name, const std::string& label_text,
-                const rapidjson::Value& options_json);
+    SettingsBox(const std::string& name, const std::string& label_text, const rapidjson::Value& options_json);
     ~SettingsBox();
 
     void set_y(float new_y);

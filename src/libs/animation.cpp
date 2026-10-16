@@ -1,9 +1,11 @@
 #include "animation.h"
-#include "rapidjson/error/en.h"
+
 #include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <spdlog/spdlog.h>
+
+#include "rapidjson/error/en.h"
 
 using std::runtime_error;
 
@@ -12,9 +14,11 @@ namespace {
 
     void release_input_lock() {
         int prev = input_lock_count.fetch_sub(1, std::memory_order_relaxed);
-        if (prev <= 0) input_lock_count.store(0, std::memory_order_relaxed);
+        if (prev <= 0) {
+            input_lock_count.store(0, std::memory_order_relaxed);
+        }
     }
-}
+} // namespace
 
 bool is_input_locked() {
     return input_lock_count.load(std::memory_order_relaxed) > 0;
@@ -25,15 +29,14 @@ void reset_input_lock() {
 }
 
 BaseAnimation::BaseAnimation(double duration, double delay, bool loop, bool lock_input)
-    : duration(duration), delay(delay), delay_saved(delay),
-      start_ms(get_current_ms()), paused_at_ms(0.0), is_finished(false), is_started(false),
-      is_reversing(false), unlocked(true), loop(loop),
-      lock_input(lock_input), attribute(0) {
-          if (loop) {
-              is_started = true;
-              restart();
-          }
-      }
+    : duration(duration), delay(delay), delay_saved(delay), start_ms(get_current_ms()), paused_at_ms(0.0),
+      is_finished(false), is_started(false), is_reversing(false), unlocked(true), loop(loop), lock_input(lock_input),
+      attribute(0) {
+    if (loop) {
+        is_started = true;
+        restart();
+    }
+}
 
 BaseAnimation::~BaseAnimation() {
     if (lock_input && !unlocked) {
@@ -42,31 +45,31 @@ BaseAnimation::~BaseAnimation() {
 }
 
 double BaseAnimation::easeIn(double progress, EaseType ease_type) {
-  switch (ease_type) {
+    switch (ease_type) {
     case EaseType::Quadratic:
-      return progress * progress;
+        return progress * progress;
     case EaseType::Cubic:
-      return progress * progress * progress;
+        return progress * progress * progress;
     case EaseType::Exponential:
-      return progress == 0 ? 0 : std::pow(2, 10 * (progress - 1));
-  }
-  return progress;
+        return progress == 0 ? 0 : std::pow(2, 10 * (progress - 1));
+    }
+    return progress;
 }
 
 double BaseAnimation::easeOut(double progress, EaseType ease_type) {
     switch (ease_type) {
-      case EaseType::Quadratic:
+    case EaseType::Quadratic:
         return progress * (2 - progress);
-      case EaseType::Cubic:
+    case EaseType::Cubic:
         return 1 - std::pow(1 - progress, 3);
-      case EaseType::Exponential:
+    case EaseType::Exponential:
         return progress == 1 ? 1 : 1 - std::pow(2, -10 * progress);
     }
     return progress;
 }
 
 double BaseAnimation::applyEasing(double progress, const std::optional<EaseType>& ease_in_opt,
-                  const std::optional<EaseType>& ease_out_opt) {
+                                  const std::optional<EaseType>& ease_out_opt) {
     if (ease_in_opt.has_value()) {
         return easeIn(progress, ease_in_opt.value());
     } else if (ease_out_opt.has_value()) {
@@ -111,7 +114,9 @@ void BaseAnimation::unlock_input() {
 }
 
 void BaseAnimation::pause() {
-    if (!is_started) return;
+    if (!is_started) {
+        return;
+    }
     is_started = false;
     paused_at_ms = get_current_ms();
     if (lock_input && !unlocked) {
@@ -121,7 +126,9 @@ void BaseAnimation::pause() {
 }
 
 void BaseAnimation::unpause() {
-    if (is_started) return;
+    if (is_started) {
+        return;
+    }
     is_started = true;
     start_ms += get_current_ms() - paused_at_ms;
     if (lock_input && unlocked) {
@@ -135,15 +142,11 @@ void BaseAnimation::reset() {
     pause();
 }
 
-FadeAnimation::FadeAnimation(double duration, double initial_opacity, bool loop,
-              bool lock_input, double final_opacity, double delay,
-              std::optional<EaseType> ease_in,
-              std::optional<EaseType> ease_out,
-              std::optional<double> reverse_delay)
-    : BaseAnimation(duration, delay, loop, lock_input),
-      initial_opacity(initial_opacity), final_opacity(final_opacity),
-      initial_opacity_saved(initial_opacity), final_opacity_saved(final_opacity),
-      ease_in(ease_in), ease_out(ease_out),
+FadeAnimation::FadeAnimation(double duration, double initial_opacity, bool loop, bool lock_input, double final_opacity,
+                             double delay, std::optional<EaseType> ease_in, std::optional<EaseType> ease_out,
+                             std::optional<double> reverse_delay)
+    : BaseAnimation(duration, delay, loop, lock_input), initial_opacity(initial_opacity), final_opacity(final_opacity),
+      initial_opacity_saved(initial_opacity), final_opacity_saved(final_opacity), ease_in(ease_in), ease_out(ease_out),
       reverse_delay(reverse_delay), reverse_delay_saved(reverse_delay) {
     attribute = initial_opacity;
 }
@@ -157,7 +160,9 @@ void FadeAnimation::restart() {
 }
 
 void FadeAnimation::update(double current_time_ms) {
-    if (!is_started) return;
+    if (!is_started) {
+        return;
+    }
     BaseAnimation::update(current_time_ms);
 
     double elapsed_time = current_time_ms - start_ms;
@@ -186,26 +191,18 @@ void FadeAnimation::update(double current_time_ms) {
 }
 
 std::unique_ptr<BaseAnimation> FadeAnimation::copy() const {
-    return std::make_unique<FadeAnimation>(
-        duration, initial_opacity_saved, loop, lock_input,
-        final_opacity_saved, delay_saved, ease_in, ease_out, reverse_delay_saved
-    );
+    return std::make_unique<FadeAnimation>(duration, initial_opacity_saved, loop, lock_input, final_opacity_saved,
+                                           delay_saved, ease_in, ease_out, reverse_delay_saved);
 }
 
-MoveAnimation::MoveAnimation(double duration, int total_distance, bool loop,
-              bool lock_input, int start_position, double delay,
-              std::optional<double> reverse_delay,
-              std::optional<EaseType> ease_in,
-              std::optional<EaseType> ease_out,
-              std::vector<Waypoint> waypoints)
-    : BaseAnimation(duration, delay, loop, lock_input),
-      total_distance(total_distance), start_position(start_position),
-      total_distance_saved(total_distance), start_position_saved(start_position),
-      ease_in(ease_in), ease_out(ease_out),
-      reverse_delay(reverse_delay), reverse_delay_saved(reverse_delay),
-      waypoints(std::move(waypoints)) {
+MoveAnimation::MoveAnimation(double duration, int total_distance, bool loop, bool lock_input, int start_position,
+                             double delay, std::optional<double> reverse_delay, std::optional<EaseType> ease_in,
+                             std::optional<EaseType> ease_out, std::vector<Waypoint> waypoints)
+    : BaseAnimation(duration, delay, loop, lock_input), total_distance(total_distance), start_position(start_position),
+      total_distance_saved(total_distance), start_position_saved(start_position), ease_in(ease_in), ease_out(ease_out),
+      reverse_delay(reverse_delay), reverse_delay_saved(reverse_delay), waypoints(std::move(waypoints)) {
     std::stable_sort(this->waypoints.begin(), this->waypoints.end(),
-                      [](const Waypoint& a, const Waypoint& b) { return a.at < b.at; });
+                     [](const Waypoint& a, const Waypoint& b) { return a.at < b.at; });
     attribute = start_position;
 }
 
@@ -218,7 +215,9 @@ void MoveAnimation::restart() {
 }
 
 void MoveAnimation::update(double current_time_ms) {
-    if (!is_started) return;
+    if (!is_started) {
+        return;
+    }
     BaseAnimation::update(current_time_ms);
 
     double elapsed_time = current_time_ms - start_ms;
@@ -233,7 +232,8 @@ void MoveAnimation::update(double current_time_ms) {
             // negating total_distance/start_position here would replay the
             // same forward waypoint sequence from the new position instead
             // of retracing it backward. Finish rather than play a wrong path.
-            spdlog::warn("MoveAnimation: reverse_delay combined with waypoints is not supported; finishing without reversing");
+            spdlog::warn(
+                "MoveAnimation: reverse_delay combined with waypoints is not supported; finishing without reversing");
             is_finished = true;
         } else if (reverse_delay.has_value()) {
             start_ms = current_time_ms;
@@ -258,9 +258,8 @@ void MoveAnimation::update(double current_time_ms) {
         int next_val = is_last_segment ? total_distance : waypoints[i].value;
 
         double seg_progress = (next_at > prev_at) ? (t - prev_at) / (next_at - prev_at) : 1.0;
-        seg_progress = is_last_segment
-            ? applyEasing(seg_progress, ease_in, ease_out)
-            : applyEasing(seg_progress, waypoints[i].ease_in, waypoints[i].ease_out);
+        seg_progress = is_last_segment ? applyEasing(seg_progress, ease_in, ease_out)
+                                       : applyEasing(seg_progress, waypoints[i].ease_in, waypoints[i].ease_out);
         attribute = start_position + prev_val + (next_val - prev_val) * seg_progress;
     } else {
         double progress = applyEasing((elapsed_time - delay) / duration, ease_in, ease_out);
@@ -269,15 +268,13 @@ void MoveAnimation::update(double current_time_ms) {
 }
 
 std::unique_ptr<BaseAnimation> MoveAnimation::copy() const {
-    return std::make_unique<MoveAnimation>(
-        duration, total_distance_saved, loop, lock_input,
-        start_position_saved, delay_saved, reverse_delay_saved, ease_in, ease_out,
-        waypoints
-    );
+    return std::make_unique<MoveAnimation>(duration, total_distance_saved, loop, lock_input, start_position_saved,
+                                           delay_saved, reverse_delay_saved, ease_in, ease_out, waypoints);
 }
 
-TextureChangeAnimation::TextureChangeAnimation(double duration, const std::vector<std::tuple<double, double, int>>& keyframes,
-                      bool loop, bool lock_input, double delay)
+TextureChangeAnimation::TextureChangeAnimation(double duration,
+                                               const std::vector<std::tuple<double, double, int>>& keyframes, bool loop,
+                                               bool lock_input, double delay)
     : BaseAnimation(duration, delay, loop, lock_input) {
     for (const auto& [start, end, index] : keyframes) {
         this->textures.push_back({start, end, index});
@@ -295,11 +292,15 @@ void TextureChangeAnimation::reset() {
 }
 
 void TextureChangeAnimation::update(double current_time_ms) {
-    if (!is_started) return;
+    if (!is_started) {
+        return;
+    }
     BaseAnimation::update(current_time_ms);
 
     double elapsed_time = current_time_ms - start_ms;
-    if (elapsed_time < delay) return;
+    if (elapsed_time < delay) {
+        return;
+    }
 
     double animation_time = elapsed_time - delay;
     if (animation_time <= duration) {
@@ -318,20 +319,22 @@ std::unique_ptr<BaseAnimation> TextureChangeAnimation::copy() const {
     for (const auto& frame : textures) {
         tex_tuples.emplace_back(frame.start, frame.end, frame.index);
     }
-    return std::make_unique<TextureChangeAnimation>(
-        duration, tex_tuples, loop, lock_input, delay_saved
-    );
+    return std::make_unique<TextureChangeAnimation>(duration, tex_tuples, loop, lock_input, delay_saved);
 }
 
 TextStretchAnimation::TextStretchAnimation(double duration, double delay, bool loop, bool lock_input)
     : BaseAnimation(duration, delay, loop, lock_input) {}
 
 void TextStretchAnimation::update(double current_time_ms) {
-    if (!is_started) return;
+    if (!is_started) {
+        return;
+    }
     BaseAnimation::update(current_time_ms);
 
     double elapsed_time = current_time_ms - start_ms;
-    if (elapsed_time < delay) return;
+    if (elapsed_time < delay) {
+        return;
+    }
 
     double animation_time = elapsed_time - delay;
     if (animation_time <= duration) {
@@ -349,15 +352,11 @@ std::unique_ptr<BaseAnimation> TextStretchAnimation::copy() const {
     return std::make_unique<TextStretchAnimation>(duration, delay_saved, loop, lock_input);
 }
 
-TextureResizeAnimation::TextureResizeAnimation(double duration, double initial_size, bool loop,
-                      bool lock_input, double final_size, double delay,
-                      std::optional<double> reverse_delay,
-                      std::optional<EaseType> ease_in,
-                      std::optional<EaseType> ease_out)
-    : BaseAnimation(duration, delay, loop, lock_input),
-      initial_size(initial_size), final_size(final_size),
-      initial_size_saved(initial_size), final_size_saved(final_size),
-      ease_in(ease_in), ease_out(ease_out),
+TextureResizeAnimation::TextureResizeAnimation(double duration, double initial_size, bool loop, bool lock_input,
+                                               double final_size, double delay, std::optional<double> reverse_delay,
+                                               std::optional<EaseType> ease_in, std::optional<EaseType> ease_out)
+    : BaseAnimation(duration, delay, loop, lock_input), initial_size(initial_size), final_size(final_size),
+      initial_size_saved(initial_size), final_size_saved(final_size), ease_in(ease_in), ease_out(ease_out),
       reverse_delay(reverse_delay), reverse_delay_saved(reverse_delay) {
     attribute = initial_size;
 }
@@ -371,7 +370,9 @@ void TextureResizeAnimation::restart() {
 }
 
 void TextureResizeAnimation::update(double current_time_ms) {
-    if (!is_started) return;
+    if (!is_started) {
+        return;
+    }
     BaseAnimation::update(current_time_ms);
 
     double elapsed_time = current_time_ms - start_ms;
@@ -398,10 +399,8 @@ void TextureResizeAnimation::update(double current_time_ms) {
 }
 
 std::unique_ptr<BaseAnimation> TextureResizeAnimation::copy() const {
-    return std::make_unique<TextureResizeAnimation>(
-        duration, initial_size_saved, loop, lock_input,
-        final_size_saved, delay_saved, reverse_delay_saved, ease_in, ease_out
-    );
+    return std::make_unique<TextureResizeAnimation>(duration, initial_size_saved, loop, lock_input, final_size_saved,
+                                                    delay_saved, reverse_delay_saved, ease_in, ease_out);
 }
 
 Value AnimationParser::resolveValue(const Value& ref_obj, std::set<int>& visited) {
@@ -450,10 +449,11 @@ Value AnimationParser::resolveValue(const Value& ref_obj, std::set<int>& visited
             Value init_val = resolveValue(init_val_obj, visited);
 
             // Handle numeric addition with type coercion
-            double base_num = base_value.IsDouble() ? base_value.GetDouble() :
-                             (base_value.IsInt() ? static_cast<double>(base_value.GetInt()) : 0.0);
-            double init_num = init_val.IsDouble() ? init_val.GetDouble() :
-                             (init_val.IsInt() ? static_cast<double>(init_val.GetInt()) : 0.0);
+            double base_num = base_value.IsDouble()
+                                  ? base_value.GetDouble()
+                                  : (base_value.IsInt() ? static_cast<double>(base_value.GetInt()) : 0.0);
+            double init_num = init_val.IsDouble() ? init_val.GetDouble()
+                                                  : (init_val.IsInt() ? static_cast<double>(init_val.GetInt()) : 0.0);
 
             if (base_value.IsDouble() || init_val.IsDouble()) {
                 base_value.SetDouble(base_num + init_num);
@@ -462,10 +462,12 @@ Value AnimationParser::resolveValue(const Value& ref_obj, std::set<int>& visited
             }
         } else {
             // Handle numeric addition with type coercion
-            double base_num = base_value.IsDouble() ? base_value.GetDouble() :
-                             (base_value.IsInt() ? static_cast<double>(base_value.GetInt()) : 0.0);
-            double init_num = init_val_obj.IsDouble() ? init_val_obj.GetDouble() :
-                             (init_val_obj.IsInt() ? static_cast<double>(init_val_obj.GetInt()) : 0.0);
+            double base_num = base_value.IsDouble()
+                                  ? base_value.GetDouble()
+                                  : (base_value.IsInt() ? static_cast<double>(base_value.GetInt()) : 0.0);
+            double init_num = init_val_obj.IsDouble()
+                                  ? init_val_obj.GetDouble()
+                                  : (init_val_obj.IsInt() ? static_cast<double>(init_val_obj.GetInt()) : 0.0);
 
             if (base_value.IsDouble() || init_val_obj.IsDouble()) {
                 base_value.SetDouble(base_num + init_num);
@@ -480,8 +482,7 @@ Value AnimationParser::resolveValue(const Value& ref_obj, std::set<int>& visited
 
 Value AnimationParser::findRefs(int anim_id, std::set<int>& visited) {
     if (visited.find(anim_id) != visited.end()) {
-      throw runtime_error("Circular reference detected involving animation " +
-                          std::to_string(anim_id));
+        throw runtime_error("Circular reference detected involving animation " + std::to_string(anim_id));
     }
 
     visited.insert(anim_id);
@@ -516,7 +517,7 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
             throw std::runtime_error("Animation 'duration' must be numeric");
         }
         duration = anim_obj["duration"].IsDouble() ? anim_obj["duration"].GetDouble()
-                 : static_cast<double>(anim_obj["duration"].GetInt());
+                                                   : static_cast<double>(anim_obj["duration"].GetInt());
         if (duration <= 0.0) {
             throw std::runtime_error("Animation of type '" + type + "' requires a positive duration");
         }
@@ -555,24 +556,32 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
     };
 
     auto get_ease_opt_from = [&](const Value& obj, const char* key) -> std::optional<EaseType> {
-        if (!obj.HasMember(key) || !obj[key].IsString()) return std::nullopt;
+        if (!obj.HasMember(key) || !obj[key].IsString()) {
+            return std::nullopt;
+        }
         std::string str = obj[key].GetString();
-        if (str == "quadratic") return EaseType::Quadratic;
-        if (str == "cubic") return EaseType::Cubic;
-        if (str == "exponential") return EaseType::Exponential;
+        if (str == "quadratic") {
+            return EaseType::Quadratic;
+        }
+        if (str == "cubic") {
+            return EaseType::Cubic;
+        }
+        if (str == "exponential") {
+            return EaseType::Exponential;
+        }
         throw std::runtime_error("Unknown ease type: " + str);
     };
 
-    auto get_ease_opt = [&](const char* key) -> std::optional<EaseType> {
-        return get_ease_opt_from(anim_obj, key);
-    };
+    auto get_ease_opt = [&](const char* key) -> std::optional<EaseType> { return get_ease_opt_from(anim_obj, key); };
 
     auto get_waypoints = [&]() -> std::vector<MoveAnimation::Waypoint> {
         std::vector<MoveAnimation::Waypoint> result;
-        if (!anim_obj.HasMember("waypoints") || !anim_obj["waypoints"].IsArray()) return result;
+        if (!anim_obj.HasMember("waypoints") || !anim_obj["waypoints"].IsArray()) {
+            return result;
+        }
         for (const auto& wp : anim_obj["waypoints"].GetArray()) {
-            if (!wp.IsObject() || !wp.HasMember("at") || !wp.HasMember("value") ||
-                !wp["at"].IsNumber() || !wp["value"].IsNumber()) {
+            if (!wp.IsObject() || !wp.HasMember("at") || !wp.HasMember("value") || !wp["at"].IsNumber() ||
+                !wp["value"].IsNumber()) {
                 throw std::runtime_error("Each 'waypoints' entry requires numeric 'at' and 'value'");
             }
             double at = wp["at"].IsDouble() ? wp["at"].GetDouble() : static_cast<double>(wp["at"].GetInt());
@@ -587,38 +596,20 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
     bool lock_input = get_bool("lock_input", false);
 
     if (type == "fade") {
-        return std::make_unique<FadeAnimation>(
-            duration,
-            get_double("initial_opacity", 1.0),
-            loop,
-            lock_input,
-            get_double("final_opacity", 0.0),
-            delay,
-            get_ease_opt("ease_in"),
-            get_ease_opt("ease_out"),
-            get_double_opt("reverse_delay")
-        );
+        return std::make_unique<FadeAnimation>(duration, get_double("initial_opacity", 1.0), loop, lock_input,
+                                               get_double("final_opacity", 0.0), delay, get_ease_opt("ease_in"),
+                                               get_ease_opt("ease_out"), get_double_opt("reverse_delay"));
     } else if (type == "move") {
-        return std::make_unique<MoveAnimation>(
-            duration,
-            get_int("total_distance", 0),
-            loop,
-            lock_input,
-            get_int("start_position", 0),
-            delay,
-            get_double_opt("reverse_delay"),
-            get_ease_opt("ease_in"),
-            get_ease_opt("ease_out"),
-            get_waypoints()
-        );
+        return std::make_unique<MoveAnimation>(duration, get_int("total_distance", 0), loop, lock_input,
+                                               get_int("start_position", 0), delay, get_double_opt("reverse_delay"),
+                                               get_ease_opt("ease_in"), get_ease_opt("ease_out"), get_waypoints());
     } else if (type == "texture_change") {
         std::vector<std::tuple<double, double, int>> textures;
         if (anim_obj.HasMember("textures") && anim_obj["textures"].IsArray()) {
             const Value& tex_array = anim_obj["textures"];
             for (SizeType i = 0; i < tex_array.Size(); i++) {
-                if (tex_array[i].IsArray() && tex_array[i].Size() == 3 &&
-                    tex_array[i][0].IsNumber() && tex_array[i][1].IsNumber() &&
-                    tex_array[i][2].IsInt()) {
+                if (tex_array[i].IsArray() && tex_array[i].Size() == 3 && tex_array[i][0].IsNumber() &&
+                    tex_array[i][1].IsNumber() && tex_array[i][2].IsInt()) {
                     double start = tex_array[i][0].GetDouble();
                     double end = tex_array[i][1].GetDouble();
                     int index = tex_array[i][2].GetInt();
@@ -626,25 +617,13 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
                 }
             }
         }
-        return std::make_unique<TextureChangeAnimation>(
-            duration, textures, loop, lock_input, delay
-        );
+        return std::make_unique<TextureChangeAnimation>(duration, textures, loop, lock_input, delay);
     } else if (type == "text_stretch") {
-        return std::make_unique<TextStretchAnimation>(
-            duration, delay, loop, lock_input
-        );
+        return std::make_unique<TextStretchAnimation>(duration, delay, loop, lock_input);
     } else if (type == "texture_resize") {
         return std::make_unique<TextureResizeAnimation>(
-            duration,
-            get_double("initial_size", 1.0),
-            loop,
-            lock_input,
-            get_double("final_size", 0.0),
-            delay,
-            get_double_opt("reverse_delay"),
-            get_ease_opt("ease_in"),
-            get_ease_opt("ease_out")
-        );
+            duration, get_double("initial_size", 1.0), loop, lock_input, get_double("final_size", 0.0), delay,
+            get_double_opt("reverse_delay"), get_ease_opt("ease_in"), get_ease_opt("ease_out"));
     } else {
         throw std::runtime_error("Unknown animation type: " + type);
     }
@@ -703,16 +682,14 @@ std::unordered_map<int, std::unique_ptr<BaseAnimation>> AnimationParser::parse_a
     return anim_dict;
 }
 
-std::unordered_map<int, std::unique_ptr<BaseAnimation>> AnimationParser::parseAnimationsFromString(const std::string& json_str) {
+std::unordered_map<int, std::unique_ptr<BaseAnimation>>
+AnimationParser::parseAnimationsFromString(const std::string& json_str) {
     Document doc;
     doc.Parse(json_str.c_str());
 
     if (doc.HasParseError()) {
-        throw std::runtime_error(
-            std::string("JSON parse error: ") +
-            GetParseError_En(doc.GetParseError()) +
-            " at offset " + std::to_string(doc.GetErrorOffset())
-        );
+        throw std::runtime_error(std::string("JSON parse error: ") + GetParseError_En(doc.GetParseError()) +
+                                 " at offset " + std::to_string(doc.GetErrorOffset()));
     }
 
     return parse_animations(doc);

@@ -19,8 +19,9 @@ int emscripten_run_main_loop(void (*run_frame)());
 void emscripten_shutdown();
 
 // Checks if we're on Emscripten (for compile-time platform detection).
-constexpr bool emscripten_is_emscripten_platform() { return true; }
+constexpr bool emscripten_is_emscripten_platform() {
+    return true;
+}
 
 // Emscripten filesystem sync (persist IndexedDB changes).
 void emscripten_sync_filesystem();
-

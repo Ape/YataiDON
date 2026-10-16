@@ -1,19 +1,20 @@
 #pragma once
 
-#include "box_song.h"
-#include "genre_bg.h"
-#include <queue>
 #include <array>
-#include <unordered_map>
 #include <cstdint>
 #include <mutex>
+#include <queue>
+#include <unordered_map>
+
+#include "box_song.h"
+#include "genre_bg.h"
 
 class SongSelectScript;
 
 struct CourseStats {
-    int total       = 0;
+    int total = 0;
     int full_combos = 0;
-    int clears      = 0;
+    int clears = 0;
 };
 
 struct InlineState {
@@ -45,23 +46,23 @@ private:
     // difficulty filter reads this instead of re-parsing every chart on disk
     std::unordered_map<std::string, std::array<int, 5>> song_levels;
     int open_index;
-    bool is_init      = false;
+    bool is_init = false;
     bool is_preloaded = false;
     bool reloading_roots = false;
     bool genre_box_defs_built = false;
     std::map<GenreIndex, BoxDef> genre_box_defs;
     bool built_hide_dan = false;
 
-    std::optional<InlineState>  inline_state;
-    std::optional<fs::path>     pending_inline_path;
-    FolderBox*                  pending_inline_folder = nullptr;
-    BoxDef                      inline_back_def;      // genre/colours for the repeated back boxes of the open folder
-    BoxDef                      pending_inline_box_def;
+    std::optional<InlineState> inline_state;
+    std::optional<fs::path> pending_inline_path;
+    FolderBox* pending_inline_folder = nullptr;
+    BoxDef inline_back_def; // genre/colours for the repeated back boxes of the open folder
+    BoxDef pending_inline_box_def;
     bool is_inline = false;
 
     std::optional<GenreBG> genre_bg;
-    int        genre_bg_start;
-    int        genre_bg_end;
+    int genre_bg_start;
+    int genre_bg_end;
     std::optional<float> genre_bg_end_pos;
     GenreIndex bg_genre_index;
     GenreIndex last_bg_genre_index;
@@ -70,7 +71,7 @@ private:
     FadeAnimation* background_fade_change;
     MoveAnimation* background_move;
 
-    std::thread              loader_thread;
+    std::thread loader_thread;
 
     struct InlinePrefetch {
         fs::path path;
@@ -78,9 +79,9 @@ private:
         std::unordered_map<std::string, std::vector<std::pair<bool, fs::path>>> plan;
         std::unordered_map<std::string, std::unique_ptr<SongParser>> preparsed;
         bool new_songs = false; // song_paths are the NEW collection's hits (no plan)
-        bool complete  = false; // set by the prefetch thread when it was not aborted
+        bool complete = false;  // set by the prefetch thread when it was not aborted
     };
-    std::thread              prefetch_thread;
+    std::thread prefetch_thread;
     std::unique_ptr<InlinePrefetch> prefetch;
     void start_inline_prefetch(const fs::path& path);
     void start_new_songs_prefetch(const fs::path& path);
@@ -88,27 +89,27 @@ private:
     void join_prefetch();
     void scan_song_tree(const fs::path& path, std::vector<fs::path>& song_paths,
                         std::unordered_map<std::string, std::vector<std::pair<bool, fs::path>>>& plan);
-    std::thread              song_files_thread;
-    std::mutex               pending_mutex;
+    std::thread song_files_thread;
+    std::mutex pending_mutex;
     std::queue<std::unique_ptr<BaseBox>> pending_boxes;
     std::queue<std::unique_ptr<BaseBox>> pending_inline_boxes;
-    std::atomic<bool>        loading_complete{false};
-    std::atomic<bool>        abort_loading{false};
+    std::atomic<bool> loading_complete{false};
+    std::atomic<bool> abort_loading{false};
 
-    std::optional<fs::path>  reopen_folder_path;
-    std::optional<fs::path>  reopen_song_path;
-    std::optional<fs::path>  restore_cursor_path;
+    std::optional<fs::path> reopen_folder_path;
+    std::optional<fs::path> reopen_song_path;
+    std::optional<fs::path> restore_cursor_path;
 
-    std::optional<fs::path>  recent_folder_path;
-    std::optional<fs::path>  favorite_folder_path;
-    std::set<std::string>    favorite_songs;
-    std::unordered_map<std::string, bool>    def_file_cache;
-    std::unordered_map<std::string, bool>    child_folders_cache;  // has_child_folders; cleared with def_file_cache
-    std::unordered_map<std::string, BoxDef>  box_def_cache;
+    std::optional<fs::path> recent_folder_path;
+    std::optional<fs::path> favorite_folder_path;
+    std::set<std::string> favorite_songs;
+    std::unordered_map<std::string, bool> def_file_cache;
+    std::unordered_map<std::string, bool> child_folders_cache; // has_child_folders; cleared with def_file_cache
+    std::unordered_map<std::string, BoxDef> box_def_cache;
 
     bool awaiting_diff_sort = false;
-    std::optional<std::array<int,3>> diff_sort_filter;
-    std::optional<std::pair<int,int>> last_diff_sort_result;
+    std::optional<std::array<int, 3>> diff_sort_filter;
+    std::optional<std::pair<int, int>> last_diff_sort_result;
 
     bool vertical_gallery = false;
 
@@ -209,26 +210,28 @@ public:
     MoveAnimation* background_move_anim() const { return background_move; }
     FadeAnimation* background_fade_anim() const { return background_fade_change; }
     FolderBox* lua_current_folder() const {
-        if (!inline_state.has_value()) return nullptr;
+        if (!inline_state.has_value()) {
+            return nullptr;
+        }
         return inline_state->saved_folder_box.get();
     }
     int bg_genre_frame() const { return genre_to_ref_frame(bg_genre_index); }
     int last_bg_genre_frame() const { return genre_to_ref_frame(last_bg_genre_index); }
 
     enum WheelEvent {
-        WHEEL_EVENT_NONE        = 0,
+        WHEEL_EVENT_NONE = 0,
         WHEEL_EVENT_SCENE_ENTRY = 1,
         WHEEL_EVENT_CURSOR_MOVE = 2,
-        WHEEL_EVENT_OPEN_BEGIN  = 3,
-        WHEEL_EVENT_OPEN_SWAP   = 4,
+        WHEEL_EVENT_OPEN_BEGIN = 3,
+        WHEEL_EVENT_OPEN_SWAP = 4,
         WHEEL_EVENT_CLOSE_BEGIN = 5,
-        WHEEL_EVENT_CLOSE_SWAP  = 6,
+        WHEEL_EVENT_CLOSE_SWAP = 6,
         WHEEL_EVENT_COURSE_BACK = 7,
     };
-    int wheel_event     = WHEEL_EVENT_NONE;
+    int wheel_event = WHEEL_EVENT_NONE;
     int wheel_event_seq = 0;
     double wheel_leg_ms = 0.0;
-    bool wheel_events_read = false;  // the skin script reads the wheel events
+    bool wheel_events_read = false; // the skin script reads the wheel events
     void emit_wheel_event(int id);
 
     static constexpr double kSwapDelayMs = (114.0 - 45.0) / 60.0 * 1000.0;

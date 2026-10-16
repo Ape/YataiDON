@@ -3,18 +3,18 @@
 #include <rlgl.h>
 
 #include "libs/animation.h"
-#include "libs/profiler.h"
 #include "libs/audio.h"
-#include "libs/global_data.h"
+#include "libs/camera_utils.h"
 #include "libs/filesystem.h"
+#include "libs/global_data.h"
 #include "libs/input.h"
 #include "libs/logging.h"
-#include "libs/camera_utils.h"
 #include "libs/network.h"
+#include "libs/profiler.h"
 #include "libs/screen.h"
 #include "libs/script.h"
-#include "libs/song_parser.h"
 #include "libs/skin_updater.h"
+#include "libs/song_parser.h"
 #include "libs/text.h"
 #include "libs/webcam.h"
 
@@ -32,28 +32,27 @@
 #include <SDL3/SDL_main.h>
 #endif
 
+#include "objects/global/debug_menu.h"
+#include "objects/global/fps_counter.h"
 #include "scenes/dan_result.h"
 #include "scenes/dan_select.h"
 #include "scenes/entry.h"
 #include "scenes/game.h"
 #include "scenes/game_2p.h"
 #include "scenes/game_dan.h"
+#include "scenes/game_over.h"
 #include "scenes/game_practice.h"
 #include "scenes/input_cali.h"
 #include "scenes/input_test.h"
 #include "scenes/loading.h"
 #include "scenes/result.h"
 #include "scenes/result_2p.h"
+#include "scenes/retry_game.h"
 #include "scenes/settings.h"
 #include "scenes/song_select.h"
 #include "scenes/song_select_2p.h"
 #include "scenes/song_select_practice.h"
 #include "scenes/title.h"
-#include "scenes/game_over.h"
-#include "scenes/retry_game.h"
-
-#include "objects/global/debug_menu.h"
-#include "objects/global/fps_counter.h"
 
 void draw_outer_border(int screen_width, int screen_height, ray::Color last_color) {
     DrawRectangle(-screen_width, 0, screen_width, screen_height, last_color);
@@ -68,29 +67,33 @@ void draw_outer_border(int screen_width, int screen_height, ray::Color last_colo
 
 static void draw_skin_update_status() {
     const SkinUpdater::Status st = skin_updater.snapshot();
-    if (!st.running) return;
+    if (!st.running) {
+        return;
+    }
 
     const int size = static_cast<int>(20.0f * global_tex.screen_scale);
     const float x = static_cast<float>(size);
     float y = static_cast<float>(size) * 2.0f;
 
-    const std::string skin_line = st.current_skin.empty()
-                                      ? "Checking for skin updates..."
-                                      : "Updating skin: " + st.current_skin;
+    const std::string skin_line =
+        st.current_skin.empty() ? "Checking for skin updates..." : "Updating skin: " + st.current_skin;
     ray::Font skin_font = font_manager.get_font(skin_line, size);
     ray::DrawTextEx(skin_font, skin_line.c_str(), ray::Vector2{x, y}, static_cast<float>(size), 1.0f, ray::YELLOW);
 
     if (!st.current_file.empty()) {
         y += static_cast<float>(size);
         ray::Font file_font = font_manager.get_font(st.current_file, size);
-        ray::DrawTextEx(file_font, st.current_file.c_str(), ray::Vector2{x, y}, static_cast<float>(size), 1.0f, ray::WHITE);
+        ray::DrawTextEx(file_font, st.current_file.c_str(), ray::Vector2{x, y}, static_cast<float>(size), 1.0f,
+                        ray::WHITE);
     }
 }
 
 [[noreturn]] static void exit_now(int code) {
     std::cout.flush();
     std::cerr.flush();
-    if (auto logger = spdlog::default_logger()) logger->flush();
+    if (auto logger = spdlog::default_logger()) {
+        logger->flush();
+    }
     std::_Exit(code);
 }
 
@@ -112,17 +115,25 @@ static void parse_card_reader_args(int& argc, char* argv[], CardReaderConfig& cr
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         const bool known = arg == "--card-port" || arg == "--card-baud" || arg == "--card-poll-ms";
-        if (!known) { argv[out++] = argv[i]; continue; }
+        if (!known) {
+            argv[out++] = argv[i];
+            continue;
+        }
         if (i + 1 >= argc) {
             std::cerr << "Error: " << arg << " requires a value\n";
             exit_now(1);
         }
         std::string val = argv[++i];
-        if (arg == "--card-port") { cr.port = val; continue; }
+        if (arg == "--card-port") {
+            cr.port = val;
+            continue;
+        }
         try {
             size_t pos = 0;
             int n = std::stoi(val, &pos);
-            if (pos != val.size() || n <= 0) throw std::invalid_argument(val);
+            if (pos != val.size() || n <= 0) {
+                throw std::invalid_argument(val);
+            }
             (arg == "--card-baud" ? cr.baudrate : cr.poll_interval_ms) = n;
         } catch (const std::exception&) {
             std::cerr << "Error: Invalid value for " << arg << ": " << val << "\n";
@@ -169,7 +180,9 @@ Screens check_args(int argc, char* argv[]) {
             try {
                 size_t pos = 0;
                 int value = std::stoi(arg, &pos);
-                if (pos != arg.size()) throw std::invalid_argument(arg);
+                if (pos != arg.size()) {
+                    throw std::invalid_argument(arg);
+                }
                 difficulty = value;
             } catch (const std::exception& e) {
                 std::cerr << "Error: Invalid difficulty value: " << arg << "\n";
@@ -201,7 +214,9 @@ Screens check_args(int argc, char* argv[]) {
     {
         std::error_code abs_ec;
         std::filesystem::path abs = std::filesystem::absolute(path, abs_ec);
-        if (!abs_ec) path = abs;
+        if (!abs_ec) {
+            path = abs;
+        }
     }
     SongParser tja = [&]() -> SongParser {
         try {
@@ -228,18 +243,18 @@ Screens check_args(int argc, char* argv[]) {
         if (tja.metadata.course_data.empty()) {
             selected_difficulty = static_cast<int>(Difficulty::EASY);
         } else {
-            selected_difficulty = std::max_element(
-                tja.metadata.course_data.begin(),
-                tja.metadata.course_data.end(),
-                [](const auto& a, const auto& b) { return a.first < b.first; }
-            )->first;
+            selected_difficulty = std::max_element(tja.metadata.course_data.begin(), tja.metadata.course_data.end(),
+                                                   [](const auto& a, const auto& b) { return a.first < b.first; })
+                                      ->first;
         }
     }
 
     Screens current_screen = practice ? Screens::GAME_PRACTICE : Screens::GAME;
     global_data.session_data[(int)PlayerNum::P1].selected_song = path;
     global_data.session_data[(int)PlayerNum::P1].selected_difficulty = selected_difficulty;
-    if (auto_play) global_data.force_auto_play = true;
+    if (auto_play) {
+        global_data.force_auto_play = true;
+    }
 
     return current_screen;
 }
@@ -247,8 +262,9 @@ Screens check_args(int argc, char* argv[]) {
 struct LoopState {
     std::unordered_map<Screens, std::unique_ptr<Screen>> screens;
     Screens current_screen = Screens::LOADING;
-    ray::Camera2D camera   = {};
-    std::chrono::steady_clock::duration target_duration = std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / 60.0));
+    ray::Camera2D camera = {};
+    std::chrono::steady_clock::duration target_duration =
+        std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / 60.0));
     std::chrono::time_point<std::chrono::steady_clock> next_frame_time = std::chrono::steady_clock::now();
     FPSCounter fps_counter;
     ray::Color last_color = ray::BLACK;
@@ -257,15 +273,27 @@ struct LoopState {
 
 static bool screen_fade_applies(Screens from, Screens to) {
     switch (to) {
-        case Screens::GAME: case Screens::GAME_2P: case Screens::GAME_DAN:
-        case Screens::GAME_PRACTICE: case Screens::AI_GAME:
-        case Screens::RESULT: case Screens::RESULT_2P: case Screens::DAN_RESULT:
-            return false;
-        default: break;
+    case Screens::GAME:
+    case Screens::GAME_2P:
+    case Screens::GAME_DAN:
+    case Screens::GAME_PRACTICE:
+    case Screens::AI_GAME:
+    case Screens::RESULT:
+    case Screens::RESULT_2P:
+    case Screens::DAN_RESULT:
+        return false;
+    default:
+        break;
     }
-    if (from == Screens::LOADING) return false;
-    if (from == Screens::SONG_SELECT && to == Screens::DAN_SELECT) return false;
-    if (from == Screens::ENTRY && to == Screens::DAN_SELECT) return false;
+    if (from == Screens::LOADING) {
+        return false;
+    }
+    if (from == Screens::SONG_SELECT && to == Screens::DAN_SELECT) {
+        return false;
+    }
+    if (from == Screens::ENTRY && to == Screens::DAN_SELECT) {
+        return false;
+    }
     return true;
 }
 
@@ -273,38 +301,83 @@ static LoopState* g_loop = nullptr;
 double g_frame_ms = 0.0;
 
 static void populate_screens(std::unordered_map<Screens, std::unique_ptr<Screen>>& screens,
-                              std::optional<Screens> except = std::nullopt) {
-    if (except != Screens::ENTRY)           screens[Screens::ENTRY]           = std::make_unique<EntryScreen>();
-    if (except != Screens::TITLE)           screens[Screens::TITLE]           = std::make_unique<TitleScreen>();
-    if (except != Screens::SONG_SELECT)     screens[Screens::SONG_SELECT]     = std::make_unique<SongSelectScreen>();
-    if (except != Screens::SONG_SELECT_2P)  screens[Screens::SONG_SELECT_2P]  = std::make_unique<SongSelect2PScreen>();
-    if (except != Screens::LOADING)         screens[Screens::LOADING]         = std::make_unique<LoadingScreen>();
-    if (except != Screens::GAME)            screens[Screens::GAME]            = std::make_unique<GameScreen>();
-    if (except != Screens::GAME_2P)         screens[Screens::GAME_2P]         = std::make_unique<Game2PScreen>();
-    if (except != Screens::GAME_PRACTICE)   screens[Screens::GAME_PRACTICE]   = std::make_unique<PracticeGameScreen>();
-    if (except != Screens::PRACTICE_SELECT) screens[Screens::PRACTICE_SELECT] = std::make_unique<PracticeSongSelectScreen>();
-    if (except != Screens::RESULT)          screens[Screens::RESULT]          = std::make_unique<ResultScreen>();
-    if (except != Screens::RESULT_2P)       screens[Screens::RESULT_2P]       = std::make_unique<Result2PScreen>();
-    if (except != Screens::DAN_SELECT)      screens[Screens::DAN_SELECT]      = std::make_unique<DanSelectScreen>();
-    if (except != Screens::GAME_DAN)        screens[Screens::GAME_DAN]        = std::make_unique<DanGameScreen>();
-    if (except != Screens::DAN_RESULT)      screens[Screens::DAN_RESULT]      = std::make_unique<DanResultScreen>();
-    if (except != Screens::SETTINGS)        screens[Screens::SETTINGS]        = std::make_unique<SettingsScreen>();
-    if (except != Screens::INPUT_CALI)      screens[Screens::INPUT_CALI]      = std::make_unique<InputCaliScreen>();
-    if (except != Screens::GAME_OVER)       screens[Screens::GAME_OVER]       = std::make_unique<GameOverScreen>();
-    if (except != Screens::INPUT_TEST)      screens[Screens::INPUT_TEST]      = std::make_unique<InputTestScreen>();
-    if (except != Screens::RETRY_GAME)      screens[Screens::RETRY_GAME]      = std::make_unique<RetryGameScreen>();
+                             std::optional<Screens> except = std::nullopt) {
+    if (except != Screens::ENTRY) {
+        screens[Screens::ENTRY] = std::make_unique<EntryScreen>();
+    }
+    if (except != Screens::TITLE) {
+        screens[Screens::TITLE] = std::make_unique<TitleScreen>();
+    }
+    if (except != Screens::SONG_SELECT) {
+        screens[Screens::SONG_SELECT] = std::make_unique<SongSelectScreen>();
+    }
+    if (except != Screens::SONG_SELECT_2P) {
+        screens[Screens::SONG_SELECT_2P] = std::make_unique<SongSelect2PScreen>();
+    }
+    if (except != Screens::LOADING) {
+        screens[Screens::LOADING] = std::make_unique<LoadingScreen>();
+    }
+    if (except != Screens::GAME) {
+        screens[Screens::GAME] = std::make_unique<GameScreen>();
+    }
+    if (except != Screens::GAME_2P) {
+        screens[Screens::GAME_2P] = std::make_unique<Game2PScreen>();
+    }
+    if (except != Screens::GAME_PRACTICE) {
+        screens[Screens::GAME_PRACTICE] = std::make_unique<PracticeGameScreen>();
+    }
+    if (except != Screens::PRACTICE_SELECT) {
+        screens[Screens::PRACTICE_SELECT] = std::make_unique<PracticeSongSelectScreen>();
+    }
+    if (except != Screens::RESULT) {
+        screens[Screens::RESULT] = std::make_unique<ResultScreen>();
+    }
+    if (except != Screens::RESULT_2P) {
+        screens[Screens::RESULT_2P] = std::make_unique<Result2PScreen>();
+    }
+    if (except != Screens::DAN_SELECT) {
+        screens[Screens::DAN_SELECT] = std::make_unique<DanSelectScreen>();
+    }
+    if (except != Screens::GAME_DAN) {
+        screens[Screens::GAME_DAN] = std::make_unique<DanGameScreen>();
+    }
+    if (except != Screens::DAN_RESULT) {
+        screens[Screens::DAN_RESULT] = std::make_unique<DanResultScreen>();
+    }
+    if (except != Screens::SETTINGS) {
+        screens[Screens::SETTINGS] = std::make_unique<SettingsScreen>();
+    }
+    if (except != Screens::INPUT_CALI) {
+        screens[Screens::INPUT_CALI] = std::make_unique<InputCaliScreen>();
+    }
+    if (except != Screens::GAME_OVER) {
+        screens[Screens::GAME_OVER] = std::make_unique<GameOverScreen>();
+    }
+    if (except != Screens::INPUT_TEST) {
+        screens[Screens::INPUT_TEST] = std::make_unique<InputTestScreen>();
+    }
+    if (except != Screens::RETRY_GAME) {
+        screens[Screens::RETRY_GAME] = std::make_unique<RetryGameScreen>();
+    }
 }
 
 void drop_other_screens_for_skin_reload() {
-    if (!g_loop) return;
-    for (auto it = g_loop->screens.begin(); it != g_loop->screens.end(); ) {
-        if (it->first != g_loop->current_screen) it = g_loop->screens.erase(it);
-        else ++it;
+    if (!g_loop) {
+        return;
+    }
+    for (auto it = g_loop->screens.begin(); it != g_loop->screens.end();) {
+        if (it->first != g_loop->current_screen) {
+            it = g_loop->screens.erase(it);
+        } else {
+            ++it;
+        }
     }
 }
 
 void reload_skin_screens() {
-    if (!g_loop) return;
+    if (!g_loop) {
+        return;
+    }
     populate_screens(g_loop->screens, g_loop->current_screen);
 }
 
@@ -317,10 +390,12 @@ static void run_frame() {
 
     ray::PollInputEvents();
 #if defined(YATAIDON_PLATFORM_IOS)
-    if (ios_is_suspended_state()) return;
+    if (ios_is_suspended_state()) {
+        return;
+    }
 #endif
 #if defined(YATAIDON_PLATFORM_IOS) || defined(__EMSCRIPTEN__)
-    poll_keyboard_once();  // no input thread on these platforms
+    poll_keyboard_once(); // no input thread on these platforms
 #endif
     poll_touch_once();
 
@@ -334,7 +409,7 @@ static void run_frame() {
         spdlog::info("Toggled borderless windowed mode");
     }
 
-    {   // new sol metatables (see ScriptManager::refresh_method_cache)
+    { // new sol metatables (see ScriptManager::refresh_method_cache)
         static double last_method_cache_ms = 0.0;
         if (g_frame_ms - last_method_cache_ms > 1000.0) {
             last_method_cache_ms = g_frame_ms;
@@ -410,10 +485,11 @@ static void run_frame() {
     if (next_screen.has_value()) {
         spdlog::info("Screen changed from {} to {}", L.current_screen, next_screen.value());
         clear_input_buffers();
-        if (tex.get_skin_config(SC::SCREEN_FADE_MS) && screen_fade_applies(L.current_screen, next_screen.value()))
+        if (tex.get_skin_config(SC::SCREEN_FADE_MS) && screen_fade_applies(L.current_screen, next_screen.value())) {
             L.screen_fade_start = g_frame_ms;
-        else
+        } else {
             L.screen_fade_start = 0.0;
+        }
         global_data.previous_screen = global_data.current_screen;
         L.current_screen = next_screen.value();
         global_data.current_screen = screens_to_string(L.current_screen);
@@ -468,11 +544,13 @@ static void run_frame() {
 #ifdef _WIN32
             // the plain sleep overshoots by up to a 15.6 ms tick, which turned every other frame
             // into a ~17 ms one (frames came as ~1 ms / ~17 ms pairs at any target)
-            if (!win32_precise_sleep_us(std::chrono::duration_cast<std::chrono::microseconds>(spin_start - now).count()))
+            if (!win32_precise_sleep_us(
+                    std::chrono::duration_cast<std::chrono::microseconds>(spin_start - now).count()))
 #endif
-            std::this_thread::sleep_until(spin_start);
+                std::this_thread::sleep_until(spin_start);
         }
-        while (std::chrono::steady_clock::now() < L.next_frame_time) { }
+        while (std::chrono::steady_clock::now() < L.next_frame_time) {
+        }
     }
 #endif
 }
@@ -513,15 +591,19 @@ int main(int argc, char* argv[]) {
 
     scores_manager.player_1 = global_data.config->network.access_code_1;
     scores_manager.player_2 = global_data.config->network.access_code_2;
-    if (auto pd = scores_manager.get_player_data(scores_manager.player_1))
+    if (auto pd = scores_manager.get_player_data(scores_manager.player_1)) {
         scores_manager.player_1_data = *pd;
-    if (auto pd = scores_manager.get_player_data(scores_manager.player_2))
+    }
+    if (auto pd = scores_manager.get_player_data(scores_manager.player_2)) {
         scores_manager.player_2_data = *pd;
+    }
 
 #ifdef PLATFORM_ANDROID
     android_check_and_install_update();
 #endif
-    if (global_data.config->general.skin_updater) skin_updater.start();
+    if (global_data.config->general.skin_updater) {
+        skin_updater.start();
+    }
 
 #ifdef YATAIDON_PLATFORM_IOS
     ios_initialize_after_window();
@@ -535,11 +617,11 @@ int main(int argc, char* argv[]) {
     g_loop = new LoopState();
     LoopState& L = *g_loop;
 
-    L.current_screen     = initial_screen;
+    L.current_screen = initial_screen;
     global_data.current_screen = screens_to_string(initial_screen);
-    L.target_duration    = (target_fps > 0.0)
-        ? std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / target_fps))
-        : std::chrono::steady_clock::duration::zero();
+    L.target_duration = (target_fps > 0.0) ? std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                                                 std::chrono::duration<double>(1.0 / target_fps))
+                                           : std::chrono::steady_clock::duration::zero();
 
     populate_screens(L.screens);
 
@@ -556,7 +638,8 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
-    rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD, RL_FUNC_ADD);
+    rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD,
+                              RL_FUNC_ADD);
     ray::SetExitKey(ray::KEY_NULL);
     ray::HideCursor();
 

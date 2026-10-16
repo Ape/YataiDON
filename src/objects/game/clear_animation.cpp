@@ -1,9 +1,11 @@
 #include "clear_animation.h"
 
 ClearAnimation::ClearAnimation(bool is_2p) {
-    if (!load("ClearAnimation", "clear_animation", is_2p)) return;
+    if (!load("ClearAnimation", "clear_animation", is_2p)) {
+        return;
+    }
     fn_update = lua_object["update"];
-    fn_draw   = lua_object["draw"];
+    fn_draw = lua_object["draw"];
 }
 
 void ClearAnimation::update(double current_ms) {

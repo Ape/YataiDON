@@ -1,12 +1,13 @@
 #include "lane_hit_effect.h"
+
 #include <spdlog/spdlog.h>
 #include <stdexcept>
 
-LaneHitEffect::LaneHitEffect(DrumType type, Judgments judgment)
-            : type(type), judgment(judgment) {
+LaneHitEffect::LaneHitEffect(DrumType type, Judgments judgment) : type(type), judgment(judgment) {
     fade = dynamic_cast<FadeAnimation*>(tex.get_animation(0, true));
-    if (!fade)
+    if (!fade) {
         throw std::runtime_error("LaneHitEffect: animation 0 is not a FadeAnimation");
+    }
     fade->start();
     t_effect = tex.get_texture("lane/lane_hit_effect");
 }
@@ -17,16 +18,15 @@ void LaneHitEffect::update(double current_ms) {
 
 void LaneHitEffect::draw(float y) {
     if (type == DrumType::DON) {
-        tex.draw_texture(t_effect, {.frame=0, .y=y, .fade=fade->attribute});
+        tex.draw_texture(t_effect, {.frame = 0, .y = y, .fade = fade->attribute});
     } else if (type == DrumType::KAT) {
-        tex.draw_texture(t_effect, {.frame=1, .y=y, .fade=fade->attribute});
+        tex.draw_texture(t_effect, {.frame = 1, .y = y, .fade = fade->attribute});
     } else {
         spdlog::warn("LaneHitEffect::draw: unexpected DrumType {}", static_cast<int>(type));
     }
     if (judgment == Judgments::GOOD || judgment == Judgments::OK) {
-        tex.draw_texture(t_effect, {.frame=2, .y=y, .fade=fade->attribute});
+        tex.draw_texture(t_effect, {.frame = 2, .y = y, .fade = fade->attribute});
     }
-
 }
 
 bool LaneHitEffect::is_finished() const {

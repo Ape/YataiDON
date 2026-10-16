@@ -18,7 +18,7 @@ namespace fs = std::filesystem;
 namespace ScoreMethod {
     const std::string GEN3 = "gen3";
     const std::string SHINUCHI = "shinuchi";
-}
+} // namespace ScoreMethod
 
 enum class PlayerNum {
     ALL = 0,
@@ -49,7 +49,7 @@ enum class Crown {
     DFC = 3
 };
 
-//underscore to avoid conflict with raylib colors
+// underscore to avoid conflict with raylib colors
 enum class Rank {
     _NONE = 0,
     _WHITE = 1,
@@ -62,10 +62,10 @@ enum class Rank {
 };
 
 struct Exam {
-    std::string type;   // "gauge","combo","judgebad","judgegood","judgeperfect","hit","score"
+    std::string type; // "gauge","combo","judgebad","judgegood","judgeperfect","hit","score"
     int red = 0;
     int gold = 0;
-    std::string range;  // "less" or "more"
+    std::string range; // "less" or "more"
     bool gothrough = true;
     std::vector<int> song_red;
     std::vector<int> song_gold;
@@ -76,7 +76,7 @@ struct Exam {
         assert(!per_song() || (i >= 0 && i < (int)song_red.size()));
         Exam ex = *this;
         if (per_song() && i >= 0 && i < (int)song_red.size()) {
-            ex.red  = song_red[i];
+            ex.red = song_red[i];
             ex.gold = i < (int)song_gold.size() ? song_gold[i] : song_red[i];
         }
         // the view of one song is a plain pair again (captions print a single number)
@@ -86,33 +86,52 @@ struct Exam {
     }
 };
 
-inline std::string dan_bar_state(const Exam& exam, int value,
-                                 bool live = false,
-                                 bool near_end = false,
+inline std::string dan_bar_state(const Exam& exam, int value, bool live = false, bool near_end = false,
                                  bool just_before_end = false) {
     const bool down = (exam.range == "less");
     // CheckMax
     if (exam.gold > 0 && ((down && value < exam.gold) || (!down && value >= exam.gold))) {
-        if (!live || !down) return "max";
-        if (just_before_end) return "max_soon2";
-        if (near_end)        return "max_soon";
+        if (!live || !down) {
+            return "max";
+        }
+        if (just_before_end) {
+            return "max_soon2";
+        }
+        if (near_end) {
+            return "max_soon";
+        }
         // fall through to the flat palette -- no `max` during play
     }
-    int gauge = (exam.red > 0)
-        ? (int)std::floor(100.0 * (double)value / (double)exam.red) : 100;
-    if (gauge > 100) gauge = 100;
-    if (gauge < 0) gauge = 0;
-    if (down) gauge = 100 - gauge;
-    if (gauge <= 0) return "empty";
+    int gauge = (exam.red > 0) ? (int)std::floor(100.0 * (double)value / (double)exam.red) : 100;
+    if (gauge > 100) {
+        gauge = 100;
+    }
+    if (gauge < 0) {
+        gauge = 0;
+    }
+    if (down) {
+        gauge = 100 - gauge;
+    }
+    if (gauge <= 0) {
+        return "empty";
+    }
     if (!down) {
-        if (gauge <= 49) return "up_50";
-        if (gauge <= 99) return "up_80";
+        if (gauge <= 49) {
+            return "up_50";
+        }
+        if (gauge <= 99) {
+            return "up_80";
+        }
         return "up_100";
     }
-    const int good = (exam.red > 0 && exam.gold > 0)
-        ? 100 - (int)std::floor(100.0 * (double)exam.gold / (double)exam.red) : 100;
-    if (gauge < 30)    return "down_80";
-    if (gauge <= good) return "up_80";
+    const int good =
+        (exam.red > 0 && exam.gold > 0) ? 100 - (int)std::floor(100.0 * (double)exam.gold / (double)exam.red) : 100;
+    if (gauge < 30) {
+        return "down_80";
+    }
+    if (gauge <= good) {
+        return "up_80";
+    }
     return "down_100";
 }
 
@@ -143,9 +162,9 @@ struct DanResultExam {
     int counter_value = 0;
     std::string bar_texture = "exam_red";
     bool failed = false;
-    int   song_value[3]    = {0, 0, 0};
+    int song_value[3] = {0, 0, 0};
     float song_progress[3] = {0.0f, 0.0f, 0.0f};
-    int   song_count       = 0;
+    int song_count = 0;
     int tier = 0;
     std::string bar_state = "empty";
     std::string song_state[3] = {"empty", "empty", "empty"};
@@ -165,7 +184,7 @@ struct DanResultData {
     std::vector<Exam> exams;
     std::vector<DanResultExam> exam_data;
     int odai_result = -1;
-    bool skipped = false;       // the player skipped out: nothing is recorded
+    bool skipped = false; // the player skipped out: nothing is recorded
 };
 
 struct ResultData {
@@ -232,20 +251,20 @@ struct GlobalData {
     std::string previous_screen;
     bool in_transition = false;
     std::string title_state = "";
-    double      title_state_start_ms = 0.0;
-    int  live_skip_count = -1;
+    double title_state_start_ms = 0.0;
+    int live_skip_count = -1;
     bool live_skip_used = false;
     bool force_auto_play = false;
     bool returned_from_result = false;
     bool entry_join_pending = false;
     PlayerNum entry_joined_seat = PlayerNum::P1;
     // Card reader
-    std::string card_reader_card_id_hex;  // 16-char hex card ID
+    std::string card_reader_card_id_hex; // 16-char hex card ID
     bool card_reader_card_valid = false;
     std::string card_prev_code[2];
     bool card_override[2] = {false, false};
     CameraConfig camera;
-    Config* config = nullptr;  // Using pointer, initialize appropriately
+    Config* config = nullptr; // Using pointer, initialize appropriately
     int total_songs = 0;
     PlayerNum player_num = PlayerNum::P1;
     PlayerNum first_login_player = PlayerNum::P1;

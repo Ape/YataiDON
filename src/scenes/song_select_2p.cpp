@@ -1,7 +1,9 @@
 #include "song_select_2p.h"
-#include "../libs/input.h"
+
 #include <algorithm>
 #include <filesystem>
+
+#include "../libs/input.h"
 
 void SongSelect2PScreen::on_screen_start() {
     SongSelectScreen::on_screen_start();
@@ -35,8 +37,11 @@ void SongSelect2PScreen::handle_input_browsing(double current_ms) {
         }
         return;
     }
-    if (s1 != SongSelectState::BROWSING) state = s1;
-    else if (s2 != SongSelectState::BROWSING) state = s2;
+    if (s1 != SongSelectState::BROWSING) {
+        state = s1;
+    } else if (s2 != SongSelectState::BROWSING) {
+        state = s2;
+    }
 }
 
 void SongSelect2PScreen::handle_input_selecting() {
@@ -50,8 +55,12 @@ void SongSelect2PScreen::handle_input_selecting() {
         player_2->handle_input_selecting();
     }
 
-    if (player->is_ura != ura_1p && !player_2->is_ready)   player_2->sync_ura(player->is_ura);
-    if (player_2->is_ura != ura_2p && !player->is_ready)   player->sync_ura(player_2->is_ura);
+    if (player->is_ura != ura_1p && !player_2->is_ready) {
+        player_2->sync_ura(player->is_ura);
+    }
+    if (player_2->is_ura != ura_2p && !player->is_ready) {
+        player->sync_ura(player_2->is_ura);
+    }
 }
 
 void SongSelect2PScreen::select_song(SongBox* song) {
@@ -101,16 +110,17 @@ std::optional<Screens> SongSelect2PScreen::update() {
             }
         }
     }
-    if (!game_transition.has_value() &&
-        ((player->is_ready && player->selected_difficulty == Difficulty::BACK) ||
-         (player_2->is_ready && player_2->selected_difficulty == Difficulty::BACK))) {
+    if (!game_transition.has_value() && ((player->is_ready && player->selected_difficulty == Difficulty::BACK) ||
+                                         (player_2->is_ready && player_2->selected_difficulty == Difficulty::BACK))) {
         navigator.exit_diff_select();
         state = SongSelectState::BROWSING;
         player->reset_selection();
         player_2->reset_selection();
     }
 
-    if (screen_init) navigator.update(current_time);
+    if (screen_init) {
+        navigator.update(current_time);
+    }
 
     if (game_transition.has_value()) {
         game_transition->update(current_time);
@@ -143,11 +153,19 @@ void SongSelect2PScreen::draw() {
     player_2->draw_background_diffs(state);
     bool same_diff = (player->selected_difficulty == player_2->selected_difficulty);
     if (state == SongSelectState::SONG_SELECTED) {
-        if (script && script->has_box_bg()) navigator.draw_diff_select_bg();
-        if (player->selected_song)   player->try_lua_selector(same_diff, navigator.get_diff_fade_in(), 0);
-        if (player_2->selected_song) player_2->try_lua_selector(same_diff, navigator.get_diff_fade_in(), 0);
+        if (script && script->has_box_bg()) {
+            navigator.draw_diff_select_bg();
+        }
+        if (player->selected_song) {
+            player->try_lua_selector(same_diff, navigator.get_diff_fade_in(), 0);
+        }
+        if (player_2->selected_song) {
+            player_2->try_lua_selector(same_diff, navigator.get_diff_fade_in(), 0);
+        }
     }
-    if (screen_init) navigator.draw();
+    if (screen_init) {
+        navigator.draw();
+    }
     script->draw_footer();
 
     player->draw(state, same_diff, navigator.get_diff_fade_in());
@@ -155,12 +173,18 @@ void SongSelect2PScreen::draw() {
 
     draw_overlays();
 
-    const bool popup_open = (player->neiro_selector.has_value()   || player->modifier_selector.has_value()
-                          || player_2->neiro_selector.has_value() || player_2->modifier_selector.has_value());
-    if (screen_init && !popup_open) navigator.draw_score_history();
+    const bool popup_open = (player->neiro_selector.has_value() || player->modifier_selector.has_value() ||
+                             player_2->neiro_selector.has_value() || player_2->modifier_selector.has_value());
+    if (screen_init && !popup_open) {
+        navigator.draw_score_history();
+    }
 
-    if (diff_sort_selector) diff_sort_selector->draw();
-    if (search_box) search_box->draw(script.get());
+    if (diff_sort_selector) {
+        diff_sort_selector->draw();
+    }
+    if (search_box) {
+        search_box->draw(script.get());
+    }
     if (game_transition.has_value()) {
         game_transition->draw();
         global_data.in_transition = true;

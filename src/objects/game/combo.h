@@ -10,9 +10,11 @@ private:
 public:
     Combo() = default;
     Combo(int combo, double current_ms) {
-        if (!load("Combo", "combo", combo, current_ms)) return;
+        if (!load("Combo", "combo", combo, current_ms)) {
+            return;
+        }
         fn_update = lua_object["update"];
-        fn_draw   = lua_object["draw"];
+        fn_draw = lua_object["draw"];
     }
 
     void update(double current_ms, int curr_combo) { call(fn_update, "Combo:update", current_ms, curr_combo); }

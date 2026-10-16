@@ -1,9 +1,5 @@
 #include "input.h"
-#include "profiler.h"
-#include "animation.h"
-#include "spdlog/spdlog.h"
-#include "texture.h"
-#include "time.h"
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -11,6 +7,12 @@
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
+
+#include "animation.h"
+#include "profiler.h"
+#include "spdlog/spdlog.h"
+#include "texture.h"
+#include "time.h"
 
 #ifndef __EMSCRIPTEN__
 #include <libremidi/libremidi.hpp>
@@ -30,7 +32,6 @@
 #include "../platform/platform_ios.h"
 #endif
 
-
 #include <SDL3/SDL.h>
 std::atomic<bool> input_thread_running{true};
 std::thread input_thread;
@@ -39,7 +40,7 @@ static std::atomic<double> last_input_ms{0.0};
 
 static std::unordered_map<SDL_JoystickID, SDL_Joystick*> sdl_joysticks;
 // keyed by joy_id * 256 + button_index
-static std::unordered_map<int64_t, bool>  sdl_prev_button;
+static std::unordered_map<int64_t, bool> sdl_prev_button;
 // keyed by joy_id * 256 + axis_index
 static std::unordered_map<int64_t, float> sdl_prev_axis;
 static bool sdl_joysticks_init_done = false;
@@ -68,13 +69,14 @@ static void refresh_sdl_joysticks() {
     }
 
     for (int i = 0; i < count; i++) {
-        if (SDL_IsGamepad(ids[i])) continue; // already handled by raylib
+        if (SDL_IsGamepad(ids[i])) {
+            continue; // already handled by raylib
+        }
         if (!sdl_joysticks.count(ids[i])) {
             SDL_Joystick* joy = SDL_OpenJoystick(ids[i]);
             if (joy) {
                 sdl_joysticks[ids[i]] = joy;
-                spdlog::info("Joystick fallback: opened '{}' (id {})",
-                             SDL_GetJoystickName(joy), (int)ids[i]);
+                spdlog::info("Joystick fallback: opened '{}' (id {})", SDL_GetJoystickName(joy), (int)ids[i]);
             }
         }
     }
@@ -112,29 +114,45 @@ static std::array<std::array<bool, 18>, 4> previous_gamepad_states{};
 // Gamepad/joystick buttons and axes are folded into the key space at these
 // offsets (config stores the bare button number).
 static constexpr int GAMEPAD_VKEY_BASE = 10000;
-static constexpr int AXIS_VKEY_BASE    = 20000;
+static constexpr int AXIS_VKEY_BASE = 20000;
 static std::atomic<int> last_gamepad_vkey{0};
 
 bool is_input_key_pressed(const std::vector<int>& keys, const std::vector<int>& gamepad_buttons, float* strength) {
 
     for (int key : keys) {
-        if (check_key_pressed(key, strength)) return true;
+        if (check_key_pressed(key, strength)) {
+            return true;
+        }
     }
 
     // Check gamepad buttons (offset by 10000)
-    if (gamepad_buttons.empty()) return false;
+    if (gamepad_buttons.empty()) {
+        return false;
+    }
 
     for (int button : gamepad_buttons) {
-        if (check_key_pressed(10000 + button, strength)) return true;
+        if (check_key_pressed(10000 + button, strength)) {
+            return true;
+        }
     }
     return false;
 }
 
 static bool keys_held(const std::vector<int>& keys, const std::vector<int>& pad) {
-    for (int k : keys) if (k >= 0 && k < (int)previous_key_states.size() && previous_key_states[k]) return true;
+    for (int k : keys) {
+        if (k >= 0 && k < (int)previous_key_states.size() && previous_key_states[k]) {
+            return true;
+        }
+    }
     for (int b : pad) {
-        if (b < 0 || b >= 18) continue;
-        for (auto& g : previous_gamepad_states) if (g[b]) return true;
+        if (b < 0 || b >= 18) {
+            continue;
+        }
+        for (auto& g : previous_gamepad_states) {
+            if (g[b]) {
+                return true;
+            }
+        }
     }
     return false;
 }
@@ -143,16 +161,20 @@ bool is_kat_held(bool left, PlayerNum player_num) {
     const auto& c = *global_data.config;
     bool p1 = player_num == PlayerNum::P1 || player_num == PlayerNum::ALL;
     bool p2 = player_num == PlayerNum::P2 || player_num == PlayerNum::ALL;
-    return (p1 && keys_held(left ? c.keys_1p.left_kat : c.keys_1p.right_kat, left ? c.gamepad_1p.left_kat : c.gamepad_1p.right_kat))
-        || (p2 && keys_held(left ? c.keys_2p.left_kat : c.keys_2p.right_kat, left ? c.gamepad_2p.left_kat : c.gamepad_2p.right_kat));
+    return (p1 && keys_held(left ? c.keys_1p.left_kat : c.keys_1p.right_kat,
+                            left ? c.gamepad_1p.left_kat : c.gamepad_1p.right_kat)) ||
+           (p2 && keys_held(left ? c.keys_2p.left_kat : c.keys_2p.right_kat,
+                            left ? c.gamepad_2p.left_kat : c.gamepad_2p.right_kat));
 }
 
 bool is_l_don_pressed(PlayerNum player_num, float* strength) {
     if (player_num == PlayerNum::P1) {
-        return is_input_key_pressed(global_data.config->keys_1p.left_don, global_data.config->gamepad_1p.left_don, strength)
-            || check_key_pressed(TOUCH_L_DON, strength);
+        return is_input_key_pressed(global_data.config->keys_1p.left_don, global_data.config->gamepad_1p.left_don,
+                                    strength) ||
+               check_key_pressed(TOUCH_L_DON, strength);
     } else if (player_num == PlayerNum::P2) {
-        return is_input_key_pressed(global_data.config->keys_2p.left_don, global_data.config->gamepad_2p.left_don, strength);
+        return is_input_key_pressed(global_data.config->keys_2p.left_don, global_data.config->gamepad_2p.left_don,
+                                    strength);
     } else if (player_num != PlayerNum::ALL) {
         return false;
     }
@@ -167,10 +189,12 @@ bool is_l_don_pressed(PlayerNum player_num, float* strength) {
 
 bool is_r_don_pressed(PlayerNum player_num, float* strength) {
     if (player_num == PlayerNum::P1) {
-        return is_input_key_pressed(global_data.config->keys_1p.right_don, global_data.config->gamepad_1p.right_don, strength)
-            || check_key_pressed(TOUCH_R_DON, strength);
+        return is_input_key_pressed(global_data.config->keys_1p.right_don, global_data.config->gamepad_1p.right_don,
+                                    strength) ||
+               check_key_pressed(TOUCH_R_DON, strength);
     } else if (player_num == PlayerNum::P2) {
-        return is_input_key_pressed(global_data.config->keys_2p.right_don, global_data.config->gamepad_2p.right_don, strength);
+        return is_input_key_pressed(global_data.config->keys_2p.right_don, global_data.config->gamepad_2p.right_don,
+                                    strength);
     } else if (player_num != PlayerNum::ALL) {
         return false;
     }
@@ -185,10 +209,12 @@ bool is_r_don_pressed(PlayerNum player_num, float* strength) {
 
 bool is_l_kat_pressed(PlayerNum player_num, float* strength) {
     if (player_num == PlayerNum::P1) {
-        return is_input_key_pressed(global_data.config->keys_1p.left_kat, global_data.config->gamepad_1p.left_kat, strength)
-            || check_key_pressed(TOUCH_L_KAT, strength);
+        return is_input_key_pressed(global_data.config->keys_1p.left_kat, global_data.config->gamepad_1p.left_kat,
+                                    strength) ||
+               check_key_pressed(TOUCH_L_KAT, strength);
     } else if (player_num == PlayerNum::P2) {
-        return is_input_key_pressed(global_data.config->keys_2p.left_kat, global_data.config->gamepad_2p.left_kat, strength);
+        return is_input_key_pressed(global_data.config->keys_2p.left_kat, global_data.config->gamepad_2p.left_kat,
+                                    strength);
     } else if (player_num != PlayerNum::ALL) {
         return false;
     }
@@ -203,10 +229,12 @@ bool is_l_kat_pressed(PlayerNum player_num, float* strength) {
 
 bool is_r_kat_pressed(PlayerNum player_num, float* strength) {
     if (player_num == PlayerNum::P1) {
-        return is_input_key_pressed(global_data.config->keys_1p.right_kat, global_data.config->gamepad_1p.right_kat, strength)
-            || check_key_pressed(TOUCH_R_KAT, strength);
+        return is_input_key_pressed(global_data.config->keys_1p.right_kat, global_data.config->gamepad_1p.right_kat,
+                                    strength) ||
+               check_key_pressed(TOUCH_R_KAT, strength);
     } else if (player_num == PlayerNum::P2) {
-        return is_input_key_pressed(global_data.config->keys_2p.right_kat, global_data.config->gamepad_2p.right_kat, strength);
+        return is_input_key_pressed(global_data.config->keys_2p.right_kat, global_data.config->gamepad_2p.right_kat,
+                                    strength);
     } else if (player_num != PlayerNum::ALL) {
         return false;
     }
@@ -221,8 +249,10 @@ bool is_r_kat_pressed(PlayerNum player_num, float* strength) {
 
 static int touch_quadrant_vkey(ray::Vector2 pos, int sw, int sh) {
     bool left = pos.x < sw / 2.0f;
-    bool top  = pos.y < sh / 2.0f;
-    if (top) return left ? TOUCH_L_KAT : TOUCH_R_KAT;
+    bool top = pos.y < sh / 2.0f;
+    if (top) {
+        return left ? TOUCH_L_KAT : TOUCH_R_KAT;
+    }
 
     float render_scale = std::min((float)sw / tex.screen_width, (float)sh / tex.screen_height);
     float cx = sw * 0.5f;
@@ -237,33 +267,47 @@ static int touch_quadrant_vkey(ray::Vector2 pos, int sw, int sh) {
     float nx = dx / rx;
     float ny = dy / ry;
     bool in_drum = (nx * nx + ny * ny) <= 1.0f;
-    if (in_drum) return left ? TOUCH_L_DON : TOUCH_R_DON;
+    if (in_drum) {
+        return left ? TOUCH_L_DON : TOUCH_R_DON;
+    }
     return left ? TOUCH_L_KAT : TOUCH_R_KAT;
 }
 
 static bool touch_watch_registered = false;
 
 static int char_to_raylib_key(unsigned char c) {
-    if (c >= 'a' && c <= 'z') return c - 32;
-    if (c >= 32 && c <= 96) return c;
+    if (c >= 'a' && c <= 'z') {
+        return c - 32;
+    }
+    if (c >= 32 && c <= 96) {
+        return c;
+    }
     return 0;
 }
 
 #if defined(__linux__) && !defined(__ANDROID__)
 static bool handle_linux_text_input(SDL_Event* event) {
-    if (is_input_locked()) return false;
-    if (event->type != SDL_EVENT_TEXT_INPUT || !event->text.text) return false;
+    if (is_input_locked()) {
+        return false;
+    }
+    if (event->type != SDL_EVENT_TEXT_INPUT || !event->text.text) {
+        return false;
+    }
 
     const bool* key_state = SDL_GetKeyboardState(nullptr);
     std::lock_guard<std::mutex> lock(input_mutex);
     for (const char* p = event->text.text; *p; p++) {
         unsigned char c = (unsigned char)*p;
         int key = char_to_raylib_key(c);
-        if (!key) continue;
+        if (!key) {
+            continue;
+        }
         SDL_Keycode keycode = (c >= 'A' && c <= 'Z') ? (c + 32) : c;
         SDL_Keymod mod = SDL_KMOD_NONE;
         SDL_Scancode sc = SDL_GetScancodeFromKey(keycode, &mod);
-        if (sc != SDL_SCANCODE_UNKNOWN && key_state && key_state[sc]) continue;
+        if (sc != SDL_SCANCODE_UNKNOWN && key_state && key_state[sc]) {
+            continue;
+        }
         pressed_keys.emplace(key, 1.0f);
         released_keys.insert(key);
     }
@@ -272,36 +316,40 @@ static bool handle_linux_text_input(SDL_Event* event) {
 #endif
 
 static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
-    if (is_input_locked()) return 1;
+    if (is_input_locked()) {
+        return 1;
+    }
 
-    #if defined(__linux__) && !defined(__ANDROID__)
+#if defined(__linux__) && !defined(__ANDROID__)
     if (handle_linux_text_input(event)) {
         return 1;
     }
-    #endif
+#endif
 
-    if (event->type == SDL_EVENT_KEY_DOWN &&
-        event->key.scancode == SDL_SCANCODE_AC_BACK) {
+    if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_AC_BACK) {
         std::lock_guard<std::mutex> lock(input_mutex);
         pressed_keys.emplace(ray::KEY_ESCAPE, 1.0f);
         return 0;
     }
-    if (event->type == SDL_EVENT_KEY_UP &&
-        event->key.scancode == SDL_SCANCODE_AC_BACK) {
+    if (event->type == SDL_EVENT_KEY_UP && event->key.scancode == SDL_SCANCODE_AC_BACK) {
         std::lock_guard<std::mutex> lock(input_mutex);
         released_keys.insert(ray::KEY_ESCAPE);
         return 0;
     }
 
     if (event->type == SDL_EVENT_FINGER_DOWN) {
-        if (!global_data.config || !global_data.config->general.touch_input) return 1;
-        if (!touch_drum_enabled.load(std::memory_order_relaxed)) return 1;
+        if (!global_data.config || !global_data.config->general.touch_input) {
+            return 1;
+        }
+        if (!touch_drum_enabled.load(std::memory_order_relaxed)) {
+            return 1;
+        }
         SDL_FingerID id = event->tfinger.fingerID;
         std::lock_guard<std::mutex> lock(input_mutex);
         if (!touch_id_to_vkey.count(id)) {
             int sw = ray::GetScreenWidth();
             int sh = ray::GetScreenHeight();
-            ray::Vector2 pos = { event->tfinger.x * sw, event->tfinger.y * sh };
+            ray::Vector2 pos = {event->tfinger.x * sw, event->tfinger.y * sh};
             int vkey = touch_quadrant_vkey(pos, sw, sh);
 #ifdef YATAIDON_PLATFORM_IOS
             vkey = ios_handle_touch_navigation(vkey, event->tfinger.x, event->tfinger.y);
@@ -311,8 +359,7 @@ static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
             last_input_ms.store(get_current_ms(), std::memory_order_relaxed);
             pressed_keys.emplace(vkey, 1.0f);
         }
-    } else if (event->type == SDL_EVENT_FINGER_UP ||
-               event->type == SDL_EVENT_FINGER_CANCELED) {
+    } else if (event->type == SDL_EVENT_FINGER_UP || event->type == SDL_EVENT_FINGER_CANCELED) {
         SDL_FingerID id = event->tfinger.fingerID;
         std::lock_guard<std::mutex> lock(input_mutex);
         auto it = touch_id_to_vkey.find(id);
@@ -326,24 +373,36 @@ static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
 }
 
 bool draw_touch_drum() {
-    if (!touch_drum_enabled.load(std::memory_order_relaxed)) return false;
-    if (!global_data.config || !global_data.config->general.touch_input) return false;
+    if (!touch_drum_enabled.load(std::memory_order_relaxed)) {
+        return false;
+    }
+    if (!global_data.config || !global_data.config->general.touch_input) {
+        return false;
+    }
 
     auto* touch_drum_resize = static_cast<TextureResizeAnimation*>(global_tex.get_animation(66));
-    if (!touch_drum_resize) return false;
+    if (!touch_drum_resize) {
+        return false;
+    }
 
-    if (!touch_drum_resize->isStarted()) touch_drum_resize->start();
-    if (touch_drum_pressed.exchange(false, std::memory_order_relaxed))
+    if (!touch_drum_resize->isStarted()) {
+        touch_drum_resize->start();
+    }
+    if (touch_drum_pressed.exchange(false, std::memory_order_relaxed)) {
         touch_drum_resize->restart();
+    }
     touch_drum_resize->update(get_current_ms());
     const float scale = (float)touch_drum_resize->attribute;
     float y_fix = 0.0f;
     auto drum_it = global_tex.textures.find("overlay/touch_drum");
-    if (drum_it != global_tex.textures.end())
+    if (drum_it != global_tex.textures.end()) {
         y_fix = drum_it->second->height * 0.5f * (1.0f - scale);
-    global_tex.draw_texture(global_tex.get_texture("overlay/touch_drum"), {.scale=scale, .center=true, .y=y_fix, .fade=0.5f});
+    }
+    global_tex.draw_texture(global_tex.get_texture("overlay/touch_drum"),
+                            {.scale = scale, .center = true, .y = y_fix, .fade = 0.5f});
 #ifdef YATAIDON_PLATFORM_IOS
-    ios_draw_touch_navigation_labels(static_cast<float>(ray::GetScreenWidth()), static_cast<float>(ray::GetScreenHeight()));
+    ios_draw_touch_navigation_labels(static_cast<float>(ray::GetScreenWidth()),
+                                     static_cast<float>(ray::GetScreenHeight()));
 #endif
     return true;
 }
@@ -358,7 +417,9 @@ void poll_touch_once() {
 // Scan all keyboard keys once and push press/release events.
 // Used by the polling thread on desktop and called directly per-frame on web.
 void poll_keyboard_once() {
-    if (is_input_locked()) return;
+    if (is_input_locked()) {
+        return;
+    }
     thread_local std::vector<int> local_pressed;
     thread_local std::vector<int> local_released;
     local_pressed.clear();
@@ -366,33 +427,46 @@ void poll_keyboard_once() {
 
 #ifdef _WIN32
     for (int key = 32; key < 349; key++) {
-        bool current_state  = win32_is_key_down_native(key);
+        bool current_state = win32_is_key_down_native(key);
         bool previous_state = previous_key_states[key];
-        if (current_state  && !previous_state) local_pressed.push_back(key);
-        if (!current_state && previous_state)  local_released.push_back(key);
+        if (current_state && !previous_state) {
+            local_pressed.push_back(key);
+        }
+        if (!current_state && previous_state) {
+            local_released.push_back(key);
+        }
         previous_key_states[key] = current_state;
     }
 #else
     for (int key = 32; key < 349; key++) {
-        bool current_state  = ray::IsKeyDown(key);
+        bool current_state = ray::IsKeyDown(key);
         bool previous_state = previous_key_states[key];
-        if (current_state  && !previous_state) local_pressed.push_back(key);
-        if (!current_state && previous_state)  local_released.push_back(key);
+        if (current_state && !previous_state) {
+            local_pressed.push_back(key);
+        }
+        if (!current_state && previous_state) {
+            local_released.push_back(key);
+        }
         previous_key_states[key] = current_state;
     }
 #endif
 
     for (int gamepad = 0; gamepad < 4; gamepad++) {
-        if (!ray::IsGamepadAvailable(gamepad)) continue;
+        if (!ray::IsGamepadAvailable(gamepad)) {
+            continue;
+        }
         for (int btn = 1; btn <= 17; btn++) {
             int key = 10000 + btn;
-            bool current_state  = ray::IsGamepadButtonDown(gamepad, btn);
+            bool current_state = ray::IsGamepadButtonDown(gamepad, btn);
             bool previous_state = previous_gamepad_states[gamepad][btn];
-            if (current_state  && !previous_state) local_pressed.push_back(key);
-            if (!current_state && previous_state)  local_released.push_back(key);
+            if (current_state && !previous_state) {
+                local_pressed.push_back(key);
+            }
+            if (!current_state && previous_state) {
+                local_released.push_back(key);
+            }
             previous_gamepad_states[gamepad][btn] = current_state;
         }
-
     }
 
     refresh_sdl_joysticks();
@@ -404,10 +478,14 @@ void poll_keyboard_once() {
             int64_t state_key = (int64_t)joy_id * 256 + btn;
             // Use 1-indexed encoding to match raylib's gamepad button convention
             int vkey = 10000 + btn + 1;
-            bool cur  = SDL_GetJoystickButton(joy, btn);
+            bool cur = SDL_GetJoystickButton(joy, btn);
             bool prev = sdl_prev_button[state_key];
-            if (cur  && !prev) local_pressed.push_back(vkey);
-            if (!cur && prev)  local_released.push_back(vkey);
+            if (cur && !prev) {
+                local_pressed.push_back(vkey);
+            }
+            if (!cur && prev) {
+                local_released.push_back(vkey);
+            }
             sdl_prev_button[state_key] = cur;
         }
 
@@ -415,17 +493,25 @@ void poll_keyboard_once() {
         for (int axis = 0; axis < num_axes && axis < 8; axis++) {
             int64_t state_key = (int64_t)joy_id * 256 + axis;
             float value = SDL_GetJoystickAxis(joy, axis) / 32767.0f;
-            float prev  = sdl_prev_axis[state_key];
+            float prev = sdl_prev_axis[state_key];
             int key_pos = 20000 + axis * 2;
             int key_neg = 20000 + axis * 2 + 1;
-            bool cur_pos  = value >  JOYSTICK_AXIS_THRESHOLD;
-            bool cur_neg  = value < -JOYSTICK_AXIS_THRESHOLD;
-            bool prev_pos = prev  >  JOYSTICK_AXIS_THRESHOLD;
-            bool prev_neg = prev  < -JOYSTICK_AXIS_THRESHOLD;
-            if (cur_pos  && !prev_pos) local_pressed.push_back(key_pos);
-            if (!cur_pos && prev_pos)  local_released.push_back(key_pos);
-            if (cur_neg  && !prev_neg) local_pressed.push_back(key_neg);
-            if (!cur_neg && prev_neg)  local_released.push_back(key_neg);
+            bool cur_pos = value > JOYSTICK_AXIS_THRESHOLD;
+            bool cur_neg = value < -JOYSTICK_AXIS_THRESHOLD;
+            bool prev_pos = prev > JOYSTICK_AXIS_THRESHOLD;
+            bool prev_neg = prev < -JOYSTICK_AXIS_THRESHOLD;
+            if (cur_pos && !prev_pos) {
+                local_pressed.push_back(key_pos);
+            }
+            if (!cur_pos && prev_pos) {
+                local_released.push_back(key_pos);
+            }
+            if (cur_neg && !prev_neg) {
+                local_pressed.push_back(key_neg);
+            }
+            if (!cur_neg && prev_neg) {
+                local_released.push_back(key_neg);
+            }
             sdl_prev_axis[state_key] = value;
         }
     }
@@ -440,11 +526,15 @@ void poll_keyboard_once() {
         }
     }
 
-    if (!local_pressed.empty()) last_input_ms.store(get_current_ms(), std::memory_order_relaxed);
+    if (!local_pressed.empty()) {
+        last_input_ms.store(get_current_ms(), std::memory_order_relaxed);
+    }
 
     if (!local_pressed.empty() || !local_released.empty()) {
         std::lock_guard<std::mutex> lock(input_mutex);
-        for (int key : local_pressed) pressed_keys.emplace(key, 1.0f);
+        for (int key : local_pressed) {
+            pressed_keys.emplace(key, 1.0f);
+        }
         released_keys.insert(local_released.begin(), local_released.end());
     }
 }
@@ -455,15 +545,21 @@ double get_last_input_ms() {
 
 int take_gamepad_button_pressed() {
     int vkey = last_gamepad_vkey.exchange(0, std::memory_order_relaxed);
-    if (vkey < GAMEPAD_VKEY_BASE || vkey >= AXIS_VKEY_BASE) return -1;
+    if (vkey < GAMEPAD_VKEY_BASE || vkey >= AXIS_VKEY_BASE) {
+        return -1;
+    }
     return vkey - GAMEPAD_VKEY_BASE;
 }
 
 void submit_gamepad_button_press(int button, float strength) {
-    if (is_input_locked()) return;
+    if (is_input_locked()) {
+        return;
+    }
 
     // The SDL joystick fallback currently exposes at most 32 buttons.
-    if (button < 1 || button > 32) return;
+    if (button < 1 || button > 32) {
+        return;
+    }
 
     const int vkey = GAMEPAD_VKEY_BASE + button;
     last_gamepad_vkey.store(vkey, std::memory_order_relaxed);
@@ -476,72 +572,81 @@ void submit_gamepad_button_press(int button, float strength) {
 #ifndef __EMSCRIPTEN__
 namespace {
 
-struct MidiPortEvent {
-    libremidi::input_port port;
-    bool added;
-};
+    struct MidiPortEvent {
+        libremidi::input_port port;
+        bool added;
+    };
 
-struct MidiInput {
-    std::string device;
-    int channel = 0;
-    std::unordered_map<int, int> note_to_button;
-    std::mutex events_mutex;
-    std::vector<MidiPortEvent> events;
-    std::atomic<bool> events_pending{false};
-    std::optional<libremidi::input_port> selected;
-    std::unique_ptr<libremidi::midi_in> port;
-    std::unique_ptr<libremidi::observer> observer;
+    struct MidiInput {
+        std::string device;
+        int channel = 0;
+        std::unordered_map<int, int> note_to_button;
+        std::mutex events_mutex;
+        std::vector<MidiPortEvent> events;
+        std::atomic<bool> events_pending{false};
+        std::optional<libremidi::input_port> selected;
+        std::unique_ptr<libremidi::midi_in> port;
+        std::unique_ptr<libremidi::observer> observer;
 #ifdef _WIN32
-    bool winrt_initialized = false;
+        bool winrt_initialized = false;
 
-    ~MidiInput() {
-        observer.reset();
-        port.reset();
-        if (winrt_initialized) RoUninitialize();
-    }
+        ~MidiInput() {
+            observer.reset();
+            port.reset();
+            if (winrt_initialized) {
+                RoUninitialize();
+            }
+        }
 #endif
-};
+    };
 
-static std::unique_ptr<MidiInput> midi_input;
+    static std::unique_ptr<MidiInput> midi_input;
 
 #ifdef _WIN32
-static constexpr auto midi_api = libremidi::API::WINDOWS_UWP;
+    static constexpr auto midi_api = libremidi::API::WINDOWS_UWP;
 #else
-static constexpr auto midi_api = libremidi::midi1::default_api();
+    static constexpr auto midi_api = libremidi::midi1::default_api();
 #endif
 
-static void midi_message_received(const libremidi::message& message, const MidiInput& state) {
-    const auto& bytes = message.bytes;
-    if (bytes.size() != 3 || (bytes[0] & 0xf0) != 0x90 || bytes[2] == 0) return;
+    static void midi_message_received(const libremidi::message& message, const MidiInput& state) {
+        const auto& bytes = message.bytes;
+        if (bytes.size() != 3 || (bytes[0] & 0xf0) != 0x90 || bytes[2] == 0) {
+            return;
+        }
 
-    const int channel = (bytes[0] & 0x0f) + 1;
-    if (state.channel != 0 && state.channel != channel) return;
+        const int channel = (bytes[0] & 0x0f) + 1;
+        if (state.channel != 0 && state.channel != channel) {
+            return;
+        }
 
-    const auto mapping = state.note_to_button.find(bytes[1]);
-    if (mapping != state.note_to_button.end()) {
-        constexpr float minimum_strength = 0.5f;
-        constexpr float maximum_strength = 1.15f;
-        constexpr int normal_velocity = 80;
-        const float strength = bytes[2] <= normal_velocity
-            ? minimum_strength + (1.0f - minimum_strength) * (bytes[2] - 1) / (normal_velocity - 1)
-            : 1.0f + (maximum_strength - 1.0f) * (bytes[2] - normal_velocity) / (127 - normal_velocity);
+        const auto mapping = state.note_to_button.find(bytes[1]);
+        if (mapping != state.note_to_button.end()) {
+            constexpr float minimum_strength = 0.5f;
+            constexpr float maximum_strength = 1.15f;
+            constexpr int normal_velocity = 80;
+            const float strength =
+                bytes[2] <= normal_velocity
+                    ? minimum_strength + (1.0f - minimum_strength) * (bytes[2] - 1) / (normal_velocity - 1)
+                    : 1.0f + (maximum_strength - 1.0f) * (bytes[2] - normal_velocity) / (127 - normal_velocity);
 
-        submit_gamepad_button_press(mapping->second, strength);
+            submit_gamepad_button_press(mapping->second, strength);
+        }
     }
-}
 
-// Device notifications can arrive on background threads; open and close ports on the main thread.
-static void queue_midi_port_event(MidiInput& state, const libremidi::input_port& port, bool added) {
-    std::lock_guard<std::mutex> lock(state.events_mutex);
-    state.events.push_back({port, added});
-    state.events_pending.store(true, std::memory_order_release);
-}
+    // Device notifications can arrive on background threads; open and close ports on the main thread.
+    static void queue_midi_port_event(MidiInput& state, const libremidi::input_port& port, bool added) {
+        std::lock_guard<std::mutex> lock(state.events_mutex);
+        state.events.push_back({port, added});
+        state.events_pending.store(true, std::memory_order_release);
+    }
 
-}
+} // namespace
 #endif
 
 void start_midi_input(const MidiConfig& config) {
-    if (config.device.empty()) return;
+    if (config.device.empty()) {
+        return;
+    }
 #ifndef __EMSCRIPTEN__
     if (midi_input) {
         spdlog::warn("MIDI input listener was already started");
@@ -577,7 +682,9 @@ void start_midi_input(const MidiConfig& config) {
 
 #ifdef _WIN32
     HRESULT result = RoInitialize(RO_INIT_MULTITHREADED);
-    if (result == RPC_E_CHANGED_MODE) result = RoInitialize(RO_INIT_SINGLETHREADED);
+    if (result == RPC_E_CHANGED_MODE) {
+        result = RoInitialize(RO_INIT_SINGLETHREADED);
+    }
 
     if (FAILED(result)) {
         spdlog::warn("Could not initialize Windows MIDI services: {}", static_cast<long>(result));
@@ -604,8 +711,8 @@ void start_midi_input(const MidiConfig& config) {
     observer_config.track_virtual = true;
     observer_config.track_any = true;
 
-    state->observer = std::make_unique<libremidi::observer>(
-        observer_config, libremidi::observer_configuration_for(midi_api));
+    state->observer =
+        std::make_unique<libremidi::observer>(observer_config, libremidi::observer_configuration_for(midi_api));
 
     if (state->observer->get_current_api() != midi_api) {
         spdlog::warn("MIDI backend is unavailable");
@@ -625,7 +732,9 @@ void start_midi_input(const MidiConfig& config) {
 
 void process_midi_events() {
 #ifndef __EMSCRIPTEN__
-    if (!midi_input || !midi_input->events_pending.exchange(false, std::memory_order_acquire)) return;
+    if (!midi_input || !midi_input->events_pending.exchange(false, std::memory_order_acquire)) {
+        return;
+    }
     auto& state = *midi_input;
     std::vector<MidiPortEvent> events;
 
@@ -636,8 +745,8 @@ void process_midi_events() {
 
     for (const auto& event : events) {
         if (!event.added) {
-            if (state.selected && state.selected->api == event.port.api &&
-                state.selected->port == event.port.port && state.selected->port_name == event.port.port_name) {
+            if (state.selected && state.selected->api == event.port.api && state.selected->port == event.port.port &&
+                state.selected->port_name == event.port.port_name) {
                 state.port.reset();
                 state.selected.reset();
                 spdlog::info("MIDI input disconnected from '{}'", event.port.display_name);
@@ -649,7 +758,9 @@ void process_midi_events() {
         spdlog::info("MIDI input available: {}", event.port.display_name);
 
         if (state.port || (event.port.display_name.find(state.device) == std::string::npos &&
-                           event.port.device_name.find(state.device) == std::string::npos)) continue;
+                           event.port.device_name.find(state.device) == std::string::npos)) {
+            continue;
+        }
 
         libremidi::input_configuration input_config;
 
@@ -661,8 +772,7 @@ void process_midi_events() {
             spdlog::warn("MIDI input: {}", error);
         };
 
-        auto port = std::make_unique<libremidi::midi_in>(
-            input_config, libremidi::midi_in_configuration_for(midi_api));
+        auto port = std::make_unique<libremidi::midi_in>(input_config, libremidi::midi_in_configuration_for(midi_api));
 
         const auto error = port->open_port(event.port, "YataiDON MIDI Input");
 
@@ -702,7 +812,9 @@ bool check_key_pressed(int key, float* strength) {
     std::lock_guard<std::mutex> lock(input_mutex);
     auto it = pressed_keys.find(key);
     if (it != pressed_keys.end()) {
-        if (strength) *strength = it->second;
+        if (strength) {
+            *strength = it->second;
+        }
         pressed_keys.erase(it);
         return true;
     }
@@ -742,32 +854,35 @@ void shutdown_sdl_joysticks() {
 static bool keyboard_editing = false;
 
 bool is_text_input_key(int key) {
-    if (!keyboard_editing) return false;
+    if (!keyboard_editing) {
+        return false;
+    }
 
-    return (key >= ray::KEY_SPACE && key <= ray::KEY_GRAVE) ||
-           (key >= ray::KEY_KP_0 && key <= ray::KEY_KP_EQUAL) ||
+    return (key >= ray::KEY_SPACE && key <= ray::KEY_GRAVE) || (key >= ray::KEY_KP_0 && key <= ray::KEY_KP_EQUAL) ||
            (key >= ray::KEY_ESCAPE && key <= ray::KEY_END) ||
            (key >= ray::KEY_LEFT_SHIFT && key <= ray::KEY_RIGHT_SUPER);
 }
 
 void set_keyboard_visible(bool visible) {
     keyboard_editing = visible;
-    #if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
-        int count = 0;
-        SDL_Window** windows = SDL_GetWindows(&count);
-        if (!windows || count == 0) return;
-        SDL_Window* win = windows[0];
-        SDL_free(windows);
-        if (visible) {
-            SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "1");
-            SDL_StartTextInput(win);
-        } else {
-            SDL_StopTextInput(win);
-            SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "0");
-        }
-    #else
-        (void)visible;
-    #endif
+#if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
+    int count = 0;
+    SDL_Window** windows = SDL_GetWindows(&count);
+    if (!windows || count == 0) {
+        return;
+    }
+    SDL_Window* win = windows[0];
+    SDL_free(windows);
+    if (visible) {
+        SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "1");
+        SDL_StartTextInput(win);
+    } else {
+        SDL_StopTextInput(win);
+        SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "0");
+    }
+#else
+    (void)visible;
+#endif
 }
 
 // Unified keyboard text-field editing. See the declaration in input.h.
@@ -776,7 +891,7 @@ void set_keyboard_visible(bool visible) {
 // 5-150 ms on the frame after a drum hit on a keyboard-type controller. Text input is only on
 // while poll_text_edit is in use.
 static bool text_input_wanted = false;
-static bool text_input_active = true;   // raylib started it
+static bool text_input_active = true; // raylib started it
 
 void sync_text_input() {
 #if defined(PLATFORM_DESKTOP_SDL)
@@ -784,8 +899,11 @@ void sync_text_input() {
         int count = 0;
         SDL_Window** windows = SDL_GetWindows(&count);
         if (windows && count > 0) {
-            if (text_input_wanted) SDL_StartTextInput(windows[0]);
-            else                   SDL_StopTextInput(windows[0]);
+            if (text_input_wanted) {
+                SDL_StartTextInput(windows[0]);
+            } else {
+                SDL_StopTextInput(windows[0]);
+            }
             text_input_active = text_input_wanted;
         }
         SDL_free(windows);
@@ -803,19 +921,25 @@ TextEditAction poll_text_edit(std::string& text, const std::function<bool(int)>&
         if (clip) {
             std::string s(clip);
             const size_t eol = s.find_first_of("\r\n");
-            if (eol != std::string::npos) s.resize(eol);
+            if (eol != std::string::npos) {
+                s.resize(eol);
+            }
             text += s;
         }
-        while (ray::GetCharPressed() > 0) {}   // the 'v' itself is not typed
+        while (ray::GetCharPressed() > 0) {
+        } // the 'v' itself is not typed
         return TextEditAction::None;
     }
 
     TextEditAction action = TextEditAction::None;
     if (ray::IsKeyPressed(ray::KEY_BACKSPACE)) {
         // Remove one whole UTF-8 code point (continuation bytes first).
-        while (!text.empty() && ((unsigned char)text.back() & 0xC0) == 0x80)
+        while (!text.empty() && ((unsigned char)text.back() & 0xC0) == 0x80) {
             text.pop_back();
-        if (!text.empty()) text.pop_back();
+        }
+        if (!text.empty()) {
+            text.pop_back();
+        }
     } else if (ray::IsKeyPressed(ray::KEY_ESCAPE)) {
         action = TextEditAction::Cancel;
     } else if (ray::IsKeyPressed(ray::KEY_ENTER)) {
@@ -825,7 +949,9 @@ TextEditAction poll_text_edit(std::string& text, const std::function<bool(int)>&
     int key = ray::GetCharPressed();
     while (key > 0) {
         if (key == '\n' || key == '\r') {
-            if (action == TextEditAction::None) action = TextEditAction::Confirm;
+            if (action == TextEditAction::None) {
+                action = TextEditAction::Confirm;
+            }
         } else if (key >= 0x20 && (!accept || accept(key))) {
             // GetCharPressed yields a Unicode code point (IME-composed CJK
             // included); store it as UTF-8.

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <spdlog/spdlog.h>
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -11,6 +10,7 @@
 #include <map>
 #include <optional>
 #include <regex>
+#include <spdlog/spdlog.h>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -47,15 +47,36 @@ enum class ScrollType : int {
 };
 
 // TJAPlayer3-Extended camera commands
-enum class CamProp : int { H_OFFSET, V_OFFSET, ZOOM, ROTATION, H_SCALE, V_SCALE, RESET, BORDER_COLOR };
-enum class EaseDir : int { IN_, OUT_, IN_OUT };
-enum class EaseCalc : int { CUBIC, QUARTIC, QUINTIC, SINUSOIDAL, EXPONENTIAL, CIRCULAR, LINEAR };
+enum class CamProp : int {
+    H_OFFSET,
+    V_OFFSET,
+    ZOOM,
+    ROTATION,
+    H_SCALE,
+    V_SCALE,
+    RESET,
+    BORDER_COLOR
+};
+enum class EaseDir : int {
+    IN_,
+    OUT_,
+    IN_OUT
+};
+enum class EaseCalc : int {
+    CUBIC,
+    QUARTIC,
+    QUINTIC,
+    SINUSOIDAL,
+    EXPONENTIAL,
+    CIRCULAR,
+    LINEAR
+};
 
 struct CameraEvent {
     CamProp prop = CamProp::RESET;
-    double from = 0.0;   // ease start; BORDER_COLOR: r
-    double to = 0.0;     // value to set / ease end; BORDER_COLOR: g
-    double extra = 0.0;  // BORDER_COLOR: b
+    double from = 0.0;  // ease start; BORDER_COLOR: r
+    double to = 0.0;    // value to set / ease end; BORDER_COLOR: g
+    double extra = 0.0; // BORDER_COLOR: b
     bool ease = false;
     EaseDir dir = EaseDir::IN_;
     EaseCalc calc = EaseCalc::LINEAR;
@@ -77,8 +98,7 @@ struct TimelineObject {
     int seq = 0;
 
     std::optional<std::string> lyric;
-    std::optional<CameraEvent> cam;  // eased events run start_time -> end_time
-
+    std::optional<CameraEvent> cam; // eased events run start_time -> end_time
 };
 
 class Note {
@@ -103,34 +123,21 @@ public:
     std::optional<int> count;
     std::optional<bool> popped;
 
-    Note() : type(NoteType::BARLINE), hit_ms(0.0f), load_ms(0.0f), unload_ms(0.0f),
-             bpm(0.0f), scroll_x(0.0f), scroll_y(0.0f),
-             display(true), index(0), moji(0),
-             is_branch_start(false) {}
+    Note()
+        : type(NoteType::BARLINE), hit_ms(0.0f), load_ms(0.0f), unload_ms(0.0f), bpm(0.0f), scroll_x(0.0f),
+          scroll_y(0.0f), display(true), index(0), moji(0), is_branch_start(false) {}
 
     virtual ~Note() = default;
 
-    bool operator<(const Note& other) const {
-        return hit_ms < other.hit_ms;
-    }
-    bool operator<=(const Note& other) const {
-        return hit_ms <= other.hit_ms;
-    }
-    bool operator>(const Note& other) const {
-        return hit_ms > other.hit_ms;
-    }
-    bool operator>=(const Note& other) const {
-        return hit_ms >= other.hit_ms;
-    }
-    bool operator==(const Note& other) const {
-        return hit_ms == other.hit_ms && index == other.index;
-    }
+    bool operator<(const Note& other) const { return hit_ms < other.hit_ms; }
+    bool operator<=(const Note& other) const { return hit_ms <= other.hit_ms; }
+    bool operator>(const Note& other) const { return hit_ms > other.hit_ms; }
+    bool operator>=(const Note& other) const { return hit_ms >= other.hit_ms; }
+    bool operator==(const Note& other) const { return hit_ms == other.hit_ms && index == other.index; }
 
     size_t hash() const {
         size_t h = 0;
-        auto combine = [&](size_t v) {
-            h ^= v + 0x9e3779b9 + (h << 6) + (h >> 2);
-        };
+        auto combine = [&](size_t v) { h ^= v + 0x9e3779b9 + (h << 6) + (h >> 2); };
         combine(std::hash<double>{}(bpm));
         combine(std::hash<double>{}(hit_ms));
         combine(std::hash<double>{}(scroll_x));
@@ -143,11 +150,9 @@ public:
 namespace std {
     template<>
     struct hash<Note> {
-        size_t operator()(const Note& note) const {
-            return note.hash();
-        }
+        size_t operator()(const Note& note) const { return note.hash(); }
     };
-}
+} // namespace std
 
 struct CompareNotes {
     bool operator()(const Note& a, const Note& b) const { return a < b; }
@@ -161,7 +166,7 @@ struct CompareNotes {
 struct TempoPoint {
     double ms;
     double beat;
-    double bpm;  // 0 while a #DELAY holds the beat still
+    double bpm; // 0 while a #DELAY holds the beat still
 };
 
 // Chart time to beat count, for #BMSCROLL / #HBSCROLL where notes scroll by beat
@@ -173,10 +178,14 @@ struct TempoMap {
     double lead_bpm = 0.0;
 
     double beat_at(double ms) const {
-        if (points.empty()) return 0.0;
-        auto it = std::upper_bound(points.begin(), points.end(), ms,
-            [](double v, const TempoPoint& p) { return v < p.ms; });
-        if (it == points.begin()) return points.front().beat + (ms - points.front().ms) * lead() / 60000.0;
+        if (points.empty()) {
+            return 0.0;
+        }
+        auto it =
+            std::upper_bound(points.begin(), points.end(), ms, [](double v, const TempoPoint& p) { return v < p.ms; });
+        if (it == points.begin()) {
+            return points.front().beat + (ms - points.front().ms) * lead() / 60000.0;
+        }
         const TempoPoint& p = *std::prev(it);
         return p.beat + (ms - p.ms) * p.bpm / 60000.0;
     }
@@ -191,7 +200,9 @@ struct TempoMap {
         auto stretch = [&](double ms, double beat, double bpm, double from, double to) {
             double enter, leave;
             if (bpm == 0.0) {
-                if (beat < lo || beat > hi) return;
+                if (beat < lo || beat > hi) {
+                    return;
+                }
                 enter = from;
                 leave = to;
             } else {
@@ -199,12 +210,16 @@ struct TempoMap {
                 double b = ms + (hi - beat) * 60000.0 / bpm;
                 enter = std::max(std::min(a, b), from);
                 leave = std::min(std::max(a, b), to);
-                if (enter > leave) return;
+                if (enter > leave) {
+                    return;
+                }
             }
             first = std::min(first, enter);
             last = std::max(last, leave);
         };
-        if (points.empty()) return {first, last};
+        if (points.empty()) {
+            return {first, last};
+        }
         stretch(points.front().ms, points.front().beat, lead(), -inf, points.front().ms);
         for (size_t i = 0; i < points.size(); i++) {
             const TempoPoint& p = points[i];
@@ -228,26 +243,18 @@ struct NoteList {
         result.scroll_type = scroll_type;
         result.tempo_map = tempo_map;
         result.notes = notes;
-        result.notes.insert(result.notes.end(),
-                                 other.notes.begin(),
-                                 other.notes.end());
+        result.notes.insert(result.notes.end(), other.notes.begin(), other.notes.end());
 
         result.timeline = timeline;
-        result.timeline.insert(result.timeline.end(),
-                              other.timeline.begin(),
-                              other.timeline.end());
+        result.timeline.insert(result.timeline.end(), other.timeline.begin(), other.timeline.end());
 
         return result;
     }
 
     NoteList& operator+=(const NoteList& other) {
-        notes.insert(notes.end(),
-                         other.notes.begin(),
-                         other.notes.end());
+        notes.insert(notes.end(), other.notes.begin(), other.notes.end());
 
-        timeline.insert(timeline.end(),
-                       other.timeline.begin(),
-                       other.timeline.end());
+        timeline.insert(timeline.end(), other.timeline.begin(), other.timeline.end());
         return *this;
     }
 };
@@ -303,8 +310,8 @@ struct ParserState {
     double judge_pos_y = 0.0f;
     bool is_branching = false;
     bool is_section_start = false;
-    bool doron = false;  // #ENABLEDORON: notes created while set are invisible
-    std::map<CamProp, TimelineObject*> open_cam;  // eased camera events awaiting their *END
+    bool doron = false;                          // #ENABLEDORON: notes created while set are invisible
+    std::map<CamProp, TimelineObject*> open_cam; // eased camera events awaiting their *END
     double start_branch_ms = 0.0f;
     double start_branch_bpm = 120.0f;
     double start_branch_time_sig = 4.0f / 4.0f;
@@ -349,8 +356,7 @@ public:
 
     using CommandHandler = std::function<void(const std::string&, ParserState&)>;
 
-    std::tuple<NoteList, std::deque<NoteList>, std::deque<NoteList>, std::deque<NoteList>>
-    notes_to_position(int diff);
+    std::tuple<NoteList, std::deque<NoteList>, std::deque<NoteList>, std::deque<NoteList>> notes_to_position(int diff);
     std::string get_song_hash();
     std::string get_diff_hash(int difficulty);
 
@@ -367,8 +373,7 @@ private:
     std::deque<NoteList> branch_n;
     static const std::regex complex_number_regex;
 
-    std::vector<std::string> read_file_lines(const std::filesystem::path& path,
-                                             const std::string& encoding);
+    std::vector<std::string> read_file_lines(const std::filesystem::path& path, const std::string& encoding);
 
     static std::string to_lower(const std::string& str);
     static std::string split_after_colon(const std::string& str);
@@ -383,7 +388,7 @@ private:
     void add_tempo_point(double bpm);
 
     void set_branch_params(std::vector<TimelineObject>& bar_list, std::string branch_params,
-                          std::optional<Note> section_bar);
+                           std::optional<Note> section_bar);
 
     std::map<std::string, CommandHandler> build_command_registry();
     void register_extended_commands(std::map<std::string, CommandHandler>& registry);

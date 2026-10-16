@@ -4,12 +4,13 @@
 
 enum CrownType {
     CROWN_CLEAR = 0,
-    CROWN_FC    = 1,
-    CROWN_DFC   = 2
+    CROWN_FC = 1,
+    CROWN_DFC = 2
 };
 
 class ResultCrown : public LuaScript {
     sol::protected_function fn_update, fn_draw, fn_is_settled;
+
 public:
     ResultCrown() = default;
     ResultCrown(CrownType crown_type, bool is_2p);

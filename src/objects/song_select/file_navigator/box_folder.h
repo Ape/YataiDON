@@ -1,7 +1,7 @@
 #pragma once
 
-#include "box_base.h"
 #include "../../../libs/global_data.h"
+#include "box_base.h"
 
 class FolderBox : public BaseBox {
 public:
@@ -14,7 +14,8 @@ public:
     std::unique_ptr<FadeAnimation> enter_fade;
     std::optional<ray::Texture> box_texture;
 
-    FolderBox(const fs::path& path, const BoxDef& box_def, std::map<std::pair<std::string, std::string>, fs::path>& song_files);
+    FolderBox(const fs::path& path, const BoxDef& box_def,
+              std::map<std::pair<std::string, std::string>, fs::path>& song_files);
     ~FolderBox() override;
 
     void load_text() override;

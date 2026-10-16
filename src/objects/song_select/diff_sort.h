@@ -36,12 +36,12 @@ private:
     int order_count = 4;
     int song_num = 0;
     double t_open = 0.0;
-    double t_end  = 0.0;
-    double t_out  = 0.0;
+    double t_end = 0.0;
+    double t_out = 0.0;
     double now_ms = 0.0;
     double arrow_t0[3] = {0.0, 0.0, 0.0};
-    int    arrow_dir[3] = {0, 0, 0};     // +1 = right arrow bounced, -1 = left
-    bool   finished = false;
+    int arrow_dir[3] = {0, 0, 0}; // +1 = right arrow bounced, -1 = left
+    bool finished = false;
     std::optional<std::array<int, 3>> one_menu_sort_result;
 
     void one_menu_sort_refresh_song_num();
@@ -49,45 +49,45 @@ private:
     void one_menu_sort_change_param(int move);
 
 public:
-    DiffSortSelect(Statistics statistics, int prev_diff, int prev_level,
-                   SongSelectScript* script = nullptr, int prev_order = 1);
+    DiffSortSelect(Statistics statistics, int prev_diff, int prev_level, SongSelectScript* script = nullptr,
+                   int prev_order = 1);
 
     void update(double current_ms);
     std::optional<std::pair<int, int>> input_select();
     void input_left();
     void input_right();
-    void draw();   // the skin's SongSelect:draw_sort_window (or the default sort_window module)
+    void draw(); // the skin's SongSelect:draw_sort_window (or the default sort_window module)
 
     std::optional<std::array<int, 3>> take_result();
 
     // state the Lua sort window draws from
-    bool lua_one_menu() const        { return one_menu_sort; }
-    int  lua_box() const             { return selected_box; }          // -1 = back, 0..4 = course, 5 = previous
-    int  lua_level() const           { return selected_level; }
-    bool lua_in_level() const        { return in_level_select; }
-    bool lua_confirmation() const    { return confirmation; }
-    int  lua_confirm_index() const   { return confirm_index; }
-    int  lua_num_boxes() const       { return num_boxes; }
-    int  lua_prev_diff() const       { return prev_diff; }
-    int  lua_prev_level() const      { return prev_level; }
-    int  lua_limit(int box) const    { return (box >= 0 && box < (int)limits.size()) ? limits[box] : 0; }
+    bool lua_one_menu() const { return one_menu_sort; }
+    int lua_box() const { return selected_box; } // -1 = back, 0..4 = course, 5 = previous
+    int lua_level() const { return selected_level; }
+    bool lua_in_level() const { return in_level_select; }
+    bool lua_confirmation() const { return confirmation; }
+    int lua_confirm_index() const { return confirm_index; }
+    int lua_num_boxes() const { return num_boxes; }
+    int lua_prev_diff() const { return prev_diff; }
+    int lua_prev_level() const { return prev_level; }
+    int lua_limit(int box) const { return (box >= 0 && box < (int)limits.size()) ? limits[box] : 0; }
     CourseStats lua_stats(int diff, int level) { return statistics[diff][level]; }
-    std::array<int, 3> lua_sums(int diff)      { return diff_sort_sum_stat[diff]; }   // total, clears, full combos
+    std::array<int, 3> lua_sums(int diff) { return diff_sort_sum_stat[diff]; } // total, clears, full combos
     // the classic window's animations: bg_resize, diff_fade_in, box_flicker, bounce, arrow_fade, arrow_move
     std::array<double, 6> lua_anim() const {
-        return { bg_resize->attribute, diff_fade_in->attribute, box_flicker->attribute,
-                 confirmation_bounce->attribute, blue_arrow_fade->attribute, blue_arrow_move->attribute };
+        return {bg_resize->attribute,           diff_fade_in->attribute,    box_flicker->attribute,
+                confirmation_bounce->attribute, blue_arrow_fade->attribute, blue_arrow_move->attribute};
     }
 
-    int  lua_session() const     { return session; }         // 0..2 (3 = all decided)
-    int  lua_diff() const        { return sort_param[0]; }   // 1..5 (5 = oni-ura)
-    int  lua_star() const        { return sort_param[1]; }   // 1..10
-    int  lua_order() const       { return sort_param[2]; }   // 1..4
-    int  lua_diff_count() const  { return diff_count; }
-    int  lua_order_count() const { return order_count; }
-    int  lua_song_num() const    { return song_num; }
+    int lua_session() const { return session; }     // 0..2 (3 = all decided)
+    int lua_diff() const { return sort_param[0]; }  // 1..5 (5 = oni-ura)
+    int lua_star() const { return sort_param[1]; }  // 1..10
+    int lua_order() const { return sort_param[2]; } // 1..4
+    int lua_diff_count() const { return diff_count; }
+    int lua_order_count() const { return order_count; }
+    int lua_song_num() const { return song_num; }
     // 0 = fading in, 1 = open, 2 = the 2 s hold after the last row, 3 = fading out
-    int   lua_phase() const;
+    int lua_phase() const;
     float lua_alpha() const;
     float lua_arrow_offset(int row) const;
 };

@@ -1,10 +1,10 @@
 #pragma once
 
 #include "../libs/screen.h"
-#include "../objects/settings/settings_box_manager.h"
 #include "../objects/global/allnet_indicator.h"
 #include "../objects/global/coin_overlay.h"
 #include "../objects/global/indicator.h"
+#include "../objects/settings/settings_box_manager.h"
 
 class SettingsScreen : public Screen {
 private:
@@ -12,7 +12,7 @@ private:
     std::optional<Indicator> indicator;
     std::optional<CoinOverlay> coin_overlay;
     std::optional<AllNetIcon> allnet_indicator;
-    std::string         username_on_entry;
+    std::string username_on_entry;
 
     TextureObject* t_background = nullptr;
     TextureObject* t_footer = nullptr;

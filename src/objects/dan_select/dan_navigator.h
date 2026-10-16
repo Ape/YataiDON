@@ -1,29 +1,30 @@
 #pragma once
 
-#include "../song_select/file_navigator/box_dan.h"
-#include "../../libs/parsers/tja.h"
-#include <sol/sol.hpp>
 #include <atomic>
-#include <thread>
-#include <mutex>
 #include <filesystem>
-#include <vector>
-#include <string>
-#include <optional>
-#include <memory>
-#include <utility>
 #include <map>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <sol/sol.hpp>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+
+#include "../../libs/parsers/tja.h"
+#include "../song_select/file_navigator/box_dan.h"
 
 struct DanBoxData {
-    fs::path                   json_path;
-    std::string                title;
-    int                        color = 0;
-    int                        rank = -1;
-    int                        dan_index = -1;
-    bool                       gaiden = false;
-    std::vector<DanSongEntry>  songs;
-    std::vector<Exam>          exams;
-    int                        total_notes = 0;
+    fs::path json_path;
+    std::string title;
+    int color = 0;
+    int rank = -1;
+    int dan_index = -1;
+    bool gaiden = false;
+    std::vector<DanSongEntry> songs;
+    std::vector<Exam> exams;
+    int total_notes = 0;
     std::vector<std::pair<std::string, std::string>> song_titles;
 };
 
@@ -32,8 +33,12 @@ public:
     // the skin's ribbon: box centre, spacing between boxes, and the extra gap left / right of the selection
     void set_ribbon(float center, float spacing, float side_l, float side_r) {
         ribbon.legacy = false;
-        if (center != 0)  ribbon.center  = center;
-        if (spacing != 0) ribbon.spacing = spacing;
+        if (center != 0) {
+            ribbon.center = center;
+        }
+        if (spacing != 0) {
+            ribbon.spacing = spacing;
+        }
         ribbon.side_l = side_l;
         ribbon.side_r = side_r;
     }
@@ -41,7 +46,7 @@ public:
     int selected_index = 0;
 
     bool paint_tried = false;
-    bool paint_ok    = false;
+    bool paint_ok = false;
     sol::table lua_paint;
     sol::protected_function fn_draw_cursor;
     sol::protected_function fn_draw_box;
@@ -61,7 +66,7 @@ public:
     bool init_running() const { return scan_thread.joinable() && !scan_done.load(); }
     void abort_init();
     ~DanNavigator();
-    int  scan_root(const fs::path& root_path);
+    int scan_root(const fs::path& root_path);
     void move_left();
     void move_right();
     void skip(int delta);
@@ -76,13 +81,13 @@ private:
     static constexpr float SIDE_OFFSET_R = 500.0f;
 
     struct RibbonLayout {
-        bool  legacy  = true;
-        float center  = BOX_CENTER;
+        bool legacy = true;
+        float center = BOX_CENTER;
         float spacing = BASE_SPACING;
-        float side_l  = SIDE_OFFSET_L;
-        float side_r  = SIDE_OFFSET_R;
+        float side_l = SIDE_OFFSET_L;
+        float side_r = SIDE_OFFSET_R;
     };
-    RibbonLayout ribbon;   // legacy defaults until the skin gives its own (set_ribbon)
+    RibbonLayout ribbon; // legacy defaults until the skin gives its own (set_ribbon)
     RibbonLayout ribbon_layout() const { return ribbon; }
 
     void set_positions(bool init, float duration);
@@ -95,9 +100,9 @@ private:
         std::mutex mutex;
         std::map<fs::path, std::shared_ptr<const TJAMetadata>> metadata;
         std::map<std::pair<fs::path, int>, int> note_counts;
-        std::map<fs::path, int> genres;  // by box.def folder
+        std::map<fs::path, int> genres; // by box.def folder
     };
-    ScanMemo* memo_ = nullptr;  // set while a scan runs; nullptr = read every time
+    ScanMemo* memo_ = nullptr; // set while a scan runs; nullptr = read every time
     std::shared_ptr<const TJAMetadata> song_metadata(const fs::path& path);
     int song_note_count(const fs::path& path, int difficulty);
     int box_genre(const fs::path& box_def_dir);
@@ -111,18 +116,17 @@ private:
                                                 std::pair<std::string, std::string>* titles_out = nullptr);
 
     std::optional<DanBoxData> load_dan_box_data(const fs::path& json_path);
-    std::unique_ptr<DanBox>   load_dan_box(const fs::path& json_path);
+    std::unique_ptr<DanBox> load_dan_box(const fs::path& json_path);
     static std::unique_ptr<DanBox> make_box(const DanBoxData& d);
     std::vector<DanBoxData> scan_all_data(const std::vector<fs::path>& song_paths);
     int scan_root_data(const fs::path& root_path, std::vector<DanBoxData>& out);
     void publish(std::vector<DanBoxData>&& data);
 
-    std::thread              scan_thread;
-    std::atomic<bool>        scan_done{false};
-    std::atomic<bool>        scan_abort{false};
-    std::atomic<bool>        scan_published{false};
-    fs::path                 restore_selection_path;
-    std::mutex               scan_mutex;
-    std::vector<DanBoxData>  scan_result;   // guarded by scan_mutex
+    std::thread scan_thread;
+    std::atomic<bool> scan_done{false};
+    std::atomic<bool> scan_abort{false};
+    std::atomic<bool> scan_published{false};
+    fs::path restore_selection_path;
+    std::mutex scan_mutex;
+    std::vector<DanBoxData> scan_result; // guarded by scan_mutex
 };
-

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <optional>
+
 #include "../libs/screen.h"
 #include "../objects/game_over/game_over.h"
 #include "../objects/global/allnet_indicator.h"
@@ -14,8 +15,7 @@ private:
     std::optional<GameOverSequence> sequence;
 
 public:
-    GameOverScreen() : Screen("game_over") {
-    }
+    GameOverScreen() : Screen("game_over") {}
 
     void on_screen_start() override;
 

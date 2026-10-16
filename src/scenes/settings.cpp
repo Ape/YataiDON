@@ -1,10 +1,11 @@
 #include "settings.h"
+
 #include "../libs/audio.h"
-#include "../libs/input.h"
 #include "../libs/filesystem.h"
 #include "../libs/global_data.h"
-#include "../libs/scores.h"
+#include "../libs/input.h"
 #include "../libs/network.h"
+#include "../libs/scores.h"
 #include "../objects/song_select/file_navigator/navigator.h"
 
 void save_config(const Config& config);
@@ -22,7 +23,10 @@ void SettingsScreen::on_screen_start() {
     fs::path tmpl_path = skin_dir / "settings_template.json";
     if (!fs::exists(tmpl_path)) {
         for (const fs::path& root : tex.all_graphics_roots()) {
-            if (fs::exists(root / "settings_template.json")) { tmpl_path = root / "settings_template.json"; break; }
+            if (fs::exists(root / "settings_template.json")) {
+                tmpl_path = root / "settings_template.json";
+                break;
+            }
         }
     }
 
@@ -33,8 +37,8 @@ void SettingsScreen::on_screen_start() {
         screen_init = false;
         throw;
     }
-    indicator   = Indicator(Indicator::State::SELECT);
-    coin_overlay   = CoinOverlay();
+    indicator = Indicator(Indicator::State::SELECT);
+    coin_overlay = CoinOverlay();
     allnet_indicator = AllNetIcon();
     username_on_entry = scores_manager.player_1_data.username;
 
@@ -51,10 +55,12 @@ Screens SettingsScreen::on_screen_end(Screens next_screen) {
     scores_manager.save_player_data(scores_manager.player_2_data);
     spdlog::info("Settings saved");
 
-    if (!global_data.config->network.access_code_1.empty() && scores_manager.player_1_data.username != username_on_entry) {
+    if (!global_data.config->network.access_code_1.empty() &&
+        scores_manager.player_1_data.username != username_on_entry) {
         network.update_username(global_data.config->network.access_code_1, scores_manager.player_1_data.username);
     }
-    if (!global_data.config->network.access_code_2.empty() && scores_manager.player_2_data.username != username_on_entry) {
+    if (!global_data.config->network.access_code_2.empty() &&
+        scores_manager.player_2_data.username != username_on_entry) {
         network.update_username(global_data.config->network.access_code_2, scores_manager.player_2_data.username);
     }
     username_on_entry.clear();
@@ -113,8 +119,9 @@ std::optional<Screens> SettingsScreen::update() {
     allnet_indicator->update(current_time);
     indicator->update(current_time);
     box_manager->update(current_time);
-    if (auto screen = box_manager->pending_screen_change())
+    if (auto screen = box_manager->pending_screen_change()) {
         return on_screen_end(*screen);
+    }
     return handle_input();
 }
 

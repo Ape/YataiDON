@@ -5,6 +5,7 @@
 class SongNum {
 private:
     std::unique_ptr<OutlinedText> text;
+
 public:
     float width = 0.0f;
     float height = 0.0f;
@@ -34,7 +35,8 @@ private:
 
 public:
     SongInfo() = default;
-    SongInfo(const std::string& song_name, const std::string& subtitle, bool show_subtitle, int genre, int song_num, int song_total = 0, const std::string& genre_label = "");
+    SongInfo(const std::string& song_name, const std::string& subtitle, bool show_subtitle, int genre, int song_num,
+             int song_total = 0, const std::string& genre_label = "");
     SongInfo(const SongInfo&) = delete;
     SongInfo& operator=(const SongInfo&) = delete;
     SongInfo(SongInfo&& other) noexcept;

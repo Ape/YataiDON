@@ -1,9 +1,11 @@
 #include "fc_animation.h"
 
 FCAnimation::FCAnimation(bool is_2p, bool donderful) {
-    if (!load("FCAnimation", "fc_animation", is_2p, donderful)) return;
+    if (!load("FCAnimation", "fc_animation", is_2p, donderful)) {
+        return;
+    }
     fn_update = lua_object["update"];
-    fn_draw   = lua_object["draw"];
+    fn_draw = lua_object["draw"];
 }
 
 void FCAnimation::update(double current_ms) {

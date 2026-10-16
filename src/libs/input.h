@@ -6,8 +6,8 @@
 #include <thread>
 #include <vector>
 
-#include "ray.h" // IWYU pragma: keep
 #include "global_data.h"
+#include "ray.h" // IWYU pragma: keep
 
 extern std::atomic<bool> input_thread_running;
 extern std::thread input_thread;
@@ -59,7 +59,8 @@ void set_touch_drum_enabled(bool enabled);
 // Draw the touch drum overlay (returns true if drawn, false if hidden)
 bool draw_touch_drum();
 
-bool is_input_key_pressed(const std::vector<int>& keys, const std::vector<int>& gamepad_buttons, float* strength = nullptr);
+bool is_input_key_pressed(const std::vector<int>& keys, const std::vector<int>& gamepad_buttons,
+                          float* strength = nullptr);
 bool is_l_don_pressed(PlayerNum player_num = PlayerNum::ALL, float* strength = nullptr);
 bool is_r_don_pressed(PlayerNum player_num = PlayerNum::ALL, float* strength = nullptr);
 bool is_l_kat_pressed(PlayerNum player_num = PlayerNum::ALL, float* strength = nullptr);
@@ -69,7 +70,11 @@ bool is_kat_held(bool left, PlayerNum player_num = PlayerNum::ALL);
 
 // --- Unified keyboard text editing ---------------------------------------
 // Result of one frame of keyboard-driven text-field editing.
-enum class TextEditAction { None, Confirm, Cancel };
+enum class TextEditAction {
+    None,
+    Confirm,
+    Cancel
+};
 
 // Polls the keyboard for text-field editing and applies the edits to `text`:
 //   * Backspace removes one UTF-8 code point.
@@ -79,24 +84,18 @@ enum class TextEditAction { None, Confirm, Cancel };
 //   * Enter / Escape (IsKeyPressed) and a typed '\n'/'\r' map to
 //     Confirm / Cancel, which are returned so the caller can finalize or
 //     abort its edit session.
-TextEditAction poll_text_edit(std::string& text,
-                              const std::function<bool(int)>& accept = nullptr);
+TextEditAction poll_text_edit(std::string& text, const std::function<bool(int)>& accept = nullptr);
 
 // Desktop: keeps SDL text input (and with it the OS IME) on only while a text field is being
 // edited, i.e. poll_text_edit ran since the last call. Call once per frame after the screen update.
 void sync_text_input();
 
 namespace ray {
-inline bool operator==(const Color& a, const Color& b)
-{
-    return a.r == b.r &&
-           a.g == b.g &&
-           a.b == b.b &&
-           a.a == b.a;
-}
+    inline bool operator==(const Color& a, const Color& b) {
+        return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
+    }
 
-inline bool operator!=(const Color& a, const Color& b)
-{
-    return !(a == b);
-}
-}  // namespace ray
+    inline bool operator!=(const Color& a, const Color& b) {
+        return !(a == b);
+    }
+} // namespace ray

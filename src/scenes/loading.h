@@ -1,13 +1,14 @@
 #pragma once
 
-#include "../libs/screen.h"
-#include "../objects/global/allnet_indicator.h"
 #include <atomic>
-#include <thread>
-#include <vector>
+#include <filesystem>
 #include <memory>
 #include <optional>
-#include <filesystem>
+#include <thread>
+#include <vector>
+
+#include "../libs/screen.h"
+#include "../objects/global/allnet_indicator.h"
 
 class LoadingScreen : public Screen {
 private:
@@ -45,8 +46,7 @@ private:
     void load_navigator();
 
 public:
-    LoadingScreen() : Screen("loading") {
-    }
+    LoadingScreen() : Screen("loading") {}
 
     ~LoadingScreen() override {
         if (loading_thread.joinable()) {

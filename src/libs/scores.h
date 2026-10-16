@@ -1,58 +1,71 @@
 #pragma once
 
-#include "global_data.h"
-#include "parsers/tja.h"
 #include <cassert>
 #include <chrono>
-#include <sqlite3.h>
 #include <mutex>
+#include <sqlite3.h>
+
+#include "global_data.h"
+#include "parsers/tja.h"
 
 inline int64_t unix_now() {
-    return std::chrono::duration_cast<std::chrono::seconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
+    return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch())
+        .count();
 }
 
 struct PlayerData {
     std::string player_id;
-    std::string username     = "";
-    std::string title        = "";
-    int title_bg             = 0;
-    int dan                  = -1;      // -1 = no 段位, matches the column default
-    bool gold                = false;
-    bool rainbow             = false;
-    bool modifier_auto       = false;
-    int modifier_speed       = 10;      // 1.0x, in tenths
-    bool modifier_display    = false;
-    bool modifier_inverse    = false;
-    int modifier_random      = 0;
-    bool modifier_skip       = false;
-    int neiro_index          = 0;
+    std::string username = "";
+    std::string title = "";
+    int title_bg = 0;
+    int dan = -1; // -1 = no 段位, matches the column default
+    bool gold = false;
+    bool rainbow = false;
+    bool modifier_auto = false;
+    int modifier_speed = 10; // 1.0x, in tenths
+    bool modifier_display = false;
+    bool modifier_inverse = false;
+    int modifier_random = 0;
+    bool modifier_skip = false;
+    int neiro_index = 0;
     ray::Color chara_color_1 = ray::Color{0x68, 0xBF, 0xC0, 0xFF};
     ray::Color chara_color_2 = ray::Color{0xF9, 0x47, 0x28, 0xFF};
     ray::Color chara_color_3 = ray::Color{0xF9, 0xF0, 0xE1, 0xFF};
-    int chara_head_index     = 0;
-    int chara_body_index     = 0;
-    int chara_cos_index      = 0;
-    bool chara_is_costume    = true;
-    int chara_paint_index    = 0;
-    int chara_face_index     = 0;
-    int chara_acce_index     = 0;
+    int chara_head_index = 0;
+    int chara_body_index = 0;
+    int chara_cos_index = 0;
+    bool chara_is_costume = true;
+    int chara_paint_index = 0;
+    int chara_face_index = 0;
+    int chara_acce_index = 0;
 };
 
 struct DanRecord {
     int dan_index = -1;
-    int rank      = 0;
-    int score     = 0;
-    int arrival   = 0;
+    int rank = 0;
+    int score = 0;
+    int arrival = 0;
 };
 
 inline Rank rank_for_score(int score) {
-    if (score >= 1000000) return Rank::_RAINBOW;
-    if (score >= 950000)  return Rank::_PURPLE;
-    if (score >= 900000)  return Rank::_PINK;
-    if (score >= 800000)  return Rank::_GOLD;
-    if (score >= 700000)  return Rank::_SILVER;
-    if (score >= 600000)  return Rank::_BRONZE;
+    if (score >= 1000000) {
+        return Rank::_RAINBOW;
+    }
+    if (score >= 950000) {
+        return Rank::_PURPLE;
+    }
+    if (score >= 900000) {
+        return Rank::_PINK;
+    }
+    if (score >= 800000) {
+        return Rank::_GOLD;
+    }
+    if (score >= 700000) {
+        return Rank::_SILVER;
+    }
+    if (score >= 600000) {
+        return Rank::_BRONZE;
+    }
     return Rank::_WHITE;
 }
 
@@ -84,7 +97,7 @@ struct SongCacheEntry {
 
 // Bump when get_diff_hash / the parsers produce different hashes or metadata for the same file,
 // so every chart is parsed again.
-constexpr int SONG_CACHE_VERSION = 3;  // 3: Shift-JIS charts read as UTF-8
+constexpr int SONG_CACHE_VERSION = 3; // 3: Shift-JIS charts read as UTF-8
 
 struct RemoteScore;
 
@@ -100,6 +113,7 @@ private:
     std::unordered_map<std::string, fs::path> diff_hash_to_path;
     std::map<std::tuple<std::string, int, std::string>, Score> score_cache;
     void load_score_cache();
+
 public:
     std::string player_1;
     std::string player_2;
@@ -115,7 +129,8 @@ public:
     int apply_remote_scores(const std::vector<RemoteScore>& scores, const std::string& player_id);
     std::optional<Score> get_score(const std::string& hash, int difficulty, const std::string& player_id);
     // out_score_id (optional) receives the new scores row id, or -1 if the insert failed.
-    Score save_score(const std::string& hash, int difficulty, const std::string& player_id, Score score, int64_t played_at, const std::string& modifiers_json, int64_t* out_score_id = nullptr);
+    Score save_score(const std::string& hash, int difficulty, const std::string& player_id, Score score,
+                     int64_t played_at, const std::string& modifiers_json, int64_t* out_score_id = nullptr);
     void add_path_binding(const fs::path& path, const std::array<std::string, 5>& hashes);
     std::array<std::string, 5> get_hashes(const fs::path& path);
     std::string get_single_hash(const fs::path& path);
@@ -133,7 +148,8 @@ public:
     // Best-of view over dan_scores for one course (course_id from dan_course_id).
     std::optional<DanRecord> get_dan_record(const std::string& player_id, const std::string& course_id);
     // Appends one attempt to dan_scores; each song links to its normal scores row (DanResultSong::score_id).
-    void save_dan_score(const std::string& player_id, const std::string& course_id, const DanResultData& rd, int arrival);
+    void save_dan_score(const std::string& player_id, const std::string& course_id, const DanResultData& rd,
+                        int arrival);
     std::optional<PlayerData> get_player_data(const std::string& player_id);
     void save_player_data(const PlayerData& player);
     void migrate_player_id(const std::string& old_id, const std::string& new_id);
@@ -166,10 +182,10 @@ inline ray::Color chara_default_color_2(PlayerNum player_num) {
 inline Modifiers player_data_to_modifiers(const PlayerData& pd) {
     Modifiers m;
     m.auto_play = pd.modifier_auto;
-    m.speed     = pd.modifier_speed;
-    m.display   = pd.modifier_display;
-    m.inverse   = pd.modifier_inverse;
-    m.random    = pd.modifier_random;
-    m.skip      = pd.modifier_skip;
+    m.speed = pd.modifier_speed;
+    m.display = pd.modifier_display;
+    m.inverse = pd.modifier_inverse;
+    m.random = pd.modifier_random;
+    m.skip = pd.modifier_skip;
     return m;
 }

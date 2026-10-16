@@ -1,9 +1,10 @@
 #pragma once
 
-#include "../../../libs/text.h"
 #include <string>
 #include <unordered_set>
 #include <vector>
+
+#include "../../../libs/text.h"
 
 inline bool language_is_cjk(const std::string& lang) {
     static const std::unordered_set<std::string> cjk = {
@@ -19,9 +20,13 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
         while (start <= text.size()) {
             size_t nl = text.find('\n', start);
             size_t len = (nl == std::string::npos) ? std::string::npos : nl - start;
-            if (!result.empty()) result += "\n";
+            if (!result.empty()) {
+                result += "\n";
+            }
             result += word_wrap(text.substr(start, len), font_size, spacing, max_width);
-            if (nl == std::string::npos) break;
+            if (nl == std::string::npos) {
+                break;
+            }
             start = nl + 1;
         }
         return result;
@@ -33,7 +38,10 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
     size_t start = 0;
     while (start < text.size()) {
         size_t sp = text.find(' ', start);
-        if (sp == std::string::npos) { words.push_back(text.substr(start)); break; }
+        if (sp == std::string::npos) {
+            words.push_back(text.substr(start));
+            break;
+        }
         words.push_back(text.substr(start, sp - start));
         start = sp + 1;
     }
@@ -47,10 +55,12 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
         size_t i = 0;
         while (i < word.size()) {
             size_t char_len = 1;
-            while (i + char_len < word.size() && ((unsigned char)word[i + char_len] & 0xC0) == 0x80)
+            while (i + char_len < word.size() && ((unsigned char)word[i + char_len] & 0xC0) == 0x80) {
                 char_len++;
+            }
             std::string candidate = piece + word.substr(i, char_len);
-            if (!piece.empty() && ray::MeasureTextEx(font, candidate.c_str(), (float)font_size, spacing).x > max_width) {
+            if (!piece.empty() &&
+                ray::MeasureTextEx(font, candidate.c_str(), (float)font_size, spacing).x > max_width) {
                 pieces.push_back(piece);
                 piece = word.substr(i, char_len);
             } else {
@@ -58,7 +68,9 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
             }
             i += char_len;
         }
-        if (!piece.empty()) pieces.push_back(piece);
+        if (!piece.empty()) {
+            pieces.push_back(piece);
+        }
         return pieces;
     };
 
@@ -76,12 +88,16 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
         }
         if (ray::MeasureTextEx(font, w.c_str(), (float)font_size, spacing).x > max_width) {
             std::vector<std::string> pieces = break_long_word(w);
-            for (size_t i = 0; i + 1 < pieces.size(); i++) wrapped += pieces[i] + "\n";
+            for (size_t i = 0; i + 1 < pieces.size(); i++) {
+                wrapped += pieces[i] + "\n";
+            }
             current = pieces.empty() ? "" : pieces.back();
         } else {
             current = w;
         }
     }
-    if (!current.empty()) wrapped += current;
+    if (!current.empty()) {
+        wrapped += current;
+    }
     return wrapped;
 }

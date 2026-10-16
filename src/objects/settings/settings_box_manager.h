@@ -1,15 +1,16 @@
 #pragma once
 
-#include "settings_box.h"
 #include <memory>
 #include <optional>
 #include <vector>
 
+#include "settings_box.h"
+
 class SettingsBoxManager {
 private:
     std::vector<std::unique_ptr<SettingsBox>> boxes;
-    int   selected_box_index;
-    bool  box_selected;
+    int selected_box_index;
+    bool box_selected;
 
 public:
     explicit SettingsBoxManager(const rapidjson::Document& tmpl);

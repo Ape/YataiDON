@@ -1,60 +1,94 @@
 #include "osu.h"
-#include "../md5.h"
-#include <fstream>
-#include <sstream>
+
 #include <algorithm>
 #include <cctype>
+#include <fstream>
+#include <sstream>
+
+#include "../md5.h"
 
 std::vector<std::string> OsuParser::read_file_lines(const fs::path& path) {
     std::vector<std::string> lines;
     std::ifstream f(path, std::ios::binary);
-    if (!f) return lines;
+    if (!f) {
+        return lines;
+    }
     std::string line;
     while (std::getline(f, line)) {
-        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (!line.empty() && line.back() == '\r') {
+            line.pop_back();
+        }
         lines.push_back(line);
     }
     return lines;
 }
 
-std::map<std::string, std::string> OsuParser::read_section_dict(
-    const std::vector<std::string>& lines, const std::string& section) const
-{
+std::map<std::string, std::string> OsuParser::read_section_dict(const std::vector<std::string>& lines,
+                                                                const std::string& section) const {
     std::map<std::string, std::string> result;
     bool in_section = false;
     for (const auto& line : lines) {
-        if (line == "[" + section + "]") { in_section = true; continue; }
-        if (!line.empty() && line[0] == '[') { in_section = false; continue; }
-        if (!in_section) continue;
+        if (line == "[" + section + "]") {
+            in_section = true;
+            continue;
+        }
+        if (!line.empty() && line[0] == '[') {
+            in_section = false;
+            continue;
+        }
+        if (!in_section) {
+            continue;
+        }
         auto colon = line.find(':');
-        if (colon == std::string::npos) continue;
+        if (colon == std::string::npos) {
+            continue;
+        }
         std::string key = line.substr(0, colon);
         std::string val = line.substr(colon + 1);
         // trim whitespace
         auto ltrim = [](std::string& s) { s.erase(0, s.find_first_not_of(" \t")); };
-        auto rtrim = [](std::string& s) { auto p = s.find_last_not_of(" \t\r\n"); if (p != std::string::npos) s.erase(p+1); };
-        ltrim(key); rtrim(key); ltrim(val); rtrim(val);
+        auto rtrim = [](std::string& s) {
+            auto p = s.find_last_not_of(" \t\r\n");
+            if (p != std::string::npos) {
+                s.erase(p + 1);
+            }
+        };
+        ltrim(key);
+        rtrim(key);
+        ltrim(val);
+        rtrim(val);
         result[key] = val;
     }
     return result;
 }
 
-std::vector<std::vector<double>> OsuParser::read_section_list(
-    const std::vector<std::string>& lines, const std::string& section) const
-{
+std::vector<std::vector<double>> OsuParser::read_section_list(const std::vector<std::string>& lines,
+                                                              const std::string& section) const {
     static const std::regex num_re(R"([-+]?\d*\.?\d+)");
     std::vector<std::vector<double>> result;
     bool in_section = false;
     for (const auto& line : lines) {
-        if (line == "[" + section + "]") { in_section = true; continue; }
-        if (!line.empty() && line[0] == '[') { in_section = false; continue; }
-        if (!in_section) continue;
-        if (line.empty() || line[0] == '/' || line[0] == '\r') continue;
+        if (line == "[" + section + "]") {
+            in_section = true;
+            continue;
+        }
+        if (!line.empty() && line[0] == '[') {
+            in_section = false;
+            continue;
+        }
+        if (!in_section) {
+            continue;
+        }
+        if (line.empty() || line[0] == '/' || line[0] == '\r') {
+            continue;
+        }
         // only parse lines that start with a digit or sign
-        if (!std::isdigit((unsigned char)line[0]) && line[0] != '-' && line[0] != '+') continue;
+        if (!std::isdigit((unsigned char)line[0]) && line[0] != '-' && line[0] != '+') {
+            continue;
+        }
         std::vector<double> nums;
         auto begin = std::sregex_iterator(line.begin(), line.end(), num_re);
-        auto end   = std::sregex_iterator();
+        auto end = std::sregex_iterator();
         for (auto it = begin; it != end; ++it) {
             try {
                 nums.push_back(std::stod(it->str()));
@@ -62,42 +96,59 @@ std::vector<std::vector<double>> OsuParser::read_section_list(
                 nums.push_back(0.0);
             }
         }
-        if (!nums.empty()) result.push_back(nums);
+        if (!nums.empty()) {
+            result.push_back(nums);
+        }
     }
     return result;
 }
 
-std::vector<std::vector<std::string>> OsuParser::read_hitobjects_fields(
-    const std::vector<std::string>& lines) const
-{
+std::vector<std::vector<std::string>> OsuParser::read_hitobjects_fields(const std::vector<std::string>& lines) const {
     std::vector<std::vector<std::string>> result;
     bool in_section = false;
     for (const auto& line : lines) {
-        if (line == "[HitObjects]") { in_section = true; continue; }
-        if (!line.empty() && line[0] == '[') { in_section = false; continue; }
-        if (!in_section) continue;
-        if (line.empty() || line[0] == '/' || line[0] == '\r') continue;
-        if (!std::isdigit((unsigned char)line[0]) && line[0] != '-' && line[0] != '+') continue;
+        if (line == "[HitObjects]") {
+            in_section = true;
+            continue;
+        }
+        if (!line.empty() && line[0] == '[') {
+            in_section = false;
+            continue;
+        }
+        if (!in_section) {
+            continue;
+        }
+        if (line.empty() || line[0] == '/' || line[0] == '\r') {
+            continue;
+        }
+        if (!std::isdigit((unsigned char)line[0]) && line[0] != '-' && line[0] != '+') {
+            continue;
+        }
         std::vector<std::string> fields;
         std::stringstream ss(line);
         std::string field;
-        while (std::getline(ss, field, ',')) fields.push_back(field);
-        if (!fields.empty()) result.push_back(fields);
+        while (std::getline(ss, field, ',')) {
+            fields.push_back(field);
+        }
+        if (!fields.empty()) {
+            result.push_back(fields);
+        }
     }
     return result;
 }
 
 double OsuParser::get_scroll_multiplier(double ms) const {
-    double base_scroll = (slider_multiplier >= 1.37 && slider_multiplier <= 1.47)
-                         ? 1.0
-                         : slider_multiplier / 1.40;
+    double base_scroll = (slider_multiplier >= 1.37 && slider_multiplier <= 1.47) ? 1.0 : slider_multiplier / 1.40;
     double current_scroll = 1.0;
     for (const auto& tp : timing_points) {
-        if (tp[0] > ms) break;
-        if (tp[1] < 0)
+        if (tp[0] > ms) {
+            break;
+        }
+        if (tp[1] < 0) {
             current_scroll = -100.0 / tp[1];
-        else
+        } else {
             current_scroll = 1.0; // uninherited point resets SV
+        }
     }
     return current_scroll * base_scroll;
 }
@@ -105,16 +156,19 @@ double OsuParser::get_scroll_multiplier(double ms) const {
 double OsuParser::get_bpm_at(double ms) const {
     double bpm = 120.0;
     for (const auto& tp : timing_points) {
-        if (tp[0] > ms) break;
-        if (tp[1] > 0 && tp[1] < 60000)
+        if (tp[0] > ms) {
+            break;
+        }
+        if (tp[1] > 0 && tp[1] < 60000) {
             bpm = 60000.0 / tp[1];
+        }
     }
     return bpm;
 }
 
 OsuParser::OsuParser(const fs::path& path) : file_path(path) {
     metadata = TJAMetadata();
-    ex_data  = TJAEXData();
+    ex_data = TJAEXData();
 
     auto lines = read_file_lines(path);
     if (lines.empty()) {
@@ -122,51 +176,64 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
         return;
     }
 
-    auto general    = read_section_dict(lines, "General");
-    auto osu_meta   = read_section_dict(lines, "Metadata");
+    auto general = read_section_dict(lines, "General");
+    auto osu_meta = read_section_dict(lines, "Metadata");
     auto difficulty = read_section_dict(lines, "Difficulty");
-    auto tp_data    = read_section_list(lines, "TimingPoints");
+    auto tp_data = read_section_list(lines, "TimingPoints");
     hit_objects_data = read_hitobjects_fields(lines);
 
     // Slider multiplier
     if (difficulty.count("SliderMultiplier")) {
         try {
             double sm = std::stod(difficulty["SliderMultiplier"]);
-            if (sm > 0.0) slider_multiplier = sm;
-            else spdlog::warn("OsuParser: invalid SliderMultiplier '{}', using default", difficulty["SliderMultiplier"]);
+            if (sm > 0.0) {
+                slider_multiplier = sm;
+            } else {
+                spdlog::warn("OsuParser: invalid SliderMultiplier '{}', using default", difficulty["SliderMultiplier"]);
+            }
         } catch (const std::exception& e) {
-            spdlog::warn("OsuParser: failed to parse SliderMultiplier '{}': {}", difficulty["SliderMultiplier"], e.what());
+            spdlog::warn("OsuParser: failed to parse SliderMultiplier '{}': {}", difficulty["SliderMultiplier"],
+                         e.what());
         }
     }
 
     // Timing points: store {time_ms, beat_length}
     for (const auto& row : tp_data) {
-        if (row.size() >= 2)
+        if (row.size() >= 2) {
             timing_points.push_back({row[0], row[1]});
+        }
     }
     // stable_sort + tie-breaker: an inherited (green) and uninherited (red) point
     // often share the same offset, and get_scroll_multiplier()/get_bpm_at() depend
     // on the uninherited (positive beatLength) one being processed first.
     std::stable_sort(timing_points.begin(), timing_points.end(),
-              [](const std::array<double, 2>& a, const std::array<double, 2>& b) {
-                  if (a[0] != b[0]) return a[0] < b[0];
-                  return a[1] > b[1]; // uninherited (positive beatLength) first
-              });
+                     [](const std::array<double, 2>& a, const std::array<double, 2>& b) {
+                         if (a[0] != b[0]) {
+                             return a[0] < b[0];
+                         }
+                         return a[1] > b[1]; // uninherited (positive beatLength) first
+                     });
 
     // Metadata
-    if (osu_meta.count("Title"))
+    if (osu_meta.count("Title")) {
         metadata.title["en"] = osu_meta["Title"];
-    if (osu_meta.count("Artist"))
+    }
+    if (osu_meta.count("Artist")) {
         metadata.subtitle["en"] = osu_meta["Artist"];
-    if (osu_meta.count("TitleUnicode"))
+    }
+    if (osu_meta.count("TitleUnicode")) {
         metadata.title["ja"] = osu_meta["TitleUnicode"];
-    if (osu_meta.count("ArtistUnicode"))
+    }
+    if (osu_meta.count("ArtistUnicode")) {
         metadata.subtitle["ja"] = osu_meta["ArtistUnicode"];
-    if (osu_meta.count("Version"))
+    }
+    if (osu_meta.count("Version")) {
         difficulty_name = osu_meta["Version"];
+    }
 
-    if (general.count("AudioFilename"))
+    if (general.count("AudioFilename")) {
         metadata.wave = path.parent_path() / general["AudioFilename"];
+    }
     if (general.count("PreviewTime")) {
         try {
             metadata.demostart = std::stod(general["PreviewTime"]) / 1000.0;
@@ -182,9 +249,19 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
         std::string full_text;
         bool in_events = false;
         for (const auto& l : lines) {
-            if (l == "[Events]") { in_events = true; continue; }
-            if (!l.empty() && l[0] == '[') { if (in_events) break; continue; }
-            if (in_events) { full_text += l + "\n"; }
+            if (l == "[Events]") {
+                in_events = true;
+                continue;
+            }
+            if (!l.empty() && l[0] == '[') {
+                if (in_events) {
+                    break;
+                }
+                continue;
+            }
+            if (in_events) {
+                full_text += l + "\n";
+            }
         }
         // Look for video or background: "Video,offset,"filename"" or "0,0,"filename""
         static const std::regex bg_re(R"re(^\s*(?:Video|\d+),\d+,"([^"]+)")re");
@@ -196,7 +273,7 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
                 fs::path candidate = path.parent_path() / m[1].str();
                 std::string ext = candidate.extension().string();
                 std::transform(ext.begin(), ext.end(), ext.begin(),
-                    [](unsigned char c) { return (char)std::tolower(c); });
+                               [](unsigned char c) { return (char)std::tolower(c); });
                 if (ext == ".mp4" || ext == ".avi" || ext == ".mkv" || ext == ".mov" || ext == ".flv") {
                     metadata.bgmovie = candidate;
                     break;
@@ -223,7 +300,9 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
 }
 
 NoteList& OsuParser::get_notes() {
-    if (notes_built) return cached_notes;
+    if (notes_built) {
+        return cached_notes;
+    }
 
     double first_bpm = metadata.bpm;
     double first_beat_length = (first_bpm > 0) ? 60000.0 / first_bpm : 500.0;
@@ -231,38 +310,40 @@ NoteList& OsuParser::get_notes() {
     int counter = 0;
 
     for (const auto& line : hit_objects_data) {
-        if (line.size() < 5) continue;
+        if (line.size() < 5) {
+            continue;
+        }
 
         double note_time;
         int obj_type;
         int hit_sound;
         try {
             note_time = std::stod(line[2]);
-            obj_type  = std::stoi(line[3]);
+            obj_type = std::stoi(line[3]);
             hit_sound = std::stoi(line[4]);
         } catch (const std::exception& e) {
             spdlog::warn("OsuParser: skipping malformed hit object line: {}", e.what());
             continue;
         }
-        double scroll    = get_scroll_multiplier(note_time);
-        double bpm_here  = get_bpm_at(note_time);
+        double scroll = get_scroll_multiplier(note_time);
+        double bpm_here = get_bpm_at(note_time);
 
-        bool is_circle  = (obj_type & 1) != 0;  // type bit 0
-        bool is_slider  = (obj_type & 2) != 0;  // type bit 1
-        bool is_spinner = (obj_type & 8) != 0;  // type bit 3
+        bool is_circle = (obj_type & 1) != 0;  // type bit 0
+        bool is_slider = (obj_type & 2) != 0;  // type bit 1
+        bool is_spinner = (obj_type & 8) != 0; // type bit 3
 
         if (is_circle) {
             Note note;
-            note.hit_ms  = note_time;
-            note.bpm     = bpm_here;
+            note.hit_ms = note_time;
+            note.bpm = bpm_here;
             note.scroll_x = scroll;
             note.scroll_y = 0.0;
-            note.display  = true;
-            note.index    = counter++;
-            note.moji     = 1;
+            note.display = true;
+            note.index = counter++;
+            note.moji = 1;
 
-            bool kat = (hit_sound & (2 | 8)) != 0;  // whistle or clap bit -> kat
-            bool big = (hit_sound & 4) != 0;        // finish bit -> big don/kat
+            bool kat = (hit_sound & (2 | 8)) != 0; // whistle or clap bit -> kat
+            bool big = (hit_sound & 4) != 0;       // finish bit -> big don/kat
             if (big && kat) {
                 note.type = NoteType::KAT_L;
                 note.moji = 6;
@@ -282,49 +363,61 @@ NoteList& OsuParser::get_notes() {
             // Drumroll: compute duration (field 7 is the slider "length")
             double slider_len = 0.0;
             if (line.size() > 7) {
-                try { slider_len = std::stod(line[7]); } catch (const std::exception&) {}
+                try {
+                    slider_len = std::stod(line[7]);
+                } catch (const std::exception&) {
+                }
             }
             // Field 6 is the slide (repeat) count.
             int slides = 1;
             if (line.size() > 6) {
-                try { slides = std::stoi(line[6]); } catch (const std::exception&) {}
+                try {
+                    slides = std::stoi(line[6]);
+                } catch (const std::exception&) {
+                }
             }
-            if (slides < 1) slides = 1;
+            if (slides < 1) {
+                slides = 1;
+            }
 
             double beat_len_at = first_beat_length;
             // Effective slider velocity multiplier from inherited (green) timing
             // points; an uninherited (red) point resets it back to 1.0.
             double sv = 1.0;
             for (const auto& tp : timing_points) {
-                if (tp[0] > note_time) break;
-                if (tp[1] > 0) beat_len_at = tp[1];
+                if (tp[0] > note_time) {
+                    break;
+                }
+                if (tp[1] > 0) {
+                    beat_len_at = tp[1];
+                }
                 sv = tp[1] < 0 ? (-100.0 / tp[1]) : 1.0;
             }
             double slider_time = slider_len / (slider_multiplier * 100.0 * sv) * beat_len_at * slides;
 
-            bool big = (hit_sound & 4) != 0;        // finish bit -> big roll head
+            bool big = (hit_sound & 4) != 0; // finish bit -> big roll head
             NoteType head_type = big ? NoteType::ROLL_HEAD_L : NoteType::ROLL_HEAD;
 
             Note head;
-            head.type     = head_type;
-            head.hit_ms   = note_time;
-            head.bpm      = bpm_here;
+            head.type = head_type;
+            head.hit_ms = note_time;
+            head.bpm = bpm_here;
             head.scroll_x = scroll;
             head.scroll_y = 0.0;
-            head.display  = true;
-            head.index    = counter++;
-            head.color    = 255;
-            head.moji     = big ? 8 : 7;
+            head.display = true;
+            head.index = counter++;
+            head.color = 255;
+            head.moji = big ? 8 : 7;
 
             Note tail;
-            tail.type     = NoteType::TAIL;
-            tail.hit_ms   = note_time + slider_time;
-            tail.bpm      = bpm_here;
+            tail.type = NoteType::TAIL;
+            tail.hit_ms = note_time + slider_time;
+            tail.bpm = bpm_here;
             tail.scroll_x = scroll;
             tail.scroll_y = 0.0;
-            tail.display  = true;
-            tail.index    = counter++;
-            tail.moji     = 10;
+            tail.display = true;
+            tail.index = counter++;
+            tail.moji = 10;
 
             cached_notes.notes.push_back(head);
             cached_notes.notes.push_back(tail);
@@ -333,29 +426,32 @@ NoteList& OsuParser::get_notes() {
             // Balloon (field 5 is the spinner "endTime")
             double end_time = note_time + 1000.0;
             if (line.size() > 5) {
-                try { end_time = std::stod(line[5]); } catch (const std::exception&) {}
+                try {
+                    end_time = std::stod(line[5]);
+                } catch (const std::exception&) {
+                }
             }
 
             Note head;
-            head.type     = NoteType::BALLOON_HEAD;
-            head.hit_ms   = note_time;
-            head.bpm      = bpm_here;
+            head.type = NoteType::BALLOON_HEAD;
+            head.hit_ms = note_time;
+            head.bpm = bpm_here;
             head.scroll_x = scroll;
             head.scroll_y = 0.0;
-            head.display  = true;
-            head.index    = counter++;
-            head.count    = 20;
-            head.moji     = 10;
+            head.display = true;
+            head.index = counter++;
+            head.count = 20;
+            head.moji = 10;
 
             Note tail;
-            tail.type     = NoteType::TAIL;
-            tail.hit_ms   = end_time;
-            tail.bpm      = bpm_here;
+            tail.type = NoteType::TAIL;
+            tail.hit_ms = end_time;
+            tail.bpm = bpm_here;
             tail.scroll_x = scroll;
             tail.scroll_y = 0.0;
-            tail.display  = true;
-            tail.index    = counter++;
-            tail.moji     = 9;
+            tail.display = true;
+            tail.index = counter++;
+            tail.moji = 9;
 
             cached_notes.notes.push_back(head);
             cached_notes.notes.push_back(tail);
@@ -367,8 +463,8 @@ NoteList& OsuParser::get_notes() {
         if (tp[1] > 0 && tp[1] < 60000) {
             TimelineObject tl;
             tl.start_time = tp[0];
-            tl.end_time   = tp[0];
-            tl.bpm        = 60000.0 / tp[1];
+            tl.end_time = tp[0];
+            tl.bpm = 60000.0 / tp[1];
             cached_notes.timeline.push_back(tl);
         }
     }
@@ -385,7 +481,9 @@ OsuParser::notes_to_position(int /*diff*/) {
 
 std::string OsuParser::get_diff_hash(int /*difficulty*/) {
     const NoteList& notes = get_notes();
-    if (notes.notes.empty()) return "";
+    if (notes.notes.empty()) {
+        return "";
+    }
     std::vector<unsigned char> buffer;
     for (const Note& n : notes.notes) {
         auto h = n.hash();

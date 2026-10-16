@@ -1,37 +1,42 @@
 #pragma once
 
-#include "texture.h"
-#include "audio.h"
-#include "global_data.h"
-#include <spdlog/spdlog.h>
 #include <algorithm>
 #include <array>
 #include <optional>
+#include <spdlog/spdlog.h>
 #include <string>
 
+#include "audio.h"
+#include "global_data.h"
+#include "texture.h"
+
 inline int virtual_to_screen_x(float virtual_x) {
-    if (tex.screen_width <= 0 || tex.screen_height <= 0) return 0;
+    if (tex.screen_width <= 0 || tex.screen_height <= 0) {
+        return 0;
+    }
     int win_w = ray::GetRenderWidth();
     int win_h = ray::GetRenderHeight();
     float scale = std::min((float)win_w / tex.screen_width, (float)win_h / tex.screen_height);
     float effective_zoom = scale * global_data.camera.zoom;
-    float zoom_off    = (tex.screen_width * scale * (global_data.camera.zoom    - 1.0f)) * 0.5f;
+    float zoom_off = (tex.screen_width * scale * (global_data.camera.zoom - 1.0f)) * 0.5f;
     float h_scale_off = (tex.screen_width * scale * (global_data.camera.h_scale - 1.0f)) * 0.5f;
-    float offset_x = (win_w - tex.screen_width * scale) * 0.5f - zoom_off - h_scale_off
-                     + global_data.camera.offset.x * scale;
+    float offset_x =
+        (win_w - tex.screen_width * scale) * 0.5f - zoom_off - h_scale_off + global_data.camera.offset.x * scale;
     return static_cast<int>(virtual_x * effective_zoom + offset_x);
 }
 
 inline int virtual_to_screen_y(float virtual_y) {
-    if (tex.screen_width <= 0 || tex.screen_height <= 0) return 0;
+    if (tex.screen_width <= 0 || tex.screen_height <= 0) {
+        return 0;
+    }
     int win_w = ray::GetRenderWidth();
     int win_h = ray::GetRenderHeight();
     float scale = std::min((float)win_w / tex.screen_width, (float)win_h / tex.screen_height);
     float effective_zoom = scale * global_data.camera.zoom;
-    float zoom_off    = (tex.screen_height * scale * (global_data.camera.zoom    - 1.0f)) * 0.5f;
+    float zoom_off = (tex.screen_height * scale * (global_data.camera.zoom - 1.0f)) * 0.5f;
     float v_scale_off = (tex.screen_height * scale * (global_data.camera.v_scale - 1.0f)) * 0.5f;
-    float offset_y = (win_h - tex.screen_height * scale) * 0.5f - zoom_off - v_scale_off
-                     + global_data.camera.offset.y * scale;
+    float offset_y =
+        (win_h - tex.screen_height * scale) * 0.5f - zoom_off - v_scale_off + global_data.camera.offset.y * scale;
     return static_cast<int>(virtual_y * effective_zoom + offset_y);
 }
 
@@ -61,34 +66,17 @@ enum class Screens {
 
 inline std::string screens_to_string(Screens screen) {
     static const std::array<std::string, 21> names = {
-        "TITLE",
-        "ENTRY",
-        "SONG_SELECT",
-        "GAME",
-        "GAME_2P",
-        "RESULT",
-        "RESULT_2P",
-        "SONG_SELECT_2P",
-        "DAN_SELECT",
-        "GAME_DAN",
-        "DAN_RESULT",
-        "PRACTICE_SELECT",
-        "GAME_PRACTICE",
-        "AI_SELECT",
-        "AI_GAME",
-        "SETTINGS",
-        "LOADING",
-        "INPUT_CALI",
-        "GAME_OVER",
-        "INPUT_TEST",
-        "RETRY_GAME"
-    };
+        "TITLE",          "ENTRY",      "SONG_SELECT", "GAME",       "GAME_2P",         "RESULT",        "RESULT_2P",
+        "SONG_SELECT_2P", "DAN_SELECT", "GAME_DAN",    "DAN_RESULT", "PRACTICE_SELECT", "GAME_PRACTICE", "AI_SELECT",
+        "AI_GAME",        "SETTINGS",   "LOADING",     "INPUT_CALI", "GAME_OVER",       "INPUT_TEST",    "RETRY_GAME"};
     int idx = static_cast<int>(screen);
-    if (idx < 0 || static_cast<size_t>(idx) >= names.size()) return "UNKNOWN";
+    if (idx < 0 || static_cast<size_t>(idx) >= names.size()) {
+        return "UNKNOWN";
+    }
     return names[idx];
 }
 
-template <>
+template<>
 struct fmt::formatter<Screens> : fmt::formatter<std::string> {
     auto format(Screens screen, fmt::format_context& ctx) const {
         return fmt::formatter<std::string>::format(screens_to_string(screen), ctx);
@@ -100,8 +88,7 @@ class Screen {
 public:
     bool screen_init;
     std::string screen_name;
-    Screen(const std::string& name)
-        : screen_init(false), screen_name(name) {}
+    Screen(const std::string& name) : screen_init(false), screen_name(name) {}
 
     virtual ~Screen() = default;
 

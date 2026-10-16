@@ -1,11 +1,13 @@
 #include "costume_menu.h"
-#include "../../libs/text.h"
-#include "../../libs/texture.h"
-#include "../../libs/input.h"
-#include "../../libs/audio.h"
-#include "../../libs/filesystem.h"
+
 #include <random>
 #include <spdlog/spdlog.h>
+
+#include "../../libs/audio.h"
+#include "../../libs/filesystem.h"
+#include "../../libs/input.h"
+#include "../../libs/text.h"
+#include "../../libs/texture.h"
 
 CostumeMenu::CostumeMenu(PlayerNum player_num) : player_num(player_num), is_2p(player_num == PlayerNum::P2) {
     const SkinInfo* info = font_manager.get_text_info("entry_costume_text");
@@ -15,8 +17,10 @@ CostumeMenu::CostumeMenu(PlayerNum player_num) : player_num(player_num), is_2p(p
 
     t_item_box = is_2p ? tex.get_texture("costume_select/item_box_2p") : tex.get_texture("costume_select/item_box_1p");
 
-    if (!load("CostumeMenu", "costume_menu", is_2p, text_str, title_x, title_y)) return;
-    fn_update  = lua_object["update"];
+    if (!load("CostumeMenu", "costume_menu", is_2p, text_str, title_x, title_y)) {
+        return;
+    }
+    fn_update = lua_object["update"];
     fn_draw_bg = lua_object["draw_bg"];
     fn_draw_fg = lua_object["draw_fg"];
     fn_get_position = lua_object["position"];
@@ -28,34 +32,39 @@ CostumeMenu::CostumeMenu(PlayerNum player_num) : player_num(player_num), is_2p(p
 }
 
 CostumeMenu::~CostumeMenu() {
-    for (auto& icon : costume_icons)
+    for (auto& icon : costume_icons) {
         ray::UnloadTexture(icon);
+    }
 }
 
 void CostumeMenu::load_costume_icons(const std::string& subdir, const std::string& json_key) {
     icon_prev_index = -1;
     icon_scroll_dir = 0;
-    for (auto& icon : costume_icons)
+    for (auto& icon : costume_icons) {
         ray::UnloadTexture(icon);
+    }
     costume_icons.clear();
     costume_ids.clear();
     costume_names.clear();
     costume_icon_index = 0;
 
     fs::path dir = tex.resolve_skin_path(fs::path("Models") / subdir);
-    if (!fs::exists(dir)) return;
+    if (!fs::exists(dir)) {
+        return;
+    }
 
     std::vector<std::pair<int, fs::path>> entries;
     for (auto& e : fs::directory_iterator(dir)) {
         if (e.path().extension() == ".png") {
-            try { entries.push_back({std::stoi(e.path().stem().string()), e.path()}); }
-            catch (const std::exception& ex) {
-                spdlog::warn("CostumeMenu: skipping icon with non-numeric filename {}: {}", e.path().string(), ex.what());
+            try {
+                entries.push_back({std::stoi(e.path().stem().string()), e.path()});
+            } catch (const std::exception& ex) {
+                spdlog::warn("CostumeMenu: skipping icon with non-numeric filename {}: {}", e.path().string(),
+                             ex.what());
             }
         }
     }
-    std::sort(entries.begin(), entries.end(),
-              [](const auto& a, const auto& b) { return a.first < b.first; });
+    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
     for (auto& [id, path] : entries) {
         ray::Texture t = ray::LoadTexture(path.string().c_str());
         if (t.id == 0 || t.width <= 0 || t.height <= 0) {
@@ -72,7 +81,9 @@ void CostumeMenu::load_costume_icons(const std::string& subdir, const std::strin
             auto doc = read_json_file(names_path);
             if (doc.HasMember(json_key.c_str()) && doc[json_key.c_str()].IsObject()) {
                 for (auto& m : doc[json_key.c_str()].GetObject()) {
-                    if (!m.value.HasMember("name") || m.value["name"].IsNull()) continue;
+                    if (!m.value.HasMember("name") || m.value["name"].IsNull()) {
+                        continue;
+                    }
                     costume_names[std::stoi(m.name.GetString())] = m.value["name"].GetString();
                 }
             }
@@ -83,33 +94,36 @@ void CostumeMenu::load_costume_icons(const std::string& subdir, const std::strin
 }
 
 bool CostumeMenu::is_preset_item(const std::string& item) {
-    return item == "costume_select/default"   || item == "costume_select/preset_1" ||
-           item == "costume_select/preset_2"  || item == "costume_select/preset_3" ||
-           item == "costume_select/random_item";
+    return item == "costume_select/default" || item == "costume_select/preset_1" || item == "costume_select/preset_2" ||
+           item == "costume_select/preset_3" || item == "costume_select/random_item";
 }
 
 void CostumeMenu::load_preset_data() {
-    if (preset_data_loaded) return;
+    if (preset_data_loaded) {
+        return;
+    }
     preset_data_loaded = true;
 
     fs::path dir = tex.resolve_skin_path(fs::path("Models") / "costume_icon");
     if (fs::exists(dir)) {
         for (auto& e : fs::directory_iterator(dir)) {
-            if (e.path().extension() != ".png") continue;
-            try { preset_pool.push_back(std::stoi(e.path().stem().string())); }
-            catch (const std::exception& ex) {
-                spdlog::warn("CostumeMenu: skipping preset icon with non-numeric filename {}: {}", e.path().string(), ex.what());
+            if (e.path().extension() != ".png") {
+                continue;
+            }
+            try {
+                preset_pool.push_back(std::stoi(e.path().stem().string()));
+            } catch (const std::exception& ex) {
+                spdlog::warn("CostumeMenu: skipping preset icon with non-numeric filename {}: {}", e.path().string(),
+                             ex.what());
             }
         }
     }
     std::sort(preset_pool.begin(), preset_pool.end());
 
     static const std::pair<const char*, const char*> KEYS[] = {
-        {"default", "costume_select/default"},
-        {"cool",    "costume_select/preset_1"},
-        {"cute",    "costume_select/preset_2"},
-        {"joke",    "costume_select/preset_3"},
-        {"random",  "costume_select/random_item"},
+        {"default", "costume_select/default"},    {"cool", "costume_select/preset_1"},
+        {"cute", "costume_select/preset_2"},      {"joke", "costume_select/preset_3"},
+        {"random", "costume_select/random_item"},
     };
 
     fs::path presets_path = tex.resolve_skin_path("Models/costume_presets.json");
@@ -117,18 +131,26 @@ void CostumeMenu::load_preset_data() {
         try {
             auto doc = read_json_file(presets_path);
             for (auto& [name, item] : KEYS) {
-                if (!doc.HasMember(name) || !doc[name].IsArray()) continue;
+                if (!doc.HasMember(name) || !doc[name].IsArray()) {
+                    continue;
+                }
                 std::vector<int> ids;
-                for (auto& v : doc[name].GetArray())
-                    if (v.IsInt()) ids.push_back(v.GetInt());
-                if (!ids.empty()) preset_sets[item] = std::move(ids);
+                for (auto& v : doc[name].GetArray()) {
+                    if (v.IsInt()) {
+                        ids.push_back(v.GetInt());
+                    }
+                }
+                if (!ids.empty()) {
+                    preset_sets[item] = std::move(ids);
+                }
             }
         } catch (const std::exception& ex) {
             spdlog::warn("CostumeMenu: failed to parse {}: {}", presets_path.string(), ex.what());
         }
     }
-    if (!preset_sets.count("costume_select/default"))
+    if (!preset_sets.count("costume_select/default")) {
         preset_sets["costume_select/default"] = {0};
+    }
 }
 
 void CostumeMenu::apply_preset(const std::string& item) {
@@ -136,15 +158,22 @@ void CostumeMenu::apply_preset(const std::string& item) {
 
     const std::vector<int>* set = nullptr;
     auto it = preset_sets.find(item);
-    if (it != preset_sets.end() && !it->second.empty()) set = &it->second;
-    else if (!preset_pool.empty()) set = &preset_pool;
-    if (!set || set->empty()) return;
+    if (it != preset_sets.end() && !it->second.empty()) {
+        set = &it->second;
+    } else if (!preset_pool.empty()) {
+        set = &preset_pool;
+    }
+    if (!set || set->empty()) {
+        return;
+    }
 
     bool sticky = (item != "costume_select/random_item");
     if (sticky) {
         auto rolled = preset_rolled.find(item);
         if (rolled != preset_rolled.end()) {
-            if (preset_cos_id && *preset_cos_id == rolled->second) return;  // already worn
+            if (preset_cos_id && *preset_cos_id == rolled->second) {
+                return; // already worn
+            }
             preset_cos_id = rolled->second;
             preset_seq++;
             return;
@@ -153,11 +182,13 @@ void CostumeMenu::apply_preset(const std::string& item) {
 
     static std::mt19937 rng{std::random_device{}()};
     int id = (*set)[std::uniform_int_distribution<size_t>(0, set->size() - 1)(rng)];
-    if (sticky) preset_rolled[item] = id;
+    if (sticky) {
+        preset_rolled[item] = id;
+    }
     preset_cos_id = id;
     preset_seq++;
-    spdlog::info("costume_preset: player={} item={} pool={} cos={} seq={}",
-                 (int)player_num, item, set->size(), id, preset_seq);
+    spdlog::info("costume_preset: player={} item={} pool={} cos={} seq={}", (int)player_num, item, set->size(), id,
+                 preset_seq);
 }
 
 void CostumeMenu::update(double current_time_ms) {
@@ -166,20 +197,29 @@ void CostumeMenu::update(double current_time_ms) {
 }
 
 std::optional<int> CostumeMenu::get_index() {
-    if (!costume_select_mode) return std::nullopt;
+    if (!costume_select_mode) {
+        return std::nullopt;
+    }
     return costume_icon_index;
 }
 
 std::string CostumeMenu::get_costume_name() const {
-    if (!costume_select_mode && preset_cos_id) return std::to_string(*preset_cos_id);
-    if (pick_stage == CostumePickStage::BODY && picked_head_id >= 0 && costume_ids.empty())
+    if (!costume_select_mode && preset_cos_id) {
+        return std::to_string(*preset_cos_id);
+    }
+    if (pick_stage == CostumePickStage::BODY && picked_head_id >= 0 && costume_ids.empty()) {
         return std::to_string(picked_head_id);
-    if (costume_ids.empty()) return "";
+    }
+    if (costume_ids.empty()) {
+        return "";
+    }
     return std::to_string(costume_ids[costume_icon_index]);
 }
 
 void CostumeMenu::handle_input() {
-    if (fn_is_ready.valid() && !call_r<bool>(fn_is_ready, "CostumeMenu:is_ready").value_or(true)) return;
+    if (fn_is_ready.valid() && !call_r<bool>(fn_is_ready, "CostumeMenu:is_ready").value_or(true)) {
+        return;
+    }
     if (costume_select_mode) {
         if (!costume_icons.empty()) {
             int n = (int)costume_icons.size();
@@ -246,7 +286,9 @@ void CostumeMenu::handle_input() {
                 costume_select_mode = true;
                 audio.play_sound("don", VolumePreset::SOUND);
             } else if (is_preset_item(ITEMS[selected_index])) {
-                if (!preset_cos_id) apply_preset(ITEMS[selected_index]);
+                if (!preset_cos_id) {
+                    apply_preset(ITEMS[selected_index]);
+                }
                 if (preset_cos_id) {
                     confirmed = true;
                     audio.play_sound("don", VolumePreset::SOUND);
@@ -258,7 +300,8 @@ void CostumeMenu::handle_input() {
 
 void CostumeMenu::draw() {
     const float x = pos_x, y = pos_y;
-    call(fn_draw_bg, "CostumeMenu:draw_bg", x, y, selected_index, costume_select_mode, preset_seq, static_cast<int>(pick_stage));
+    call(fn_draw_bg, "CostumeMenu:draw_bg", x, y, selected_index, costume_select_mode, preset_seq,
+         static_cast<int>(pick_stage));
 
     constexpr float ITEM_W = 80.0f;
 
@@ -275,7 +318,7 @@ void CostumeMenu::draw() {
             icon_prev_index = costume_icon_index;
         }
         float glide = icon_scroll_dir * ITEM_W *
-            (1.0f - std::clamp((float)((now_ms - icon_scroll_start) / ICON_SCROLL_MS), 0.0f, 1.0f));
+                      (1.0f - std::clamp((float)((now_ms - icon_scroll_start) / ICON_SCROLL_MS), 0.0f, 1.0f));
         base_x += glide;
         int slots = std::min(5, n);
         for (int i = 0; i < slots; i++) {
@@ -285,16 +328,17 @@ void CostumeMenu::draw() {
             float dw = icon.width * scale, dh = icon.height * scale;
             float ix = tex.draw_offset_x + base_x + i * ITEM_W + (ITEM_W - dw) / 2.0f;
             float iy = tex.draw_offset_y + base_y + (ITEM_W - dh) / 2.0f;
-            ray::DrawTexturePro(icon,
-                {0, 0, (float)icon.width, (float)icon.height},
-                {ix, iy, dw, dh}, {0, 0}, 0, ray::WHITE);
+            ray::DrawTexturePro(icon, {0, 0, (float)icon.width, (float)icon.height}, {ix, iy, dw, dh}, {0, 0}, 0,
+                                ray::WHITE);
         }
     }
 
     sol::object name_arg = sol::lua_nil;
     if (costume_select_mode && !costume_icons.empty()) {
         auto it = costume_names.find(costume_ids[costume_icon_index]);
-        if (it != costume_names.end()) name_arg = sol::make_object(*script_manager.lua, it->second);
+        if (it != costume_names.end()) {
+            name_arg = sol::make_object(*script_manager.lua, it->second);
+        }
     }
     call(fn_draw_fg, "CostumeMenu:draw_fg", x, y, name_arg);
 }

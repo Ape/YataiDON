@@ -1,9 +1,11 @@
 #include "player.h"
-#include "../../libs/input.h"
-#include "../../libs/scores.h"
-#include "../../libs/network.h"
-#include "../../libs/global_data.h"
+
 #include <spdlog/spdlog.h>
+
+#include "../../libs/global_data.h"
+#include "../../libs/input.h"
+#include "../../libs/network.h"
+#include "../../libs/scores.h"
 
 static void apply_pd_look(Chara3D& chara, PlayerData* pd, PlayerNum player_num) {
     std::string player_id = get_player_id(player_num);
@@ -11,7 +13,8 @@ static void apply_pd_look(Chara3D& chara, PlayerData* pd, PlayerNum player_num) 
         chara.set_don_colors(pd->chara_color_1, pd->chara_color_2, pd->chara_color_3);
         chara.apply_face(pd->chara_face_index);
     } else {
-        chara.set_don_colors(chara_default_color_1(player_num), chara_default_color_2(player_num), {249, 240, 225, 255});
+        chara.set_don_colors(chara_default_color_1(player_num), chara_default_color_2(player_num),
+                             {249, 240, 225, 255});
     }
     chara.set_anim(AnimIndex::DON_ENTRY_LOOP);
 }
@@ -22,24 +25,24 @@ EntryPlayer::EntryPlayer(PlayerNum player_num, int side, BoxManager* box_manager
 
     std::string player_id = get_player_id(player_num);
     auto pd = scores_manager.get_player_data(player_id);
-    nameplate = std::make_unique<Nameplate>(
-        pd ? pd->username : "", pd ? pd->title : "",
-        player_num,
-        pd ? pd->dan : -1, pd ? pd->gold : false, pd ? pd->rainbow : false, pd ? pd->title_bg : 0);
+    nameplate = std::make_unique<Nameplate>(pd ? pd->username : "", pd ? pd->title : "", player_num, pd ? pd->dan : -1,
+                                            pd ? pd->gold : false, pd ? pd->rainbow : false, pd ? pd->title_bg : 0);
     PlayerData* pd_ptr = pd ? &*pd : nullptr;
     chara = make_chara_from_player_data(pd_ptr, player_num == PlayerNum::P2);
     apply_pd_look(*chara, pd_ptr, player_num);
     chara->set_anim(AnimIndex::DON_ENTRY_IN);
 
-    if (!load("EntryPlayer", "player", side)) return;
-    fn_start_animations   = lua_object["start_animations"];
-    fn_update             = lua_object["update"];
-    fn_draw_drum_back     = lua_object["draw_drum_back"];
-    fn_draw_drum_front    = lua_object["draw_drum_front"];
-    fn_is_cloud_finished  = lua_object["is_cloud_finished"];
+    if (!load("EntryPlayer", "player", side)) {
+        return;
+    }
+    fn_start_animations = lua_object["start_animations"];
+    fn_update = lua_object["update"];
+    fn_draw_drum_back = lua_object["draw_drum_back"];
+    fn_draw_drum_front = lua_object["draw_drum_front"];
+    fn_is_cloud_finished = lua_object["is_cloud_finished"];
     fn_get_nameplate_fade = lua_object["get_nameplate_fade"];
-    fn_finish_cloud       = lua_object["finish_cloud"];
-    fn_get_overlay_pos    = lua_object["nameplate_indicator_pos"];
+    fn_finish_cloud = lua_object["finish_cloud"];
+    fn_get_overlay_pos = lua_object["nameplate_indicator_pos"];
     if (auto pos = call_r<sol::table>(fn_get_overlay_pos, "EntryPlayer:nameplate_indicator_pos")) {
         nameplate_x = (*pos)[1].get_or(0.0f);
         nameplate_y = (*pos)[2].get_or(0.0f);
@@ -49,7 +52,9 @@ EntryPlayer::EntryPlayer(PlayerNum player_num, int side, BoxManager* box_manager
 }
 
 void EntryPlayer::finish_loading() {
-    if (!loading) return;
+    if (!loading) {
+        return;
+    }
     loading = false;
     call(fn_finish_cloud, "EntryPlayer:finish_cloud");
 }
@@ -58,10 +63,8 @@ void EntryPlayer::finish_loading() {
 void EntryPlayer::refresh_from_player_data() {
     auto pd = scores_manager.get_player_data(get_player_id(player_num));
     PlayerData* pd_ptr = pd ? &*pd : nullptr;
-    nameplate = std::make_unique<Nameplate>(
-        pd ? pd->username : "", pd ? pd->title : "",
-        player_num,
-        pd ? pd->dan : -1, pd ? pd->gold : false, pd ? pd->rainbow : false, pd ? pd->title_bg : 0);
+    nameplate = std::make_unique<Nameplate>(pd ? pd->username : "", pd ? pd->title : "", player_num, pd ? pd->dan : -1,
+                                            pd ? pd->gold : false, pd ? pd->rainbow : false, pd ? pd->title_bg : 0);
     chara = make_chara_from_player_data(pd_ptr, player_num == PlayerNum::P2);
     apply_pd_look(*chara, pd_ptr, player_num);
 }
@@ -76,7 +79,9 @@ void EntryPlayer::update(double current_time) {
     nameplate->update(current_time);
     indicator->update(current_time);
     chara->update(current_time);
-    if (costume_menu) costume_menu->update(current_time);
+    if (costume_menu) {
+        costume_menu->update(current_time);
+    }
 }
 
 void EntryPlayer::open_costume_menu() {
@@ -98,7 +103,9 @@ void EntryPlayer::draw_drum() {
 }
 
 void EntryPlayer::draw_costume_menu() {
-    if (!costume_menu) return;
+    if (!costume_menu) {
+        return;
+    }
     costume_menu->draw();
 }
 
@@ -128,7 +135,7 @@ void EntryPlayer::handle_input() {
                 std::string cos_name = std::to_string(*cos);
                 chara = std::make_unique<Chara3D>(cos_name, mirror);
             } else {
-                chara = make_chara_from_player_data(pd_ptr, mirror);  // preview dropped
+                chara = make_chara_from_player_data(pd_ptr, mirror); // preview dropped
             }
             apply_pd_look(*chara, pd_ptr, player_num);
         }
@@ -172,20 +179,23 @@ void EntryPlayer::handle_input() {
                         pd->chara_is_costume = true;
                     }
                 } catch (const std::exception& e) {
-                    spdlog::error("costume_save: invalid costume name '{}': {}", costume_menu->get_costume_name(), e.what());
+                    spdlog::error("costume_save: invalid costume name '{}': {}", costume_menu->get_costume_name(),
+                                  e.what());
                     parsed = false;
                 }
                 if (parsed) {
                     scores_manager.save_player_data(*pd);
-                    spdlog::info("costume_save: player_id={} is_costume={} head={} body={} cos={}",
-                        pd->player_id, pd->chara_is_costume, pd->chara_head_index, pd->chara_body_index, pd->chara_cos_index);
+                    spdlog::info("costume_save: player_id={} is_costume={} head={} body={} cos={}", pd->player_id,
+                                 pd->chara_is_costume, pd->chara_head_index, pd->chara_body_index, pd->chara_cos_index);
 
-                    if (pd->player_id == scores_manager.player_1 && !global_data.config->network.access_code_1.empty()) {
-                        network.update_costume(global_data.config->network.access_code_1, pd->chara_head_index, pd->chara_body_index,
-                                    pd->chara_cos_index, pd->chara_is_costume);
-                    } else if (pd->player_id == scores_manager.player_2 && !global_data.config->network.access_code_2.empty()) {
-                        network.update_costume(global_data.config->network.access_code_2, pd->chara_head_index, pd->chara_body_index,
-                                    pd->chara_cos_index, pd->chara_is_costume);
+                    if (pd->player_id == scores_manager.player_1 &&
+                        !global_data.config->network.access_code_1.empty()) {
+                        network.update_costume(global_data.config->network.access_code_1, pd->chara_head_index,
+                                               pd->chara_body_index, pd->chara_cos_index, pd->chara_is_costume);
+                    } else if (pd->player_id == scores_manager.player_2 &&
+                               !global_data.config->network.access_code_2.empty()) {
+                        network.update_costume(global_data.config->network.access_code_2, pd->chara_head_index,
+                                               pd->chara_body_index, pd->chara_cos_index, pd->chara_is_costume);
                     }
                 }
             }
@@ -199,7 +209,9 @@ void EntryPlayer::handle_input() {
         }
         return;
     }
-    if (box_manager->is_box_selected()) return;
+    if (box_manager->is_box_selected()) {
+        return;
+    }
 
     if (is_l_don_pressed(player_num) || is_r_don_pressed(player_num)) {
         audio.play_sound("don", VolumePreset::SOUND);

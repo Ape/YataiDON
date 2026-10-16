@@ -7,6 +7,7 @@ class KusudamaCounter : public LuaScript {
 private:
     bool fx = false;
     sol::protected_function fn_update, fn_miss, fn_draw, fn_popped, fn_missed, fn_finished;
+
 public:
     KusudamaCounter(int total);
 

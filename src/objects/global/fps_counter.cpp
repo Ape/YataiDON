@@ -1,7 +1,9 @@
 #include "fps_counter.h"
-#include "../../libs/texture.h"
-#include "../../libs/text.h"
+
 #include <algorithm>
+
+#include "../../libs/text.h"
+#include "../../libs/texture.h"
 
 FPSCounter::FPSCounter() {
     lastTime = get_current_ms();
@@ -25,22 +27,28 @@ float FPSCounter::get_fps() const {
         sum += frameTimes[i];
     }
     float avgFrameTime = sum / SAMPLE_SIZE;
-    if (!(avgFrameTime > 0.0f)) return 0.0f;
+    if (!(avgFrameTime > 0.0f)) {
+        return 0.0f;
+    }
     return 1000.0f / avgFrameTime;
 }
 
 void FPSCounter::draw() {
     int curr_fps = get_fps();
-    int   size = (int)(20.0f * global_tex.screen_scale);
-    float pos  = (float)size;
+    int size = (int)(20.0f * global_tex.screen_scale);
+    float pos = (float)size;
 
     ray::Color color;
     std::string fps_text = std::to_string(curr_fps) + " FPS";
     ray::Font font = font_manager.get_font(fps_text, size);
 
-    if (curr_fps < 30) color = ray::RED;
-    else if (curr_fps < 60) color = ray::YELLOW;
-    else color = ray::LIME;
+    if (curr_fps < 30) {
+        color = ray::RED;
+    } else if (curr_fps < 60) {
+        color = ray::YELLOW;
+    } else {
+        color = ray::LIME;
+    }
 
-    DrawTextEx(font, ray::TextFormat("%d FPS", curr_fps), ray::Vector2{ pos, pos }, pos, 1.0f, color);
+    DrawTextEx(font, ray::TextFormat("%d FPS", curr_fps), ray::Vector2{pos, pos}, pos, 1.0f, color);
 }

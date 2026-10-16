@@ -1,21 +1,22 @@
 #include "platform_linux.h"
-#include "../libs/ray.h"
-#include <SDL3/SDL_video.h>
-#include <dlfcn.h>
 
-#include <spdlog/spdlog.h>
+#include <SDL3/SDL_video.h>
 #include <algorithm>
 #include <atomic>
 #include <cerrno>
+#include <csignal>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <csignal>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <dlfcn.h>
 #include <fcntl.h>
+#include <spdlog/spdlog.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include "../libs/ray.h"
 
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
 #include <cpptrace/cpptrace.hpp>
@@ -23,56 +24,68 @@
 
 namespace {
 
-static void write_all(int fd, const char* buf, std::size_t len) {
-    while (len > 0) {
-        ssize_t n = write(fd, buf, len);
-        if (n > 0) {
-            buf += n;
-            len -= static_cast<std::size_t>(n);
-            continue;
+    static void write_all(int fd, const char* buf, std::size_t len) {
+        while (len > 0) {
+            ssize_t n = write(fd, buf, len);
+            if (n > 0) {
+                buf += n;
+                len -= static_cast<std::size_t>(n);
+                continue;
+            }
+            if (n < 0 && errno == EINTR) {
+                continue;
+            }
+            break;
         }
-        if (n < 0 && errno == EINTR) continue;
-        break;
     }
-}
 
 #define CRASH_WRITE_LIT(fd, lit) write_all((fd), (lit), sizeof(lit) - 1)
 
-static void write_hex(int fd, std::uintptr_t value) {
-    char buf[2 + sizeof(value) * 2];
-    buf[0] = '0';
-    buf[1] = 'x';
-    for (std::size_t i = 0; i < sizeof(value) * 2; i++) {
-        int nibble = (value >> (4 * (sizeof(value) * 2 - 1 - i))) & 0xF;
-        buf[2 + i] = nibble < 10 ? char('0' + nibble) : char('a' + nibble - 10);
+    static void write_hex(int fd, std::uintptr_t value) {
+        char buf[2 + sizeof(value) * 2];
+        buf[0] = '0';
+        buf[1] = 'x';
+        for (std::size_t i = 0; i < sizeof(value) * 2; i++) {
+            int nibble = (value >> (4 * (sizeof(value) * 2 - 1 - i))) & 0xF;
+            buf[2 + i] = nibble < 10 ? char('0' + nibble) : char('a' + nibble - 10);
+        }
+        write_all(fd, buf, sizeof(buf));
     }
-    write_all(fd, buf, sizeof(buf));
-}
 
-static void crash_signal_handler(int sig) {
-    switch (sig) {
-        case SIGSEGV: CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGSEGV (Segmentation fault)\n"); break;
-        case SIGABRT: CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGABRT (Abort)\n"); break;
-        case SIGFPE:  CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGFPE (Floating point exception)\n"); break;
-        case SIGILL:  CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGILL (Illegal instruction)\n"); break;
-        default:      CRASH_WRITE_LIT(STDERR_FILENO, "Unknown signal\n"); break;
-    }
+    static void crash_signal_handler(int sig) {
+        switch (sig) {
+        case SIGSEGV:
+            CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGSEGV (Segmentation fault)\n");
+            break;
+        case SIGABRT:
+            CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGABRT (Abort)\n");
+            break;
+        case SIGFPE:
+            CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGFPE (Floating point exception)\n");
+            break;
+        case SIGILL:
+            CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGILL (Illegal instruction)\n");
+            break;
+        default:
+            CRASH_WRITE_LIT(STDERR_FILENO, "Unknown signal\n");
+            break;
+        }
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
-    cpptrace::frame_ptr frames[64];
-    std::size_t count = cpptrace::safe_generate_raw_trace(frames, 64);
-    for (std::size_t i = 0; i < count; i++) {
-        write_hex(STDERR_FILENO, frames[i]);
-        CRASH_WRITE_LIT(STDERR_FILENO, "\n");
-    }
+        cpptrace::frame_ptr frames[64];
+        std::size_t count = cpptrace::safe_generate_raw_trace(frames, 64);
+        for (std::size_t i = 0; i < count; i++) {
+            write_hex(STDERR_FILENO, frames[i]);
+            CRASH_WRITE_LIT(STDERR_FILENO, "\n");
+        }
 #endif
-    _exit(1);
-}
-
-void signal_handler(int signal) {
-    if (signal == SIGINT) {
-        _exit(0);
+        _exit(1);
     }
-}
+
+    void signal_handler(int signal) {
+        if (signal == SIGINT) {
+            _exit(0);
+        }
+    }
 
 } // namespace
 
@@ -99,7 +112,9 @@ void unix_close_window() {
 
     ray::CloseWindow();
 
-    if (egl_wayland) dlclose(egl_wayland);
+    if (egl_wayland) {
+        dlclose(egl_wayland);
+    }
 }
 
 void unix_install_crash_handlers() {
@@ -120,15 +135,25 @@ void unix_install_crash_handlers() {
     sa.sa_handler = crash_signal_handler;
     sa.sa_flags = SA_ONSTACK;
     sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGSEGV, &sa, nullptr) != 0) spdlog::warn("sigaction(SIGSEGV) failed: {}", strerror(errno));
-    if (sigaction(SIGABRT, &sa, nullptr) != 0) spdlog::warn("sigaction(SIGABRT) failed: {}", strerror(errno));
-    if (sigaction(SIGFPE,  &sa, nullptr) != 0) spdlog::warn("sigaction(SIGFPE) failed: {}", strerror(errno));
-    if (sigaction(SIGILL,  &sa, nullptr) != 0) spdlog::warn("sigaction(SIGILL) failed: {}", strerror(errno));
+    if (sigaction(SIGSEGV, &sa, nullptr) != 0) {
+        spdlog::warn("sigaction(SIGSEGV) failed: {}", strerror(errno));
+    }
+    if (sigaction(SIGABRT, &sa, nullptr) != 0) {
+        spdlog::warn("sigaction(SIGABRT) failed: {}", strerror(errno));
+    }
+    if (sigaction(SIGFPE, &sa, nullptr) != 0) {
+        spdlog::warn("sigaction(SIGFPE) failed: {}", strerror(errno));
+    }
+    if (sigaction(SIGILL, &sa, nullptr) != 0) {
+        spdlog::warn("sigaction(SIGILL) failed: {}", strerror(errno));
+    }
 
     // Use sigaction (not std::signal) for consistent restart/mask semantics
     // with the crash handlers above.
     struct sigaction sa_int{};
     sa_int.sa_handler = signal_handler;
     sigemptyset(&sa_int.sa_mask);
-    if (sigaction(SIGINT, &sa_int, nullptr) != 0) spdlog::warn("sigaction(SIGINT) failed: {}", strerror(errno));
+    if (sigaction(SIGINT, &sa_int, nullptr) != 0) {
+        spdlog::warn("sigaction(SIGINT) failed: {}", strerror(errno));
+    }
 }

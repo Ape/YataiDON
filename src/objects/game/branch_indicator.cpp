@@ -1,4 +1,5 @@
 #include "branch_indicator.h"
+
 #include <algorithm>
 #include <stdexcept>
 
@@ -9,13 +10,15 @@ namespace {
     constexpr int BRANCH_ANIM_LEVEL_FADE = 44;
     constexpr int BRANCH_ANIM_LEVEL_SCALE = 45;
 
-    template <class T>
+    template<class T>
     T* require_anim(int id) {
         auto* a = dynamic_cast<T*>(tex.get_animation(id));
-        if (!a) throw std::runtime_error("animation " + std::to_string(id) + " has unexpected type");
+        if (!a) {
+            throw std::runtime_error("animation " + std::to_string(id) + " has unexpected type");
+        }
         return a;
     }
-}
+} // namespace
 
 BranchIndicator::BranchIndicator()
     : difficulty(BranchDifficulty::NORMAL), diff_2(BranchDifficulty::NORMAL), direction(1) {
@@ -67,14 +70,19 @@ void BranchIndicator::level_down(BranchDifficulty difficulty) {
 
 void BranchIndicator::draw(float y) {
     if (difficulty == BranchDifficulty::EXPERT) {
-        tex.draw_texture(t_expert_bg, {.y=y, .fade = std::clamp(1.0f - (float)diff_fade->attribute, 0.0f, 0.5f)});
+        tex.draw_texture(t_expert_bg, {.y = y, .fade = std::clamp(1.0f - (float)diff_fade->attribute, 0.0f, 0.5f)});
     } else if (difficulty == BranchDifficulty::MASTER) {
-        tex.draw_texture(t_master_bg, {.y=y, .fade = std::clamp(1.0f - (float)diff_fade->attribute, 0.0f, 0.5f)});
+        tex.draw_texture(t_master_bg, {.y = y, .fade = std::clamp(1.0f - (float)diff_fade->attribute, 0.0f, 0.5f)});
     }
 
-    tex.draw_texture(direction == -1 ? t_level_down : t_level_up, {.scale = (float)level_scale->attribute, .center = true, .y=y, .fade = level_fade->attribute});
+    tex.draw_texture(direction == -1 ? t_level_down : t_level_up,
+                     {.scale = (float)level_scale->attribute, .center = true, .y = y, .fade = level_fade->attribute});
 
-    tex.draw_texture(t_diff[(int)diff_2], {.y = y + (float)(diff_down->attribute - diff_up->attribute) * direction, .fade = diff_fade->attribute});
+    tex.draw_texture(t_diff[(int)diff_2], {.y = y + (float)(diff_down->attribute - diff_up->attribute) * direction,
+                                           .fade = diff_fade->attribute});
 
-    tex.draw_texture(t_diff[(int)difficulty], {.y = y + (float)(diff_up->attribute * (direction * -1)) - (tex.get_skin_config(SC::GAME_BRANCH_INDICATOR_Y_OFFSET)->y * direction * -1), .fade = 1 - diff_fade->attribute});
+    tex.draw_texture(t_diff[(int)difficulty],
+                     {.y = y + (float)(diff_up->attribute * (direction * -1)) -
+                           (tex.get_skin_config(SC::GAME_BRANCH_INDICATOR_Y_OFFSET)->y * direction * -1),
+                      .fade = 1 - diff_fade->attribute});
 }

@@ -7,8 +7,9 @@
 class ScoreAnimator {
 private:
     std::string target_score;
-    std::vector<std::pair<int,int>> current_score_list;
+    std::vector<std::pair<int, int>> current_score_list;
     int digit_index;
+
 public:
     ScoreAnimator(int target);
 

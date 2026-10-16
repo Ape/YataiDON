@@ -1,9 +1,8 @@
 #pragma once
 
-#include "../enums.h"
 #include "../../libs/animation.h"
-
 #include "../../libs/texture.h"
+#include "../enums.h"
 
 class Judgment {
 private:
@@ -11,7 +10,7 @@ private:
 
     FadeAnimation* fade_animation_1;
     FadeAnimation* fade_animation_2;
-    FadeAnimation* fade_animation_3 = nullptr;  // null when the skin has no animation 77
+    FadeAnimation* fade_animation_3 = nullptr; // null when the skin has no animation 77
     MoveAnimation* move_animation;
     TextureChangeAnimation* texture_animation;
     TextureObject* t_effect = nullptr;

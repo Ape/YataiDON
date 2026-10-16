@@ -29,13 +29,13 @@ public:
     int lua_id() const { return instance_id; }
     PlayerNum lua_player() const { return player_num; }
     // the sideways-slide animation of the name text: passed to the Lua panel each frame
-    int    lua_change_dir() const    { return direction; }
-    int    lua_change_seq() const    { return change_seq; }
-    double lua_change_move() const   { return move_sideways->attribute; }
-    double lua_change_fade() const   { return fade_sideways->attribute; }
-    bool   lua_change_active() const { return !move_sideways->is_finished; }
-    double lua_arrow_fade() const    { return blue_arrow_fade->attribute; }
-    double lua_arrow_move() const    { return blue_arrow_move->attribute; }
+    int lua_change_dir() const { return direction; }
+    int lua_change_seq() const { return change_seq; }
+    double lua_change_move() const { return move_sideways->attribute; }
+    double lua_change_fade() const { return fade_sideways->attribute; }
+    bool lua_change_active() const { return !move_sideways->is_finished; }
+    double lua_arrow_fade() const { return blue_arrow_fade->attribute; }
+    double lua_arrow_move() const { return blue_arrow_move->attribute; }
 
     bool is_finished;
     bool is_confirmed;

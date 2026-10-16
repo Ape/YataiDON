@@ -1,14 +1,12 @@
 #include "settings_box_manager.h"
 
-static constexpr int   INITIAL_SELECTED = 3;
+static constexpr int INITIAL_SELECTED = 3;
 // Same 1280x720-canvas base values as SettingsBox; scale with the skin.
-static constexpr float BOX_STEP_BASE      = 100.0f;
+static constexpr float BOX_STEP_BASE = 100.0f;
 static constexpr float BOX_INITIAL_Y_BASE = -50.0f;
 
 SettingsBoxManager::SettingsBoxManager(const rapidjson::Document& tmpl)
-    : selected_box_index(INITIAL_SELECTED)
-    , box_selected(false)
-{
+    : selected_box_index(INITIAL_SELECTED), box_selected(false) {
     std::string lang = global_data.config->general.language;
 
     for (auto it = tmpl.MemberBegin(); it != tmpl.MemberEnd(); ++it) {
@@ -18,14 +16,18 @@ SettingsBoxManager::SettingsBoxManager(const rapidjson::Document& tmpl)
         std::string label;
         if (cat.HasMember("name")) {
             const auto& n = cat["name"];
-            if (n.HasMember(lang.c_str())) label = n[lang.c_str()].GetString();
-            else if (n.HasMember("en"))    label = n["en"].GetString();
+            if (n.HasMember(lang.c_str())) {
+                label = n[lang.c_str()].GetString();
+            } else if (n.HasMember("en")) {
+                label = n["en"].GetString();
+            }
         }
 
-        const rapidjson::Value* opts =
-            cat.HasMember("options") ? &cat["options"] : nullptr;
+        const rapidjson::Value* opts = cat.HasMember("options") ? &cat["options"] : nullptr;
         rapidjson::Value empty_obj(rapidjson::kObjectType);
-        if (!opts) opts = &empty_obj;
+        if (!opts) {
+            opts = &empty_obj;
+        }
 
         boxes.push_back(std::make_unique<SettingsBox>(cat_name, label, *opts));
     }
@@ -36,7 +38,9 @@ SettingsBoxManager::SettingsBoxManager(const rapidjson::Document& tmpl)
         boxes[i]->set_y((BOX_INITIAL_Y_BASE + i * BOX_STEP_BASE) * tex.screen_scale);
     }
 
-    if (num_boxes == 0) return;
+    if (num_boxes == 0) {
+        return;
+    }
 
     selected_box_index = std::min(selected_box_index, num_boxes - 1);
 }
@@ -51,9 +55,13 @@ void SettingsBoxManager::move_left() {
         // idle, so a box still animating from a previous move can't leave
         // the others (and the selection index) out of sync.
         for (auto& b : boxes) {
-            if (!b->can_move()) return;
+            if (!b->can_move()) {
+                return;
+            }
         }
-        for (auto& b : boxes) b->move_left();
+        for (auto& b : boxes) {
+            b->move_left();
+        }
         int num_boxes = (int)boxes.size();
         selected_box_index = (selected_box_index - 1 + num_boxes) % num_boxes;
     }
@@ -64,9 +72,13 @@ void SettingsBoxManager::move_right() {
         boxes[selected_box_index]->move_option_right();
     } else {
         for (auto& b : boxes) {
-            if (!b->can_move()) return;
+            if (!b->can_move()) {
+                return;
+            }
         }
-        for (auto& b : boxes) b->move_right();
+        for (auto& b : boxes) {
+            b->move_right();
+        }
         selected_box_index = (selected_box_index + 1) % (int)boxes.size();
     }
 }
@@ -74,7 +86,9 @@ void SettingsBoxManager::move_right() {
 std::optional<Screens> SettingsBoxManager::pending_screen_change() {
     for (auto& b : boxes) {
         auto result = b->pending_screen_change();
-        if (result) return result;
+        if (result) {
+            return result;
+        }
     }
     return std::nullopt;
 }
@@ -100,5 +114,7 @@ void SettingsBoxManager::update(double current_time_ms) {
 }
 
 void SettingsBoxManager::draw() {
-    for (auto& b : boxes) b->draw();
+    for (auto& b : boxes) {
+        b->draw();
+    }
 }

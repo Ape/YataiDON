@@ -1,13 +1,14 @@
 #pragma once
 
+#include <future>
+
 #include "../libs/screen.h"
 #include "../libs/video.h"
 #include "../objects/game/player.h"
-#include "../objects/game/transition.h"
-#include "../objects/game/song_info.h"
 #include "../objects/game/result_transition.h"
+#include "../objects/game/song_info.h"
+#include "../objects/game/transition.h"
 #include "../objects/global/allnet_indicator.h"
-#include <future>
 
 class GameScreen : public Screen {
 protected:
@@ -16,17 +17,16 @@ protected:
     void update_gameplay(double current_ms);
 
 public:
-    GameScreen() : Screen("game") {
-    }
+    GameScreen() : Screen("game") {}
 
     double start_ms;
     double ms_from_start;
     double start_delay;
     double last_resync_ms;
-    double resync_drift_ema = 0.0;   // smoothed audio - chart drift (resync_song)
-    double resync_rate_bias = 0.0;   // learned audio clock rate offset (resync_song)
-    double resync_chart_ms = 0.0;    // chart time after the previous resync_song
-    double refresh_period_ms = 0.0;  // display refresh period, 0 = unknown (resync_song)
+    double resync_drift_ema = 0.0;  // smoothed audio - chart drift (resync_song)
+    double resync_rate_bias = 0.0;  // learned audio clock rate offset (resync_song)
+    double resync_chart_ms = 0.0;   // chart time after the previous resync_song
+    double refresh_period_ms = 0.0; // display refresh period, 0 = unknown (resync_song)
     bool song_started;
     bool paused;
     bool score_saved;
@@ -73,10 +73,10 @@ public:
 
     static constexpr int SKIP_HITS = 10;
     PlayerNum skip_lane = PlayerNum::ALL;
-    int    skip_count = 0;
-    int    skip_last  = -1;
+    int skip_count = 0;
+    int skip_last = -1;
     size_t skip_play_hits = 0;
-    bool   skipped = false;
+    bool skipped = false;
     std::unique_ptr<OutlinedText> skip_text;
     void init_skip();
     void update_skip();

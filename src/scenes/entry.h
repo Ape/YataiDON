@@ -1,19 +1,19 @@
 #pragma once
 
-#include "../libs/screen.h"
-#include "../libs/scores.h"
 #include "../libs/network.h"
+#include "../libs/scores.h"
+#include "../libs/screen.h"
 #include "../objects/entry/box_manager.h"
 #include "../objects/entry/entry_script.h"
-#include "../objects/entry/player.h"
 #include "../objects/entry/name_entry.h"
-#include "../objects/global/nameplate.h"
-#include "../objects/global/coin_overlay.h"
+#include "../objects/entry/player.h"
 #include "../objects/global/allnet_indicator.h"
-#include "../objects/global/network_msg.h"
-#include "../objects/global/entry_overlay.h"
-#include "../objects/global/timer.h"
 #include "../objects/global/chara_3d.h"
+#include "../objects/global/coin_overlay.h"
+#include "../objects/global/entry_overlay.h"
+#include "../objects/global/nameplate.h"
+#include "../objects/global/network_msg.h"
+#include "../objects/global/timer.h"
 
 #ifdef CARD_READER_ENABLED
 #include "../libs/optional/card_reader.h"
@@ -22,13 +22,12 @@
 #include <functional>
 #include <future>
 
-
 enum class EntryState {
     SELECT_SIDE = 0,
     SELECT_MODE = 1,
     SELECT_COSTUME = 2,
-    WAITING = 3, // online, auto_login off: side select hidden until Enter (online) or Don (local)
-    NAME_ENTRY = 4  // a freshly registered account picks its name; resumes name_prev_state_
+    WAITING = 3,   // online, auto_login off: side select hidden until Enter (online) or Don (local)
+    NAME_ENTRY = 4 // a freshly registered account picks its name; resumes name_prev_state_
 };
 
 struct RemoteLogin {
@@ -51,12 +50,12 @@ private:
     Nameplate nameplate;
     CoinOverlay coin_overlay;
     AllNetIcon allnet_indicator;
-    NetworkMsg network_msg;  // login / probe wait banner
+    NetworkMsg network_msg; // login / probe wait banner
     EntryOverlay entry_overlay;
     std::unique_ptr<Timer> timer;
 
     std::unique_ptr<Chara3D> chara;
-    std::unique_ptr<Chara3D> wait_chara[2];  // wait panels, P1 / P2
+    std::unique_ptr<Chara3D> wait_chara[2]; // wait panels, P1 / P2
     bool announce_played = false;
     std::vector<std::unique_ptr<EntryPlayer>> players;
 
@@ -65,10 +64,10 @@ private:
     double last_card_poll_ms_ = 0;
     bool card_reader_initialized_ = false;
 #endif
-    std::vector<std::string> used_cards_;  // held card must not log in twice
-    std::string pending_card_hex_;         // scanned on title, consumed on first update
-    bool local_login_ = false;   // Don pressed: scores.db only, never register
-    bool login_ready_ = false;   // next join_player already logged in (Enter / auto login)
+    std::vector<std::string> used_cards_; // held card must not log in twice
+    std::string pending_card_hex_;        // scanned on title, consumed on first update
+    bool local_login_ = false;            // Don pressed: scores.db only, never register
+    bool login_ready_ = false;            // next join_player already logged in (Enter / auto login)
 
     std::unique_ptr<Chara3D> make_preview_chara(PlayerNum player_num);
     void reload_preview_chara(PlayerNum player_num);
@@ -96,15 +95,14 @@ private:
     std::unique_ptr<NameEntry> name_entry_;
     EntryState name_prev_state_ = EntryState::SELECT_SIDE;
     int name_slot_ = 0;
-    int name_pending_ = -1;  // slot of a new account whose name is asked once its side is chosen
+    int name_pending_ = -1; // slot of a new account whose name is asked once its side is chosen
     std::function<void()> name_then_;
     void begin_name_entry(int slot, std::function<void()> then);
     void end_name_entry();
     void on_card_login();
 
 public:
-    EntryScreen() : Screen("entry") {
-    }
+    EntryScreen() : Screen("entry") {}
     void on_screen_start() override;
     Screens on_screen_end(Screens next_screen) override;
     std::optional<Screens> update() override;

@@ -1,9 +1,9 @@
 #include "note_arc.h"
 
-NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bool big, bool is_balloon, float start_x, float start_y)
-    : is_balloon(is_balloon), arc_duration(31), current_progress(0), elapsed_ms(0),
-      note_finished_handled(false), start_ms(current_ms), note_type(note_type), is_big(big)
-{
+NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bool big, bool is_balloon, float start_x,
+                 float start_y)
+    : is_balloon(is_balloon), arc_duration(31), current_progress(0), elapsed_ms(0), note_finished_handled(false),
+      start_ms(current_ms), note_type(note_type), is_big(big) {
     NoteType texture_note_type = note_type;
     if (big) {
         if (note_type == NoteType::DON) {
@@ -16,8 +16,8 @@ NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bo
         texture_note_type = NoteType::DON_L;
     }
 
-    if (load("NoteArc", "note_arc", static_cast<int>(texture_note_type), big, is_balloon,
-             static_cast<int>(player_num), start_x, start_y)) {
+    if (load("NoteArc", "note_arc", static_cast<int>(texture_note_type), big, is_balloon, static_cast<int>(player_num),
+             start_x, start_y)) {
         fn_draw = lua_object["draw"];
         firework_frames = lua_object["firework_frames"].get_or(0);
     }
@@ -35,7 +35,9 @@ void NoteArc::draw(float y) {
 
 bool NoteArc::is_finished() const {
     double end_ms = (double)arc_duration * 16.67;
-    if (is_balloon) end_ms *= 1.5;
+    if (is_balloon) {
+        end_ms *= 1.5;
+    }
     end_ms += firework_frames * 16.67;
     return elapsed_ms >= end_ms;
 }
@@ -45,7 +47,9 @@ bool NoteArc::is_note_finished() const {
 }
 
 bool NoteArc::consume_note_finished() {
-    if (note_finished_handled || !is_note_finished()) return false;
+    if (note_finished_handled || !is_note_finished()) {
+        return false;
+    }
     note_finished_handled = true;
     return true;
 }

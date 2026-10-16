@@ -1,8 +1,10 @@
 #include "song_select.h"
+
+#include <filesystem>
+
 #include "../libs/input.h"
 #include "../libs/network.h"
 #include "../objects/global/practice_timer.h"
-#include <filesystem>
 
 void SongSelectScreen::on_screen_start() {
     Screen::on_screen_start();
@@ -32,9 +34,8 @@ void SongSelectScreen::on_screen_start() {
     navigator.init(global_data.config->paths.tja_path);
 #ifndef __EMSCRIPTEN__
     if (!global_data.config->paths.tja_path.empty()) {
-        stats_future = std::async(std::launch::async, [this]() {
-            return navigator.get_statistics(global_data.config->paths.tja_path[0]);
-        });
+        stats_future = std::async(std::launch::async,
+                                  [this]() { return navigator.get_statistics(global_data.config->paths.tja_path[0]); });
     }
 #endif
     navigator.refresh_scores();
@@ -74,7 +75,9 @@ void SongSelectScreen::handle_input_selecting() {
 }
 
 void SongSelectScreen::handle_input_diff_sorting() {
-    if (!diff_sort_selector) return;
+    if (!diff_sort_selector) {
+        return;
+    }
     auto result = player->handle_input_diff_sort(&diff_sort_selector.value());
     if (result) {
         diff_sort_selector.reset();
@@ -89,18 +92,24 @@ void SongSelectScreen::handle_input_diff_sorting() {
 }
 
 void SongSelectScreen::apply_sort_window_result() {
-    if (!diff_sort_selector || !tex.options[SCO::ONE_MENU_SORT]) return;
+    if (!diff_sort_selector || !tex.options[SCO::ONE_MENU_SORT]) {
+        return;
+    }
     auto r = diff_sort_selector->take_result();
-    if (!r) return;
+    if (!r) {
+        return;
+    }
     diff_sort_selector.reset();
     state = SongSelectState::BROWSING;
-    last_diff_sort  = {(*r)[0], (*r)[1]};
+    last_diff_sort = {(*r)[0], (*r)[1]};
     last_diff_order = (*r)[2];
     navigator.apply_diff_sort((*r)[0], (*r)[1], (*r)[2]);
 }
 
 void SongSelectScreen::handle_input_search() {
-    if (!search_box) return;
+    if (!search_box) {
+        return;
+    }
     auto result = player->handle_input_search();
     search_box->current_search = player->search_string;
     if (result) {
@@ -110,7 +119,9 @@ void SongSelectScreen::handle_input_search() {
         // Enter on an empty (or blank) query just closes the box: there is nothing to
         // search for, so do not open the search folder.
         const bool blank = result->find_first_not_of(" \t\r\n") == std::string::npos;
-        if (blank) return;
+        if (blank) {
+            return;
+        }
         navigator.current_search = *result;
         navigator.load_current_directory(navigator.get_current_item()->path);
     }
@@ -180,34 +191,49 @@ std::optional<Screens> SongSelectScreen::start_replay(const ReplayData& replay) 
 std::optional<Screens> SongSelectScreen::poll_second_player_join(double current_ms) {
     static constexpr double JOIN_WAIT_MS = 1.5 * 1000.0;
     if (join_request_ms >= 0.0) {
-        if (current_ms - join_request_ms < JOIN_WAIT_MS) return std::nullopt;
+        if (current_ms - join_request_ms < JOIN_WAIT_MS) {
+            return std::nullopt;
+        }
         join_request_ms = -1.0;
         global_data.entry_join_pending = true;
-        global_data.entry_joined_seat  = join_existing_seat;
+        global_data.entry_joined_seat = join_existing_seat;
         spdlog::info("[2P join] returning to ENTRY, {}P stays in", (int)join_existing_seat);
         return on_screen_end(Screens::ENTRY);
     }
 
-    if (!allows_second_player_join()) return std::nullopt;
-    if (global_data.songs_played >= 2) return std::nullopt;
-    if (game_transition.has_value() || dan_transition.has_value()) return std::nullopt;
-    if (navigator.is_processing || navigator.inline_streaming) return std::nullopt;
-    if (state != SongSelectState::BROWSING && state != SongSelectState::SONG_SELECTED)
+    if (!allows_second_player_join()) {
         return std::nullopt;
+    }
+    if (global_data.songs_played >= 2) {
+        return std::nullopt;
+    }
+    if (game_transition.has_value() || dan_transition.has_value()) {
+        return std::nullopt;
+    }
+    if (navigator.is_processing || navigator.inline_streaming) {
+        return std::nullopt;
+    }
+    if (state != SongSelectState::BROWSING && state != SongSelectState::SONG_SELECTED) {
+        return std::nullopt;
+    }
 
-    const PlayerNum in  = (global_data.player_num == PlayerNum::P2) ? PlayerNum::P2 : PlayerNum::P1;
+    const PlayerNum in = (global_data.player_num == PlayerNum::P2) ? PlayerNum::P2 : PlayerNum::P1;
     const PlayerNum out = (in == PlayerNum::P1) ? PlayerNum::P2 : PlayerNum::P1;
 
     if (awaiting_join_don_release) {
-        if (is_l_don_pressed(out) || is_r_don_pressed(out)) return std::nullopt;
+        if (is_l_don_pressed(out) || is_r_don_pressed(out)) {
+            return std::nullopt;
+        }
         awaiting_join_don_release = false;
     } else {
-        if (!is_l_don_pressed(out) && !is_r_don_pressed(out)) return std::nullopt;
+        if (!is_l_don_pressed(out) && !is_r_don_pressed(out)) {
+            return std::nullopt;
+        }
         awaiting_join_don_release = true;
         return std::nullopt;
     }
 
-    join_request_ms   = current_ms;
+    join_request_ms = current_ms;
     join_existing_seat = in;
     audio.play_sound("don", VolumePreset::SOUND);          // CheckEntry: don_l / don_r
     audio.play_sound("entry_2p_add", VolumePreset::SOUND); // SecondPlayerJoinToEntry
@@ -242,13 +268,19 @@ void SongSelectScreen::update_selection_ui(double current_time, bool advance_tim
     diff_fade_out->update(current_time);
     script->update(current_time);
     if (uses_session_timer()) {
-        if (auto* session = PracticeTimer::active()) session->update(current_time);
+        if (auto* session = PracticeTimer::active()) {
+            session->update(current_time);
+        }
     } else if (advance_timers) {
         select_timer->update(current_time);
-        if (diff_select_timer != nullptr) diff_select_timer->update(current_time);
+        if (diff_select_timer != nullptr) {
+            diff_select_timer->update(current_time);
+        }
     }
     indicator->update(current_time);
-    if (search_box) search_box->update(current_time);
+    if (search_box) {
+        search_box->update(current_time);
+    }
 }
 
 void SongSelectScreen::update_diff_sort(double current_time) {
@@ -257,8 +289,8 @@ void SongSelectScreen::update_diff_sort(double current_time) {
             stats_future.wait();
             cached_stats = stats_future.get();
         }
-        diff_sort_selector.emplace(cached_stats, last_diff_sort.first, last_diff_sort.second,
-                                   script.get(), last_diff_order);
+        diff_sort_selector.emplace(cached_stats, last_diff_sort.first, last_diff_sort.second, script.get(),
+                                   last_diff_order);
     }
     if (diff_sort_selector) {
         state = SongSelectState::DIFF_SORTING;
@@ -271,7 +303,8 @@ void SongSelectScreen::start_search() {
     search_box.emplace();
     // The don key that opened the search (F/J) is also a typed character still
     // queued in raylib's char buffer; drop it so it does not land in the query.
-    while (ray::GetCharPressed() > 0) {}
+    while (ray::GetCharPressed() > 0) {
+    }
 }
 
 std::optional<Screens> SongSelectScreen::update() {
@@ -282,8 +315,12 @@ std::optional<Screens> SongSelectScreen::update() {
     update_diff_sort(current_time);
 
     poll_song_jump(current_time);
-    if (auto replay_screen = poll_replay_jump(current_time)) return replay_screen;
-    if (auto join = poll_second_player_join(current_time)) return join;
+    if (auto replay_screen = poll_replay_jump(current_time)) {
+        return replay_screen;
+    }
+    if (auto join = poll_second_player_join(current_time)) {
+        return join;
+    }
     if (join_request_ms >= 0.0) {
         clear_input_buffers();
     } else {
@@ -303,7 +340,9 @@ std::optional<Screens> SongSelectScreen::update() {
         }
     }
 
-    if (screen_init) navigator.update(current_time);
+    if (screen_init) {
+        navigator.update(current_time);
+    }
 
     if (game_transition.has_value() && join_request_ms < 0.0) {
         game_transition->update(current_time);
@@ -321,7 +360,9 @@ std::optional<Screens> SongSelectScreen::update() {
 
     if (uses_session_timer()) {
         auto* session = PracticeTimer::active();
-        if (session && session->is_finished()) return on_screen_end(Screens::ENTRY);
+        if (session && session->is_finished()) {
+            return on_screen_end(Screens::ENTRY);
+        }
     }
 
     if (check_key_pressed(global_data.config->keys.back_key) && global_data.config->limits.song_limit <= 0) {
@@ -330,8 +371,9 @@ std::optional<Screens> SongSelectScreen::update() {
 
     if (state != prev_state) {
         script->restart_text_fade();
-        if (prev_state == SongSelectState::SEARCHING)
+        if (prev_state == SongSelectState::SEARCHING) {
             set_keyboard_visible(false);
+        }
         if (state == SongSelectState::SONG_SELECTED) {
             diff_select_timer = std::make_unique<Timer>(60, current_time, [this]() {
                 if (auto* item = dynamic_cast<SongBox*>(navigator.get_current_item())) {
@@ -352,8 +394,12 @@ std::optional<Screens> SongSelectScreen::update() {
 
 Screens SongSelectScreen::on_screen_end(Screens next_screen) {
     diff_sort_selector.reset();
-    if (search_box) set_keyboard_visible(false);
-    if (stats_future.valid()) stats_future.wait();
+    if (search_box) {
+        set_keyboard_visible(false);
+    }
+    if (stats_future.valid()) {
+        stats_future.wait();
+    }
     navigator.join_loader();
     ray::UnloadShader(shader);
     return Screen::on_screen_end(next_screen);
@@ -363,13 +409,18 @@ void SongSelectScreen::draw_overlays() {
     script->draw_overlays(state);
 
     if (!uses_session_timer()) {
-        tex.draw_texture(t_song_num_bg, {.x=-(song_num->width-127), .x2=(song_num->width-127), .fade=0.75});
-        song_num->draw(font_manager.get_text_info("song_num")->x-song_num->width, font_manager.get_text_info("song_num")->y, 1.0);
+        tex.draw_texture(t_song_num_bg, {.x = -(song_num->width - 127), .x2 = (song_num->width - 127), .fade = 0.75});
+        song_num->draw(font_manager.get_text_info("song_num")->x - song_num->width,
+                       font_manager.get_text_info("song_num")->y, 1.0);
     }
     if (uses_session_timer()) {
-        if (auto* session = PracticeTimer::active()) session->draw();
+        if (auto* session = PracticeTimer::active()) {
+            session->draw();
+        }
     } else if (state == SongSelectState::SONG_SELECTED) {
-        if (diff_select_timer) diff_select_timer->draw();
+        if (diff_select_timer) {
+            diff_select_timer->draw();
+        }
     } else {
         select_timer->draw();
     }
@@ -395,10 +446,16 @@ void SongSelectScreen::draw() {
 
     // the personal-best panel gives way to the neiro / option popup, which shares its corner
     const bool popup_open = (player->neiro_selector.has_value() || player->modifier_selector.has_value());
-    if (screen_init && !popup_open) navigator.draw_score_history();
+    if (screen_init && !popup_open) {
+        navigator.draw_score_history();
+    }
 
-    if (diff_sort_selector) diff_sort_selector->draw();
-    if (search_box) search_box->draw(script.get());
+    if (diff_sort_selector) {
+        diff_sort_selector->draw();
+    }
+    if (search_box) {
+        search_box->draw(script.get());
+    }
     if (game_transition.has_value()) {
         game_transition->draw();
         global_data.in_transition = true;
@@ -407,5 +464,7 @@ void SongSelectScreen::draw() {
     }
     script->draw_top(dan_transition.has_value() ? (float)dan_transition->progress() : -1.0f);
 
-    if (dan_transition.has_value()) dan_transition->draw();
+    if (dan_transition.has_value()) {
+        dan_transition->draw();
+    }
 }

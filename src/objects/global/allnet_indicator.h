@@ -5,6 +5,7 @@
 class AllNetIcon : public LuaScript {
     sol::protected_function fn_update;
     sol::protected_function fn_draw;
+
 public:
     AllNetIcon();
     bool online = false;

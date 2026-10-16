@@ -1,27 +1,28 @@
 #pragma once
 
 #include <array>
+#include <optional>
 #include <string>
 #include <vector>
-#include <optional>
-#include "game.h"
+
 #include "../objects/game/dan_between.h"
 #include "../objects/game/dan_game_lua.h"
+#include "game.h"
 
 struct DanExamInfo {
-    float   progress     = 0;
-    float   bar_width    = 0;
-    int     counter_value = 0;
-    int     red_value    = 0;
+    float progress = 0;
+    float bar_width = 0;
+    int counter_value = 0;
+    int red_value = 0;
     std::string bar_texture;
     std::string bar_state = "empty";
     std::string song_state[3] = {"empty", "empty", "empty"};
     std::string exam_type;
     std::string exam_range;
-    bool    gothrough    = true;
-    int     song_count   = 0;               // songs finished BEFORE the current one
-    int     song_value[3]    = {0, 0, 0};   // that song's own count
-    float   song_progress[3] = {0, 0, 0};
+    bool gothrough = true;
+    int song_count = 0;            // songs finished BEFORE the current one
+    int song_value[3] = {0, 0, 0}; // that song's own count
+    float song_progress[3] = {0, 0, 0};
 };
 
 struct DanInfoCache {
@@ -43,10 +44,10 @@ private:
     int total_notes = 0;
     int dan_color = 0;
 
-    std::optional<Gauge> dan_gauge;  // constructed lazily in init_dan(), once textures are loaded
+    std::optional<Gauge> dan_gauge; // constructed lazily in init_dan(), once textures are loaded
 
     std::vector<bool> exam_failed;
-    bool   failed_out    = false;
+    bool failed_out = false;
     double failed_out_at = 0.0;
     std::vector<std::array<bool, 3>> exam_song_failed;
     std::optional<DanInfoCache> dan_info_cache;
@@ -58,9 +59,11 @@ private:
     // Cumulative stat tracking across songs
     int prev_good = 0, prev_ok = 0, prev_bad = 0, prev_drumroll = 0;
     int prev_score = 0;
-    struct SongStats { int good = 0, ok = 0, bad = 0, drumroll = 0, score = 0, max_combo = 0; };
+    struct SongStats {
+        int good = 0, ok = 0, bad = 0, drumroll = 0, score = 0, max_combo = 0;
+    };
     std::vector<SongStats> song_stats;
-    std::vector<int> song_note_counts;   // notes per course song, for the "perfect" gold border
+    std::vector<int> song_note_counts; // notes per course song, for the "perfect" gold border
     // exam as judged for song_idx (-1 = course-wide): per-song pair applied and an omitted
     // gold border resolved to the perfect value
     Exam exam_for(const Exam& exam, int song_idx) const;

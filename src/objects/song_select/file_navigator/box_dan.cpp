@@ -1,17 +1,17 @@
-#include "../../../libs/text.h"
 #include "box_dan.h"
-#include "../../../libs/song_parser.h"
-#include "../../../libs/scores.h"
+
 #include <algorithm>
 #include <string>
 
-DanBox::DanBox(const fs::path& path, const std::string& title, int color,
-               const std::vector<DanSongEntry>& songs_in,
+#include "../../../libs/scores.h"
+#include "../../../libs/song_parser.h"
+#include "../../../libs/text.h"
+
+DanBox::DanBox(const fs::path& path, const std::string& title, int color, const std::vector<DanSongEntry>& songs_in,
                const std::vector<Exam>& exams_in, int total_notes_in)
-    : BaseBox(path, BoxDef{title, static_cast<TextureIndex>(color), GenreIndex::DAN, "", "", std::nullopt, std::nullopt})
-    , dan_title(title), dan_color(color)
-    , songs(songs_in), exams(exams_in), total_notes(total_notes_in)
-{
+    : BaseBox(path,
+              BoxDef{title, static_cast<TextureIndex>(color), GenreIndex::DAN, "", "", std::nullopt, std::nullopt}),
+      dan_title(title), dan_color(color), songs(songs_in), exams(exams_in), total_notes(total_notes_in) {
     text_name = title;
 }
 
@@ -20,12 +20,15 @@ static float dan_shrink_font(float font_size) {
 }
 
 void DanBox::load_text() {
-    if (is_back) { text_loaded = true; return; }
-    BaseBox::load_text();  // populates name (vertical) for closed state
+    if (is_back) {
+        text_loaded = true;
+        return;
+    }
+    BaseBox::load_text(); // populates name (vertical) for closed state
     const SkinInfo* chip_slot = tex.get_skin_config(SC::DAN_SELECT_CHIP_NAME);
     float base_font = (chip_slot && chip_slot->font_size > 0)
-                    ? (float)chip_slot->font_size
-                    : (float)tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
+                          ? (float)chip_slot->font_size
+                          : (float)tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     float name_outline = 5.0f;
     if (utf8_char_count(text_name) >= 30) {
         float shrunk = dan_shrink_font(base_font);
@@ -33,22 +36,25 @@ void DanBox::load_text() {
         base_font = shrunk;
     }
     const bool chip_black = tex.options[SCO::DAN_CHIP_NAME_BLACK];
-    name = std::make_unique<OutlinedText>(text_name, (int)base_font,
-                                          chip_black ? ray::BLACK : ray::WHITE,
-                                          ray::BLACK, true,
-                                          chip_black ? 0.0f : name_outline);
+    name = std::make_unique<OutlinedText>(text_name, (int)base_font, chip_black ? ray::BLACK : ray::WHITE, ray::BLACK,
+                                          true, chip_black ? 0.0f : name_outline);
     int font_size = tex.get_skin_config(SC::DAN_SELECT_TITLE)->font_size;
     hori_name = std::make_unique<OutlinedText>(dan_title, font_size, ray::WHITE, ray::BLACK, false);
 
     int revealed = 0;
     {
         // rank: 1 = played/failed, 2..7 = passes (7 = rainbow)
-        auto rec = scores_manager.get_dan_record(
-            get_player_id(global_data.player_num), dan_course_id(songs, exams));
-        if (rec) clear_mark = rec->rank >= 7 ? 2 : (rec->rank >= 2 ? 1 : 0);
+        auto rec = scores_manager.get_dan_record(get_player_id(global_data.player_num), dan_course_id(songs, exams));
+        if (rec) {
+            clear_mark = rec->rank >= 7 ? 2 : (rec->rank >= 2 ? 1 : 0);
+        }
         bool any_hidden = false;
-        for (const auto& e : songs) any_hidden |= e.hidden;
-        if (any_hidden && rec && rec->rank > 0) revealed = rec->arrival;
+        for (const auto& e : songs) {
+            any_hidden |= e.hidden;
+        }
+        if (any_hidden && rec && rec->rank > 0) {
+            revealed = rec->arrival;
+        }
     }
 
     const std::string& lang = global_data.config->general.language;
@@ -59,11 +65,11 @@ void DanBox::load_text() {
         std::string title_str, sub_str;
         if (have_titles) {
             title_str = song_titles[song_idx].first;
-            sub_str   = song_titles[song_idx].second;
+            sub_str = song_titles[song_idx].second;
         } else {
             SongParser sp(entry.song_path);
             title_str = localized_text(sp.metadata.title, lang, LocalizedTextFallback::ENGLISH);
-            sub_str   = localized_text(sp.metadata.subtitle, lang, LocalizedTextFallback::NONE);
+            sub_str = localized_text(sp.metadata.subtitle, lang, LocalizedTextFallback::NONE);
         }
         const bool masked = entry.hidden && song_idx >= revealed;
         song_masked.push_back(masked);
@@ -83,16 +89,16 @@ void DanBox::load_text() {
         }
 
         const bool vertical = !tex.options[SCO::DAN_TITLE_HORIZONTAL];
-        song_texts.push_back({
-            std::make_unique<OutlinedText>(title_str, font_size, ray::WHITE, ray::BLACK, vertical),
-            std::make_unique<OutlinedText>(sub_str,   sub_font,  ray::WHITE, ray::BLACK, vertical, sub_outline)
-        });
+        song_texts.push_back(
+            {std::make_unique<OutlinedText>(title_str, font_size, ray::WHITE, ray::BLACK, vertical),
+             std::make_unique<OutlinedText>(sub_str, sub_font, ray::WHITE, ray::BLACK, vertical, sub_outline)});
     }
     text_loaded = true;
 }
 
 void DanBox::update(double current_ms) {
     BaseBox::update(current_ms);
-    if (yellow_box_active && yellow_box_opened && !is_diff_select)
+    if (yellow_box_active && yellow_box_opened && !is_diff_select) {
         is_diff_select = true;
+    }
 }

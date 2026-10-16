@@ -1,11 +1,17 @@
 #pragma once
 
-#include "../../libs/script.h"
 #include <string>
+
+#include "../../libs/script.h"
 
 class NameEntry : public LuaScript {
 public:
-    enum Action { NONE = 0, LEFT = 1, RIGHT = 2, DECIDE = 3 };
+    enum Action {
+        NONE = 0,
+        LEFT = 1,
+        RIGHT = 2,
+        DECIDE = 3
+    };
 
     explicit NameEntry(bool is_2p);
     bool unavailable() const { return !fn_input.valid(); }
@@ -13,7 +19,7 @@ public:
     void input(Action action);
     void draw();
     bool is_done();
-    std::string get_name();  // empty: keep the default name
+    std::string get_name(); // empty: keep the default name
 
 private:
     sol::protected_function fn_update;

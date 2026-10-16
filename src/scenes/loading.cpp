@@ -1,14 +1,16 @@
 #include "loading.h"
-#include "../libs/script.h"
-#include "../objects/song_select/song_select_script.h"
+
 #include <unordered_set>
-#include "../libs/global_data.h"
-#include "../libs/scores.h"
+
 #include "../libs/filesystem.h"
+#include "../libs/global_data.h"
 #include "../libs/input.h"
+#include "../libs/scores.h"
+#include "../libs/script.h"
 #include "../libs/skin_updater.h"
 #include "../libs/song_parser.h"
 #include "../objects/song_select/file_navigator/navigator.h"
+#include "../objects/song_select/song_select_script.h"
 
 void LoadingScreen::on_screen_start() {
     init_visuals();
@@ -43,8 +45,9 @@ void LoadingScreen::init_visuals() {
     }
 
     double fade_ms = 1000;
-    if (const SkinInfo* f = tex.get_skin_config(SC::LOADING_FADE_MS); f && f->x > 0)
+    if (const SkinInfo* f = tex.get_skin_config(SC::LOADING_FADE_MS); f && f->x > 0) {
         fade_ms = f->x;
+    }
     fade_in = std::make_unique<FadeAnimation>(fade_ms, 0.0, false, false, 1.0);
     allnet_indicator.emplace();
     t_warning = tex.get_texture("kidou/warning");
@@ -90,54 +93,66 @@ void LoadingScreen::load_song_hashes() {
                 const auto size = std::filesystem::file_size(songs[i], ec);
                 SongCacheEntry stamp;
                 stamp.mtime = static_cast<int64_t>(mtime.time_since_epoch().count());
-                stamp.size  = ec ? -1 : static_cast<int64_t>(size);
+                stamp.size = ec ? -1 : static_cast<int64_t>(size);
 
                 std::array<std::string, 5> hashes;
                 std::string title, subtitle;
-                SongCacheEntry meta;   // handed to Navigator::preload
+                SongCacheEntry meta; // handed to Navigator::preload
 
                 auto cached = cache.find(path);
-                const bool from_cache = cached != cache.end() && cached->second.mtime == stamp.mtime &&
-                                        cached->second.size == stamp.size;
+                const bool from_cache =
+                    cached != cache.end() && cached->second.mtime == stamp.mtime && cached->second.size == stamp.size;
                 if (from_cache) {
-                    hashes   = cached->second.hashes;
-                    title    = cached->second.title;
+                    hashes = cached->second.hashes;
+                    title = cached->second.title;
                     subtitle = cached->second.subtitle;
-                    meta     = cached->second;
+                    meta = cached->second;
                     cache_hits++;
-                } else try {
-                    SongParser parser(songs[i]);
-                    spdlog::debug("Parsing song: {}", path);
-                    if (songs[i].extension() == ".osu") {
-                        hashes[0] = parser.get_diff_hash(0);
-                    } else {
-                        for (const auto& [course, course_data] : parser.metadata.course_data) {
-                            if (course < 0 || course >= static_cast<int>(hashes.size()))
-                                continue;
-                            hashes[course] = parser.get_diff_hash(course);
+                } else {
+                    try {
+                        SongParser parser(songs[i]);
+                        spdlog::debug("Parsing song: {}", path);
+                        if (songs[i].extension() == ".osu") {
+                            hashes[0] = parser.get_diff_hash(0);
+                        } else {
+                            for (const auto& [course, course_data] : parser.metadata.course_data) {
+                                if (course < 0 || course >= static_cast<int>(hashes.size())) {
+                                    continue;
+                                }
+                                hashes[course] = parser.get_diff_hash(course);
+                            }
                         }
+                        title = parser.metadata.title.count("en") ? parser.metadata.title.at("en") : "";
+                        subtitle = parser.metadata.subtitle.count("en") ? parser.metadata.subtitle.at("en") : "";
+                        stamp.hashes = hashes;
+                        stamp.title = title;
+                        stamp.subtitle = subtitle;
+                        for (const auto& [lang, t] : parser.metadata.title) {
+                            stamp.titles.emplace_back(lang, t);
+                        }
+                        for (const auto& [lang, t] : parser.metadata.subtitle) {
+                            stamp.subtitles.emplace_back(lang, t);
+                        }
+                        for (const auto& [course, data] : parser.metadata.course_data) {
+                            if (course >= 0 && course <= 4) {
+                                stamp.levels[course] = (int)data.level;
+                            }
+                        }
+                        meta = stamp;
+                        std::lock_guard<std::mutex> lock(scores_mutex);
+                        fresh.emplace_back(path, std::move(stamp));
+                    } catch (const std::exception& e) {
+                        spdlog::error("Failed to parse song {}: {}", path, e.what());
+                        continue;
                     }
-                    title    = parser.metadata.title.count("en") ? parser.metadata.title.at("en") : "";
-                    subtitle = parser.metadata.subtitle.count("en") ? parser.metadata.subtitle.at("en") : "";
-                    stamp.hashes   = hashes;
-                    stamp.title    = title;
-                    stamp.subtitle = subtitle;
-                    for (const auto& [lang, t] : parser.metadata.title)    stamp.titles.emplace_back(lang, t);
-                    for (const auto& [lang, t] : parser.metadata.subtitle) stamp.subtitles.emplace_back(lang, t);
-                    for (const auto& [course, data] : parser.metadata.course_data)
-                        if (course >= 0 && course <= 4) stamp.levels[course] = (int)data.level;
-                    meta = stamp;
-                    std::lock_guard<std::mutex> lock(scores_mutex);
-                    fresh.emplace_back(path, std::move(stamp));
-                } catch (const std::exception& e) {
-                    spdlog::error("Failed to parse song {}: {}", path, e.what());
-                    continue;
                 }
 
                 try {
                     std::lock_guard<std::mutex> lock(scores_mutex);
                     // a cached file's songs row was written when it was parsed
-                    if (!from_cache) scores_manager.add_song(hashes, title, subtitle);
+                    if (!from_cache) {
+                        scores_manager.add_song(hashes, title, subtitle);
+                    }
                     scores_manager.add_path_binding(songs[i], hashes);
                     scores_manager.set_song_meta(path, meta);
 
@@ -158,9 +173,13 @@ void LoadingScreen::load_song_hashes() {
             int end = (i == thread_count - 1) ? songs.size() : start + chunk;
             threads.emplace_back(worker, start, end);
         }
-        for (auto& t : threads) t.join();
+        for (auto& t : threads) {
+            t.join();
+        }
 #endif
-        for (const auto& [path, entry] : fresh) scores_manager.store_song_cache(path, entry);
+        for (const auto& [path, entry] : fresh) {
+            scores_manager.store_song_cache(path, entry);
+        }
         // forget files that are gone, so the table does not grow with deleted songs
         if (!cache.empty()) {
             std::unordered_set<std::string> present;
@@ -170,7 +189,9 @@ void LoadingScreen::load_song_hashes() {
                 present.emplace(u8.begin(), u8.end());
             }
             for (const auto& [path, entry] : cache) {
-                if (!present.count(path)) scores_manager.remove_song_cache(path);
+                if (!present.count(path)) {
+                    scores_manager.remove_song_cache(path);
+                }
             }
         }
         scores_manager.commit();
@@ -201,12 +222,15 @@ Screens LoadingScreen::on_screen_end(Screens next_screen) {
 
 std::optional<Screens> LoadingScreen::update() {
     Screen::update();
-    if (allnet_indicator) allnet_indicator->update(get_current_ms());
+    if (allnet_indicator) {
+        allnet_indicator->update(get_current_ms());
+    }
 
-    if (is_l_don_pressed() || is_r_don_pressed()) skip_requested = true;
+    if (is_l_don_pressed() || is_r_don_pressed()) {
+        skip_requested = true;
+    }
 
-    if (!skin_reloaded && loading_complete &&
-        skin_updater.finished() && skin_updater.updated_this_pass()) {
+    if (!skin_reloaded && loading_complete && skin_updater.finished() && skin_updater.updated_this_pass()) {
         skin_reloaded = true;
         spdlog::info("Skin update applied; reloading skin before leaving the loading screen");
         try {
@@ -246,7 +270,8 @@ std::optional<Screens> LoadingScreen::update() {
 void LoadingScreen::draw() {
     ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::BLACK);
 
-    ray::DrawRectangle(progress_bar_x, progress_bar_y, progress_bar_width, progress_bar_height, ray::Color(101, 0, 0, 255));
+    ray::DrawRectangle(progress_bar_x, progress_bar_y, progress_bar_width, progress_bar_height,
+                       ray::Color(101, 0, 0, 255));
 
     float clamped_progress = std::max(0.0f, std::min(1.0f, progress.load()));
     float fill_width = progress_bar_width * clamped_progress;
@@ -260,10 +285,15 @@ void LoadingScreen::draw() {
             cached_skin_module_fn("loading/loading_countdown", "draw", "__loading_countdown_draw");
         if (draw_countdown.valid()) {
             auto r = draw_countdown(std::max(0.0, countdown_ms - (get_current_ms() - start_ms)));
-            if (!r.valid()) { sol::error err = r; spdlog::error("Lua error in loading_countdown.draw: {}", err.what()); }
+            if (!r.valid()) {
+                sol::error err = r;
+                spdlog::error("Lua error in loading_countdown.draw: {}", err.what());
+            }
         }
     }
 
     ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::WHITE, fade_in->attribute));
-    if (allnet_indicator) allnet_indicator->draw();
+    if (allnet_indicator) {
+        allnet_indicator->draw();
+    }
 }

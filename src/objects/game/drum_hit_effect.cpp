@@ -1,8 +1,8 @@
 #include "drum_hit_effect.h"
+
 #include <stdexcept>
 
-DrumHitEffect::DrumHitEffect(DrumType type, Side side)
-            : type(type), side(side) {
+DrumHitEffect::DrumHitEffect(DrumType type, Side side) : type(type), side(side) {
     fade = dynamic_cast<FadeAnimation*>(tex.get_animation(1, true));
     if (!fade) {
         throw std::runtime_error("DrumHitEffect: animation 1 is not a FadeAnimation");
@@ -21,7 +21,7 @@ void DrumHitEffect::update(double current_ms) {
 }
 
 void DrumHitEffect::draw(float y) {
-    tex.draw_texture(t_effect, {.y=y, .fade=fade->attribute});
+    tex.draw_texture(t_effect, {.y = y, .fade = fade->attribute});
 }
 
 bool DrumHitEffect::is_finished() const {

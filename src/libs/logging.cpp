@@ -1,11 +1,11 @@
 #include "logging.h"
 
 #include <iostream>
-#include <sstream>
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/dup_filter_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
+#include <sstream>
 #ifdef __ANDROID__
 #include <spdlog/sinks/android_sink.h>
 #endif
@@ -43,14 +43,17 @@ static void log_stacktrace() {
         cpptrace::generate_trace().print(oss, false);
         spdlog::critical("Stack trace:\n{}", oss.str());
         spdlog::default_logger()->flush();
-    } catch (...) {}
+    } catch (...) {
+    }
 #endif
 }
 
 void handle_exception() {
     try {
         auto exception_ptr = std::current_exception();
-        if (exception_ptr) std::rethrow_exception(exception_ptr);
+        if (exception_ptr) {
+            std::rethrow_exception(exception_ptr);
+        }
     } catch (const std::exception& e) {
         spdlog::critical("Uncaught exception: {}", e.what());
     } catch (...) {
@@ -76,11 +79,21 @@ static void install_crash_handlers() {
 }
 
 static spdlog::level::level_enum parse_log_level(const std::string& log_level_str) {
-    if (log_level_str == "debug") return spdlog::level::debug;
-    if (log_level_str == "info") return spdlog::level::info;
-    if (log_level_str == "warning") return spdlog::level::warn;
-    if (log_level_str == "error") return spdlog::level::err;
-    if (log_level_str == "critical") return spdlog::level::critical;
+    if (log_level_str == "debug") {
+        return spdlog::level::debug;
+    }
+    if (log_level_str == "info") {
+        return spdlog::level::info;
+    }
+    if (log_level_str == "warning") {
+        return spdlog::level::warn;
+    }
+    if (log_level_str == "error") {
+        return spdlog::level::err;
+    }
+    if (log_level_str == "critical") {
+        return spdlog::level::critical;
+    }
     fprintf(stderr, "Unknown log level '%s'; using info\n", log_level_str.c_str());
     return spdlog::level::info;
 }
@@ -111,22 +124,19 @@ void setup_logging(const std::string& log_level_str) {
         console_sink->set_pattern("[%^%l%$] %n: %v");
 #endif
 
-        auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(
-            "latest.log", true);
+        auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("latest.log", true);
         file_sink->set_pattern("[%H:%M:%S.%e] [%l] %n: %v");
 
-        auto dup_filter = std::make_shared<spdlog::sinks::dup_filter_sink_mt>(
-            std::chrono::seconds(5));
+        auto dup_filter = std::make_shared<spdlog::sinks::dup_filter_sink_mt>(std::chrono::seconds(5));
         dup_filter->add_sink(file_sink);
 
 #ifdef __ANDROID__
         auto android_sink = std::make_shared<spdlog::sinks::android_sink_mt>("YataiDON");
-        std::vector<spdlog::sink_ptr> sinks {android_sink, dup_filter};
+        std::vector<spdlog::sink_ptr> sinks{android_sink, dup_filter};
 #else
-        std::vector<spdlog::sink_ptr> sinks {console_sink, dup_filter};
+        std::vector<spdlog::sink_ptr> sinks{console_sink, dup_filter};
 #endif
-        auto logger = std::make_shared<spdlog::logger>("",
-            sinks.begin(), sinks.end());
+        auto logger = std::make_shared<spdlog::logger>("", sinks.begin(), sinks.end());
 
         logger->set_level(parse_log_level(log_level_str));
         spdlog::set_default_logger(logger);
@@ -135,10 +145,12 @@ void setup_logging(const std::string& log_level_str) {
         install_crash_handlers();
 
     } catch (const std::exception& ex) {
-        std::cerr << "Log initialization failed: " << ex.what() << " -- falling back to console-only logging" << std::endl;
+        std::cerr << "Log initialization failed: " << ex.what() << " -- falling back to console-only logging"
+                  << std::endl;
         setup_fallback_logging(log_level_str);
     } catch (...) {
-        std::cerr << "Log initialization failed with unknown exception -- falling back to console-only logging" << std::endl;
+        std::cerr << "Log initialization failed with unknown exception -- falling back to console-only logging"
+                  << std::endl;
         setup_fallback_logging(log_level_str);
     }
 }

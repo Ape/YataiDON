@@ -1,15 +1,17 @@
 #pragma once
 
-#include "box_base.h"
-#include "score_history.h"
-#include "../../../libs/song_parser.h"
-#include "../../../libs/audio.h"
 #include <atomic>
 #include <cmath>
 #include <thread>
 
+#include "../../../libs/audio.h"
+#include "../../../libs/song_parser.h"
+#include "box_base.h"
+#include "score_history.h"
+
 class SongBox : public BaseBox {
     void preregister_text() override;
+
 public:
     std::array<std::string, 5> hashes;
     std::array<std::optional<Score>, 5> scores;
@@ -21,15 +23,20 @@ public:
     std::optional<ray::Texture2D> preimage;
     bool music_playing = false;
     struct PreviewLoad {
-        std::atomic<bool>       done{false};
-        bool                    ok = false;
+        std::atomic<bool> done{false};
+        bool ok = false;
         AudioEngine::PreparedPCM pcm;
     };
     std::shared_ptr<PreviewLoad> preview_load;
     std::thread preview_thread;
     bool preview_attempted = false;
     // the preview audio file, checked once on the first update()
-    enum class WaveKind { UNKNOWN, MISSING, BANK, STREAM } wave_kind = WaveKind::UNKNOWN;
+    enum class WaveKind {
+        UNKNOWN,
+        MISSING,
+        BANK,
+        STREAM
+    } wave_kind = WaveKind::UNKNOWN;
     std::unique_ptr<ScoreHistory> score_history;
     double box_opened_at = 0.0;
     FadeAnimation* diff_fade_in;
@@ -39,9 +46,13 @@ public:
 
     SongBox(const fs::path& path, const BoxDef& box_def, SongParser parser);
     ~SongBox() override {
-        if (preview_thread.joinable()) preview_thread.join();
+        if (preview_thread.joinable()) {
+            preview_thread.join();
+        }
         release_preview_slot();
-        if (preimage.has_value()) ray::UnloadTexture(preimage.value());
+        if (preimage.has_value()) {
+            ray::UnloadTexture(preimage.value());
+        }
     }
 
     static void service_bgm_resume(double current_ms);
@@ -65,31 +76,49 @@ public:
     const char* lua_kind() const override { return "song"; }
     OutlinedText* horizontal_subtitle() {
         if (!horizontal_subtitle_cache) {
-            float font_size = utf8_char_count(text_subtitle) < 30
-                ? tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size
-                : tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size - (int)(10 * tex.screen_scale);
-            horizontal_subtitle_cache = std::make_unique<OutlinedText>(text_subtitle, font_size, text_color, fore_color.value(), false);
+            float font_size =
+                utf8_char_count(text_subtitle) < 30
+                    ? tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size
+                    : tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size - (int)(10 * tex.screen_scale);
+            horizontal_subtitle_cache =
+                std::make_unique<OutlinedText>(text_subtitle, font_size, text_color, fore_color.value(), false);
         }
         return horizontal_subtitle_cache.get();
     }
     OutlinedText* horizontal_subtitle_large() {
         if (!horizontal_subtitle_large_cache) {
-            float font_size = utf8_char_count(text_subtitle) < 30
-                ? tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size
-                : tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size - (int)(10 * tex.screen_scale);
-            horizontal_subtitle_large_cache = std::make_unique<OutlinedText>(text_subtitle, (int)(font_size * 1.3f), text_color, fore_color.value(), false);
+            float font_size =
+                utf8_char_count(text_subtitle) < 30
+                    ? tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size
+                    : tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size - (int)(10 * tex.screen_scale);
+            horizontal_subtitle_large_cache = std::make_unique<OutlinedText>(text_subtitle, (int)(font_size * 1.3f),
+                                                                             text_color, fore_color.value(), false);
         }
         return horizontal_subtitle_large_cache.get();
     }
     bool has_ura() const { return parser.metadata.course_data.count((int)Difficulty::URA) > 0; }
     int ex_data_flag() const {
-        if (parser.ex_data.new_audio) return 1;
-        if (parser.ex_data.old_audio) return 2;
-        if (parser.ex_data.limited_time) return 3;
-        if (is_new) return 4;
+        if (parser.ex_data.new_audio) {
+            return 1;
+        }
+        if (parser.ex_data.old_audio) {
+            return 2;
+        }
+        if (parser.ex_data.limited_time) {
+            return 3;
+        }
+        if (is_new) {
+            return 4;
+        }
         return 0;
     }
-    struct CourseInfo { bool has_course; int level; bool is_branching; int crown; int rank; };
+    struct CourseInfo {
+        bool has_course;
+        int level;
+        bool is_branching;
+        int crown;
+        int rank;
+    };
     CourseInfo course_info(int diff) const {
         auto it = parser.metadata.course_data.find(diff);
         bool has_course = it != parser.metadata.course_data.end();
@@ -100,7 +129,7 @@ public:
         }
         if (diff >= 0 && diff < (int)scores.size() && scores[diff].has_value()) {
             info.crown = (int)scores[diff]->crown;
-            info.rank  = (int)scores[diff]->rank;
+            info.rank = (int)scores[diff]->rank;
         }
         return info;
     }

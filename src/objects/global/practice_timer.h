@@ -8,7 +8,7 @@ class PracticeTimer : public LuaScript {
     sol::protected_function fn_draw;
     double remaining_ms;
     double last_ms;
-    double up_ms = -1;  // ms since the time ran out, -1 while running
+    double up_ms = -1; // ms since the time ran out, -1 while running
 public:
     PracticeTimer(int limit_seconds, double current_ms);
     // running = false freezes the clock (paused game)
