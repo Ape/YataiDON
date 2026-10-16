@@ -1,9 +1,11 @@
 #include "game_over.h"
 
 GameOverSequence::GameOverSequence() {
-    if (!load("GameOver", "game_over")) return;
-    fn_update      = lua_object["update"];
-    fn_draw        = lua_object["draw"];
+    if (!load("GameOver", "game_over")) {
+        return;
+    }
+    fn_update = lua_object["update"];
+    fn_draw = lua_object["draw"];
     fn_is_finished = lua_object["is_finished"];
 }
 

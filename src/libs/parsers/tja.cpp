@@ -1,7 +1,6 @@
 #include "tja.h"
-#include "../text.h"
-#include "../profiler.h"
-#include "../md5.h"
+
+#include <SDL3/SDL_stdinc.h>
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -11,25 +10,27 @@
 #include <numbers>
 #include <numeric>
 #include <random>
+#include <spdlog/spdlog.h>
 #include <sstream>
 #include <stdexcept>
 #include <utility>
-#include <SDL3/SDL_stdinc.h>
-#include <spdlog/spdlog.h>
+
+#include "../md5.h"
+#include "../profiler.h"
+#include "../text.h"
 
 #ifdef _WIN32
 #include "platform/platform_windows.h"
 #endif
 
-
 double get_ms_per_measure(double bpm_val, double time_sig) {
-    if (bpm_val == 0) return 0;
+    if (bpm_val == 0) {
+        return 0;
+    }
     return 60000 * (time_sig * 4) / bpm_val;
 }
 
-const std::regex TJAParser::complex_number_regex(
-    R"(([+-]?[0-9]*\.?[0-9]+)?([+-][0-9]*\.?[0-9]+)?j?)"
-);
+const std::regex TJAParser::complex_number_regex(R"(([+-]?[0-9]*\.?[0-9]+)?([+-][0-9]*\.?[0-9]+)?j?)");
 
 int calculate_base_score(const NoteList& notes) {
     int total_notes = 0;
@@ -39,25 +40,29 @@ int calculate_base_score(const NoteList& notes) {
     for (size_t i = 0; i < notes.notes.size(); i++) {
         Note note = notes.notes[i];
 
-        Note next_note = *((i < notes.notes.size() - 1)
-            ? &notes.notes[i + 1]
-            : &notes.notes[notes.notes.size() - 1]);
+        Note next_note = *((i < notes.notes.size() - 1) ? &notes.notes[i + 1] : &notes.notes[notes.notes.size() - 1]);
 
-        if (note.color.has_value()) { //is drumroll
+        if (note.color.has_value()) { // is drumroll
             drumroll_msec += (next_note.hit_ms - note.hit_ms);
-        } else if (note.count.has_value()) { //is balloon
+        } else if (note.count.has_value()) { // is balloon
             balloon_count += std::min(100, note.count.value());
         } else {
             if (note.type == NoteType::TAIL) {
                 continue;
             }
-            if (NoteType::DON <= note.type && note.type <= NoteType::KAT_L) total_notes += 1;
+            if (NoteType::DON <= note.type && note.type <= NoteType::KAT_L) {
+                total_notes += 1;
+            }
         }
     }
 
-    if (total_notes == 0) return 1000000;
+    if (total_notes == 0) {
+        return 1000000;
+    }
 
-    double calculation = (1000000.0f - (balloon_count * 100.0f) - (16.920079999994086f * drumroll_msec / 1000.0f * 100.0f)) / total_notes / 10.0f;
+    double calculation =
+        (1000000.0f - (balloon_count * 100.0f) - (16.920079999994086f * drumroll_msec / 1000.0f * 100.0f)) /
+        total_notes / 10.0f;
     return static_cast<int>(std::ceil(calculation)) * 10;
 }
 
@@ -86,12 +91,13 @@ std::string test_encodings(const std::filesystem::path& file_path) {
     return "shift-jis";
 }
 
-inline std::filesystem::path get_proper_path(const std::string& path, const std::string& encoding, const std::filesystem::path& base_path) {
-    #ifdef _WIN32
+inline std::filesystem::path get_proper_path(const std::string& path, const std::string& encoding,
+                                             const std::filesystem::path& base_path) {
+#ifdef _WIN32
     return win32_path_from_encoded(path, encoding, base_path);
-    #else
+#else
     return base_path / path;
-    #endif
+#endif
 }
 
 // One open per chart. test_encodings + read_file_lines opened the file twice, and on Windows the
@@ -107,30 +113,41 @@ static std::vector<std::string> read_lines_once(const std::filesystem::path& pat
     const std::streamoff size = file.tellg();
     file.seekg(0, std::ios::beg);
     std::string raw(size > 0 ? static_cast<size_t>(size) : 0, '\0');
-    if (!raw.empty()) file.read(raw.data(), static_cast<std::streamsize>(raw.size()));
+    if (!raw.empty()) {
+        file.read(raw.data(), static_cast<std::streamsize>(raw.size()));
+    }
     raw.resize(static_cast<size_t>(file.gcount() > 0 ? file.gcount() : 0));
 
     const auto byte = [&](size_t i) { return i < raw.size() ? static_cast<unsigned char>(raw[i]) : 0u; };
-    if (byte(0) == 0xEF && byte(1) == 0xBB && byte(2) == 0xBF) encoding = "utf-8-sig";
-    else if (byte(0) == 0xFF && byte(1) == 0xFE) encoding = "utf-16-le";
-    else if (byte(0) == 0xFE && byte(1) == 0xFF) encoding = "utf-16-be";
-    else {
+    if (byte(0) == 0xEF && byte(1) == 0xBB && byte(2) == 0xBF) {
+        encoding = "utf-8-sig";
+    } else if (byte(0) == 0xFF && byte(1) == 0xFE) {
+        encoding = "utf-16-le";
+    } else if (byte(0) == 0xFE && byte(1) == 0xFF) {
+        encoding = "utf-16-be";
+    } else {
         // No BOM: UTF-8 or Shift-JIS. Shift-JIS is converted here, so titles and file names are
         // UTF-8 from here on either way (it used to stay Shift-JIS and showed as '?')
         encoding = "utf-8";
-        if (!is_valid_utf8(raw)) raw = utf8_from_utf8_or_sjis(raw);
+        if (!is_valid_utf8(raw)) {
+            raw = utf8_from_utf8_or_sjis(raw);
+        }
     }
 
     std::vector<std::string> lines;
     size_t start = (encoding == "utf-8-sig") ? 3 : 0;
-    for (size_t nl; (nl = raw.find('\n', start)) != std::string::npos; start = nl + 1)
+    for (size_t nl; (nl = raw.find('\n', start)) != std::string::npos; start = nl + 1) {
         lines.emplace_back(raw, start, nl - start);
-    if (start < raw.size()) lines.emplace_back(raw, start, raw.size() - start);
+    }
+    if (start < raw.size()) {
+        lines.emplace_back(raw, start, raw.size() - start);
+    }
     return lines;
 }
 
 TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int player_num)
-    : file_path(path), start_ms(static_cast<double>(start_delay)), current_ms(static_cast<double>(start_delay)), player_num(player_num) {
+    : file_path(path), start_ms(static_cast<double>(start_delay)), current_ms(static_cast<double>(start_delay)),
+      player_num(player_num) {
     PROFILE_SCOPE();
 
     std::vector<std::string> lines = read_lines_once(file_path, encoding);
@@ -142,15 +159,17 @@ TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int pla
             cleaned = line;
         } else if (comment_pos > 0) {
             std::string prefix = line.substr(0, comment_pos);
-            auto non_space = std::find_if(prefix.begin(), prefix.end(),
-                                         [](unsigned char c) { return !std::isspace(c); });
+            auto non_space =
+                std::find_if(prefix.begin(), prefix.end(), [](unsigned char c) { return !std::isspace(c); });
             if (non_space != prefix.end()) {
                 cleaned = std::move(prefix);
             }
         }
 
         size_t start = cleaned.find_first_not_of(" \t\r\n");
-        if (start == std::string::npos) continue;
+        if (start == std::string::npos) {
+            continue;
+        }
         size_t end = cleaned.find_last_not_of(" \t\r\n");
         data.push_back(cleaned.substr(start, end - start + 1));
     }
@@ -171,256 +190,233 @@ TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int pla
 }
 
 void TJAParser::get_metadata() {
-        int current_diff = -1;
+    int current_diff = -1;
 
-        for (const auto& item : data) {
-            if (item.find("#BRANCH") == 0 && current_diff != -1) {
-                metadata.course_data[current_diff].is_branching = true;
+    for (const auto& item : data) {
+        if (item.find("#BRANCH") == 0 && current_diff != -1) {
+            metadata.course_data[current_diff].is_branching = true;
+        } else if (item[0] == '#' || std::isdigit(static_cast<unsigned char>(item[0]))) {
+            continue;
+        } else if (item.find("SUBTITLE") == 0) {
+            std::string region_code = "en";
+            if (item.size() > 8 && item[8] != ':') {
+                region_code = to_lower(item.substr(8, 2));
             }
-            else if (item[0] == '#' || std::isdigit(static_cast<unsigned char>(item[0]))) {
-                continue;
+            std::string value = join_after_colon(item);
+            if (value.rfind("++", 0) == 0) {
+                metadata.subtitle_full_display = true;
+                value = value.substr(2);
+            } else if (value.rfind("/ ", 0) == 0) {
+                metadata.subtitle_full_display = true;
+                value = value.substr(2);
+            } else if (value.rfind("--", 0) == 0) {
+                metadata.subtitle_full_display = false;
+                value = value.substr(2);
             }
-            else if (item.find("SUBTITLE") == 0) {
-                std::string region_code = "en";
-                if (item.size() > 8 && item[8] != ':') {
-                    region_code = to_lower(item.substr(8, 2));
-                }
-                std::string value = join_after_colon(item);
-                if (value.rfind("++", 0) == 0) {
-                    metadata.subtitle_full_display = true;
-                    value = value.substr(2);
-                } else if (value.rfind("/ ", 0) == 0) {
-                    metadata.subtitle_full_display = true;
-                    value = value.substr(2);
-                } else if (value.rfind("--", 0) == 0) {
-                    metadata.subtitle_full_display = false;
-                    value = value.substr(2);
-                }
-                metadata.subtitle[region_code] = value;
+            metadata.subtitle[region_code] = value;
 
-                if (metadata.subtitle.find("ja") != metadata.subtitle.end() &&
-                    metadata.subtitle["ja"].find("限定") != std::string::npos) {
-                    ex_data.limited_time = true;
-                }
-            }
-            else if (item.find("TITLE") == 0) {
-                std::string region_code = "en";
-                if (item.size() > 5 && item[5] != ':') {
-                    region_code = to_lower(item.substr(5, 2));
-                }
-                metadata.title[region_code] = join_after_colon(item);
-            }
-            else if (item.find("BPM") == 0) {
-                std::string data_str = split_after_colon(item);
-                if (data_str.empty()) {
-                    metadata.bpm = 0.0f;
-                } else {
-                    try {
-                        metadata.bpm = std::stof(data_str);
-                    } catch (const std::exception&) {
-                        spdlog::warn("Invalid BPM value '{}' in {}", data_str, file_path.string());
-                        metadata.bpm = 0.0f;
-                    }
-                }
-            }
-            else if (item.find("WAVE") == 0) {
-                std::string data_str = trim(split_after_colon(item));
-
-                fs::path wave_path = get_proper_path(data_str, encoding, file_path.parent_path());
-                metadata.wave = wave_path;
-            }
-            else if (item.find("OFFSET") == 0) {
-                std::string data_str = split_after_colon(item);
-                if (data_str.empty()) {
-                    metadata.offset = 0.0f;
-                } else {
-                    try {
-                        metadata.offset = std::stof(data_str);
-                    } catch (const std::exception&) {
-                        spdlog::warn("Invalid OFFSET value '{}' in {}", data_str, file_path.string());
-                        metadata.offset = 0.0f;
-                    }
-                }
-            }
-            else if (item.find("DEMOSTART") == 0) {
-                std::string data_str = split_after_colon(item);
-                if (data_str.empty()) {
-                    metadata.demostart = 0.0f;
-                } else {
-                    try {
-                        metadata.demostart = std::stof(data_str);
-                    } catch (const std::exception&) {
-                        spdlog::warn("Invalid DEMOSTART value '{}' in {}", data_str, file_path.string());
-                        metadata.demostart = 0.0f;
-                    }
-                }
-            }
-            else if (item.find("BGMOVIE") == 0) {
-                std::string data_str = split_after_colon(item);
-                if (data_str.empty()) {
-                    spdlog::warn("Invalid BGMOVIE value in TJA file: {}", file_path.string());
-                    metadata.bgmovie = std::filesystem::path();
-                } else {
-                metadata.bgmovie = get_proper_path(trim(data_str), encoding, file_path.parent_path());
-                }
-            }
-            else if (item.find("MOVIEOFFSET") == 0) {
-                std::string data_str = split_after_colon(item);
-                if (data_str.empty()) {
-                    metadata.movieoffset = 0.0f;
-                } else {
-                    try {
-                        metadata.movieoffset = std::stof(data_str);
-                    } catch (const std::exception&) {
-                        spdlog::warn("Invalid MOVIEOFFSET value '{}' in {}", data_str, file_path.string());
-                        metadata.movieoffset = 0.0f;
-                    }
-                }
-            }
-            else if (item.find("PREIMAGE") == 0) {
-                std::string data_str = split_after_colon(item);
-                if (data_str.empty()) {
-                    metadata.preimage = std::filesystem::path();
-                } else {
-                    metadata.preimage = get_proper_path(trim(data_str), encoding, file_path.parent_path());
-                }
-            }
-            else if (item.find("SCENEPRESET") == 0) {
-                metadata.scene_preset = split_after_colon(item);
-            }
-            else if (item.find("COURSE") == 0) {
-                std::string course = to_lower(trim(split_after_colon(item)));
-
-                if (course == "6" || course == "dan") {
-                    current_diff = 6;
-                } else if (course == "5" || course == "tower") {
-                    current_diff = 5;
-                } else if (course == "4" || course == "edit" || course == "ura") {
-                    current_diff = 4;
-                } else if (course == "3" || course == "oni") {
-                    current_diff = 3;
-                } else if (course == "2" || course == "hard") {
-                    current_diff = 2;
-                } else if (course == "1" || course == "normal") {
-                    current_diff = 1;
-                } else if (course == "0" || course == "easy") {
-                    current_diff = 0;
-                } else {
-                    current_diff = -1;
-                    spdlog::warn("Unrecognized COURSE value '{}' in {}", course, file_path.string());
-                }
-
-                if (current_diff != -1) {
-                    metadata.course_data[current_diff] = CourseData();
-                }
-            }
-            else if (current_diff != -1) {
-                if (item.find("LEVEL") == 0) {
-                    std::string data_str = split_after_colon(item);
-                    if (data_str.empty()) {
-                        metadata.course_data[current_diff].level = 0;
-                    } else {
-                        try {
-                            metadata.course_data[current_diff].level = static_cast<int>(std::stof(data_str));
-                        } catch (const std::exception&) {
-                            spdlog::warn("Invalid LEVEL value '{}' in {}", data_str, file_path.string());
-                            metadata.course_data[current_diff].level = 0;
-                        }
-                    }
-                }
-                else if (item.find("BALLOONNOR") == 0) {
-                    std::string balloon_data = split_after_colon(item);
-                    if (!balloon_data.empty()) {
-                        try {
-                            auto balloons = parse_balloon_data(balloon_data);
-                            metadata.course_data[current_diff].balloon.insert(
-                                metadata.course_data[current_diff].balloon.end(),
-                                balloons.begin(), balloons.end()
-                            );
-                        } catch (const std::exception& e) {
-                            spdlog::warn("Invalid BALLOONNOR value '{}' in {}: {}", balloon_data, file_path.string(), e.what());
-                        }
-                    }
-                }
-                else if (item.find("BALLOONEXP") == 0) {
-                    std::string balloon_data = split_after_colon(item);
-                    if (!balloon_data.empty()) {
-                        try {
-                            auto balloons = parse_balloon_data(balloon_data);
-                            metadata.course_data[current_diff].balloon.insert(
-                                metadata.course_data[current_diff].balloon.end(),
-                                balloons.begin(), balloons.end()
-                            );
-                        } catch (const std::exception& e) {
-                            spdlog::warn("Invalid BALLOONEXP value '{}' in {}: {}", balloon_data, file_path.string(), e.what());
-                        }
-                    }
-                }
-                else if (item.find("BALLOONMAS") == 0) {
-                    std::string balloon_data = split_after_colon(item);
-                    if (!balloon_data.empty()) {
-                        try {
-                            metadata.course_data[current_diff].balloon = parse_balloon_data(balloon_data);
-                        } catch (const std::exception& e) {
-                            spdlog::warn("Invalid BALLOONMAS value '{}' in {}: {}", balloon_data, file_path.string(), e.what());
-                        }
-                    }
-                }
-                else if (item.find("BALLOON") == 0) {
-                    if (item.find(':') == std::string::npos) {
-                        metadata.course_data[current_diff].balloon.clear();
-                        continue;
-                    }
-                    std::string balloon_data = split_after_colon(item);
-                    if (!balloon_data.empty()) {
-                        try {
-                            metadata.course_data[current_diff].balloon = parse_balloon_data(balloon_data);
-                        } catch (const std::exception& e) {
-                            spdlog::warn("Invalid BALLOON value '{}' in {}: {}", balloon_data, file_path.string(), e.what());
-                        }
-                    }
-                }
-                else if (item.find("SCOREINIT") == 0) {
-                    std::string score_init = split_after_colon(item);
-                    if (!score_init.empty()) {
-                        try {
-                            metadata.course_data[current_diff].scoreinit = parse_balloon_data(score_init);
-                        } catch (const std::exception& e) {
-                            spdlog::warn("Failed to parse SCOREINIT: " + std::string(e.what()));
-                            metadata.course_data[current_diff].scoreinit = {0, 0};
-                        }
-                    }
-                }
-                else if (item.find("SCOREDIFF") == 0) {
-                    std::string score_diff = split_after_colon(item);
-                    if (!score_diff.empty()) {
-                        try {
-                            metadata.course_data[current_diff].scorediff = static_cast<int>(std::stof(score_diff));
-                        } catch (const std::exception&) {
-                            spdlog::warn("Invalid SCOREDIFF value '{}' in {}", score_diff, file_path.string());
-                        }
-                    }
-                }
-            }
-        }
-
-        for (auto& [region_code, title] : metadata.title) {
-            if (title.find("-New Audio-") != std::string::npos ||
-                title.find("-新曲-") != std::string::npos) {
-                replace_all(title, "-New Audio-", "");
-                replace_all(title, "-新曲-", "");
-                ex_data.new_audio = true;
-            }
-            else if (title.find("-Old Audio-") != std::string::npos ||
-                     title.find("-旧曲-") != std::string::npos) {
-                replace_all(title, "-Old Audio-", "");
-                replace_all(title, "-旧曲-", "");
-                ex_data.old_audio = true;
-            }
-            else if (title.find("限定") != std::string::npos) {
+            if (metadata.subtitle.find("ja") != metadata.subtitle.end() &&
+                metadata.subtitle["ja"].find("限定") != std::string::npos) {
                 ex_data.limited_time = true;
             }
+        } else if (item.find("TITLE") == 0) {
+            std::string region_code = "en";
+            if (item.size() > 5 && item[5] != ':') {
+                region_code = to_lower(item.substr(5, 2));
+            }
+            metadata.title[region_code] = join_after_colon(item);
+        } else if (item.find("BPM") == 0) {
+            std::string data_str = split_after_colon(item);
+            if (data_str.empty()) {
+                metadata.bpm = 0.0f;
+            } else {
+                try {
+                    metadata.bpm = std::stof(data_str);
+                } catch (const std::exception&) {
+                    spdlog::warn("Invalid BPM value '{}' in {}", data_str, file_path.string());
+                    metadata.bpm = 0.0f;
+                }
+            }
+        } else if (item.find("WAVE") == 0) {
+            std::string data_str = trim(split_after_colon(item));
+
+            fs::path wave_path = get_proper_path(data_str, encoding, file_path.parent_path());
+            metadata.wave = wave_path;
+        } else if (item.find("OFFSET") == 0) {
+            std::string data_str = split_after_colon(item);
+            if (data_str.empty()) {
+                metadata.offset = 0.0f;
+            } else {
+                try {
+                    metadata.offset = std::stof(data_str);
+                } catch (const std::exception&) {
+                    spdlog::warn("Invalid OFFSET value '{}' in {}", data_str, file_path.string());
+                    metadata.offset = 0.0f;
+                }
+            }
+        } else if (item.find("DEMOSTART") == 0) {
+            std::string data_str = split_after_colon(item);
+            if (data_str.empty()) {
+                metadata.demostart = 0.0f;
+            } else {
+                try {
+                    metadata.demostart = std::stof(data_str);
+                } catch (const std::exception&) {
+                    spdlog::warn("Invalid DEMOSTART value '{}' in {}", data_str, file_path.string());
+                    metadata.demostart = 0.0f;
+                }
+            }
+        } else if (item.find("BGMOVIE") == 0) {
+            std::string data_str = split_after_colon(item);
+            if (data_str.empty()) {
+                spdlog::warn("Invalid BGMOVIE value in TJA file: {}", file_path.string());
+                metadata.bgmovie = std::filesystem::path();
+            } else {
+                metadata.bgmovie = get_proper_path(trim(data_str), encoding, file_path.parent_path());
+            }
+        } else if (item.find("MOVIEOFFSET") == 0) {
+            std::string data_str = split_after_colon(item);
+            if (data_str.empty()) {
+                metadata.movieoffset = 0.0f;
+            } else {
+                try {
+                    metadata.movieoffset = std::stof(data_str);
+                } catch (const std::exception&) {
+                    spdlog::warn("Invalid MOVIEOFFSET value '{}' in {}", data_str, file_path.string());
+                    metadata.movieoffset = 0.0f;
+                }
+            }
+        } else if (item.find("PREIMAGE") == 0) {
+            std::string data_str = split_after_colon(item);
+            if (data_str.empty()) {
+                metadata.preimage = std::filesystem::path();
+            } else {
+                metadata.preimage = get_proper_path(trim(data_str), encoding, file_path.parent_path());
+            }
+        } else if (item.find("SCENEPRESET") == 0) {
+            metadata.scene_preset = split_after_colon(item);
+        } else if (item.find("COURSE") == 0) {
+            std::string course = to_lower(trim(split_after_colon(item)));
+
+            if (course == "6" || course == "dan") {
+                current_diff = 6;
+            } else if (course == "5" || course == "tower") {
+                current_diff = 5;
+            } else if (course == "4" || course == "edit" || course == "ura") {
+                current_diff = 4;
+            } else if (course == "3" || course == "oni") {
+                current_diff = 3;
+            } else if (course == "2" || course == "hard") {
+                current_diff = 2;
+            } else if (course == "1" || course == "normal") {
+                current_diff = 1;
+            } else if (course == "0" || course == "easy") {
+                current_diff = 0;
+            } else {
+                current_diff = -1;
+                spdlog::warn("Unrecognized COURSE value '{}' in {}", course, file_path.string());
+            }
+
+            if (current_diff != -1) {
+                metadata.course_data[current_diff] = CourseData();
+            }
+        } else if (current_diff != -1) {
+            if (item.find("LEVEL") == 0) {
+                std::string data_str = split_after_colon(item);
+                if (data_str.empty()) {
+                    metadata.course_data[current_diff].level = 0;
+                } else {
+                    try {
+                        metadata.course_data[current_diff].level = static_cast<int>(std::stof(data_str));
+                    } catch (const std::exception&) {
+                        spdlog::warn("Invalid LEVEL value '{}' in {}", data_str, file_path.string());
+                        metadata.course_data[current_diff].level = 0;
+                    }
+                }
+            } else if (item.find("BALLOONNOR") == 0) {
+                std::string balloon_data = split_after_colon(item);
+                if (!balloon_data.empty()) {
+                    try {
+                        auto balloons = parse_balloon_data(balloon_data);
+                        metadata.course_data[current_diff].balloon.insert(
+                            metadata.course_data[current_diff].balloon.end(), balloons.begin(), balloons.end());
+                    } catch (const std::exception& e) {
+                        spdlog::warn("Invalid BALLOONNOR value '{}' in {}: {}", balloon_data, file_path.string(),
+                                     e.what());
+                    }
+                }
+            } else if (item.find("BALLOONEXP") == 0) {
+                std::string balloon_data = split_after_colon(item);
+                if (!balloon_data.empty()) {
+                    try {
+                        auto balloons = parse_balloon_data(balloon_data);
+                        metadata.course_data[current_diff].balloon.insert(
+                            metadata.course_data[current_diff].balloon.end(), balloons.begin(), balloons.end());
+                    } catch (const std::exception& e) {
+                        spdlog::warn("Invalid BALLOONEXP value '{}' in {}: {}", balloon_data, file_path.string(),
+                                     e.what());
+                    }
+                }
+            } else if (item.find("BALLOONMAS") == 0) {
+                std::string balloon_data = split_after_colon(item);
+                if (!balloon_data.empty()) {
+                    try {
+                        metadata.course_data[current_diff].balloon = parse_balloon_data(balloon_data);
+                    } catch (const std::exception& e) {
+                        spdlog::warn("Invalid BALLOONMAS value '{}' in {}: {}", balloon_data, file_path.string(),
+                                     e.what());
+                    }
+                }
+            } else if (item.find("BALLOON") == 0) {
+                if (item.find(':') == std::string::npos) {
+                    metadata.course_data[current_diff].balloon.clear();
+                    continue;
+                }
+                std::string balloon_data = split_after_colon(item);
+                if (!balloon_data.empty()) {
+                    try {
+                        metadata.course_data[current_diff].balloon = parse_balloon_data(balloon_data);
+                    } catch (const std::exception& e) {
+                        spdlog::warn("Invalid BALLOON value '{}' in {}: {}", balloon_data, file_path.string(),
+                                     e.what());
+                    }
+                }
+            } else if (item.find("SCOREINIT") == 0) {
+                std::string score_init = split_after_colon(item);
+                if (!score_init.empty()) {
+                    try {
+                        metadata.course_data[current_diff].scoreinit = parse_balloon_data(score_init);
+                    } catch (const std::exception& e) {
+                        spdlog::warn("Failed to parse SCOREINIT: " + std::string(e.what()));
+                        metadata.course_data[current_diff].scoreinit = {0, 0};
+                    }
+                }
+            } else if (item.find("SCOREDIFF") == 0) {
+                std::string score_diff = split_after_colon(item);
+                if (!score_diff.empty()) {
+                    try {
+                        metadata.course_data[current_diff].scorediff = static_cast<int>(std::stof(score_diff));
+                    } catch (const std::exception&) {
+                        spdlog::warn("Invalid SCOREDIFF value '{}' in {}", score_diff, file_path.string());
+                    }
+                }
+            }
         }
+    }
+
+    for (auto& [region_code, title] : metadata.title) {
+        if (title.find("-New Audio-") != std::string::npos || title.find("-新曲-") != std::string::npos) {
+            replace_all(title, "-New Audio-", "");
+            replace_all(title, "-新曲-", "");
+            ex_data.new_audio = true;
+        } else if (title.find("-Old Audio-") != std::string::npos || title.find("-旧曲-") != std::string::npos) {
+            replace_all(title, "-Old Audio-", "");
+            replace_all(title, "-旧曲-", "");
+            ex_data.old_audio = true;
+        } else if (title.find("限定") != std::string::npos) {
+            ex_data.limited_time = true;
+        }
+    }
 }
 
 std::tuple<NoteList, std::deque<NoteList>, std::deque<NoteList>, std::deque<NoteList>>
@@ -439,9 +435,7 @@ TJAParser::notes_to_position(int diff) {
         auto cmds = build_command_registry();
         cached_cmds = std::vector<std::pair<std::string, CommandHandler>>(cmds.begin(), cmds.end());
         std::sort(cached_cmds.begin(), cached_cmds.end(),
-            [](const auto& a, const auto& b) {
-                return a.first.length() > b.first.length();
-            });
+                  [](const auto& a, const auto& b) { return a.first.length() > b.first.length(); });
     }
     auto notes = data_to_notes(diff);
 
@@ -492,16 +486,16 @@ TJAParser::notes_to_position(int diff) {
                 current_ms += ms_per_measure;
                 increment = 0.0f;
             } else {
-                increment = (bar_length > 0)
-                    ? ms_per_measure / static_cast<double>(bar_length)
-                    : 0.0;
+                increment = (bar_length > 0) ? ms_per_measure / static_cast<double>(bar_length) : 0.0;
             }
 
             // Process each note character
             for (char item : part) {
                 // Skip empty notes (0) and non-digits
                 if (item == '0' || !std::isdigit(static_cast<unsigned char>(item))) {
-                    if (item != '0') spdlog::warn("Unrecognized note '{}' in {}", item, file_path.string());
+                    if (item != '0') {
+                        spdlog::warn("Unrecognized note '{}' in {}", item, file_path.string());
+                    }
                     current_ms += increment;
                     continue;
                 }
@@ -527,255 +521,251 @@ TJAParser::notes_to_position(int diff) {
     return {master_notes, branch_m, branch_e, branch_n};
 }
 
-std::vector<std::string> TJAParser::read_file_lines(const std::filesystem::path& path,
-                                         const std::string& encoding) {
-        std::ifstream file(path, std::ios::binary);
-        if (!file.is_open()) {
-            throw std::runtime_error("Could not open file: " + path.string());
-        }
+std::vector<std::string> TJAParser::read_file_lines(const std::filesystem::path& path, const std::string& encoding) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open file: " + path.string());
+    }
 
-        if (encoding == "utf-8-sig") {
-            file.seekg(3);  // skip 3-byte UTF-8 BOM
-        }
+    if (encoding == "utf-8-sig") {
+        file.seekg(3); // skip 3-byte UTF-8 BOM
+    }
 
-        std::vector<std::string> lines;
-        std::string line;
+    std::vector<std::string> lines;
+    std::string line;
 
-        while (std::getline(file, line)) {
-            lines.push_back(line);
-        }
+    while (std::getline(file, line)) {
+        lines.push_back(line);
+    }
 
-        return lines;
+    return lines;
 }
 
 std::string TJAParser::to_lower(const std::string& str) {
-        std::string result = str;
-        std::transform(result.begin(), result.end(), result.begin(),
-                        [](unsigned char c) { return std::tolower(c); });
-        return result;
+    std::string result = str;
+    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) { return std::tolower(c); });
+    return result;
 }
 
 std::string TJAParser::split_after_colon(const std::string& str) {
-        size_t pos = str.find(':');
-        if (pos == std::string::npos) return "";
-        return str.substr(pos + 1);
+    size_t pos = str.find(':');
+    if (pos == std::string::npos) {
+        return "";
+    }
+    return str.substr(pos + 1);
 }
 
 std::string TJAParser::join_after_colon(const std::string& str) {
-        size_t pos = str.find(':');
-        if (pos == std::string::npos) return "";
-        return str.substr(pos + 1);
+    size_t pos = str.find(':');
+    if (pos == std::string::npos) {
+        return "";
+    }
+    return str.substr(pos + 1);
 }
 
 void TJAParser::replace_all(std::string& str, const std::string& from, const std::string& to) {
-        size_t pos = 0;
-        while ((pos = str.find(from, pos)) != std::string::npos) {
-            str.replace(pos, from.length(), to);
-            pos += to.length();
-        }
+    size_t pos = 0;
+    while ((pos = str.find(from, pos)) != std::string::npos) {
+        str.replace(pos, from.length(), to);
+        pos += to.length();
+    }
 }
 
 std::string TJAParser::trim(const std::string& str) {
-        auto start = std::find_if(str.begin(), str.end(),
-                                    [](unsigned char ch) { return !std::isspace(ch); });
-        auto end = std::find_if(str.rbegin(), str.rend(),
-                                [](unsigned char ch) { return !std::isspace(ch); }).base();
-        return (start < end) ? std::string(start, end) : std::string();
+    auto start = std::find_if(str.begin(), str.end(), [](unsigned char ch) { return !std::isspace(ch); });
+    auto end = std::find_if(str.rbegin(), str.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base();
+    return (start < end) ? std::string(start, end) : std::string();
 }
 
 std::vector<int> TJAParser::parse_balloon_data(const std::string& data) {
-        std::vector<int> result;
-        std::string cleaned = data;
-        replace_all(cleaned, ".", ",");
+    std::vector<int> result;
+    std::string cleaned = data;
+    replace_all(cleaned, ".", ",");
 
-        std::stringstream ss(cleaned);
-        std::string token;
+    std::stringstream ss(cleaned);
+    std::string token;
 
-        while (std::getline(ss, token, ',')) {
-            if (!token.empty()) {
-                int parsed_token;
-                try {
-                    parsed_token = std::stoi(token);
-                } catch (const std::invalid_argument&) {
-                    throw std::invalid_argument("Invalid balloon data: " + token);
-                } catch (const std::out_of_range&) {
-                    spdlog::error("Balloon data out of range: {}", token);
-                    parsed_token = std::numeric_limits<int>::max();
-                }
-                result.push_back(parsed_token);
+    while (std::getline(ss, token, ',')) {
+        if (!token.empty()) {
+            int parsed_token;
+            try {
+                parsed_token = std::stoi(token);
+            } catch (const std::invalid_argument&) {
+                throw std::invalid_argument("Invalid balloon data: " + token);
+            } catch (const std::out_of_range&) {
+                spdlog::error("Balloon data out of range: {}", token);
+                parsed_token = std::numeric_limits<int>::max();
             }
+            result.push_back(parsed_token);
         }
+    }
 
-        return result;
+    return result;
 }
 
 std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
-        std::string diff_name;
-        auto it = DIFFS.find(diff);
-        if (it != DIFFS.end()) {
-            diff_name = to_lower(it->second);
+    std::string diff_name;
+    auto it = DIFFS.find(diff);
+    if (it != DIFFS.end()) {
+        diff_name = to_lower(it->second);
+    }
+
+    int note_start = -1;
+    int note_end = -1;
+    int p1_start = -1;
+    int p2_start = -1;
+    bool target_found = false;
+    ScrollType scroll_type = ScrollType::NMSCROLL;
+
+    for (size_t i = 0; i < data.size(); i++) {
+        const std::string& line = data[i];
+
+        if (line.find("COURSE:") == 0) {
+            std::string course_value = to_lower(trim(line.substr(7)));
+
+            bool is_digit = !course_value.empty() && std::all_of(course_value.begin(), course_value.end(),
+                                                                 [](unsigned char c) { return std::isdigit(c) != 0; });
+
+            target_found = (is_digit && std::stoi(course_value) == diff) || course_value == diff_name;
+        } else if (target_found) {
+            if (note_start == -1) {
+                if (line == "#START") {
+                    note_start = i + 1;
+                } else if (line == "#START P1" && p1_start == -1) {
+                    p1_start = i + 1;
+                } else if (line == "#START P2" && p2_start == -1) {
+                    p2_start = i + 1;
+                }
+            }
+            if (line == "#END" && note_start != -1) {
+                note_end = i;
+                break;
+            }
+            // Like Taiko-san Jiro, the scroll mode only counts before #START
+            bool started = note_start != -1 || p1_start != -1 || p2_start != -1;
+            if (line.find("#NMSCROLL") != std::string::npos) {
+                if (!started) {
+                    scroll_type = ScrollType::NMSCROLL;
+                }
+                continue;
+            } else if (line.find("#BMSCROLL") != std::string::npos) {
+                if (!started) {
+                    scroll_type = ScrollType::BMSCROLL;
+                }
+                continue;
+            } else if (line.find("#HBSCROLL") != std::string::npos) {
+                if (!started) {
+                    scroll_type = ScrollType::HBSCROLL;
+                }
+                continue;
+            }
         }
+    }
 
-        int note_start = -1;
-        int note_end = -1;
-        int p1_start = -1;
-        int p2_start = -1;
-        bool target_found = false;
-        ScrollType scroll_type = ScrollType::NMSCROLL;
+    if (note_start != -1) {
+        if (player_num == 1 && p1_start != -1) {
+            note_start = p1_start;
+        } else if (player_num == 2 && p2_start != -1) {
+            note_start = p2_start;
+        }
+    } else {
+        if (player_num == 1 && p1_start != -1) {
+            note_start = p1_start;
+        } else if (player_num == 2 && p2_start != -1) {
+            note_start = p2_start;
+        } else if (player_num == 0 && p1_start != -1) {
+            note_start = p1_start;
+        } else if (player_num == 0 && p2_start != -1) {
+            note_start = p2_start;
+        }
+    }
 
-        for (size_t i = 0; i < data.size(); i++) {
-            const std::string& line = data[i];
-
-            if (line.find("COURSE:") == 0) {
-                std::string course_value = to_lower(trim(line.substr(7)));
-
-                bool is_digit = !course_value.empty() &&
-                               std::all_of(course_value.begin(), course_value.end(),
-                                           [](unsigned char c) { return std::isdigit(c) != 0; });
-
-                target_found = (is_digit && std::stoi(course_value) == diff) ||
-                              course_value == diff_name;
-            }
-            else if (target_found) {
-                if (note_start == -1) {
-                    if (line == "#START") {
-                        note_start = i + 1;
-                    } else if (line == "#START P1" && p1_start == -1) {
-                        p1_start = i + 1;
-                    } else if (line == "#START P2" && p2_start == -1) {
-                        p2_start = i + 1;
-                    }
-                }
-                if (line == "#END" && note_start != -1) {
-                    note_end = i;
-                    break;
-                }
-                // Like Taiko-san Jiro, the scroll mode only counts before #START
-                bool started = note_start != -1 || p1_start != -1 || p2_start != -1;
-                if (line.find("#NMSCROLL") != std::string::npos) {
-                    if (!started) scroll_type = ScrollType::NMSCROLL;
-                    continue;
-                }
-                else if (line.find("#BMSCROLL") != std::string::npos) {
-                    if (!started) scroll_type = ScrollType::BMSCROLL;
-                    continue;
-                }
-                else if (line.find("#HBSCROLL") != std::string::npos) {
-                    if (!started) scroll_type = ScrollType::HBSCROLL;
-                    continue;
-                }
+    if (note_start != -1 && note_end == -1) {
+        for (size_t i = note_start; i < data.size(); i++) {
+            if (data[i] == "#END") {
+                note_end = i;
+                break;
             }
         }
+    }
 
-        if (note_start != -1) {
-            if (player_num == 1 && p1_start != -1) {
-                note_start = p1_start;
-            } else if (player_num == 2 && p2_start != -1) {
-                note_start = p2_start;
+    if (note_start == -1 || note_end == -1) {
+        return {};
+    }
+
+    std::vector<std::vector<std::string>> notes;
+    std::vector<std::string> bar;
+
+    if (scroll_type == ScrollType::NMSCROLL) {
+        bar.push_back("#NMSCROLL");
+    } else if (scroll_type == ScrollType::BMSCROLL) {
+        bar.push_back("#BMSCROLL");
+    } else if (scroll_type == ScrollType::HBSCROLL) {
+        bar.push_back("#HBSCROLL");
+    }
+
+    for (int i = note_start; i < note_end; i++) {
+        const std::string& line = data[i];
+
+        if (line[0] == '#') {
+            if (line.starts_with("#NMSCROLL") || line.starts_with("#BMSCROLL") || line.starts_with("#HBSCROLL")) {
+                continue;
             }
+            bar.push_back(line);
+        } else if (line == ",") {
+            if (bar.empty() ||
+                std::all_of(bar.begin(), bar.end(), [](const std::string& item) { return item[0] == '#'; })) {
+                bar.push_back("");
+            }
+            notes.push_back(bar);
+            bar.clear();
         } else {
-            if (player_num == 1 && p1_start != -1) {
-                note_start = p1_start;
-            } else if (player_num == 2 && p2_start != -1) {
-                note_start = p2_start;
-            } else if (player_num == 0 && p1_start != -1) {
-                note_start = p1_start;
-            } else if (player_num == 0 && p2_start != -1) {
-                note_start = p2_start;
-            }
-        }
-
-        if (note_start != -1 && note_end == -1) {
-            for (size_t i = note_start; i < data.size(); i++) {
-                if (data[i] == "#END") {
-                    note_end = i;
-                    break;
-                }
-            }
-        }
-
-        if (note_start == -1 || note_end == -1) {
-            return {};
-        }
-
-        std::vector<std::vector<std::string>> notes;
-        std::vector<std::string> bar;
-
-        if (scroll_type == ScrollType::NMSCROLL) {
-            bar.push_back("#NMSCROLL");
-        } else if (scroll_type == ScrollType::BMSCROLL) {
-            bar.push_back("#BMSCROLL");
-        } else if (scroll_type == ScrollType::HBSCROLL) {
-            bar.push_back("#HBSCROLL");
-        }
-
-        for (int i = note_start; i < note_end; i++) {
-            const std::string& line = data[i];
-
-            if (line[0] == '#') {
-                if (line.starts_with("#NMSCROLL") || line.starts_with("#BMSCROLL") || line.starts_with("#HBSCROLL"))
-                    continue;
-                bar.push_back(line);
-            }
-            else if (line == ",") {
-                if (bar.empty() || std::all_of(bar.begin(), bar.end(),
-                                              [](const std::string& item) {
-                                                  return item[0] == '#';
-                                              })) {
-                    bar.push_back("");
-                }
+            if (!line.empty() && line.back() == ',') {
+                bar.push_back(line.substr(0, line.length() - 1));
                 notes.push_back(bar);
                 bar.clear();
-            }
-            else {
-                if (!line.empty() && line.back() == ',') {
-                    bar.push_back(line.substr(0, line.length() - 1));
-                    notes.push_back(bar);
-                    bar.clear();
-                } else {
-                    bar.push_back(line);
-                }
+            } else {
+                bar.push_back(line);
             }
         }
+    }
 
-        if (!bar.empty()) {
-            notes.push_back(bar);
-        }
+    if (!bar.empty()) {
+        notes.push_back(bar);
+    }
 
-        return notes;
+    return notes;
 }
 
-#define REGISTER_HANDLER(name) \
-    registry["#" #name] = [this](const std::string& v, ParserState& s) { \
-        handle_##name(v, s); \
-    };
+#define REGISTER_HANDLER(name)                                                                                         \
+    registry["#" #name] = [this](const std::string& v, ParserState& s) { handle_##name(v, s); };
 
 std::map<std::string, TJAParser::CommandHandler> TJAParser::build_command_registry() {
-        std::map<std::string, CommandHandler> registry;
+    std::map<std::string, CommandHandler> registry;
 
-        REGISTER_HANDLER(BPMCHANGE)
-        REGISTER_HANDLER(MEASURE)
-        REGISTER_HANDLER(SCROLL)
-        REGISTER_HANDLER(GOGOSTART)
-        REGISTER_HANDLER(GOGOEND)
-        REGISTER_HANDLER(DELAY)
-        REGISTER_HANDLER(BARLINEOFF)
-        REGISTER_HANDLER(BARLINEON)
-        REGISTER_HANDLER(BRANCHSTART)
-        REGISTER_HANDLER(BRANCHEND)
-        REGISTER_HANDLER(N)
-        REGISTER_HANDLER(E)
-        REGISTER_HANDLER(M)
-        REGISTER_HANDLER(SECTION)
-        REGISTER_HANDLER(NMSCROLL)
-        REGISTER_HANDLER(BMSCROLL)
-        REGISTER_HANDLER(HBSCROLL)
-        REGISTER_HANDLER(SUDDEN)
-        REGISTER_HANDLER(JPOSSCROLL)
-        REGISTER_HANDLER(LYRIC)
+    REGISTER_HANDLER(BPMCHANGE)
+    REGISTER_HANDLER(MEASURE)
+    REGISTER_HANDLER(SCROLL)
+    REGISTER_HANDLER(GOGOSTART)
+    REGISTER_HANDLER(GOGOEND)
+    REGISTER_HANDLER(DELAY)
+    REGISTER_HANDLER(BARLINEOFF)
+    REGISTER_HANDLER(BARLINEON)
+    REGISTER_HANDLER(BRANCHSTART)
+    REGISTER_HANDLER(BRANCHEND)
+    REGISTER_HANDLER(N)
+    REGISTER_HANDLER(E)
+    REGISTER_HANDLER(M)
+    REGISTER_HANDLER(SECTION)
+    REGISTER_HANDLER(NMSCROLL)
+    REGISTER_HANDLER(BMSCROLL)
+    REGISTER_HANDLER(HBSCROLL)
+    REGISTER_HANDLER(SUDDEN)
+    REGISTER_HANDLER(JPOSSCROLL)
+    REGISTER_HANDLER(LYRIC)
 
-        register_extended_commands(registry);
-        return registry;
+    register_extended_commands(registry);
+    return registry;
 }
 
 #undef REGISTER_HANDLER
@@ -786,7 +776,9 @@ void TJAParser::register_extended_commands(std::map<std::string, CommandHandler>
         std::vector<std::string> out;
         std::istringstream iss(v);
         std::string tok;
-        while (std::getline(iss, tok, ',')) out.push_back(trim(tok));
+        while (std::getline(iss, tok, ',')) {
+            out.push_back(trim(tok));
+        }
         return out;
     };
     auto push = [this](ParserState& s, CameraEvent ev) -> TimelineObject* {
@@ -794,25 +786,43 @@ void TJAParser::register_extended_commands(std::map<std::string, CommandHandler>
         t.start_time = t.end_time = this->current_ms;
         t.cam = ev;
         s.curr_timeline->push_back(t);
-        return &s.curr_timeline->back();  // deque: stays valid across later push_back
+        return &s.curr_timeline->back(); // deque: stays valid across later push_back
     };
-    auto num = [this](const std::string& cmd, const std::vector<std::string>& a, size_t n,
-                      std::vector<double>& out) {
-        if (a.size() < n) { spdlog::warn("Malformed {} in {}", cmd, file_path.string()); return false; }
-        try { for (size_t i = 0; i < n; i++) out.push_back(std::stod(a[i])); }
-        catch (const std::exception&) { spdlog::warn("Invalid {} values in {}", cmd, file_path.string()); return false; }
+    auto num = [this](const std::string& cmd, const std::vector<std::string>& a, size_t n, std::vector<double>& out) {
+        if (a.size() < n) {
+            spdlog::warn("Malformed {} in {}", cmd, file_path.string());
+            return false;
+        }
+        try {
+            for (size_t i = 0; i < n; i++) {
+                out.push_back(std::stod(a[i]));
+            }
+        } catch (const std::exception&) {
+            spdlog::warn("Invalid {} values in {}", cmd, file_path.string());
+            return false;
+        }
         return true;
     };
 
-    struct Prop { const char* name; CamProp prop; };
-    for (auto [name, prop] : {Prop{"HOFFSET", CamProp::H_OFFSET}, {"VOFFSET", CamProp::V_OFFSET},
-                              {"ZOOM", CamProp::ZOOM}, {"ROTATION", CamProp::ROTATION},
-                              {"HSCALE", CamProp::H_SCALE}, {"VSCALE", CamProp::V_SCALE}}) {
+    struct Prop {
+        const char* name;
+        CamProp prop;
+    };
+    for (auto [name, prop] : {Prop{"HOFFSET", CamProp::H_OFFSET},
+                              {"VOFFSET", CamProp::V_OFFSET},
+                              {"ZOOM", CamProp::ZOOM},
+                              {"ROTATION", CamProp::ROTATION},
+                              {"HSCALE", CamProp::H_SCALE},
+                              {"VSCALE", CamProp::V_SCALE}}) {
         std::string cmd = std::string("#CAM") + name;
         registry[cmd] = [=](const std::string& v, ParserState& s) {
             std::vector<double> d;
-            if (!num(cmd, split(v), 1, d)) return;
-            CameraEvent ev; ev.prop = prop; ev.to = d[0];
+            if (!num(cmd, split(v), 1, d)) {
+                return;
+            }
+            CameraEvent ev;
+            ev.prop = prop;
+            ev.to = d[0];
             push(s, ev);
         };
         // HOFFSET/VOFFSET have no eased form upstream; they are #CAMHMOVE/#CAMVMOVE
@@ -820,31 +830,55 @@ void TJAParser::register_extended_commands(std::map<std::string, CommandHandler>
         registry[base + "START"] = [=](const std::string& v, ParserState& s) {
             auto a = split(v);
             std::vector<double> d;
-            if (!num(base + "START", a, 2, d)) return;
-            static const std::map<std::string, EaseDir> dirs = {{"IN", EaseDir::IN_}, {"OUT", EaseDir::OUT_}, {"IN_OUT", EaseDir::IN_OUT}};
-            static const std::map<std::string, EaseCalc> calcs = {{"CUBIC", EaseCalc::CUBIC}, {"QUARTIC", EaseCalc::QUARTIC},
-                {"QUINTIC", EaseCalc::QUINTIC}, {"SINUSOIDAL", EaseCalc::SINUSOIDAL}, {"EXPONENTIAL", EaseCalc::EXPONENTIAL},
-                {"CIRCULAR", EaseCalc::CIRCULAR}, {"LINEAR", EaseCalc::LINEAR}};
-            CameraEvent ev; ev.prop = prop; ev.from = d[0]; ev.to = d[1]; ev.ease = true;
-            if (a.size() > 2 && dirs.count(a[2])) ev.dir = dirs.at(a[2]);
-            if (a.size() > 3 && calcs.count(a[3])) ev.calc = calcs.at(a[3]);
+            if (!num(base + "START", a, 2, d)) {
+                return;
+            }
+            static const std::map<std::string, EaseDir> dirs = {
+                {"IN", EaseDir::IN_}, {"OUT", EaseDir::OUT_}, {"IN_OUT", EaseDir::IN_OUT}};
+            static const std::map<std::string, EaseCalc> calcs = {{"CUBIC", EaseCalc::CUBIC},
+                                                                  {"QUARTIC", EaseCalc::QUARTIC},
+                                                                  {"QUINTIC", EaseCalc::QUINTIC},
+                                                                  {"SINUSOIDAL", EaseCalc::SINUSOIDAL},
+                                                                  {"EXPONENTIAL", EaseCalc::EXPONENTIAL},
+                                                                  {"CIRCULAR", EaseCalc::CIRCULAR},
+                                                                  {"LINEAR", EaseCalc::LINEAR}};
+            CameraEvent ev;
+            ev.prop = prop;
+            ev.from = d[0];
+            ev.to = d[1];
+            ev.ease = true;
+            if (a.size() > 2 && dirs.count(a[2])) {
+                ev.dir = dirs.at(a[2]);
+            }
+            if (a.size() > 3 && calcs.count(a[3])) {
+                ev.calc = calcs.at(a[3]);
+            }
             s.open_cam[prop] = push(s, ev);
         };
         registry[base + "END"] = [=, this](const std::string&, ParserState& s) {
             auto it = s.open_cam.find(prop);
-            if (it == s.open_cam.end()) return;
+            if (it == s.open_cam.end()) {
+                return;
+            }
             it->second->end_time = this->current_ms;
             s.open_cam.erase(it);
         };
     }
     registry["#CAMRESET"] = [=](const std::string&, ParserState& s) {
-        CameraEvent ev; ev.prop = CamProp::RESET;
+        CameraEvent ev;
+        ev.prop = CamProp::RESET;
         push(s, ev);
     };
     registry["#BORDERCOLOR"] = [=](const std::string& v, ParserState& s) {
         std::vector<double> d;
-        if (!num("#BORDERCOLOR", split(v), 3, d)) return;
-        CameraEvent ev; ev.prop = CamProp::BORDER_COLOR; ev.from = d[0]; ev.to = d[1]; ev.extra = d[2];
+        if (!num("#BORDERCOLOR", split(v), 3, d)) {
+            return;
+        }
+        CameraEvent ev;
+        ev.prop = CamProp::BORDER_COLOR;
+        ev.from = d[0];
+        ev.to = d[1];
+        ev.extra = d[2];
         push(s, ev);
     };
     registry["#ENABLEDORON"] = [](const std::string&, ParserState& s) { s.doron = true; };
@@ -883,8 +917,12 @@ double safe_stof(const std::string& str) {
 }
 
 void TJAParser::handle_SCROLL(const std::string& value, ParserState& state) {
-    if (state.scroll_type == ScrollType::BMSCROLL) return;
-    if (scroll_disabled) return;
+    if (state.scroll_type == ScrollType::BMSCROLL) {
+        return;
+    }
+    if (scroll_disabled) {
+        return;
+    }
 
     if (value.empty()) {
         spdlog::warn("Empty #SCROLL value in {}", file_path.string());
@@ -898,7 +936,9 @@ void TJAParser::handle_SCROLL(const std::string& value, ParserState& state) {
         std::stringstream ss(value);
         std::string part;
         try {
-            while (std::getline(ss, part, ',')) parts.push_back(std::stod(trim(part)));
+            while (std::getline(ss, part, ',')) {
+                parts.push_back(std::stod(trim(part)));
+            }
         } catch (const std::exception&) {
             parts.clear();
         }
@@ -978,7 +1018,9 @@ void TJAParser::handle_BPMCHANGE(const std::string& value, ParserState& state) {
 // skipped, so the beat map follows the first branch.
 void TJAParser::add_tempo_point(double bpm) {
     auto& points = master_notes.tempo_map.points;
-    if (current_ms < points.back().ms) return;
+    if (current_ms < points.back().ms) {
+        return;
+    }
     if (current_ms == points.back().ms) {
         points.back().bpm = bpm;
         return;
@@ -1105,14 +1147,18 @@ void TJAParser::handle_JPOSSCROLL(const std::string& part, ParserState& state) {
     // A component is pixels ("-94") or, as in TaikoManyGimmicks, a fraction of the default note
     // field width ("3/5"); the distance is one component or a complex "x+yi" / "x-yi" / "yi"
     auto component = [&](std::string c, double& out) -> bool {
-        if (c.empty() || c == "+" || c == "-") c += "1";
+        if (c.empty() || c == "+" || c == "-") {
+            c += "1";
+        }
         size_t slash = c.find('/');
         try {
             if (slash == std::string::npos) {
                 out = std::stod(c);
             } else {
                 double den = std::stod(c.substr(slash + 1));
-                if (den == 0.0) return false;
+                if (den == 0.0) {
+                    return false;
+                }
                 out = std::stod(c.substr(0, slash)) / den * jpos_field_width;
             }
         } catch (const std::exception&) {
@@ -1155,7 +1201,9 @@ void TJAParser::handle_JPOSSCROLL(const std::string& part, ParserState& state) {
     // Iterate in reverse through curr_timeline
     for (auto it = state.curr_timeline->rbegin(); it != state.curr_timeline->rend(); ++it) {
         TimelineObject& obj = *it;
-        if (!obj.delta_x.has_value() || !obj.delta_y.has_value()) continue;
+        if (!obj.delta_x.has_value() || !obj.delta_y.has_value()) {
+            continue;
+        }
         if (obj.end_time > this->current_ms) {
             double available_time = this->current_ms - obj.start_time;
             double total_duration = obj.end_time - obj.start_time;
@@ -1292,7 +1340,9 @@ Note TJAParser::add_bar(ParserState& state) {
     bar_line.scroll_x = state.scroll_x_modifier;
     bar_line.scroll_y = state.scroll_y_modifier;
 
-    if (state.barline_added) bar_line.display = false;
+    if (state.barline_added) {
+        bar_line.display = false;
+    }
 
     if (state.is_branching) {
         bar_line.is_branch_start = true;
@@ -1327,8 +1377,7 @@ Note TJAParser::add_note(char item, ParserState& state) {
         return note;
     } else if (note.type == NoteType::BALLOON_HEAD || note.type == NoteType::KUSUDAMA) {
         state.balloon_index++;
-        note.count = (state.balloon_cursor < state.balloons.size())
-            ? state.balloons[state.balloon_cursor] : 1;
+        note.count = (state.balloon_cursor < state.balloons.size()) ? state.balloons[state.balloon_cursor] : 1;
         state.balloon_cursor++;
         return note;
     }
@@ -1336,15 +1385,8 @@ Note TJAParser::add_note(char item, ParserState& state) {
     return note;
 }
 
-const std::map<int, std::string> TJAParser::DIFFS = {
-    {0, "easy"},
-    {1, "normal"},
-    {2, "hard"},
-    {3, "oni"},
-    {4, "edit"},
-    {5, "tower"},
-    {6, "dan"}
-};
+const std::map<int, std::string> TJAParser::DIFFS = {{0, "easy"}, {1, "normal"}, {2, "hard"}, {3, "oni"},
+                                                     {4, "edit"}, {5, "tower"},  {6, "dan"}};
 
 void modifier_speed(NoteList& notes, float value) {
     for (auto& note : notes.notes) {
@@ -1359,11 +1401,10 @@ void modifier_display(NoteList& notes) {
 }
 
 void modifier_inverse(NoteList& notes) {
-    std::map<NoteType, NoteType> type_mapping = {
-        {NoteType::DON, NoteType::KAT},
-        {NoteType::KAT, NoteType::DON},
-        {NoteType::DON_L, NoteType::KAT_L},
-        {NoteType::KAT_L, NoteType::DON_L}};
+    std::map<NoteType, NoteType> type_mapping = {{NoteType::DON, NoteType::KAT},
+                                                 {NoteType::KAT, NoteType::DON},
+                                                 {NoteType::DON_L, NoteType::KAT_L},
+                                                 {NoteType::KAT_L, NoteType::DON_L}};
 
     for (auto& note : notes.notes) {
         auto it = type_mapping.find(note.type);
@@ -1376,7 +1417,9 @@ void modifier_inverse(NoteList& notes) {
 void modifier_random(NoteList& notes, int value) {
     // value: 1 == kimagure, 2 == detarame
 
-    if (value == 0 || notes.notes.empty()) return;
+    if (value == 0 || notes.notes.empty()) {
+        return;
+    }
 
     int percentage = (notes.notes.size() / 5) * value;
     percentage = std::min(percentage, static_cast<int>(notes.notes.size()));
@@ -1390,11 +1433,10 @@ void modifier_random(NoteList& notes, int value) {
 
     std::vector<int> selected_notes(indices.begin(), indices.begin() + percentage);
 
-    std::map<NoteType, NoteType> type_mapping = {
-        {NoteType::DON, NoteType::KAT},
-        {NoteType::KAT, NoteType::DON},
-        {NoteType::DON_L, NoteType::KAT_L},
-        {NoteType::KAT_L, NoteType::DON_L}};
+    std::map<NoteType, NoteType> type_mapping = {{NoteType::DON, NoteType::KAT},
+                                                 {NoteType::KAT, NoteType::DON},
+                                                 {NoteType::DON_L, NoteType::KAT_L},
+                                                 {NoteType::KAT_L, NoteType::DON_L}};
 
     for (int i : selected_notes) {
         auto it = type_mapping.find(notes.notes[i].type);
@@ -1406,10 +1448,9 @@ void modifier_random(NoteList& notes, int value) {
 
 void modifier_moji(NoteList& notes) {
     static const std::map<NoteType, int> se_notes = {
-        {NoteType::DON, 0}, {NoteType::KAT, 3}, {NoteType::DON_L, 5}, {NoteType::KAT_L, 6},
-        {NoteType::ROLL_HEAD, 7}, {NoteType::ROLL_HEAD_L, 8}, {NoteType::BALLOON_HEAD, 9},
-        {NoteType::TAIL, 10}, {NoteType::KUSUDAMA, 11}
-    };
+        {NoteType::DON, 0},          {NoteType::KAT, 3},       {NoteType::DON_L, 5},
+        {NoteType::KAT_L, 6},        {NoteType::ROLL_HEAD, 7}, {NoteType::ROLL_HEAD_L, 8},
+        {NoteType::BALLOON_HEAD, 9}, {NoteType::TAIL, 10},     {NoteType::KUSUDAMA, 11}};
 
     for (Note& note : notes.notes) {
         auto it = se_notes.find(note.type);
@@ -1418,7 +1459,8 @@ void modifier_moji(NoteList& notes) {
         }
     }
 
-    std::vector<Interval> intervals = {Interval::EIGHTH, Interval::TWELFTH, Interval::SIXTEENTH, Interval::TWENTYFOURTH, Interval::THIRTYSECOND};
+    std::vector<Interval> intervals = {Interval::EIGHTH, Interval::TWELFTH, Interval::SIXTEENTH, Interval::TWENTYFOURTH,
+                                       Interval::THIRTYSECOND};
 
     for (const auto& interval : intervals) {
         auto streams = find_streams(notes.notes, interval);
@@ -1431,8 +1473,7 @@ void modifier_moji(NoteList& notes) {
                 }
             }
             if (length == 3) {
-                if (notes.notes[start + 0].type == NoteType::DON &&
-                    notes.notes[start + 1].type == NoteType::DON &&
+                if (notes.notes[start + 0].type == NoteType::DON && notes.notes[start + 1].type == NoteType::DON &&
                     notes.notes[start + 2].type == NoteType::DON) {
                     notes.notes[start + 1].moji = 2;
                 }
@@ -1468,7 +1509,7 @@ Interval get_note_interval_type(double interval_ms, double bpm, double time_sig)
     }
 
     double ms_per_measure = get_ms_per_measure(bpm, time_sig) / time_sig;
-    double tolerance = 15.0;  // ms tolerance for timing classification
+    double tolerance = 15.0; // ms tolerance for timing classification
 
     double eighth_note = ms_per_measure / 8.0;
     double sixteenth_note = ms_per_measure / 16.0;
@@ -1497,7 +1538,9 @@ std::vector<std::pair<int, int>> find_streams(const std::deque<Note>& modded_not
     std::vector<std::pair<int, int>> streams;
     size_t i = 0;
 
-    if (modded_notes.size() < 2) return streams;
+    if (modded_notes.size() < 2) {
+        return streams;
+    }
 
     while (i < modded_notes.size() - 1) {
         if (modded_notes[i].type == NoteType::ROLL_HEAD || modded_notes[i].type == NoteType::ROLL_HEAD_L ||
@@ -1559,9 +1602,15 @@ std::string TJAParser::get_song_hash() {
             };
 
             absorb_notes(notes);
-            for (const NoteList& nl : branch_m) absorb_notes(nl);
-            for (const NoteList& nl : branch_e) absorb_notes(nl);
-            for (const NoteList& nl : branch_n) absorb_notes(nl);
+            for (const NoteList& nl : branch_m) {
+                absorb_notes(nl);
+            }
+            for (const NoteList& nl : branch_e) {
+                absorb_notes(nl);
+            }
+            for (const NoteList& nl : branch_n) {
+                absorb_notes(nl);
+            }
         }
     }
     return md5_hexdigest(buffer);
@@ -1570,12 +1619,19 @@ std::string TJAParser::get_song_hash() {
 std::string TJAParser::get_diff_hash(int difficulty) {
     auto [notes, branch_m, branch_e, branch_n] = notes_to_position(difficulty);
     auto total_notes = notes.notes.size();
-    for (const NoteList& nl : branch_m) total_notes += nl.notes.size();
-    for (const NoteList& nl : branch_e) total_notes += nl.notes.size();
-    for (const NoteList& nl : branch_n) total_notes += nl.notes.size();
+    for (const NoteList& nl : branch_m) {
+        total_notes += nl.notes.size();
+    }
+    for (const NoteList& nl : branch_e) {
+        total_notes += nl.notes.size();
+    }
+    for (const NoteList& nl : branch_n) {
+        total_notes += nl.notes.size();
+    }
 
-    if (total_notes == 0)
+    if (total_notes == 0) {
         return "";
+    }
 
     std::vector<unsigned char> buffer;
     auto absorb = [&](const void* data, size_t size) {
@@ -1595,8 +1651,14 @@ std::string TJAParser::get_diff_hash(int difficulty) {
     };
 
     absorb_notes(notes);
-    for (const NoteList& nl : branch_m) absorb_notes(nl);
-    for (const NoteList& nl : branch_e) absorb_notes(nl);
-    for (const NoteList& nl : branch_n) absorb_notes(nl);
+    for (const NoteList& nl : branch_m) {
+        absorb_notes(nl);
+    }
+    for (const NoteList& nl : branch_e) {
+        absorb_notes(nl);
+    }
+    for (const NoteList& nl : branch_n) {
+        absorb_notes(nl);
+    }
     return md5_hexdigest(buffer);
 }

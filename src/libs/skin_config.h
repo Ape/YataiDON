@@ -63,14 +63,13 @@ enum class SC : unsigned int {
 };
 
 namespace std {
-    template<> struct hash<SC> {
-        size_t operator()(SC v) const noexcept {
-            return hash<unsigned int>{}(static_cast<unsigned int>(v));
-        }
+    template<>
+    struct hash<SC> {
+        size_t operator()(SC v) const noexcept { return hash<unsigned int>{}(static_cast<unsigned int>(v)); }
     };
-}
+} // namespace std
 
-const std::unordered_map<std::string, SC> skin_config_map {
+const std::unordered_map<std::string, SC> skin_config_map{
     {"screen_fade_ms", SC::SCREEN_FADE_MS},
     {"game_dan_exam_info", SC::GAME_DAN_EXAM_INFO},
     {"skip_counter", SC::SKIP_COUNTER},
@@ -142,14 +141,13 @@ enum class SCO : unsigned int {
 };
 
 namespace std {
-    template<> struct hash<SCO> {
-        size_t operator()(SCO v) const noexcept {
-            return hash<unsigned int>{}(static_cast<unsigned int>(v));
-        }
+    template<>
+    struct hash<SCO> {
+        size_t operator()(SCO v) const noexcept { return hash<unsigned int>{}(static_cast<unsigned int>(v)); }
     };
-}
+} // namespace std
 
-const std::unordered_map<std::string, SCO> screen_options_map {
+const std::unordered_map<std::string, SCO> screen_options_map{
     {"horizontal_song_select", SCO::HORIZONTAL_SONG_SELECT},
     {"one_menu_sort", SCO::ONE_MENU_SORT},
     {"option_skip_row", SCO::OPTION_SKIP_ROW},

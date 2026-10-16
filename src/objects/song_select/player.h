@@ -1,12 +1,12 @@
 #pragma once
 
-#include "../global/nameplate.h"
-#include "../global/chara_3d.h"
-#include "neiro.h"
-#include "modifier.h"
-#include "ura_switch.h"
-#include "diff_sort.h"
 #include "../../libs/texture.h"
+#include "../global/chara_3d.h"
+#include "../global/nameplate.h"
+#include "diff_sort.h"
+#include "modifier.h"
+#include "neiro.h"
+#include "ura_switch.h"
 
 class SongSelectScript;
 
@@ -62,7 +62,7 @@ public:
     void reset_selection();
     SongSelectState handle_input_browsing(double current_ms);
     SongSelectState handle_input_selecting();
-    std::optional<std::pair<int,int>> handle_input_diff_sort(DiffSortSelect* diff_sort_selector);
+    std::optional<std::pair<int, int>> handle_input_diff_sort(DiffSortSelect* diff_sort_selector);
     std::optional<std::string> handle_input_search();
 
     void try_lua_selector(bool is_half, float fade_in, int pass);

@@ -1,15 +1,15 @@
 #include "video.h"
-#include "profiler.h"
-#include "audio.h"
-#include "texture.h"
-#include <spdlog/spdlog.h>
-#include <climits>
 
-VideoPlayer::VideoPlayer(fs::path path)
-    : is_finished_arr{false, false}
-{
+#include <climits>
+#include <spdlog/spdlog.h>
+
+#include "audio.h"
+#include "profiler.h"
+#include "texture.h"
+
+VideoPlayer::VideoPlayer(fs::path path) : is_finished_arr{false, false} {
     if (path.extension() == ".png" || path.extension() == ".jpg") {
-        texture  = ray::LoadTexture(path.string().c_str());
+        texture = ray::LoadTexture(path.string().c_str());
         is_static = true;
         if (!ray::IsTextureValid(texture.value())) {
             spdlog::error("Failed to load static texture for video: {}", path.stem().string());
@@ -21,7 +21,7 @@ VideoPlayer::VideoPlayer(fs::path path)
     }
 
 #ifndef __EMSCRIPTEN__
-    container    = av::AVContainer::open(path);
+    container = av::AVContainer::open(path);
     if (!container) {
         spdlog::error("Failed to open video: {}", path.string());
         return;
@@ -48,13 +48,12 @@ VideoPlayer::VideoPlayer(fs::path path)
 
     fps = video_stream->average_rate().value_or(0.f);
 
-    duration = (container->duration() > 0)
-                   ? static_cast<double>(container->duration()) / av::AVContainer::time_base()
-                   : 0.0;
+    duration =
+        (container->duration() > 0) ? static_cast<double>(container->duration()) / av::AVContainer::time_base() : 0.0;
 
     frame_count = (fps > 0.f) ? static_cast<int>(duration * fps) + 1 : 0;
 
-    frame_index    = 0;
+    frame_index = 0;
     frame_duration = (fps > 0.f) ? 1000.0 / fps : 0.0;
 #endif
 }
@@ -64,16 +63,19 @@ VideoPlayer::~VideoPlayer() {
 }
 
 void VideoPlayer::audio_manager() {
-    if (is_finished_arr[1]) return;
-    if (!is_started()) return;
+    if (is_finished_arr[1]) {
+        return;
+    }
+    if (!is_started()) {
+        return;
+    }
 
     if (!audio_started) {
         audio.play_music_stream(audio_s);
         audio_started = true;
     }
 
-    is_finished_arr[1] =
-        audio.get_music_time_played(audio_s) >= audio.get_music_time_length(audio_s);
+    is_finished_arr[1] = audio.get_music_time_played(audio_s) >= audio.get_music_time_length(audio_s);
 }
 
 void VideoPlayer::decode_loop() {
@@ -85,7 +87,9 @@ void VideoPlayer::decode_loop() {
 
         int produced = 0;
         while (!decode_stop.load(std::memory_order_relaxed)) {
-            if (!frame_generator->next(current_decoded_frame)) break; // EOF
+            if (!frame_generator->next(current_decoded_frame)) {
+                break; // EOF
+            }
             current_decoded_frame->reformat("rgb24");
 
             DecodedFrame frame;
@@ -98,17 +102,18 @@ void VideoPlayer::decode_loop() {
             }
             av::AVPlane plane = current_decoded_frame->plane(0);
             frame.bytes.assign(plane.data(), plane.data() + plane.size());
-            frame.width  = current_decoded_frame->width();
+            frame.width = current_decoded_frame->width();
             frame.height = current_decoded_frame->height();
-            frame.index  = produced++;
+            frame.index = produced++;
             current_decoded_frame.reset();
 
             std::unique_lock<std::mutex> lock(queue_mutex);
             queue_cv.wait(lock, [&] {
-                return decode_stop.load(std::memory_order_relaxed) ||
-                       frame_queue.size() < MAX_QUEUED_FRAMES;
+                return decode_stop.load(std::memory_order_relaxed) || frame_queue.size() < MAX_QUEUED_FRAMES;
             });
-            if (decode_stop.load(std::memory_order_relaxed)) break;
+            if (decode_stop.load(std::memory_order_relaxed)) {
+                break;
+            }
             frame_queue.push_back(std::move(frame));
         }
     } catch (const std::exception& e) {
@@ -138,19 +143,18 @@ void VideoPlayer::stop_decode_thread() {
 void VideoPlayer::upload_frame(const DecodedFrame& frame) {
     const void* pixels_ptr = static_cast<const void*>(frame.bytes.data());
 
-    if (texture.has_value() &&
-        (texture->width != frame.width || texture->height != frame.height)) {
+    if (texture.has_value() && (texture->width != frame.width || texture->height != frame.height)) {
         ray::UnloadTexture(texture.value());
         texture.reset();
     }
 
     if (!texture.has_value()) {
         ray::Image image{};
-        image.data    = const_cast<void*>(pixels_ptr);   // raylib copies on load
-        image.width   = frame.width;
-        image.height  = frame.height;
+        image.data = const_cast<void*>(pixels_ptr); // raylib copies on load
+        image.width = frame.width;
+        image.height = frame.height;
         image.mipmaps = 1;
-        image.format  = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+        image.format = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8;
 
         ray::Texture2D tex = ray::LoadTextureFromImage(image);
         ray::SetTextureFilter(tex, ray::TEXTURE_FILTER_TRILINEAR);
@@ -165,7 +169,9 @@ bool VideoPlayer::is_started() const {
 }
 
 void VideoPlayer::start(double current_ms) {
-    if (is_static || !container) return;
+    if (is_static || !container) {
+        return;
+    }
 
     stop_decode_thread();
     audio.stop_music_stream(audio_s);
@@ -188,23 +194,27 @@ bool VideoPlayer::is_finished() const {
 }
 
 void VideoPlayer::set_volume(float volume) {
-    if (is_static || !container) return;
+    if (is_static || !container) {
+        return;
+    }
     audio.set_music_volume(audio_s, volume);
 }
 
 void VideoPlayer::update(double current_ms) {
-    if (is_static || !container) return;
+    if (is_static || !container) {
+        return;
+    }
 
     audio_manager();
 
-    if (!is_started()) return;
+    if (!is_started()) {
+        return;
+    }
 
     double elapsed_ms = current_ms - start_ms.value();
     // Unknown fps/duration: drain whatever the decoder has produced and rely
     // on decode_eof (below) to signal completion instead of a frame estimate.
-    int target_frame = (frame_duration > 0.0)
-        ? static_cast<int>(elapsed_ms / frame_duration)
-        : INT_MAX;
+    int target_frame = (frame_duration > 0.0) ? static_cast<int>(elapsed_ms / frame_duration) : INT_MAX;
 
     // Drain all due frames from the decode queue but upload only the newest;
     // intermediate catch-up frames skip the GPU entirely
@@ -239,35 +249,33 @@ void VideoPlayer::update(double current_ms) {
 
 void VideoPlayer::draw() {
     ray::ClearBackground(ray::BLACK);
-    if (!texture.has_value()) return;
+    if (!texture.has_value()) {
+        return;
+    }
 
-    ray::Rectangle source{
-        0.f, 0.f,
-        static_cast<float>(texture->width),
-        static_cast<float>(texture->height)
-    };
+    ray::Rectangle source{0.f, 0.f, static_cast<float>(texture->width), static_cast<float>(texture->height)};
 
-    float texture_aspect = static_cast<float>(texture->width)  / static_cast<float>(texture->height);
-    float screen_aspect  = static_cast<float>(tex.screen_width) / static_cast<float>(tex.screen_height);
+    float texture_aspect = static_cast<float>(texture->width) / static_cast<float>(texture->height);
+    float screen_aspect = static_cast<float>(tex.screen_width) / static_cast<float>(tex.screen_height);
 
     float dest_width, dest_height, dest_x, dest_y;
 
     if (texture_aspect > screen_aspect) {
-        //Letterbox
-        dest_width  = static_cast<float>(tex.screen_width);
+        // Letterbox
+        dest_width = static_cast<float>(tex.screen_width);
         dest_height = static_cast<float>(tex.screen_width) / texture_aspect;
-        dest_x      = 0.f;
-        dest_y      = (static_cast<float>(tex.screen_height) - dest_height) / 2.f;
+        dest_x = 0.f;
+        dest_y = (static_cast<float>(tex.screen_height) - dest_height) / 2.f;
     } else {
-        //Pillarbox
+        // Pillarbox
         dest_height = static_cast<float>(tex.screen_height);
-        dest_width  = static_cast<float>(tex.screen_height) * texture_aspect;
-        dest_x      = (static_cast<float>(tex.screen_width) - dest_width) / 2.f;
-        dest_y      = 0.f;
+        dest_width = static_cast<float>(tex.screen_height) * texture_aspect;
+        dest_x = (static_cast<float>(tex.screen_width) - dest_width) / 2.f;
+        dest_y = 0.f;
     }
 
-    ray::Rectangle destination{ dest_x, dest_y, dest_width, dest_height };
-    ray::Vector2   origin{ 0.f, 0.f };
+    ray::Rectangle destination{dest_x, dest_y, dest_width, dest_height};
+    ray::Vector2 origin{0.f, 0.f};
 
     ray::DrawTexturePro(texture.value(), source, destination, origin, 0.f, ray::WHITE);
 }

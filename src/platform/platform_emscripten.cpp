@@ -1,25 +1,25 @@
 #include "platform_emscripten.h"
 
-#include <spdlog/spdlog.h>
-#include <filesystem>
 #include <chrono>
 #include <csignal>
-#include <unistd.h>
+#include <filesystem>
+#include <spdlog/spdlog.h>
 #include <thread>
+#include <unistd.h>
 
 #ifdef __EMSCRIPTEN__
+#include <SDL3/SDL.h>
 #include <emscripten.h>
 #include <emscripten/html5.h>
-#include <SDL3/SDL.h>
 #endif
 
 namespace {
 
-void signal_handler(int signal) {
-    if (signal == SIGINT) {
-        _exit(0);
+    void signal_handler(int signal) {
+        if (signal == SIGINT) {
+            _exit(0);
+        }
     }
-}
 
 } // namespace
 
@@ -67,10 +67,13 @@ void emscripten_shutdown() {
 void emscripten_sync_filesystem() {
 #ifdef __EMSCRIPTEN__
     EM_ASM({
-        if (typeof FS !== 'undefined' && FS.syncfs) {
+        if (typeof FS != = 'undefined' && FS.syncfs) {
             FS.syncfs(function(err) {
-                if (err) console.error('FS sync failed:', err);
-                else console.log('FS synced successfully');
+                if (err) {
+                    console.error('FS sync failed:', err);
+                } else {
+                    console.log('FS synced successfully');
+                }
             });
         }
     });

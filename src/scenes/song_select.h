@@ -1,16 +1,16 @@
 #pragma once
 
 #include "../libs/screen.h"
-#include "../objects/song_select/player.h"
-#include "../objects/song_select/song_select_script.h"
-#include "../objects/song_select/dan_transition.h"
-#include "../objects/song_select/search_box.h"
+#include "../objects/game/song_info.h"
+#include "../objects/game/transition.h"
 #include "../objects/global/allnet_indicator.h"
 #include "../objects/global/coin_overlay.h"
-#include "../objects/global/timer.h"
 #include "../objects/global/indicator.h"
-#include "../objects/game/transition.h"
-#include "../objects/game/song_info.h"
+#include "../objects/global/timer.h"
+#include "../objects/song_select/dan_transition.h"
+#include "../objects/song_select/player.h"
+#include "../objects/song_select/search_box.h"
+#include "../objects/song_select/song_select_script.h"
 
 struct ReplayData;
 
@@ -39,7 +39,7 @@ protected:
     std::unique_ptr<SongSelectPlayer> player;
 
     std::optional<DiffSortSelect> diff_sort_selector;
-    std::pair<int,int> last_diff_sort = {-1, -1};
+    std::pair<int, int> last_diff_sort = {-1, -1};
     int last_diff_order = 1;
     void apply_sort_window_result();
     void update_selection_ui(double current_time, bool advance_timers);
@@ -77,8 +77,7 @@ protected:
     virtual Screens get_game_screen_target() { return Screens::GAME; }
 
 public:
-    SongSelectScreen() : Screen("song_select") {
-    }
+    SongSelectScreen() : Screen("song_select") {}
 
     explicit SongSelectScreen(const std::string& name) : Screen(name) {}
 

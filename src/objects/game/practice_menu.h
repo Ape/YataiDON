@@ -1,29 +1,45 @@
 #pragma once
 
 #include <array>
+
 #include "../../libs/script.h"
 
 // The practice pause menu. This keeps the state (selected row, dialog, selected button) and the
 // actions; the skin's PracticeMenu (game/practice_menu.lua) draws it and hit-tests the pointer.
 class PracticeMenu : public LuaScript {
 public:
-    enum class Dialog { NONE, AUTO, RESTART, ANOTHER, END };
+    enum class Dialog {
+        NONE,
+        AUTO,
+        RESTART,
+        ANOTHER,
+        END
+    };
 
-    enum class Action { NONE, END_GAME, ANOTHER_SONG, RESTART, JUMP_TO_MARK, SET_MARK, AUTO_ON, AUTO_OFF };
+    enum class Action {
+        NONE,
+        END_GAME,
+        ANOTHER_SONG,
+        RESTART,
+        JUMP_TO_MARK,
+        SET_MARK,
+        AUTO_ON,
+        AUTO_OFF
+    };
 
     static constexpr int MARK_SLOTS = 5;
-    static constexpr int ROW_COUNT  = 7;
+    static constexpr int ROW_COUNT = 7;
 
     bool open = false;
     int index = 0;
     Dialog dialog = Dialog::NONE;
-    int dialog_sel = 0;   // 0 = left option, 1 = right option
+    int dialog_sel = 0; // 0 = left option, 1 = right option
 
     bool editing_marks = false;
     bool jumping_marks = false;
 
-    void init_textures();   // loads the skin script
-    void unload();          // drops the Lua object before the Lua state can go away
+    void init_textures(); // loads the skin script
+    void unload();        // drops the Lua object before the Lua state can go away
 
     void open_menu();
     void close();

@@ -1,17 +1,26 @@
 #include "timer.h"
+
 #include "../../libs/global_data.h"
 
 Timer::Timer(int time, double current_time_ms, std::function<void()> confirm_func) {
     bool is_frozen = global_data.config ? global_data.config->limits.timer_frozen : false;
-    if (!load("Timer", "timer", time, current_time_ms, confirm_func, is_frozen)) return;
+    if (!load("Timer", "timer", time, current_time_ms, confirm_func, is_frozen)) {
+        return;
+    }
     fn_update = lua_object["update"];
-    fn_draw   = lua_object["draw"];
+    fn_draw = lua_object["draw"];
 }
 
-void Timer::update(double current_ms) { call(fn_update, "Timer:update", current_ms); }
-void Timer::draw(float x, float y)    { call(fn_draw,   "Timer:draw", x, y); }
+void Timer::update(double current_ms) {
+    call(fn_update, "Timer:update", current_ms);
+}
+void Timer::draw(float x, float y) {
+    call(fn_draw, "Timer:draw", x, y);
+}
 int Timer::time() const {
-    if (!lua_object.valid()) return -1;
+    if (!lua_object.valid()) {
+        return -1;
+    }
     sol::optional<int> t = lua_object["time"];
     return t ? *t : -1;
 }

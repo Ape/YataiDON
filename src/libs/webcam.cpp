@@ -1,7 +1,8 @@
 #include "webcam.h"
+
 #include <SDL3/SDL_camera.h>
-#include <spdlog/spdlog.h>
 #include <cstring>
+#include <spdlog/spdlog.h>
 #include <utility>
 #include <vector>
 
@@ -12,11 +13,11 @@ WebCamera::~WebCamera() {
 }
 
 WebCamera::WebCamera(WebCamera&& other) noexcept
-    : m_camera(other.m_camera), m_texture(std::move(other.m_texture)),
-      m_width(other.m_width), m_height(other.m_height) {
+    : m_camera(other.m_camera), m_texture(std::move(other.m_texture)), m_width(other.m_width),
+      m_height(other.m_height) {
     other.m_camera = nullptr;
     other.m_texture.reset();
-    other.m_width  = 0;
+    other.m_width = 0;
     other.m_height = 0;
 }
 
@@ -25,18 +26,20 @@ WebCamera& WebCamera::operator=(WebCamera&& other) noexcept {
         close();
         m_camera = other.m_camera;
         m_texture = std::move(other.m_texture);
-        m_width  = other.m_width;
+        m_width = other.m_width;
         m_height = other.m_height;
         other.m_camera = nullptr;
         other.m_texture.reset();
-        other.m_width  = 0;
+        other.m_width = 0;
         other.m_height = 0;
     }
     return *this;
 }
 
 bool WebCamera::open(int device_index) {
-    if (m_camera) close();
+    if (m_camera) {
+        close();
+    }
 
     if (!SDL_InitSubSystem(SDL_INIT_CAMERA)) {
         spdlog::error("WebCamera: failed to init SDL camera subsystem: {}", SDL_GetError());
@@ -83,13 +86,15 @@ void WebCamera::close() {
         m_camera = nullptr;
         SDL_QuitSubSystem(SDL_INIT_CAMERA);
     }
-    m_width  = 0;
+    m_width = 0;
     m_height = 0;
     m_permission_denied_logged = false;
 }
 
 void WebCamera::update() {
-    if (!m_camera) return;
+    if (!m_camera) {
+        return;
+    }
 
     // 0 = pending, -1 = denied
     int perm = SDL_GetCameraPermissionState(static_cast<SDL_Camera*>(m_camera));
@@ -105,37 +110,44 @@ void WebCamera::update() {
         }
         return;
     }
-    if (perm == 0) return;
+    if (perm == 0) {
+        return;
+    }
 
     Uint64 timestamp = 0;
     SDL_Surface* frame = SDL_AcquireCameraFrame(static_cast<SDL_Camera*>(m_camera), &timestamp);
-    if (!frame) return;
+    if (!frame) {
+        return;
+    }
 
     SDL_Surface* rgba = SDL_ConvertSurface(frame, SDL_PIXELFORMAT_RGBA32);
     SDL_ReleaseCameraFrame(static_cast<SDL_Camera*>(m_camera), frame);
 
-    if (!rgba) return;
+    if (!rgba) {
+        return;
+    }
 
     std::vector<uint8_t> packed;
     void* pixels = rgba->pixels;
     if (rgba->pitch != rgba->w * 4) {
         packed.resize((size_t)rgba->w * rgba->h * 4);
         const uint8_t* src = static_cast<const uint8_t*>(rgba->pixels);
-        for (int y = 0; y < rgba->h; y++)
+        for (int y = 0; y < rgba->h; y++) {
             memcpy(packed.data() + (size_t)y * rgba->w * 4, src + (size_t)y * rgba->pitch, (size_t)rgba->w * 4);
+        }
         pixels = packed.data();
     }
 
     if (!m_texture.has_value()) {
-        m_width  = rgba->w;
+        m_width = rgba->w;
         m_height = rgba->h;
 
         ray::Image img{};
-        img.data    = pixels;
-        img.width   = m_width;
-        img.height  = m_height;
+        img.data = pixels;
+        img.width = m_width;
+        img.height = m_height;
         img.mipmaps = 1;
-        img.format  = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+        img.format = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
 
         ray::Texture2D tex = ray::LoadTextureFromImage(img);
         if (tex.id == 0) {
@@ -150,14 +162,14 @@ void WebCamera::update() {
         // frame geometry changed - recreate the texture
         ray::UnloadTexture(m_texture.value());
         m_texture.reset();
-        m_width  = rgba->w;
+        m_width = rgba->w;
         m_height = rgba->h;
         ray::Image img{};
-        img.data    = pixels;
-        img.width   = m_width;
-        img.height  = m_height;
+        img.data = pixels;
+        img.width = m_width;
+        img.height = m_height;
         img.mipmaps = 1;
-        img.format  = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+        img.format = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
         ray::Texture2D tex = ray::LoadTextureFromImage(img);
         if (tex.id == 0) {
             spdlog::error("WebCamera: failed to create texture {}x{}", m_width, m_height);

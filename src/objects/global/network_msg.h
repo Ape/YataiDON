@@ -7,6 +7,7 @@ class NetworkMsg : public LuaScript {
     sol::protected_function fn_draw;
     sol::protected_function fn_show;
     sol::protected_function fn_hide;
+
 public:
     NetworkMsg();
     bool available = false;

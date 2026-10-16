@@ -3,6 +3,7 @@
 #include <array>
 #include <optional>
 #include <string>
+
 #include "../../libs/script.h"
 
 class RetryGameScene : public LuaScript {
@@ -14,6 +15,7 @@ class RetryGameScene : public LuaScript {
     sol::protected_function fn_hit;
     sol::protected_function fn_is_finished;
     sol::protected_function fn_is_success;
+
 public:
     RetryGameScene(int player_num, int norma);
     void update(double current_ms);

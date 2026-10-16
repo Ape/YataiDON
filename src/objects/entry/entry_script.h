@@ -1,6 +1,7 @@
 #pragma once
 #include <optional>
 #include <utility>
+
 #include "../../libs/script.h"
 
 class EntryScript : public LuaScript {

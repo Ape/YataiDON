@@ -6,7 +6,9 @@ class GenreBG {
 public:
     GenreBG(const std::string& text_name, std::optional<ray::Color> color, TextureIndex texture_index, float distance);
     ~GenreBG() {
-        if (shader_loaded) ray::UnloadShader(shader);
+        if (shader_loaded) {
+            ray::UnloadShader(shader);
+        }
     }
 
     void update(double current_ms, FolderBox* box);
@@ -19,8 +21,16 @@ public:
     int texture_frame() const { return (int)texture_index; }
     OutlinedText* name_text() const { return name.get(); }
     bool has_recolor() const { return shader_loaded; }
-    void begin_recolor() { if (shader_loaded) ray::BeginShaderMode(shader); }
-    void end_recolor()   { if (shader_loaded) ray::EndShaderMode(); }
+    void begin_recolor() {
+        if (shader_loaded) {
+            ray::BeginShaderMode(shader);
+        }
+    }
+    void end_recolor() {
+        if (shader_loaded) {
+            ray::EndShaderMode();
+        }
+    }
 
     std::unique_ptr<MoveAnimation> stretch;
     std::unique_ptr<TextureResizeAnimation> scale;

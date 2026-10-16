@@ -1,4 +1,5 @@
 ﻿#include "box.h"
+
 #include <stdexcept>
 
 static constexpr int ENTRY_BOX_MOVE_ANIM_ID = 10;
@@ -6,13 +7,19 @@ static constexpr int ENTRY_BOX_OPEN_ANIM_ID = 11;
 
 static const char* mode_key(Screens location) {
     switch (location) {
-        case Screens::SONG_SELECT:
-        case Screens::SONG_SELECT_2P:   return "entry_game";
-        case Screens::DAN_SELECT:       return "entry_dan";
-        case Screens::PRACTICE_SELECT:  return "entry_practice";
-        case Screens::ENTRY:            return "entry_costume";
-        case Screens::SETTINGS:         return "entry_settings";
-        default:                        return "";
+    case Screens::SONG_SELECT:
+    case Screens::SONG_SELECT_2P:
+        return "entry_game";
+    case Screens::DAN_SELECT:
+        return "entry_dan";
+    case Screens::PRACTICE_SELECT:
+        return "entry_practice";
+    case Screens::ENTRY:
+        return "entry_costume";
+    case Screens::SETTINGS:
+        return "entry_settings";
+    default:
+        return "";
     }
 }
 
@@ -28,7 +35,8 @@ Box::Box(const std::string& text_str, int font_size, Screens location) : locatio
     move = dynamic_cast<MoveAnimation*>(tex.get_animation(ENTRY_BOX_MOVE_ANIM_ID));
     open = dynamic_cast<MoveAnimation*>(tex.get_animation(ENTRY_BOX_OPEN_ANIM_ID));
     if (move == nullptr || open == nullptr) {
-        spdlog::error("Box: animation {} or {} is missing/not a MoveAnimation", ENTRY_BOX_MOVE_ANIM_ID, ENTRY_BOX_OPEN_ANIM_ID);
+        spdlog::error("Box: animation {} or {} is missing/not a MoveAnimation", ENTRY_BOX_MOVE_ANIM_ID,
+                      ENTRY_BOX_OPEN_ANIM_ID);
         throw std::runtime_error("Box: required MoveAnimation missing");
     }
     is_selected = false;
@@ -129,5 +137,6 @@ void Box::move_down() {
 }
 
 void Box::draw(float fade, bool has_prev, bool has_next, bool disabled) {
-    call(fn_draw, "EntryBox:draw", x, left_x, right_x, is_selected, move->is_finished, (float)open->attribute, fade, y_pos, has_prev, has_next, disabled);
+    call(fn_draw, "EntryBox:draw", x, left_x, right_x, is_selected, move->is_finished, (float)open->attribute, fade,
+         y_pos, has_prev, has_next, disabled);
 }

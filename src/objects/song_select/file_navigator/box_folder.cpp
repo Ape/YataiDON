@@ -1,104 +1,115 @@
 #include "box_folder.h"
 #ifdef SUPPORT_FUMEN
-#include "../../../libs/optional/gen4.h"
 #include "../../../libs/optional/gen3.h"
+#include "../../../libs/optional/gen4.h"
 #endif
-#include "navigator.h"
-#include "../../../libs/filesystem.h"
-#include "../../../libs/scores.h"
-#include "../../../libs/audio.h"
 #include <deque>
 #include <mutex>
 #include <unordered_set>
 
+#include "../../../libs/audio.h"
+#include "../../../libs/filesystem.h"
+#include "../../../libs/scores.h"
+#include "navigator.h"
+
 namespace {
 
-struct FolderScan {
-    std::map<int, Crown> crown;
-    std::map<int, Crown> crown_p2;
-    int tja_count;
-};
-std::mutex scan_cache_mutex;
-std::map<fs::path, FolderScan> scan_cache;
+    struct FolderScan {
+        std::map<int, Crown> crown;
+        std::map<int, Crown> crown_p2;
+        int tja_count;
+    };
+    std::mutex scan_cache_mutex;
+    std::map<fs::path, FolderScan> scan_cache;
 
-std::mutex deferred_mutex;
-std::deque<fs::path> deferred_scans;
+    std::mutex deferred_mutex;
+    std::deque<fs::path> deferred_scans;
 
-void scan_folder_now(const fs::path& path) {
-    std::map<int, Crown> crown;
-    std::map<int, Crown> crown_p2;
-    int tja_count = 0;
-    std::set<int> disqualified_p1;
-    std::set<int> disqualified_p2;
+    void scan_folder_now(const fs::path& path) {
+        std::map<int, Crown> crown;
+        std::map<int, Crown> crown_p2;
+        int tja_count = 0;
+        std::set<int> disqualified_p1;
+        std::set<int> disqualified_p2;
 
-    const std::string& player_1_id = global_data.config->network.access_code_1;
-    const std::string& player_2_id = global_data.config->network.access_code_2;
+        const std::string& player_1_id = global_data.config->network.access_code_1;
+        const std::string& player_2_id = global_data.config->network.access_code_2;
 
-    auto update_crown = [&](const fs::path& file_path, const std::string& player_id, std::map<int, Crown>& out_crown, std::set<int>& disqualified) {
-        const auto& hashes = scores_manager.get_hashes(file_path);
-        for (int diff = 0; diff < 5; diff++) {
-            if (hashes[diff].empty()) continue;
-            std::string hash = hashes[diff];
-            auto score = scores_manager.get_score(hash, diff, player_id);
+        auto update_crown = [&](const fs::path& file_path, const std::string& player_id,
+                                std::map<int, Crown>& out_crown, std::set<int>& disqualified) {
+            const auto& hashes = scores_manager.get_hashes(file_path);
+            for (int diff = 0; diff < 5; diff++) {
+                if (hashes[diff].empty()) {
+                    continue;
+                }
+                std::string hash = hashes[diff];
+                auto score = scores_manager.get_score(hash, diff, player_id);
 
-            if (!score || score->crown == Crown::NONE) {
-                out_crown.erase(diff);
-                disqualified.insert(diff);
+                if (!score || score->crown == Crown::NONE) {
+                    out_crown.erase(diff);
+                    disqualified.insert(diff);
+                    continue;
+                }
+
+                if (disqualified.count(diff)) {
+                    continue;
+                }
+
+                if (out_crown.find(diff) == out_crown.end()) {
+                    out_crown[diff] = score->crown;
+                } else {
+                    out_crown[diff] = std::min(out_crown[diff], score->crown);
+                }
+            }
+        };
+
+        // Errors are stepped over rather than thrown: one unreadable entry deep in
+        // a tree should not take the folder box down with it.
+        std::error_code scan_ec;
+        auto scan = fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied, scan_ec);
+        while (scan != fs::end(scan)) {
+            const fs::directory_entry& entry = *scan;
+            if (entry.path().filename() == "song_list.txt") {
+                auto entries = read_song_list(entry.path());
+                tja_count += (int)entries.size();
+                for (const auto& e : entries) {
+                    if (auto found = scores_manager.get_path_by_hash(e.hash)) {
+                        update_crown(*found, player_1_id, crown, disqualified_p1);
+                        update_crown(*found, player_2_id, crown_p2, disqualified_p2);
+                    }
+                }
+                scan.increment(scan_ec);
+                if (scan_ec) {
+                    break;
+                }
                 continue;
             }
+            auto ext = entry.path().extension();
+            if (ext == ".tja" || ext == ".osu") {
+                tja_count++;
+                update_crown(entry.path(), player_1_id, crown, disqualified_p1);
+                update_crown(entry.path(), player_2_id, crown_p2, disqualified_p2);
+            }
 
-            if (disqualified.count(diff)) continue;
-
-            if (out_crown.find(diff) == out_crown.end())
-                out_crown[diff] = score->crown;
-            else
-                out_crown[diff] = std::min(out_crown[diff], score->crown);
-        }
-    };
-
-    // Errors are stepped over rather than thrown: one unreadable entry deep in
-    // a tree should not take the folder box down with it.
-    std::error_code scan_ec;
-    auto scan = fs::recursive_directory_iterator(
-        path, fs::directory_options::skip_permission_denied, scan_ec);
-    while (scan != fs::end(scan)) {
-        const fs::directory_entry& entry = *scan;
-        if (entry.path().filename() == "song_list.txt") {
-            auto entries = read_song_list(entry.path());
-            tja_count += (int)entries.size();
-            for (const auto& e : entries)
-                if (auto found = scores_manager.get_path_by_hash(e.hash)) {
-                    update_crown(*found, player_1_id, crown, disqualified_p1);
-                    update_crown(*found, player_2_id, crown_p2, disqualified_p2);
-                }
             scan.increment(scan_ec);
-            if (scan_ec) break;
-            continue;
-        }
-        auto ext = entry.path().extension();
-        if (ext == ".tja" || ext == ".osu") {
-            tja_count++;
-            update_crown(entry.path(), player_1_id, crown, disqualified_p1);
-            update_crown(entry.path(), player_2_id, crown_p2, disqualified_p2);
+            if (scan_ec) {
+                break;
+            }
         }
 
-        scan.increment(scan_ec);
-        if (scan_ec) break;
+        std::lock_guard<std::mutex> lock(scan_cache_mutex);
+        scan_cache[path] = {crown, crown_p2, tja_count};
     }
-
-    std::lock_guard<std::mutex> lock(scan_cache_mutex);
-    scan_cache[path] = {crown, crown_p2, tja_count};
-}
-}
+} // namespace
 
 void FolderBox::invalidate_scan_cache() {
     std::lock_guard<std::mutex> lock(scan_cache_mutex);
     scan_cache.clear();
 }
 
-FolderBox::FolderBox(const fs::path& path, const BoxDef& box_def, std::map<std::pair<std::string, std::string>, fs::path>& song_files)
-    : BaseBox(path, box_def), tja_count(0)
-{
+FolderBox::FolderBox(const fs::path& path, const BoxDef& box_def,
+                     std::map<std::pair<std::string, std::string>, fs::path>& song_files)
+    : BaseBox(path, box_def), tja_count(0) {
     this->text_name = box_def.name;
     enter_fade = std::make_unique<FadeAnimation>(166);
     refresh_scores(song_files);
@@ -121,19 +132,25 @@ void FolderBox::refresh_scores(const std::map<std::pair<std::string, std::string
     crown_p2.clear();
     tja_count = 0;
 
-    #ifdef SUPPORT_FUMEN
+#ifdef SUPPORT_FUMEN
     if (const gen4::Library* library = gen4::library_for(path)) {
         int genre_no = gen4::genre_of_path(path);
-        for (const gen4::OrderEntry& listing : library->order())
-            if (genre_no < 0 || listing.genre_no == genre_no) tja_count++;
+        for (const gen4::OrderEntry& listing : library->order()) {
+            if (genre_no < 0 || listing.genre_no == genre_no) {
+                tja_count++;
+            }
+        }
         std::lock_guard<std::mutex> lock(scan_cache_mutex);
         scan_cache[path] = {crown, crown_p2, tja_count};
         return;
     }
     if (const gen3::Library* library = gen3::library_for(path)) {
         std::string genre = gen3::genre_of_path(path);
-        for (const gen3::SongEntry& e : library->songs())
-            if (genre.empty() || e.genre == genre) tja_count++;
+        for (const gen3::SongEntry& e : library->songs()) {
+            if (genre.empty() || e.genre == genre) {
+                tja_count++;
+            }
+        }
         std::lock_guard<std::mutex> lock(scan_cache_mutex);
         scan_cache[path] = {crown, crown_p2, tja_count};
         return;
@@ -147,25 +164,32 @@ void FolderBox::refresh_scores(const std::map<std::pair<std::string, std::string
 
 void FolderBox::run_deferred_scans(std::atomic<bool>& abort_flag) {
     for (;;) {
-        if (abort_flag) return;   // leave the rest queued for the next load
+        if (abort_flag) {
+            return; // leave the rest queued for the next load
+        }
         fs::path next;
         {
             std::lock_guard<std::mutex> lock(deferred_mutex);
-            if (deferred_scans.empty()) return;
+            if (deferred_scans.empty()) {
+                return;
+            }
             next = std::move(deferred_scans.front());
             deferred_scans.pop_front();
         }
         {
             std::lock_guard<std::mutex> lock(scan_cache_mutex);
-            if (scan_cache.count(next)) continue;
+            if (scan_cache.count(next)) {
+                continue;
+            }
         }
         scan_folder_now(next);
     }
 }
 
 FolderBox::~FolderBox() {
-    if (box_texture.has_value())
+    if (box_texture.has_value()) {
         ray::UnloadTexture(box_texture.value());
+    }
 }
 
 void FolderBox::load_text() {

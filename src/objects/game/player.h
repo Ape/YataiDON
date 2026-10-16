@@ -1,12 +1,13 @@
 #pragma once
 
 #include <unordered_map>
+
+#include "../../libs/network.h"
 #include "../../libs/screen.h"
 #include "../../libs/song_parser.h"
 #include "../../libs/text.h"
-#include "../../libs/network.h"
-#include "../global/nameplate.h"
 #include "../global/chara_3d.h"
+#include "../global/nameplate.h"
 #include "background.h"
 #include "balloon_counter.h"
 #include "branch_indicator.h"
@@ -18,20 +19,20 @@
 #include "fail_animation.h"
 #include "fc_animation.h"
 #include "fireworks.h"
+#include "gauge.h"
 #include "gauge_hit_effect.h"
 #include "gogo_time.h"
+#include "judge_counter.h"
 #include "judgment.h"
 #include "kusudama_counter.h"
 #include "lane_hit_effect.h"
 #include "note_arc.h"
-#include "gauge.h"
-#include "judge_counter.h"
 #include "score_counter.h"
 
 namespace JudgePos {
     inline float X = 0.0f;
     inline float Y = 0.0f;
-}
+} // namespace JudgePos
 
 namespace Timing {
     constexpr float GOOD = 25.0250015258789f;
@@ -40,7 +41,7 @@ namespace Timing {
     constexpr float GOOD_EASY = 41.7083358764648f;
     constexpr float OK_EASY = 108.441665649414f;
     constexpr float BAD_EASY = 125.125f;
-}
+} // namespace Timing
 
 class Player {
 public:
@@ -52,8 +53,8 @@ public:
 
     std::vector<BranchDifficulty> branch_history;
 
-    Player(std::optional<SongParser>& parser_ref, PlayerNum player_num_param, int difficulty_param,
-           bool is_2p_param, const Modifiers& modifiers_param);
+    Player(std::optional<SongParser>& parser_ref, PlayerNum player_num_param, int difficulty_param, bool is_2p_param,
+           const Modifiers& modifiers_param);
 
     std::optional<JudgeCounter> judge_counter;
     std::optional<Gauge> gauge;
@@ -72,8 +73,8 @@ public:
     ResultData get_result_score();
 
     int get_good() const { return good_count; }
-    int get_ok()   const { return ok_count; }
-    int get_bad()  const { return bad_count; }
+    int get_ok() const { return ok_count; }
+    int get_bad() const { return bad_count; }
     std::optional<Judgments> get_note_judgment(int note_index) const {
         auto it = note_judgments.find(note_index);
         return it != note_judgments.end() ? std::optional<Judgments>(it->second) : std::nullopt;
@@ -105,13 +106,17 @@ public:
         last_reported_score = -1;
         last_reported_gogo = -1;
         arc_points = 25;
-        if (judge_counter) judge_counter = JudgeCounter();
+        if (judge_counter) {
+            judge_counter = JudgeCounter();
+        }
     }
     int get_score() const { return score; }
     int get_max_combo() const { return max_combo; }
     int get_combo() const { return combo; }
     int get_total_drumroll() const { return total_drumroll; }
-    int get_scissor_x() const { return lane_cover_tex_id ? virtual_to_screen_x(lane_cover_tex_id->scissor_right()) : 0; }
+    int get_scissor_x() const {
+        return lane_cover_tex_id ? virtual_to_screen_x(lane_cover_tex_id->scissor_right()) : 0;
+    }
     void set_is_dan(bool v) { is_dan = v; }
 
     void reload_for_dan(std::optional<SongParser>& new_parser, int new_difficulty);
@@ -127,7 +132,7 @@ public:
 
     void draw_practice(double ms_from_start, float x, float y, bool draw_notes_on);
 
-    void draw_lyric(float y);   // practice scene draws it after the large drums
+    void draw_lyric(float y); // practice scene draws it after the large drums
 
     void draw_overlays(float y);
     void draw_lane_cover(float y);
@@ -138,7 +143,7 @@ protected:
 
 private:
     bool is_2p;
-    int  judgeable_note_count = 0;
+    int judgeable_note_count = 0;
     bool skipped_run = false;
     bool replay_active = false;
     std::vector<std::pair<double, InputLogType>> replay_log;
@@ -158,8 +163,8 @@ private:
     int bad_count;
     int combo;
     int score;
-    int last_reported_score = -1;   // last value sent to Background::handle_score
-    int last_reported_gogo = -1;   // background handle_gogo edge detection
+    int last_reported_score = -1; // last value sent to Background::handle_score
+    int last_reported_gogo = -1;  // background handle_gogo edge detection
     int max_combo;
     int total_drumroll;
     double hit_offset_sum_ms = 0.0;
@@ -169,7 +174,7 @@ private:
     int arc_points;
     float judge_x;
     float judge_y;
-    std::pair<double, int> last_jpos_key{-1e300, -1};  // (start_time, seq) of the newest #JPOSSCROLL applied
+    std::pair<double, int> last_jpos_key{-1e300, -1}; // (start_time, seq) of the newest #JPOSSCROLL applied
 
     bool is_gogo_time;
     bool was_gauge_full = false;
@@ -296,7 +301,7 @@ private:
     void handle_lyric(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);
     void handle_camera(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);
     void update_camera(double ms_from_start);
-    std::vector<TimelineObject> camera_eases;  // running #CAM*START..END events (P1 only)
+    std::vector<TimelineObject> camera_eases; // running #CAM*START..END events (P1 only)
     void handle_section(double ms_from_start, const TimelineObject& timeline_object, int buffer_index);
 
     void play_note_manager(double current_ms, std::optional<Background>& background);
@@ -311,9 +316,11 @@ private:
 
     void check_drumroll(double current_ms, DrumType drum_type, std::optional<Background>& background);
 
-    void check_balloon(double current_ms, DrumType drum_type, const Note& balloon, std::optional<Background>& background);
+    void check_balloon(double current_ms, DrumType drum_type, const Note& balloon,
+                       std::optional<Background>& background);
 
-    void check_kusudama(double current_ms, DrumType drum_type, const Note& balloon, std::optional<Background>& background);
+    void check_kusudama(double current_ms, DrumType drum_type, const Note& balloon,
+                        std::optional<Background>& background);
 
     void check_note(double ms_from_start, DrumType drum_type, double current_ms, std::optional<Background>& background);
 
@@ -329,7 +336,6 @@ protected:
     virtual void handle_input(double ms_from_start, double current_ms, std::optional<Background>& background);
 
 private:
-
     void draw_bar(double current_ms, float y, const Note& bar);
 
     void draw_drumroll(double current_ms, float y, const Note& head, int current_eighth, bool moji_pass);

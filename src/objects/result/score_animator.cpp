@@ -1,9 +1,10 @@
 #include "score_animator.h"
+
 #include <algorithm>
 
 ScoreAnimator::ScoreAnimator(int target) {
     target_score = std::to_string(std::max(target, 0));
-    current_score_list = std::vector<std::pair<int,int>>(target_score.size(), {0, 0});
+    current_score_list = std::vector<std::pair<int, int>>(target_score.size(), {0, 0});
     digit_index = target_score.size() - 1;
     is_finished = false;
 }
@@ -12,8 +13,9 @@ std::string ScoreAnimator::next_score() {
     if (digit_index == -1) {
         is_finished = true;
         std::string result;
-        for (auto& item : current_score_list)
+        for (auto& item : current_score_list) {
             result += std::to_string(item.first);
+        }
         return std::to_string(std::stoi(result));
     }
 
@@ -29,13 +31,15 @@ std::string ScoreAnimator::next_score() {
     }
 
     std::string ret_val;
-    for (auto& item : current_score_list)
+    for (auto& item : current_score_list) {
         ret_val += std::to_string(item.first);
+    }
 
     if (std::stoi(ret_val) == 0) {
         int active_digits = target_score.size() - digit_index;
-        if (!(active_digits > (int)target_score.size()))
+        if (!(active_digits > (int)target_score.size())) {
             return std::string(target_score.size() - digit_index, '0');
+        }
         return "0";
     }
 

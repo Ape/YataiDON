@@ -1,11 +1,12 @@
 #pragma once
 
 #include <optional>
+
 #include "../libs/screen.h"
-#include "../objects/result/retry_game.h"
 #include "../objects/global/allnet_indicator.h"
-#include "../objects/global/coin_overlay.h"
 #include "../objects/global/chara_3d.h"
+#include "../objects/global/coin_overlay.h"
+#include "../objects/result/retry_game.h"
 
 class RetryGameScreen : public Screen {
 private:
@@ -22,8 +23,7 @@ private:
 public:
     static constexpr int needed_hits = 30;
 
-    RetryGameScreen() : Screen("retry_game") {
-    }
+    RetryGameScreen() : Screen("retry_game") {}
 
     void on_screen_start() override;
     Screens on_screen_end(Screens next_screen) override;

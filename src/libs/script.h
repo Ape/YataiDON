@@ -1,20 +1,22 @@
 #pragma once
 
-#include "texture.h"
-#include "profiler.h"
-#include <sol/sol.hpp>
-#include <spdlog/spdlog.h>
-#include <set>
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
+#include <sol/sol.hpp>
+#include <spdlog/spdlog.h>
 #include <string>
 #include <string_view>
 #include <utility>
 
+#include "profiler.h"
+#include "texture.h"
+
 class LuaScript {
 public:
     virtual ~LuaScript() = default;
+
 protected:
     sol::table lua_object;
 
@@ -23,7 +25,9 @@ protected:
 
     template<typename... Args>
     void call(sol::protected_function& fn, std::string_view context, Args&&... args) {
-        if (!fn.valid()) return;
+        if (!fn.valid()) {
+            return;
+        }
         PROFILE_SCOPE_N("lua");
         PROFILE_ZONE_NAME(context);
         auto result = fn(lua_object, std::forward<Args>(args)...);
@@ -35,7 +39,9 @@ protected:
 
     template<typename Ret, typename... Args>
     sol::optional<Ret> call_r(sol::protected_function& fn, std::string_view context, Args&&... args) {
-        if (!fn.valid()) return sol::nullopt;
+        if (!fn.valid()) {
+            return sol::nullopt;
+        }
         PROFILE_SCOPE_N("lua");
         PROFILE_ZONE_NAME(context);
         auto result = fn(lua_object, std::forward<Args>(args)...);
@@ -57,6 +63,7 @@ class ScriptManager {
 private:
     std::map<std::string, std::string> scripts;
     std::set<std::string> executed_scripts;
+
 public:
     // Alias to the engine's global TextureWrapper (::tex) rather than a separate
     // copy, so C++ screens and Lua scripts share one texture/animation store and
@@ -75,20 +82,23 @@ public:
     void register_lua_bindings();
     void refresh_method_cache();
 
-
     bool script_executed(const std::string& script_name) const { return executed_scripts.count(script_name) != 0; }
     void mark_script_executed(const std::string& script_name) { executed_scripts.insert(script_name); }
 };
 
 extern ScriptManager script_manager;
 
-inline lua_State* script_lua_state() { return script_manager.lua ? script_manager.lua->lua_state() : nullptr; }
+inline lua_State* script_lua_state() {
+    return script_manager.lua ? script_manager.lua->lua_state() : nullptr;
+}
 
 void log_lua_site(DrawLogEntry& entry, lua_State* state);
 
 template<typename... Args>
 bool LuaScript::load(const std::string& class_name, const std::string& script_name, Args&&... args) {
-    if (!script_manager.lua) return false;
+    if (!script_manager.lua) {
+        return false;
+    }
     PROFILE_SCOPE_N("lua load");
     PROFILE_ZONE_TEXT(script_name);
     sol::state& lua = *script_manager.lua;
@@ -96,7 +106,9 @@ bool LuaScript::load(const std::string& class_name, const std::string& script_na
     if (!script_manager.script_executed(script_name)) {
         // A skin that scripts some screens but not this one simply has no
         // script here; that is a plain "not scripted", not an error.
-        if (!script_manager.has_lua_script(script_name)) return false;
+        if (!script_manager.has_lua_script(script_name)) {
+            return false;
+        }
         auto result = lua.script_file(script_manager.get_lua_script_path(script_name));
         if (!result.valid()) {
             sol::error err = result;

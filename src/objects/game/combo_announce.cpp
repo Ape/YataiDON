@@ -1,10 +1,11 @@
 #include "combo_announce.h"
-#include "../../libs/audio.h"
+
 #include <stdexcept>
 
+#include "../../libs/audio.h"
+
 ComboAnnounce::ComboAnnounce(int combo, double current_ms, PlayerNum player_num)
-    : combo(combo), wait(current_ms), player_num(player_num),
-      is_finished(false), audio_played(false) {
+    : combo(combo), wait(current_ms), player_num(player_num), is_finished(false), audio_played(false) {
 
     fade = dynamic_cast<FadeAnimation*>(tex.get_animation(65, true));
     if (fade == nullptr) {
@@ -18,7 +19,9 @@ ComboAnnounce::ComboAnnounce(int combo, double current_ms, PlayerNum player_num)
 }
 
 void ComboAnnounce::update(double current_ms) {
-    if (is_finished && fade->is_finished) return;
+    if (is_finished && fade->is_finished) {
+        return;
+    }
 
     if (current_ms >= wait + 1666.67f && !is_finished) {
         fade->start();
@@ -29,7 +32,8 @@ void ComboAnnounce::update(double current_ms) {
 
     if (!audio_played && combo >= 100) {
         audio_played = true;
-        std::string sound_name = "combo_" + std::to_string(combo) + "_" + std::to_string(static_cast<int>(player_num)) + "p";
+        std::string sound_name =
+            "combo_" + std::to_string(combo) + "_" + std::to_string(static_cast<int>(player_num)) + "p";
         if (audio.has_sound(sound_name)) {
             audio.play_sound(sound_name, VolumePreset::VOICE);
         }

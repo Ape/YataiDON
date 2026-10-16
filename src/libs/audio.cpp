@@ -1,4 +1,5 @@
 #include "audio.h"
+
 #include "profiler.h"
 #include "spdlog/spdlog.h"
 #ifdef YATAIDON_PLATFORM_IOS
@@ -13,18 +14,19 @@
 SDL_AudioStream* g_ios_audio_stream = nullptr;
 #endif
 #ifdef SUPPORT_FUMEN
-#include "optional/nus3bank.h"
 #include "optional/nub.h"
+#include "optional/nus3bank.h"
 #endif
-#include "filesystem.h"
-#include <chrono>
-#include <thread>
 #include <atomic>
-#include <unordered_set>
+#include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <cmath>
 #include <mutex>
+#include <thread>
+#include <unordered_set>
+
+#include "filesystem.h"
 
 #ifdef SUPPORT_FUMEN
 static bool is_bank_file(const fs::path& p) {
@@ -32,79 +34,103 @@ static bool is_bank_file(const fs::path& p) {
     return ext == ".nus3bank" || ext == ".nub";
 }
 static bool decode_bank(const fs::path& p, gen4::DecodedAudio& out) {
-    return p.extension() == ".nub" ? gen3::decode_nub(p, out)
-                                   : gen4::decode_nus3bank(p, out);
+    return p.extension() == ".nub" ? gen3::decode_nub(p, out) : gen4::decode_nus3bank(p, out);
 }
 #endif
 #include <algorithm>
 #if defined(__ANDROID__) || defined(YATAIDON_PLATFORM_IOS)
 extern "C" {
-#include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
-#include <libswresample/swresample.h>
+#include <libavformat/avformat.h>
 #include <libavutil/channel_layout.h>
+#include <libswresample/swresample.h>
 }
 
 // Decode any audio file to float32 interleaved via FFmpeg.
 // Returns false on failure; on success fills frames/sample_rate/channels/data (caller frees).
-static bool ffmpeg_decode_float(const char* path,
-    float** out_data, sf_count_t* out_frames,
-    unsigned int* out_rate, unsigned int* out_channels)
-{
+static bool ffmpeg_decode_float(const char* path, float** out_data, sf_count_t* out_frames, unsigned int* out_rate,
+                                unsigned int* out_channels) {
     AVFormatContext* fmt = nullptr;
-    if (avformat_open_input(&fmt, path, nullptr, nullptr) < 0) return false;
+    if (avformat_open_input(&fmt, path, nullptr, nullptr) < 0) {
+        return false;
+    }
     if (avformat_find_stream_info(fmt, nullptr) < 0) {
-        avformat_close_input(&fmt); return false;
+        avformat_close_input(&fmt);
+        return false;
     }
     int audio_idx = -1;
     for (unsigned i = 0; i < fmt->nb_streams; ++i) {
         if (fmt->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-            audio_idx = (int)i; break;
+            audio_idx = (int)i;
+            break;
         }
     }
-    if (audio_idx < 0) { avformat_close_input(&fmt); return false; }
+    if (audio_idx < 0) {
+        avformat_close_input(&fmt);
+        return false;
+    }
 
     auto* par = fmt->streams[audio_idx]->codecpar;
     const AVCodec* codec = avcodec_find_decoder(par->codec_id);
-    if (!codec) { avformat_close_input(&fmt); return false; }
+    if (!codec) {
+        avformat_close_input(&fmt);
+        return false;
+    }
     AVCodecContext* dec = avcodec_alloc_context3(codec);
     if (avcodec_parameters_to_context(dec, par) < 0) {
-        avcodec_free_context(&dec); avformat_close_input(&fmt); return false;
+        avcodec_free_context(&dec);
+        avformat_close_input(&fmt);
+        return false;
     }
     if (avcodec_open2(dec, codec, nullptr) < 0) {
-        avcodec_free_context(&dec); avformat_close_input(&fmt); return false;
+        avcodec_free_context(&dec);
+        avformat_close_input(&fmt);
+        return false;
     }
 
     SwrContext* swr = nullptr;
     AVChannelLayout out_layout = AV_CHANNEL_LAYOUT_STEREO;
     int out_ch = 2;
-    if (swr_alloc_set_opts2(&swr, &out_layout, AV_SAMPLE_FMT_FLT, dec->sample_rate,
-                        &dec->ch_layout, dec->sample_fmt, dec->sample_rate, 0, nullptr) < 0 || !swr) {
-        swr_free(&swr); avcodec_free_context(&dec); avformat_close_input(&fmt); return false;
+    if (swr_alloc_set_opts2(&swr, &out_layout, AV_SAMPLE_FMT_FLT, dec->sample_rate, &dec->ch_layout, dec->sample_fmt,
+                            dec->sample_rate, 0, nullptr) < 0 ||
+        !swr) {
+        swr_free(&swr);
+        avcodec_free_context(&dec);
+        avformat_close_input(&fmt);
+        return false;
     }
     if (swr_init(swr) < 0) {
-        swr_free(&swr); avcodec_free_context(&dec); avformat_close_input(&fmt); return false;
+        swr_free(&swr);
+        avcodec_free_context(&dec);
+        avformat_close_input(&fmt);
+        return false;
     }
 
     std::vector<float> pcm;
     AVPacket* pkt = av_packet_alloc();
-    AVFrame*  frm = av_frame_alloc();
+    AVFrame* frm = av_frame_alloc();
     if (!pkt || !frm) {
-        av_packet_free(&pkt); av_frame_free(&frm);
-        swr_free(&swr); avcodec_free_context(&dec); avformat_close_input(&fmt);
+        av_packet_free(&pkt);
+        av_frame_free(&frm);
+        swr_free(&swr);
+        avcodec_free_context(&dec);
+        avformat_close_input(&fmt);
         return false;
     }
 
     auto drain = [&]() {
         while (true) {
             int r = avcodec_receive_frame(dec, frm);
-            if (r == AVERROR(EAGAIN) || r == AVERROR_EOF) break;
-            if (r < 0) break;
+            if (r == AVERROR(EAGAIN) || r == AVERROR_EOF) {
+                break;
+            }
+            if (r < 0) {
+                break;
+            }
             int64_t n = swr_get_out_samples(swr, frm->nb_samples);
             std::vector<float> tmp(n * out_ch);
             uint8_t* op = (uint8_t*)tmp.data();
-            int got = swr_convert(swr, &op, (int)n,
-                                  (const uint8_t**)frm->extended_data, frm->nb_samples);
+            int got = swr_convert(swr, &op, (int)n, (const uint8_t**)frm->extended_data, frm->nb_samples);
             if (got > 0) {
                 pcm.insert(pcm.end(), tmp.begin(), tmp.begin() + got * out_ch);
             } else if (got < 0) {
@@ -137,10 +163,10 @@ static bool ffmpeg_decode_float(const char* path,
         return false;
     }
 
-    *out_rate    = (unsigned int)dec->sample_rate;
+    *out_rate = (unsigned int)dec->sample_rate;
     *out_channels = (unsigned int)out_ch;
-    *out_frames  = (sf_count_t)(pcm.size() / out_ch);
-    *out_data    = new float[pcm.size()];
+    *out_frames = (sf_count_t)(pcm.size() / out_ch);
+    *out_data = new float[pcm.size()];
     std::copy(pcm.begin(), pcm.end(), *out_data);
 
     avcodec_free_context(&dec);
@@ -159,29 +185,42 @@ static sf_count_t vf_seek(sf_count_t offset, int whence, void* user_data) {
     sf_count_t size = static_cast<sf_count_t>(vf->data->size());
 
     switch (whence) {
-        case SEEK_SET: vf->pos = offset;             break;
-        case SEEK_CUR: vf->pos += offset;            break;
-        case SEEK_END: vf->pos = size + offset;      break;
-        default:       return -1;
+    case SEEK_SET:
+        vf->pos = offset;
+        break;
+    case SEEK_CUR:
+        vf->pos += offset;
+        break;
+    case SEEK_END:
+        vf->pos = size + offset;
+        break;
+    default:
+        return -1;
     }
 
-    if (vf->pos < 0)    vf->pos = 0;
-    if (vf->pos > size) vf->pos = size;
+    if (vf->pos < 0) {
+        vf->pos = 0;
+    }
+    if (vf->pos > size) {
+        vf->pos = size;
+    }
     return vf->pos;
 }
 
 static sf_count_t vf_read(void* ptr, sf_count_t count, void* user_data) {
-    auto* vf   = static_cast<VirtualFile*>(user_data);
+    auto* vf = static_cast<VirtualFile*>(user_data);
     sf_count_t remaining = static_cast<sf_count_t>(vf->data->size()) - vf->pos;
-    sf_count_t to_read   = std::min(count, remaining);
-    if (to_read <= 0) return 0;
+    sf_count_t to_read = std::min(count, remaining);
+    if (to_read <= 0) {
+        return 0;
+    }
     std::memcpy(ptr, vf->data->data() + vf->pos, static_cast<std::size_t>(to_read));
     vf->pos += to_read;
     return to_read;
 }
 
 static sf_count_t vf_write(const void*, sf_count_t, void*) {
-    return 0;  // read-only
+    return 0; // read-only
 }
 
 static sf_count_t vf_tell(void* user_data) {
@@ -189,7 +228,7 @@ static sf_count_t vf_tell(void* user_data) {
 }
 
 static void unload_music_stream_from_map(std::unordered_map<std::string, music>& music_streams,
-                                          const std::string& name) {
+                                         const std::string& name) {
     auto it = music_streams.find(name);
     if (it != music_streams.end()) {
         music& mus = it->second;
@@ -228,9 +267,7 @@ static void unload_music_stream_from_map(std::unordered_map<std::string, music>&
     }
 }
 
-AudioEngine::AudioEngine()
-{
-}
+AudioEngine::AudioEngine() {}
 
 std::vector<std::string> enumerate_audio_devices(int device_type) {
     std::vector<std::string> names;
@@ -238,26 +275,47 @@ std::vector<std::string> enumerate_audio_devices(int device_type) {
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
     RtAudio::Api api = RtAudio::UNSPECIFIED;
     switch (device_type) {
-        case 1:  api = RtAudio::LINUX_ALSA;     break;
-        case 2:  api = RtAudio::LINUX_PULSE;    break;
-        case 3:  api = RtAudio::UNIX_JACK;      break;
-        case 4:  api = RtAudio::LINUX_OSS;      break;
-        case 5:  api = RtAudio::MACOSX_CORE;    break;
-        case 6:  api = RtAudio::WINDOWS_DS;     break;
-        case 7:  api = RtAudio::WINDOWS_WASAPI; break;
-        case 8:  api = RtAudio::WINDOWS_ASIO;   break;
-        default: break;
+    case 1:
+        api = RtAudio::LINUX_ALSA;
+        break;
+    case 2:
+        api = RtAudio::LINUX_PULSE;
+        break;
+    case 3:
+        api = RtAudio::UNIX_JACK;
+        break;
+    case 4:
+        api = RtAudio::LINUX_OSS;
+        break;
+    case 5:
+        api = RtAudio::MACOSX_CORE;
+        break;
+    case 6:
+        api = RtAudio::WINDOWS_DS;
+        break;
+    case 7:
+        api = RtAudio::WINDOWS_WASAPI;
+        break;
+    case 8:
+        api = RtAudio::WINDOWS_ASIO;
+        break;
+    default:
+        break;
     }
     if (api != RtAudio::UNSPECIFIED) {
         try {
             RtAudio rt(api, [](RtAudioErrorType type, const std::string& errorText) {
-                if (type == RTAUDIO_WARNING) spdlog::warn("RtAudio: {}", errorText);
-                else                         spdlog::error("RtAudio: {}", errorText);
+                if (type == RTAUDIO_WARNING) {
+                    spdlog::warn("RtAudio: {}", errorText);
+                } else {
+                    spdlog::error("RtAudio: {}", errorText);
+                }
             });
             for (unsigned int id : rt.getDeviceIds()) {
                 RtAudio::DeviceInfo info = rt.getDeviceInfo(id);
-                if (info.outputChannels > 0 && !info.name.empty())
+                if (info.outputChannels > 0 && !info.name.empty()) {
                     names.push_back(info.name);
+                }
             }
         } catch (const std::exception& e) {
             spdlog::warn("Failed to enumerate RtAudio devices: {}", e.what());
@@ -268,27 +326,36 @@ std::vector<std::string> enumerate_audio_devices(int device_type) {
 
 #ifdef _WIN32
     switch (device_type) {
-        case 9:  return win32_enumerate_portaudio_devices(paWDMKS);
-        case 10: return win32_enumerate_portaudio_devices(paMME);
-        default: break;
+    case 9:
+        return win32_enumerate_portaudio_devices(paWDMKS);
+    case 10:
+        return win32_enumerate_portaudio_devices(paMME);
+    default:
+        break;
     }
 #endif
 
     // Default (SDL3) backend and any unrecognized type: enumerate SDL3 devices.
     bool init_here = false;
     if (!(SDL_WasInit(SDL_INIT_AUDIO) & SDL_INIT_AUDIO)) {
-        if (SDL_InitSubSystem(SDL_INIT_AUDIO)) init_here = true;
+        if (SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+            init_here = true;
+        }
     }
     int count = 0;
     SDL_AudioDeviceID* devices = SDL_GetAudioPlaybackDevices(&count);
     if (devices) {
         for (int i = 0; i < count; i++) {
             const char* name = SDL_GetAudioDeviceName(devices[i]);
-            if (name && *name) names.emplace_back(name);
+            if (name && *name) {
+                names.emplace_back(name);
+            }
         }
         SDL_free(devices);
     }
-    if (init_here) SDL_QuitSubSystem(SDL_INIT_AUDIO);
+    if (init_here) {
+        SDL_QuitSubSystem(SDL_INIT_AUDIO);
+    }
     return names;
 }
 
@@ -302,23 +369,27 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
     const unsigned long buffer_size = framesPerBuffer * 2;
     std::memset(out, 0, buffer_size * sizeof(float));
 
-    if (!engine) return;
+    if (!engine) {
+        return;
+    }
 
     std::shared_lock<std::shared_mutex> guard(engine->rw_lock);
 
     for (auto& [name, snd] : engine->sounds) {
-        std::atomic_ref<bool>         aref_playing(snd.is_playing);
+        std::atomic_ref<bool> aref_playing(snd.is_playing);
         std::atomic_ref<unsigned int> aref_frame(snd.current_frame);
 
-        if (!aref_playing.load(std::memory_order_acquire)) continue;
+        if (!aref_playing.load(std::memory_order_acquire)) {
+            continue;
+        }
 
-        const float volume = std::atomic_ref<float>(snd.volume).load(std::memory_order_relaxed)
-            * std::atomic_ref<float>(snd.playback_gain).load(std::memory_order_relaxed);
+        const float volume = std::atomic_ref<float>(snd.volume).load(std::memory_order_relaxed) *
+                             std::atomic_ref<float>(snd.playback_gain).load(std::memory_order_relaxed);
 
-        const float pan    = std::atomic_ref<float>(snd.pan).load(std::memory_order_relaxed);
+        const float pan = std::atomic_ref<float>(snd.pan).load(std::memory_order_relaxed);
         unsigned int frame = aref_frame.load(std::memory_order_relaxed);
 
-        const float pitch    = std::atomic_ref<float>(snd.pitch).load(std::memory_order_relaxed);
+        const float pitch = std::atomic_ref<float>(snd.pitch).load(std::memory_order_relaxed);
         const float* data_ptr = snd.data;
         const unsigned int channels = snd.channels;
 
@@ -329,14 +400,18 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
         // fraction must survive across mix() calls, otherwise non-integer
         // pitches degrade toward trunc(pitch) as the buffer size shrinks
         // (at buffer_size=1, pitch 0.9 never advances and 1.5 plays at 1.0).
-        double frame_f = (double)frame
-                       + std::atomic_ref<float>(snd.frame_frac).load(std::memory_order_relaxed);
+        double frame_f = (double)frame + std::atomic_ref<float>(snd.frame_frac).load(std::memory_order_relaxed);
 
         while (frames_to_process > 0 && still_playing) {
             unsigned long src_frame = (unsigned long)frame_f;
             if (src_frame >= snd.frame_count) {
-                if (std::atomic_ref<bool>(snd.loop).load(std::memory_order_relaxed) && snd.frame_count > 0) { frame_f = 0.0; continue; }
-                else { still_playing = false; break; }
+                if (std::atomic_ref<bool>(snd.loop).load(std::memory_order_relaxed) && snd.frame_count > 0) {
+                    frame_f = 0.0;
+                    continue;
+                } else {
+                    still_playing = false;
+                    break;
+                }
             }
 
             unsigned long src_index = src_frame * channels;
@@ -345,16 +420,19 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
 
             if (channels == 1) {
                 float sample = data_ptr[src_index];
-                left  = sample * (1.0f - pan);
+                left = sample * (1.0f - pan);
                 right = sample * pan;
             } else {
-                left  = data_ptr[src_index];
+                left = data_ptr[src_index];
                 right = data_ptr[src_index + 1];
-                if (pan < 0.5f)      right *= (pan * 2.0f);
-                else if (pan > 0.5f) left  *= ((1.0f - pan) * 2.0f);
+                if (pan < 0.5f) {
+                    right *= (pan * 2.0f);
+                } else if (pan > 0.5f) {
+                    left *= ((1.0f - pan) * 2.0f);
+                }
             }
 
-            out[dst_index]     += left * volume;
+            out[dst_index] += left * volume;
             out[dst_index + 1] += right * volume;
 
             frame_f += pitch;
@@ -365,18 +443,21 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
 
         std::atomic_ref<float>(snd.frame_frac).store((float)(frame_f - (double)frame), std::memory_order_relaxed);
         aref_frame.store(frame, std::memory_order_relaxed);
-        if (!still_playing)
+        if (!still_playing) {
             aref_playing.store(false, std::memory_order_release);
+        }
     }
 
     for (auto& [name, mus] : engine->music_streams) {
         std::atomic_ref<bool> aref_playing(mus.is_playing);
 
-        if (!aref_playing.load(std::memory_order_acquire)) continue;
+        if (!aref_playing.load(std::memory_order_acquire)) {
+            continue;
+        }
 
         std::atomic_ref<unsigned long long> aref_frame(mus.current_frame);
         const float volume = std::atomic_ref<float>(mus.volume).load(std::memory_order_relaxed);
-        const float pan    = std::atomic_ref<float>(mus.pan).load(std::memory_order_relaxed);
+        const float pan = std::atomic_ref<float>(mus.pan).load(std::memory_order_relaxed);
 
         unsigned long frames_to_process = framesPerBuffer;
         unsigned long output_index = 0;
@@ -442,7 +523,9 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
                             }
                         }
 
-                        if (resample_error) break;
+                        if (resample_error) {
+                            break;
+                        }
 
                         mus.frames_in_buffer = output_generated;
                     } else {
@@ -453,7 +536,8 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
                 } else if (mus.pcm_data) {
                     unsigned long long frame_pos = aref_frame.load(std::memory_order_relaxed);
                     sf_count_t frames_left = (mus.pcm_total_frames > (sf_count_t)frame_pos)
-                                             ? mus.pcm_total_frames - (sf_count_t)frame_pos : 0;
+                                                 ? mus.pcm_total_frames - (sf_count_t)frame_pos
+                                                 : 0;
                     sf_count_t to_fill = std::min((sf_count_t)mus.buffer_size, frames_left);
 
                     if (to_fill == 0) {
@@ -468,10 +552,9 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
                     }
 
                     unsigned int ch = (unsigned int)mus.file_info.channels;
-                    std::memcpy(mus.stream_buffer, mus.pcm_data + frame_pos * ch,
-                                (size_t)to_fill * ch * sizeof(float));
+                    std::memcpy(mus.stream_buffer, mus.pcm_data + frame_pos * ch, (size_t)to_fill * ch * sizeof(float));
                     mus.frames_in_buffer = (unsigned int)to_fill;
-                    mus.buffer_position  = 0;
+                    mus.buffer_position = 0;
                 } else {
                     aref_playing.store(false, std::memory_order_release);
                     break;
@@ -479,7 +562,8 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
             }
 
             unsigned long frames_available = mus.frames_in_buffer - mus.buffer_position;
-            unsigned long frames_to_read = (frames_to_process < frames_available) ? frames_to_process : frames_available;
+            unsigned long frames_to_read =
+                (frames_to_process < frames_available) ? frames_to_process : frames_available;
 
             const unsigned int channels = mus.file_info.channels;
             const float* source_buffer = mus.resampler ? mus.resample_buffer : mus.stream_buffer;
@@ -492,22 +576,25 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
 
                 if (channels == 1) {
                     float sample = source_buffer[src_index];
-                    left  = sample * (1.0f - pan);
+                    left = sample * (1.0f - pan);
                     right = sample * pan;
                 } else {
-                    left  = source_buffer[src_index];
+                    left = source_buffer[src_index];
                     right = source_buffer[src_index + 1];
-                    if (pan < 0.5f)      right *= (pan * 2.0f);
-                    else if (pan > 0.5f) left  *= ((1.0f - pan) * 2.0f);
+                    if (pan < 0.5f) {
+                        right *= (pan * 2.0f);
+                    } else if (pan > 0.5f) {
+                        left *= ((1.0f - pan) * 2.0f);
+                    }
                 }
 
-                out[dst_index]     += left * volume;
+                out[dst_index] += left * volume;
                 out[dst_index + 1] += right * volume;
             }
 
             mus.buffer_position += frames_to_read;
             aref_frame.fetch_add(frames_to_read, std::memory_order_relaxed);
-            output_index      += frames_to_read;
+            output_index += frames_to_read;
             frames_to_process -= frames_to_read;
         }
     }
@@ -518,16 +605,20 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
     for (unsigned long i = 0; i < buffer_size; i++) {
         out[i] = std::clamp(out[i] * master_vol, -1.0f, 1.0f);
     }
-
 }
 
-void AudioEngine::sdl_audio_callback(void* userdata, SDL_AudioStream* stream, int additional_amount, int /*total_amount*/) {
+void AudioEngine::sdl_audio_callback(void* userdata, SDL_AudioStream* stream, int additional_amount,
+                                     int /*total_amount*/) {
     AudioEngine* engine = static_cast<AudioEngine*>(userdata);
-    if (!engine || additional_amount <= 0) return;
+    if (!engine || additional_amount <= 0) {
+        return;
+    }
 
     const int bytes_per_frame = static_cast<int>(sizeof(float)) * 2; // f32 stereo, matches the spec we opened with
     unsigned int frames = static_cast<unsigned int>(additional_amount) / bytes_per_frame;
-    if (frames == 0) return;
+    if (frames == 0) {
+        return;
+    }
 
     size_t needed_floats = static_cast<size_t>(frames) * 2;
     if (engine->sdl_scratch_buffer.size() < needed_floats) {
@@ -536,14 +627,12 @@ void AudioEngine::sdl_audio_callback(void* userdata, SDL_AudioStream* stream, in
 
     mix(engine->sdl_scratch_buffer.data(), frames, engine);
 
-    SDL_PutAudioStreamData(stream, engine->sdl_scratch_buffer.data(),
-                            static_cast<int>(needed_floats * sizeof(float)));
+    SDL_PutAudioStreamData(stream, engine->sdl_scratch_buffer.data(), static_cast<int>(needed_floats * sizeof(float)));
 }
 
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
-int AudioEngine::rt_audio_callback(void* outputBuffer, void* /*inputBuffer*/,
-                                    unsigned int framesPerBuffer, double /*streamTime*/,
-                                    unsigned int /*status*/, void* userData) {
+int AudioEngine::rt_audio_callback(void* outputBuffer, void* /*inputBuffer*/, unsigned int framesPerBuffer,
+                                   double /*streamTime*/, unsigned int /*status*/, void* userData) {
     AudioEngine* engine = static_cast<AudioEngine*>(userData);
     float* out = static_cast<float*>(outputBuffer);
     const unsigned int total_channels = engine->rt_total_channels;
@@ -555,15 +644,16 @@ int AudioEngine::rt_audio_callback(void* outputBuffer, void* /*inputBuffer*/,
     }
 
     size_t needed_floats = static_cast<size_t>(framesPerBuffer) * 2;
-    if (engine->sdl_scratch_buffer.size() < needed_floats)
+    if (engine->sdl_scratch_buffer.size() < needed_floats) {
         engine->sdl_scratch_buffer.resize(needed_floats);
+    }
     mix(engine->sdl_scratch_buffer.data(), framesPerBuffer, engine);
 
     for (unsigned int f = 0; f < framesPerBuffer; f++) {
         const float l = engine->sdl_scratch_buffer[f * 2];
         const float r = engine->sdl_scratch_buffer[f * 2 + 1];
         for (int offset : engine->channel_offsets) {
-            out[f * total_channels + offset]     = l;
+            out[f * total_channels + offset] = l;
             out[f * total_channels + offset + 1] = r;
         }
     }
@@ -572,10 +662,9 @@ int AudioEngine::rt_audio_callback(void* outputBuffer, void* /*inputBuffer*/,
 #endif
 
 #ifdef _WIN32
-int AudioEngine::pa_stream_callback(const void* /*inputBuffer*/, void* outputBuffer,
-                                     unsigned long framesPerBuffer,
-                                     const PaStreamCallbackTimeInfo* /*timeInfo*/,
-                                     PaStreamCallbackFlags /*statusFlags*/, void* userData) {
+int AudioEngine::pa_stream_callback(const void* /*inputBuffer*/, void* outputBuffer, unsigned long framesPerBuffer,
+                                    const PaStreamCallbackTimeInfo* /*timeInfo*/, PaStreamCallbackFlags /*statusFlags*/,
+                                    void* userData) {
     AudioEngine* engine = static_cast<AudioEngine*>(userData);
     mix(static_cast<float*>(outputBuffer), static_cast<unsigned int>(framesPerBuffer), engine);
     return paContinue;
@@ -585,10 +674,11 @@ int AudioEngine::pa_stream_callback(const void* /*inputBuffer*/, void* outputBuf
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
 bool AudioEngine::init_rtaudio_device(RtAudio::Api api, const char* label) {
     rt_audio = new RtAudio(api, [](RtAudioErrorType type, const std::string& errorText) {
-        if (type == RTAUDIO_WARNING)
+        if (type == RTAUDIO_WARNING) {
             spdlog::warn("RtAudio: {}", errorText);
-        else
+        } else {
             spdlog::error("RtAudio: {}", errorText);
+        }
     });
 
     if (rt_audio->getDeviceCount() == 0) {
@@ -598,21 +688,24 @@ bool AudioEngine::init_rtaudio_device(RtAudio::Api api, const char* label) {
         return false;
     }
 
-    channel_offsets.erase(std::remove_if(channel_offsets.begin(), channel_offsets.end(),
-                                         [](int off) { return off < 0; }),
-                          channel_offsets.end());
+    channel_offsets.erase(
+        std::remove_if(channel_offsets.begin(), channel_offsets.end(), [](int off) { return off < 0; }),
+        channel_offsets.end());
     std::sort(channel_offsets.begin(), channel_offsets.end());
-    channel_offsets.erase(std::unique(channel_offsets.begin(), channel_offsets.end()),
-                          channel_offsets.end());
-    if (channel_offsets.empty()) channel_offsets.push_back(0);
+    channel_offsets.erase(std::unique(channel_offsets.begin(), channel_offsets.end()), channel_offsets.end());
+    if (channel_offsets.empty()) {
+        channel_offsets.push_back(0);
+    }
 
     int max_offset = 0;
-    for (int off : channel_offsets) max_offset = std::max(max_offset, off);
+    for (int off : channel_offsets) {
+        max_offset = std::max(max_offset, off);
+    }
     rt_total_channels = static_cast<unsigned int>(max_offset) + 2;
 
     RtAudio::StreamParameters params;
-    params.deviceId     = rt_audio->getDefaultOutputDevice();
-    params.nChannels    = rt_total_channels;
+    params.deviceId = rt_audio->getDefaultOutputDevice();
+    params.nChannels = rt_total_channels;
     params.firstChannel = 0;
 
     if (!device_name.empty()) {
@@ -625,19 +718,20 @@ bool AudioEngine::init_rtaudio_device(RtAudio::Api api, const char* label) {
                 break;
             }
         }
-        if (!found)
+        if (!found) {
             spdlog::warn("Requested audio device '{}' not found; using default", device_name);
+        }
     }
 
     unsigned int bufferFrames = static_cast<unsigned int>(buffer_size);
 
     RtAudio::StreamOptions options;
-    options.flags    = RTAUDIO_MINIMIZE_LATENCY | RTAUDIO_SCHEDULE_REALTIME;
+    options.flags = RTAUDIO_MINIMIZE_LATENCY | RTAUDIO_SCHEDULE_REALTIME;
     options.priority = 99;
 
-    RtAudioErrorType err = rt_audio->openStream(&params, nullptr, RTAUDIO_FLOAT32,
-        static_cast<unsigned int>(target_sample_rate), &bufferFrames,
-        &AudioEngine::rt_audio_callback, this, &options);
+    RtAudioErrorType err =
+        rt_audio->openStream(&params, nullptr, RTAUDIO_FLOAT32, static_cast<unsigned int>(target_sample_rate),
+                             &bufferFrames, &AudioEngine::rt_audio_callback, this, &options);
     if (err != RTAUDIO_NO_ERROR) {
         spdlog::error("Failed to open {} stream: {}", label, rt_audio->getErrorText());
         delete rt_audio;
@@ -662,14 +756,15 @@ bool AudioEngine::init_rtaudio_device(RtAudio::Api api, const char* label) {
     spdlog::info("    > Device:        {}", dev_info.name);
     spdlog::info("    > Format:        Float32");
     std::string offsets_str;
-    for (int off : channel_offsets) offsets_str += (offsets_str.empty() ? "" : ", ") + std::to_string(off);
+    for (int off : channel_offsets) {
+        offsets_str += (offsets_str.empty() ? "" : ", ") + std::to_string(off);
+    }
     spdlog::info("    > Channels:      {} total, stereo duplicated at offsets [{}]", rt_total_channels, offsets_str);
     spdlog::info("    > Sample rate:   {} Hz", rt_audio->getStreamSampleRate());
     spdlog::info("    > Buffer size:   {} frames (actual)", bufferFrames);
     return true;
 }
 #endif
-
 
 bool AudioEngine::init_sdl3_device() {
 #ifdef YATAIDON_PLATFORM_IOS
@@ -690,9 +785,9 @@ bool AudioEngine::init_sdl3_device() {
     }
 
     SDL_AudioSpec spec{};
-    spec.format   = SDL_AUDIO_F32;
+    spec.format = SDL_AUDIO_F32;
     spec.channels = 2;
-    spec.freq     = static_cast<int>(target_sample_rate);
+    spec.freq = static_cast<int>(target_sample_rate);
 
     SDL_AudioDeviceID device_id = SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK;
     if (!device_name.empty()) {
@@ -708,12 +803,12 @@ bool AudioEngine::init_sdl3_device() {
             }
             SDL_free(devices);
         }
-        if (device_id == SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK)
+        if (device_id == SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK) {
             spdlog::warn("Requested audio device '{}' not found; using default", device_name);
+        }
     }
 
-    sdl_stream = SDL_OpenAudioDeviceStream(device_id, &spec,
-                                            AudioEngine::sdl_audio_callback, this);
+    sdl_stream = SDL_OpenAudioDeviceStream(device_id, &spec, AudioEngine::sdl_audio_callback, this);
     if (!sdl_stream) {
         spdlog::error("Failed to open SDL audio device stream: {}", SDL_GetError());
         if (sdl_audio_subsystem_initialized) {
@@ -753,8 +848,11 @@ bool AudioEngine::init_sdl3_device() {
     return true;
 }
 
-bool AudioEngine::init_audio_device(const fs::path& sounds_path, const AudioConfig& audio_config, const VolumeConfig& volume_presets) {
-    if (is_ready) close_audio_device();
+bool AudioEngine::init_audio_device(const fs::path& sounds_path, const AudioConfig& audio_config,
+                                    const VolumeConfig& volume_presets) {
+    if (is_ready) {
+        close_audio_device();
+    }
 
     this->sounds_path = sounds_path;
     this->target_sample_rate = audio_config.sample_rate <= 0 ? 44100.0 : audio_config.sample_rate;
@@ -767,22 +865,34 @@ bool AudioEngine::init_audio_device(const fs::path& sounds_path, const AudioConf
     try {
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
         switch (audio_config.device_type) {
-            case 1: return init_rtaudio_device(RtAudio::LINUX_ALSA,     "ALSA");
-            case 2: return init_rtaudio_device(RtAudio::LINUX_PULSE,    "PulseAudio");
-            case 3: return init_rtaudio_device(RtAudio::UNIX_JACK,      "JACK");
-            case 4: return init_rtaudio_device(RtAudio::LINUX_OSS,      "OSS");
-            case 5: return init_rtaudio_device(RtAudio::MACOSX_CORE,    "CoreAudio");
-            case 6: return init_rtaudio_device(RtAudio::WINDOWS_DS,     "DirectSound");
-            case 7: return init_rtaudio_device(RtAudio::WINDOWS_WASAPI, "WASAPI");
-            case 8: return init_rtaudio_device(RtAudio::WINDOWS_ASIO,   "ASIO");
-            default: break;
+        case 1:
+            return init_rtaudio_device(RtAudio::LINUX_ALSA, "ALSA");
+        case 2:
+            return init_rtaudio_device(RtAudio::LINUX_PULSE, "PulseAudio");
+        case 3:
+            return init_rtaudio_device(RtAudio::UNIX_JACK, "JACK");
+        case 4:
+            return init_rtaudio_device(RtAudio::LINUX_OSS, "OSS");
+        case 5:
+            return init_rtaudio_device(RtAudio::MACOSX_CORE, "CoreAudio");
+        case 6:
+            return init_rtaudio_device(RtAudio::WINDOWS_DS, "DirectSound");
+        case 7:
+            return init_rtaudio_device(RtAudio::WINDOWS_WASAPI, "WASAPI");
+        case 8:
+            return init_rtaudio_device(RtAudio::WINDOWS_ASIO, "ASIO");
+        default:
+            break;
         }
 #endif
 #ifdef _WIN32
         switch (audio_config.device_type) {
-            case 9:  return win32_init_portaudio_wdmks(target_sample_rate, buffer_size, device_name);
-            case 10: return win32_init_portaudio_mme(target_sample_rate, buffer_size, device_name);
-            default: break;
+        case 9:
+            return win32_init_portaudio_wdmks(target_sample_rate, buffer_size, device_name);
+        case 10:
+            return win32_init_portaudio_mme(target_sample_rate, buffer_size, device_name);
+        default:
+            break;
         }
 #endif
         return init_sdl3_device();
@@ -793,7 +903,9 @@ bool AudioEngine::init_audio_device(const fs::path& sounds_path, const AudioConf
 }
 
 void AudioEngine::close_audio_device() {
-    if (!is_ready) return;
+    if (!is_ready) {
+        return;
+    }
     try {
         unload_all_sounds();
         unload_all_music();
@@ -808,8 +920,12 @@ void AudioEngine::close_audio_device() {
         }
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
         if (rt_audio != nullptr) {
-            if (rt_audio->isStreamRunning()) rt_audio->stopStream();
-            if (rt_audio->isStreamOpen()) rt_audio->closeStream();
+            if (rt_audio->isStreamRunning()) {
+                rt_audio->stopStream();
+            }
+            if (rt_audio->isStreamOpen()) {
+                rt_audio->closeStream();
+            }
             delete rt_audio;
             rt_audio = nullptr;
         }
@@ -848,22 +964,25 @@ std::string AudioEngine::path_to_string(const fs::path& path) const {
 // A decoded buffer handed over as raw float PCM, resampled to the device rate
 // if it does not already match. Returns null on failure; frames and rate are
 // updated in place.
-static float* adopt_decoded_pcm(std::vector<float>& samples, int channels,
-                                unsigned int& frames, unsigned int& rate,
-                                double target_rate,
-                                int converter = SRC_SINC_FASTEST) {
+static float* adopt_decoded_pcm(std::vector<float>& samples, int channels, unsigned int& frames, unsigned int& rate,
+                                double target_rate, int converter = SRC_SINC_FASTEST) {
     float* data = new float[samples.size()];
     std::memcpy(data, samples.data(), samples.size() * sizeof(float));
 
-    if ((double)rate == target_rate) return data;
+    if ((double)rate == target_rate) {
+        return data;
+    }
 
     double ratio = target_rate / (double)rate;
     long out_frames = (long)(frames * ratio) + 1;
     float* resampled = new float[(size_t)out_frames * channels];
     SRC_DATA sd{};
-    sd.data_in = data;          sd.input_frames = frames;
-    sd.data_out = resampled;    sd.output_frames = out_frames;
-    sd.src_ratio = ratio;       sd.end_of_input = 1;
+    sd.data_in = data;
+    sd.input_frames = frames;
+    sd.data_out = resampled;
+    sd.output_frames = out_frames;
+    sd.src_ratio = ratio;
+    sd.end_of_input = 1;
     int err = src_simple(&sd, converter, channels);
     delete[] data;
     if (err) {
@@ -872,7 +991,7 @@ static float* adopt_decoded_pcm(std::vector<float>& samples, int channels,
         return nullptr;
     }
     frames = (unsigned int)sd.output_frames_gen;
-    rate   = (unsigned int)target_rate;
+    rate = (unsigned int)target_rate;
     return resampled;
 }
 
@@ -882,7 +1001,9 @@ void AudioEngine::store_sound(const std::string& name, const sound& snd) {
     if (it != sounds.end()) {
         std::atomic_ref<bool>(it->second.is_playing).store(false, std::memory_order_relaxed);
         delete[] it->second.data;
-        if (it->second.resampler) src_delete(it->second.resampler);
+        if (it->second.resampler) {
+            src_delete(it->second.resampler);
+        }
         delete[] it->second.resample_buffer;
     }
     sounds[name] = snd;
@@ -893,22 +1014,24 @@ std::string AudioEngine::load_sound(const fs::path& file_path, const std::string
 #ifdef SUPPORT_FUMEN
         if (is_bank_file(file_path)) {
             gen4::DecodedAudio decoded;
-            if (!decode_bank(file_path, decoded)) return "";
+            if (!decode_bank(file_path, decoded)) {
+                return "";
+            }
 
             unsigned int frames = (unsigned int)decoded.frame_count();
-            unsigned int rate   = (unsigned int)decoded.sample_rate;
-            float* data = adopt_decoded_pcm(decoded.samples, decoded.channels,
-                                            frames, rate, target_sample_rate);
-            if (!data) return "";
+            unsigned int rate = (unsigned int)decoded.sample_rate;
+            float* data = adopt_decoded_pcm(decoded.samples, decoded.channels, frames, rate, target_sample_rate);
+            if (!data) {
+                return "";
+            }
 
             sound snd{};
-            snd.data            = data;
-            snd.frame_count     = frames;
-            snd.sample_rate     = rate;
-            snd.channels        = decoded.channels;
+            snd.data = data;
+            snd.frame_count = frames;
+            snd.sample_rate = rate;
+            snd.channels = decoded.channels;
             store_sound(name, snd);
-            spdlog::info("Loaded sound (G.719): {} ({} frames, {} Hz, {} ch)",
-                         name, frames, rate, snd.channels);
+            spdlog::info("Loaded sound (G.719): {} ({} frames, {} Hz, {} ch)", name, frames, rate, snd.channels);
             return name;
         }
 #endif
@@ -917,9 +1040,9 @@ std::string AudioEngine::load_sound(const fs::path& file_path, const std::string
         std::memset(&file_info, 0, sizeof(SF_INFO));
 
         SNDFILE* file = nullptr;
-        #ifdef _WIN32
+#ifdef _WIN32
         file = sf_wchar_open(file_path.wstring().c_str(), SFM_READ, &file_info);
-        #endif
+#endif
 
         if (!file) {
             std::string path_str = path_to_string(file_path);
@@ -933,33 +1056,40 @@ std::string AudioEngine::load_sound(const fs::path& file_path, const std::string
             unsigned int ff_rate = 0, ff_ch = 0;
             std::string path_str2 = path_to_string(file_path);
             if (!ffmpeg_decode_float(path_str2.c_str(), &ff_data, &ff_frames, &ff_rate, &ff_ch)) {
-                spdlog::error("Failed to open sound file: {} - {} (ffmpeg fallback also failed)",
-                              file_path.string(), sf_strerror(NULL));
+                spdlog::error("Failed to open sound file: {} - {} (ffmpeg fallback also failed)", file_path.string(),
+                              sf_strerror(NULL));
                 return "";
             }
             sound snd{};
-            snd.data        = ff_data;
+            snd.data = ff_data;
             snd.frame_count = ff_frames;
             snd.sample_rate = ff_rate;
-            snd.channels    = ff_ch;
+            snd.channels = ff_ch;
             if ((double)ff_rate != target_sample_rate) {
                 double ratio = target_sample_rate / (double)ff_rate;
                 long out_frames = (long)(ff_frames * ratio) + 1;
                 float* rs = new float[out_frames * ff_ch];
                 SRC_DATA sd;
-                sd.data_in = ff_data; sd.input_frames = ff_frames;
-                sd.data_out = rs; sd.output_frames = out_frames;
-                sd.src_ratio = ratio; sd.end_of_input = 1;
+                sd.data_in = ff_data;
+                sd.input_frames = ff_frames;
+                sd.data_out = rs;
+                sd.output_frames = out_frames;
+                sd.src_ratio = ratio;
+                sd.end_of_input = 1;
                 int err = src_simple(&sd, SRC_SINC_FASTEST, (int)ff_ch);
-                if (err) { delete[] ff_data; delete[] rs; return ""; }
+                if (err) {
+                    delete[] ff_data;
+                    delete[] rs;
+                    return "";
+                }
                 delete[] ff_data;
                 snd.data = rs;
                 snd.frame_count = sd.output_frames_gen;
                 snd.sample_rate = (unsigned int)target_sample_rate;
             }
             store_sound(name, snd);
-            spdlog::debug("Loaded sound (ffmpeg): {} ({} frames, {} Hz, {} ch)",
-                          name, snd.frame_count, snd.sample_rate, snd.channels);
+            spdlog::debug("Loaded sound (ffmpeg): {} ({} frames, {} Hz, {} ch)", name, snd.frame_count, snd.sample_rate,
+                          snd.channels);
             return name;
 #else
             spdlog::error("Failed to open sound file: {} - {}", file_path.string(), sf_strerror(NULL));
@@ -1018,8 +1148,8 @@ std::string AudioEngine::load_sound(const fs::path& file_path, const std::string
 
         store_sound(name, snd);
 
-        spdlog::debug("Loaded sound: {} ({} frames, {} Hz, {} channels)",
-                     name, snd.frame_count, snd.sample_rate, snd.channels);
+        spdlog::debug("Loaded sound: {} ({} frames, {} Hz, {} channels)", name, snd.frame_count, snd.sample_rate,
+                      snd.channels);
 
         return name;
 
@@ -1034,19 +1164,26 @@ void AudioEngine::load_screen_sounds(const std::string& screen_name) {
     std::unordered_set<std::string> claimed;
 
     auto want = [&](const fs::path& file, const std::string& name) {
-        if (!claimed.insert(name).second) return;
-        if (!fs::exists(file)) { claimed.erase(name); return; }
+        if (!claimed.insert(name).second) {
+            return;
+        }
+        if (!fs::exists(file)) {
+            claimed.erase(name);
+            return;
+        }
         queue.emplace_back(file, name);
     };
 
     auto scan = [&](const fs::path& dir) {
-        if (!fs::exists(dir)) return;
+        if (!fs::exists(dir)) {
+            return;
+        }
         try {
             for (const auto& entry : fs::directory_iterator(dir)) {
                 if (entry.is_directory()) {
-                    for (const auto& file : fs::directory_iterator(entry.path()))
-                        want(file.path(),
-                             entry.path().stem().string() + "_" + file.path().stem().string());
+                    for (const auto& file : fs::directory_iterator(entry.path())) {
+                        want(file.path(), entry.path().stem().string() + "_" + file.path().stem().string());
+                    }
                 } else if (entry.is_regular_file()) {
                     want(entry.path(), entry.path().stem().string());
                 }
@@ -1058,46 +1195,63 @@ void AudioEngine::load_screen_sounds(const std::string& screen_name) {
 
     // the ancestors' Sounds (parent, its parent, ...), nearest first: the first file claims a name
     std::vector<fs::path> ancestor_sounds;
-    for (const fs::path& root : skin_ancestor_roots()) ancestor_sounds.push_back(root / "Sounds");
+    for (const fs::path& root : skin_ancestor_roots()) {
+        ancestor_sounds.push_back(root / "Sounds");
+    }
 
     fs::path path = sounds_path / screen_name;
     // A screen without its own sound folder still gets don/kat and the
     // global folder - those are screen-independent. Returning here also
     // took those away, leaving such screens (input_test, loading) silent.
     bool has_screen_sounds = fs::exists(path);
-    for (const fs::path& dir : ancestor_sounds) has_screen_sounds = has_screen_sounds || fs::exists(dir / screen_name);
+    for (const fs::path& dir : ancestor_sounds) {
+        has_screen_sounds = has_screen_sounds || fs::exists(dir / screen_name);
+    }
     if (!has_screen_sounds) {
         spdlog::warn("Sounds for screen {} not found", screen_name);
     }
 
     want(sounds_path / "don.wav", "don");
-    for (const fs::path& dir : ancestor_sounds) want(dir / "don.wav", "don");
+    for (const fs::path& dir : ancestor_sounds) {
+        want(dir / "don.wav", "don");
+    }
     want(sounds_path / "ka.wav", "kat");
-    for (const fs::path& dir : ancestor_sounds) want(dir / "ka.wav", "kat");
+    for (const fs::path& dir : ancestor_sounds) {
+        want(dir / "ka.wav", "kat");
+    }
 
     if (has_screen_sounds) {
         scan(path);
-        for (const fs::path& dir : ancestor_sounds) scan(dir / screen_name);
+        for (const fs::path& dir : ancestor_sounds) {
+            scan(dir / screen_name);
+        }
     }
 
     scan(sounds_path / "global");
-    for (const fs::path& dir : ancestor_sounds) scan(dir / "global");
+    for (const fs::path& dir : ancestor_sounds) {
+        scan(dir / "global");
+    }
 
     unsigned hw = std::thread::hardware_concurrency();
     size_t workers = std::min<size_t>(queue.size(), hw ? hw : 4);
     if (workers <= 1) {
-        for (const auto& [file, name] : queue) load_sound(file, name);
+        for (const auto& [file, name] : queue) {
+            load_sound(file, name);
+        }
     } else {
         std::atomic<size_t> next{0};
         std::vector<std::thread> pool;
         pool.reserve(workers);
         for (size_t w = 0; w < workers; ++w) {
             pool.emplace_back([this, &queue, &next]() {
-                for (size_t i = next.fetch_add(1); i < queue.size(); i = next.fetch_add(1))
+                for (size_t i = next.fetch_add(1); i < queue.size(); i = next.fetch_add(1)) {
                     load_sound(queue[i].first, queue[i].second);
+                }
             });
         }
-        for (auto& t : pool) t.join();
+        for (auto& t : pool) {
+            t.join();
+        }
     }
 }
 
@@ -1135,7 +1289,9 @@ void AudioEngine::unload_all_sounds() {
     {
         std::shared_lock<std::shared_mutex> guard(rw_lock);
         names.reserve(sounds.size());
-        for (const auto& [name, _] : sounds) names.push_back(name);
+        for (const auto& [name, _] : sounds) {
+            names.push_back(name);
+        }
     }
 
     for (const auto& name : names) {
@@ -1163,11 +1319,17 @@ void AudioEngine::play_sound(const std::string& name, VolumePreset volume_preset
 
         if (volume_preset != VolumePreset::NONE) {
             float volume = 1.0f;
-            if      (volume_preset == VolumePreset::SOUND)       volume = volume_presets.sound;
-            else if (volume_preset == VolumePreset::MUSIC)       volume = volume_presets.music;
-            else if (volume_preset == VolumePreset::VOICE)       volume = volume_presets.voice;
-            else if (volume_preset == VolumePreset::HITSOUND)    volume = volume_presets.hitsound;
-            else if (volume_preset == VolumePreset::ATTRACT_MODE) volume = volume_presets.attract_mode;
+            if (volume_preset == VolumePreset::SOUND) {
+                volume = volume_presets.sound;
+            } else if (volume_preset == VolumePreset::MUSIC) {
+                volume = volume_presets.music;
+            } else if (volume_preset == VolumePreset::VOICE) {
+                volume = volume_presets.voice;
+            } else if (volume_preset == VolumePreset::HITSOUND) {
+                volume = volume_presets.hitsound;
+            } else if (volume_preset == VolumePreset::ATTRACT_MODE) {
+                volume = volume_presets.attract_mode;
+            }
             std::atomic_ref<float>(snd.volume).store(volume, std::memory_order_relaxed);
         }
 
@@ -1237,7 +1399,9 @@ void AudioEngine::set_sound_pitch(const std::string& name, float pitch) {
     std::shared_lock<std::shared_mutex> guard(rw_lock);
     auto it = sounds.find(name);
     if (it != sounds.end()) {
-        if (!std::isfinite(pitch)) pitch = 1.0f;
+        if (!std::isfinite(pitch)) {
+            pitch = 1.0f;
+        }
         std::atomic_ref<float>(it->second.pitch).store(std::clamp(pitch, 0.01f, 16.0f), std::memory_order_relaxed);
     } else {
         spdlog::warn("Sound {} not found", name);
@@ -1271,58 +1435,65 @@ void AudioEngine::seek_sound(const std::string& name, float position) {
     auto it = sounds.find(name);
     if (it != sounds.end()) {
         sound& snd = it->second;
-        unsigned int frame = static_cast<unsigned int>(std::max(position, 0.0f) * static_cast<float>(target_sample_rate));
-        std::atomic_ref<unsigned int>(snd.current_frame).store(std::min(frame, snd.frame_count), std::memory_order_relaxed);
+        unsigned int frame =
+            static_cast<unsigned int>(std::max(position, 0.0f) * static_cast<float>(target_sample_rate));
+        std::atomic_ref<unsigned int>(snd.current_frame)
+            .store(std::min(frame, snd.frame_count), std::memory_order_relaxed);
         std::atomic_ref<float>(snd.frame_frac).store(0.0f, std::memory_order_relaxed);
     } else {
         spdlog::warn("Sound {} not found", name);
     }
 }
 
-bool AudioEngine::prepare_nus3bank_pcm(const fs::path& file_path, PreparedPCM& out,
-                                       bool quick_resample) {
+bool AudioEngine::prepare_nus3bank_pcm(const fs::path& file_path, PreparedPCM& out, bool quick_resample) {
 #ifdef SUPPORT_FUMEN
     gen4::DecodedAudio decoded;
-    if (!decode_bank(file_path, decoded)) return false;
+    if (!decode_bank(file_path, decoded)) {
+        return false;
+    }
 
     unsigned int frames = (unsigned int)decoded.frame_count();
-    unsigned int rate   = (unsigned int)decoded.sample_rate;
-    float* data = adopt_decoded_pcm(decoded.samples, decoded.channels,
-                                    frames, rate, target_sample_rate,
+    unsigned int rate = (unsigned int)decoded.sample_rate;
+    float* data = adopt_decoded_pcm(decoded.samples, decoded.channels, frames, rate, target_sample_rate,
                                     quick_resample ? SRC_LINEAR : SRC_SINC_FASTEST);
-    if (!data) return false;
+    if (!data) {
+        return false;
+    }
 
     out.data.reset(data);
-    out.frames      = frames;
-    out.rate        = rate;
-    out.channels    = decoded.channels;
-    out.preview_ms  = decoded.preview_ms;
+    out.frames = frames;
+    out.rate = rate;
+    out.channels = decoded.channels;
+    out.preview_ms = decoded.preview_ms;
     out.source_path = file_path.string();
     return true;
 #else
-    (void)file_path; (void)out; (void)quick_resample;
+    (void)file_path;
+    (void)out;
+    (void)quick_resample;
     return false;
 #endif
 }
 
 std::string AudioEngine::load_music_stream_prepared(PreparedPCM&& pcm, const std::string& name) {
-    if (!pcm.data || pcm.frames == 0 || pcm.channels <= 0) return "";
+    if (!pcm.data || pcm.frames == 0 || pcm.channels <= 0) {
+        return "";
+    }
 
     music mus{};
     mus.file_info.channels = pcm.channels;
     mus.file_info.samplerate = (int)pcm.rate;
-    mus.file_path          = pcm.source_path;
-    mus.pcm_data           = pcm.data.release();
-    mus.pcm_total_frames   = pcm.frames;
-    mus.buffer_size        = 4096;
-    mus.stream_buffer      = new float[mus.buffer_size * pcm.channels];
+    mus.file_path = pcm.source_path;
+    mus.pcm_data = pcm.data.release();
+    mus.pcm_total_frames = pcm.frames;
+    mus.buffer_size = 4096;
+    mus.stream_buffer = new float[mus.buffer_size * pcm.channels];
     unload_music_stream(name);
     {
         std::unique_lock<std::shared_mutex> guard(rw_lock);
         music_streams[name] = mus;
     }
-    spdlog::info("Loaded music stream (G.719): {} ({} frames, {} Hz, {} ch)",
-                 name, pcm.frames, pcm.rate, pcm.channels);
+    spdlog::info("Loaded music stream (G.719): {} ({} frames, {} Hz, {} ch)", name, pcm.frames, pcm.rate, pcm.channels);
     return name;
 }
 
@@ -1331,7 +1502,9 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
 #ifdef SUPPORT_FUMEN
         if (is_bank_file(file_path)) {
             PreparedPCM pcm;
-            if (!prepare_nus3bank_pcm(file_path, pcm)) return "";
+            if (!prepare_nus3bank_pcm(file_path, pcm)) {
+                return "";
+            }
             return load_music_stream_prepared(std::move(pcm), name);
         }
 #endif
@@ -1340,9 +1513,9 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
         std::memset(&file_info, 0, sizeof(SF_INFO));
 
         SNDFILE* file = nullptr;
-        #ifdef _WIN32
+#ifdef _WIN32
         file = sf_wchar_open(file_path.wstring().c_str(), SFM_READ, &file_info);
-        #endif
+#endif
 
         if (!file) {
             std::string path_str = path_to_string(file_path);
@@ -1356,8 +1529,8 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
             unsigned int ff_rate = 0, ff_ch = 0;
             std::string path_str2 = path_to_string(file_path);
             if (!ffmpeg_decode_float(path_str2.c_str(), &ff_data, &ff_frames, &ff_rate, &ff_ch)) {
-                spdlog::error("Failed to open music file: {} - {} (ffmpeg fallback also failed)",
-                              file_path.string(), sf_strerror(NULL));
+                spdlog::error("Failed to open music file: {} - {} (ffmpeg fallback also failed)", file_path.string(),
+                              sf_strerror(NULL));
                 return "";
             }
 
@@ -1366,11 +1539,18 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
                 long out_frames = (long)(ff_frames * ratio) + 1;
                 float* rs = new float[out_frames * ff_ch];
                 SRC_DATA sd{};
-                sd.data_in = ff_data; sd.input_frames = ff_frames;
-                sd.data_out = rs; sd.output_frames = out_frames;
-                sd.src_ratio = ratio; sd.end_of_input = 1;
+                sd.data_in = ff_data;
+                sd.input_frames = ff_frames;
+                sd.data_out = rs;
+                sd.output_frames = out_frames;
+                sd.src_ratio = ratio;
+                sd.end_of_input = 1;
                 int err = src_simple(&sd, SRC_SINC_FASTEST, (int)ff_ch);
-                if (err) { delete[] ff_data; delete[] rs; return ""; }
+                if (err) {
+                    delete[] ff_data;
+                    delete[] rs;
+                    return "";
+                }
                 delete[] ff_data;
                 ff_data = rs;
                 ff_frames = sd.output_frames_gen;
@@ -1390,8 +1570,8 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
                 std::unique_lock<std::shared_mutex> guard(rw_lock);
                 music_streams[name] = mus;
             }
-            spdlog::debug("Loaded music stream (ffmpeg): {} ({} frames, {} Hz, {} ch)",
-                          name, ff_frames, ff_rate, ff_ch);
+            spdlog::debug("Loaded music stream (ffmpeg): {} ({} frames, {} Hz, {} ch)", name, ff_frames, ff_rate,
+                          ff_ch);
             return name;
 #else
             spdlog::error("Failed to open music file: {} - {}", file_path.string(), sf_strerror(NULL));
@@ -1404,7 +1584,7 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
         mus.file_info = file_info;
         mus.file_path = file_path.string();
 
-        mus.buffer_size = 4096; //arbitrary buffer size?
+        mus.buffer_size = 4096; // arbitrary buffer size?
         mus.stream_buffer = new float[mus.buffer_size * file_info.channels];
 
         if (file_info.samplerate != target_sample_rate) {
@@ -1421,8 +1601,8 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
             unsigned int resample_buffer_size = (unsigned int)(mus.buffer_size * ratio) + 256;
             mus.resample_buffer = new float[resample_buffer_size * file_info.channels];
 
-            spdlog::info("Music stream {} will be resampled from {} Hz to {} Hz",
-                        name, file_info.samplerate, target_sample_rate);
+            spdlog::info("Music stream {} will be resampled from {} Hz to {} Hz", name, file_info.samplerate,
+                         target_sample_rate);
         }
 
         unload_music_stream(name);
@@ -1431,8 +1611,8 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
             music_streams[name] = mus;
         }
 
-        spdlog::debug("Loaded music stream: {} ({} frames, {} Hz, {} channels)",
-                     name, file_info.frames, file_info.samplerate, file_info.channels);
+        spdlog::debug("Loaded music stream: {} ({} frames, {} Hz, {} channels)", name, file_info.frames,
+                      file_info.samplerate, file_info.channels);
 
         return name;
 
@@ -1443,10 +1623,7 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
 }
 
 #ifndef __EMSCRIPTEN__
-std::string AudioEngine::load_music_stream_memory(
-    const av::AVAudioStream& audio_stream,
-    const std::string&       name)
-{
+std::string AudioEngine::load_music_stream_memory(const av::AVAudioStream& audio_stream, const std::string& name) {
     try {
         std::vector<uint8_t> encoded = audio_stream.encoded_bytes();
         if (encoded.empty()) {
@@ -1458,58 +1635,56 @@ std::string AudioEngine::load_music_stream_memory(
         // handle, so that vio_cursor lives at its final stable address when
         // sf_open_virtual stores a pointer to it.
         music mus{};
-        mus.memory_buffer    = std::make_shared<std::vector<uint8_t>>(std::move(encoded));
-        mus.file_path        = "<memory:" + name + ">";
-        mus.buffer_size      = 4096;
+        mus.memory_buffer = std::make_shared<std::vector<uint8_t>>(std::move(encoded));
+        mus.file_path = "<memory:" + name + ">";
+        mus.buffer_size = 4096;
 
         std::unique_lock<std::shared_mutex> guard(rw_lock);
-        unload_music_stream_from_map(music_streams, name);   // release any previous entry (handle/buffers/resampler)
-        music& stored = music_streams[name] = std::move(mus);  // reference into the map – stable address
+        unload_music_stream_from_map(music_streams, name);    // release any previous entry (handle/buffers/resampler)
+        music& stored = music_streams[name] = std::move(mus); // reference into the map – stable address
 
         // vio_cursor now lives inside the map entry and will never move again.
-        stored.vio_cursor = VirtualFile{ stored.memory_buffer, 0 };
+        stored.vio_cursor = VirtualFile{stored.memory_buffer, 0};
 
         SF_VIRTUAL_IO vio{};
         vio.get_filelen = vf_get_filelen;
-        vio.seek        = vf_seek;
-        vio.read        = vf_read;
-        vio.write       = vf_write;
-        vio.tell        = vf_tell;
+        vio.seek = vf_seek;
+        vio.read = vf_read;
+        vio.write = vf_write;
+        vio.tell = vf_tell;
 
         SF_INFO file_info{};
         std::memset(&file_info, 0, sizeof(SF_INFO));
 
         stored.file_handle = sf_open_virtual(&vio, SFM_READ, &file_info, &stored.vio_cursor);
         if (!stored.file_handle) {
-            spdlog::error("load_music_stream_memory: sf_open_virtual failed for '{}': {}",
-                          name, sf_strerror(nullptr));
+            spdlog::error("load_music_stream_memory: sf_open_virtual failed for '{}': {}", name, sf_strerror(nullptr));
             music_streams.erase(name);
             return "";
         }
 
-        stored.file_info     = file_info;
+        stored.file_info = file_info;
         stored.stream_buffer = new float[stored.buffer_size * file_info.channels];
 
         if (file_info.samplerate != target_sample_rate) {
             int error;
             stored.resampler = src_new(SRC_SINC_FASTEST, file_info.channels, &error);
             if (!stored.resampler) {
-                spdlog::error("Failed to create resampler for memory stream '{}': {}",
-                              name, src_strerror(error));
+                spdlog::error("Failed to create resampler for memory stream '{}': {}", name, src_strerror(error));
                 sf_close(stored.file_handle);
                 delete[] stored.stream_buffer;
                 music_streams.erase(name);
                 return "";
             }
-            double       ratio            = target_sample_rate / (double)file_info.samplerate;
+            double ratio = target_sample_rate / (double)file_info.samplerate;
             unsigned int resample_buf_size = (unsigned int)(stored.buffer_size * ratio) + 256;
             stored.resample_buffer = new float[resample_buf_size * file_info.channels];
-            spdlog::info("Memory music stream '{}' will be resampled from {} Hz to {} Hz",
-                         name, file_info.samplerate, target_sample_rate);
+            spdlog::info("Memory music stream '{}' will be resampled from {} Hz to {} Hz", name, file_info.samplerate,
+                         target_sample_rate);
         }
 
-        spdlog::debug("Loaded memory music stream: '{}' ({} frames, {} Hz, {} channels)",
-                      name, file_info.frames, file_info.samplerate, file_info.channels);
+        spdlog::debug("Loaded memory music stream: '{}' ({} frames, {} Hz, {} channels)", name, file_info.frames,
+                      file_info.samplerate, file_info.channels);
         return name;
 
     } catch (const std::exception& e) {
@@ -1527,11 +1702,17 @@ void AudioEngine::play_music_stream(const std::string& name, VolumePreset volume
 
         if (volume_preset != VolumePreset::NONE) {
             float volume = 1.0f;
-            if      (volume_preset == VolumePreset::SOUND)       volume = volume_presets.sound;
-            else if (volume_preset == VolumePreset::MUSIC)       volume = volume_presets.music;
-            else if (volume_preset == VolumePreset::VOICE)       volume = volume_presets.voice;
-            else if (volume_preset == VolumePreset::HITSOUND)    volume = volume_presets.hitsound;
-            else if (volume_preset == VolumePreset::ATTRACT_MODE) volume = volume_presets.attract_mode;
+            if (volume_preset == VolumePreset::SOUND) {
+                volume = volume_presets.sound;
+            } else if (volume_preset == VolumePreset::MUSIC) {
+                volume = volume_presets.music;
+            } else if (volume_preset == VolumePreset::VOICE) {
+                volume = volume_presets.voice;
+            } else if (volume_preset == VolumePreset::HITSOUND) {
+                volume = volume_presets.hitsound;
+            } else if (volume_preset == VolumePreset::ATTRACT_MODE) {
+                volume = volume_presets.attract_mode;
+            }
             std::atomic_ref<float>(mus.volume).store(volume, std::memory_order_relaxed);
         }
 
@@ -1546,8 +1727,9 @@ float AudioEngine::get_music_time_length(const std::string& name) const {
     std::shared_lock<std::shared_mutex> guard(rw_lock);
     auto it = music_streams.find(name);
     if (it != music_streams.end()) {
-        if (it->second.pcm_data)
+        if (it->second.pcm_data) {
             return static_cast<float>(it->second.pcm_total_frames) / static_cast<float>(target_sample_rate);
+        }
         // file_info.frames/samplerate are in the source file's own rate --
         // pcm_data above is already resampled to target_sample_rate, but
         // this file-backed stream is not.
@@ -1561,9 +1743,9 @@ float AudioEngine::get_music_time_played(const std::string& name) const {
     std::shared_lock<std::shared_mutex> guard(rw_lock);
     auto it = music_streams.find(name);
     if (it != music_streams.end()) {
-        unsigned long long frame = std::atomic_ref<unsigned long long>(
-            const_cast<unsigned long long&>(it->second.current_frame))
-            .load(std::memory_order_relaxed);
+        unsigned long long frame =
+            std::atomic_ref<unsigned long long>(const_cast<unsigned long long&>(it->second.current_frame))
+                .load(std::memory_order_relaxed);
         return static_cast<float>(frame) / static_cast<float>(target_sample_rate);
     }
     spdlog::warn("Music stream {} not found", name);
@@ -1589,8 +1771,7 @@ bool AudioEngine::is_music_stream_playing(const std::string& name) const {
     std::shared_lock<std::shared_mutex> guard(rw_lock);
     auto it = music_streams.find(name);
     if (it != music_streams.end()) {
-        return std::atomic_ref<bool>(const_cast<bool&>(it->second.is_playing))
-                   .load(std::memory_order_relaxed);
+        return std::atomic_ref<bool>(const_cast<bool&>(it->second.is_playing)).load(std::memory_order_relaxed);
     }
     spdlog::warn("Sound {} not found", name);
     return false;
@@ -1601,14 +1782,16 @@ void AudioEngine::stop_music_stream(const std::string& name) {
     auto it = music_streams.find(name);
     if (it != music_streams.end()) {
         music& mus = it->second;
-        mus.is_playing      = false;
-        mus.current_frame   = 0;
-        mus.buffer_position  = 0;
+        mus.is_playing = false;
+        mus.current_frame = 0;
+        mus.buffer_position = 0;
         mus.frames_in_buffer = 0;
 
         if (mus.file_handle) {
             sf_seek(mus.file_handle, 0, SEEK_SET);
-            if (mus.resampler) src_reset(mus.resampler);
+            if (mus.resampler) {
+                src_reset(mus.resampler);
+            }
         }
     } else {
         spdlog::warn("Music stream {} not found", name);
@@ -1625,7 +1808,9 @@ void AudioEngine::unload_all_music() {
     {
         std::shared_lock<std::shared_mutex> guard(rw_lock);
         names.reserve(music_streams.size());
-        for (const auto& [name, _] : music_streams) names.push_back(name);
+        for (const auto& [name, _] : music_streams) {
+            names.push_back(name);
+        }
     }
 
     for (const auto& name : names) {
@@ -1644,23 +1829,30 @@ void AudioEngine::seek_music_stream(const std::string& name, float position) {
         if (mus.file_handle) {
             sf_count_t frame_position = static_cast<sf_count_t>(position * mus.file_info.samplerate);
 
-            if (frame_position < 0) frame_position = 0;
-            if (frame_position >= mus.file_info.frames) frame_position = mus.file_info.frames - 1;
+            if (frame_position < 0) {
+                frame_position = 0;
+            }
+            if (frame_position >= mus.file_info.frames) {
+                frame_position = mus.file_info.frames - 1;
+            }
 
             sf_seek(mus.file_handle, frame_position, SEEK_SET);
-            if (mus.resampler) src_reset(mus.resampler);
+            if (mus.resampler) {
+                src_reset(mus.resampler);
+            }
 
-            mus.buffer_position  = 0;
+            mus.buffer_position = 0;
             mus.frames_in_buffer = 0;
-            mus.current_frame    = static_cast<unsigned long long>(
-                std::max(position, 0.0f) * static_cast<float>(target_sample_rate));
+            mus.current_frame =
+                static_cast<unsigned long long>(std::max(position, 0.0f) * static_cast<float>(target_sample_rate));
         } else if (mus.pcm_data) {
-            unsigned long long frame_pos = static_cast<unsigned long long>(
-                std::max(position, 0.0f) * static_cast<float>(target_sample_rate));
-            if (frame_pos > static_cast<unsigned long long>(mus.pcm_total_frames))
+            unsigned long long frame_pos =
+                static_cast<unsigned long long>(std::max(position, 0.0f) * static_cast<float>(target_sample_rate));
+            if (frame_pos > static_cast<unsigned long long>(mus.pcm_total_frames)) {
                 frame_pos = static_cast<unsigned long long>(mus.pcm_total_frames);
+            }
             std::atomic_ref<unsigned long long>(mus.current_frame).store(frame_pos, std::memory_order_relaxed);
-            mus.buffer_position  = 0;
+            mus.buffer_position = 0;
             mus.frames_in_buffer = 0;
         }
     } else {

@@ -8,6 +8,7 @@ class DanSelectScene : public LuaScript {
     sol::protected_function fn_draw_confirm;
     sol::protected_function fn_draw_title;
     sol::protected_function fn_ribbon;
+
 public:
     DanSelectScene();
     bool valid() const { return lua_object.valid() && fn_draw_back.valid(); }

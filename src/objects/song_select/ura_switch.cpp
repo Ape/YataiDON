@@ -1,10 +1,12 @@
 #include "ura_switch.h"
 
 UraSwitchAnimation::UraSwitchAnimation() {
-    if (!load("UraSwitchAnimation", "ura_switch")) return;
-    fn_start  = lua_object["start"];
+    if (!load("UraSwitchAnimation", "ura_switch")) {
+        return;
+    }
+    fn_start = lua_object["start"];
     fn_update = lua_object["update"];
-    fn_draw   = lua_object["draw"];
+    fn_draw = lua_object["draw"];
 }
 
 void UraSwitchAnimation::start(bool is_backwards) {

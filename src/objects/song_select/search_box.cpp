@@ -1,6 +1,8 @@
 #include "search_box.h"
-#include "song_select_script.h"
+
 #include <algorithm>
+
+#include "song_select_script.h"
 
 SearchBox::SearchBox() {
     current_search = "";
@@ -16,5 +18,7 @@ void SearchBox::update(double current_ms) {
 }
 
 void SearchBox::draw(SongSelectScript* script) {
-    if (script) script->draw_search_box(current_search, bg_resize->attribute, diff_fade_in->attribute);
+    if (script) {
+        script->draw_search_box(current_search, bg_resize->attribute, diff_fade_in->attribute);
+    }
 }

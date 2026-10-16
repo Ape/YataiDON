@@ -9,6 +9,7 @@ class AttractScene : public LuaScript {
     sol::protected_function fn_draw;
     sol::protected_function fn_is_finished;
     sol::protected_function fn_close;
+
 public:
     AttractScene();
     ~AttractScene();

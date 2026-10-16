@@ -1,4 +1,5 @@
 #include "input_cali.h"
+
 #include "../libs/input.h"
 
 static const fs::path CALI_TJA_PATH = "Songs/Calibration.tja";
@@ -20,7 +21,9 @@ void InputCaliScreen::on_screen_start() {
     background.emplace(global_data.player_num, 150, "TUTORIAL");
     latencies.clear();
     average_latency = 0.0;
-    if (!players.empty() && players[0]) players[0]->last_note_hit = NO_AUTOPLAY_HIT_YET;
+    if (!players.empty() && players[0]) {
+        players[0]->last_note_hit = NO_AUTOPLAY_HIT_YET;
+    }
 }
 
 Screens InputCaliScreen::on_screen_end(Screens next_screen) {
@@ -38,13 +41,11 @@ std::optional<Screens> InputCaliScreen::update() {
     auto result = GameScreen::update();
     if (result == Screens::SONG_SELECT) {
         return std::nullopt;
-    }
-    else if (result == Screens::RESULT) {
+    } else if (result == Screens::RESULT) {
         return Screens::SETTINGS;
     }
 
-    if ((is_l_don_pressed() || is_r_don_pressed()) &&
-        !players.empty() && players[0] &&
+    if ((is_l_don_pressed() || is_r_don_pressed()) && !players.empty() && players[0] &&
         players[0]->last_note_hit != NO_AUTOPLAY_HIT_YET) {
         double current_ms = get_current_ms();
         double latency = players[0]->last_note_hit - current_ms;
@@ -53,12 +54,13 @@ std::optional<Screens> InputCaliScreen::update() {
         std::sort(latencies.begin(), latencies.end());
 
         if (n % 2 == 0) {
-            average_latency = (latencies[n/2 - 1] + latencies[n/2]) / 2.0;
+            average_latency = (latencies[n / 2 - 1] + latencies[n / 2]) / 2.0;
         } else {
-            average_latency = latencies[n/2];
+            average_latency = latencies[n / 2];
         }
         average_latency_text.reset();
-        average_latency_text.emplace(ray::TextFormat("Average Latency: %.2f ms", average_latency * -1), 40, ray::WHITE, ray::BLUE, false, 4.0);
+        average_latency_text.emplace(ray::TextFormat("Average Latency: %.2f ms", average_latency * -1), 40, ray::WHITE,
+                                     ray::BLUE, false, 4.0);
     }
 
     return result;
@@ -66,11 +68,17 @@ std::optional<Screens> InputCaliScreen::update() {
 
 void InputCaliScreen::draw() {
     ray::ClearBackground(ray::BLACK);
-    if (background.has_value()) background->draw_back();
+    if (background.has_value()) {
+        background->draw_back();
+    }
     players[0]->draw(ms_from_start, 0, 232 * tex.screen_scale);
     if (average_latency_text.has_value()) {
-        average_latency_text->draw({.x=(int)(tex.screen_width/2) - average_latency_text->width/2, .y=static_cast<float>(tex.screen_height - 40 - (int)(average_latency_text->height*1.5))});
+        average_latency_text->draw(
+            {.x = (int)(tex.screen_width / 2) - average_latency_text->width / 2,
+             .y = static_cast<float>(tex.screen_height - 40 - (int)(average_latency_text->height * 1.5))});
     }
-    if (background.has_value()) background->draw_fore();
+    if (background.has_value()) {
+        background->draw_fore();
+    }
     draw_overlay();
 }

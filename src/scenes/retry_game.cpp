@@ -1,4 +1,5 @@
 #include "retry_game.h"
+
 #include "../libs/input.h"
 #include "../libs/scores.h"
 
@@ -12,7 +13,8 @@ void RetryGameScreen::on_screen_start() {
         chara->set_don_colors(pd->chara_color_1, pd->chara_color_2, pd->chara_color_3);
         chara->apply_face(pd->chara_face_index);
     } else {
-        chara->set_don_colors(chara_default_color_1(global_data.player_num), chara_default_color_2(global_data.player_num), {249, 240, 225, 255});
+        chara->set_don_colors(chara_default_color_1(global_data.player_num),
+                              chara_default_color_2(global_data.player_num), {249, 240, 225, 255});
     }
     chara->set_rotation(tex.chara_3d_config.rot_x, 0.0f, tex.chara_3d_config.rot_z);
     chara->set_anim(AnimIndex::DON_FUKKATU_LOOP);
@@ -37,23 +39,32 @@ std::optional<Screens> RetryGameScreen::update() {
         return std::nullopt;
     }
     double current_ms = get_current_ms();
-    if (last_ms == 0) last_ms = current_ms;
+    if (last_ms == 0) {
+        last_ms = current_ms;
+    }
     allnet_indicator.update(current_ms);
 
     int hits = is_l_don_pressed() + is_r_don_pressed();
     for (int i = 0; i < hits; i++) {
         scene->hit();
         audio.play_sound("don", VolumePreset::SOUND);
-        if (scene->phase() == "count") chara_target += 0.5f;
+        if (scene->phase() == "count") {
+            chara_target += 0.5f;
+        }
     }
     scene->update(current_ms);
     if (chara) {
         std::string phase = scene->phase();
         if (phase != chara_phase) {
             chara_phase = phase;
-            if (phase == "success") chara->set_anim(AnimIndex::DON_FULL_GAGE);
-            else if (phase == "failure") chara->set_anim(AnimIndex::DON_MISS_NORMAL);
-            if (phase == "success" || phase == "failure") chara->set_frozen(false);
+            if (phase == "success") {
+                chara->set_anim(AnimIndex::DON_FULL_GAGE);
+            } else if (phase == "failure") {
+                chara->set_anim(AnimIndex::DON_MISS_NORMAL);
+            }
+            if (phase == "success" || phase == "failure") {
+                chara->set_frozen(false);
+            }
         }
         if (phase == "count" && chara_progress < chara_target) {
             chara_progress = std::min(chara_target, chara_progress + 0.5f * (float)(current_ms - last_ms) / 100.0f);
@@ -68,7 +79,8 @@ std::optional<Screens> RetryGameScreen::update() {
             return on_screen_end(Screens::SONG_SELECT);
         }
         reset_session();
-        if (global_data.config->limits.song_limit > 0 && global_data.config->limits.song_limit == global_data.songs_played) {
+        if (global_data.config->limits.song_limit > 0 &&
+            global_data.config->limits.song_limit == global_data.songs_played) {
             global_data.songs_played = 0;
             return on_screen_end(Screens::GAME_OVER);
         }
@@ -85,7 +97,9 @@ void RetryGameScreen::draw() {
     scene->draw_back();
     if (chara) {
         auto pos = scene->chara_pos();
-        if (pos) chara->draw((*pos)[0], (*pos)[1], (*pos)[2]);
+        if (pos) {
+            chara->draw((*pos)[0], (*pos)[1], (*pos)[2]);
+        }
     }
     scene->draw_front();
     coin_overlay.draw();

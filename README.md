@@ -70,6 +70,15 @@ Download the latest release for your operating system from the [releases page](h
 - [Android](https://github.com/Yonokid/YataiDON/wiki/Android)
 - [iOS](ios/README.md)
 
+### Formatting
+
+With `clang-format` installed, run this from the repository root to format C++ sources
+and headers in place using `.clang-format`:
+
+```sh
+find src -type f \( -name '*.cpp' -o -name '*.h' \) -exec clang-format -i {} +
+```
+
 ### Linting
 
 With `clang-tidy` and `run-clang-tidy` installed, run this from the repository root

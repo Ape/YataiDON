@@ -17,7 +17,7 @@ private:
     TextureObject* t_master_bg = nullptr;
     TextureObject* t_level_up = nullptr;
     TextureObject* t_level_down = nullptr;
-    TextureObject* t_diff[3] = {};  // indexed by BranchDifficulty
+    TextureObject* t_diff[3] = {}; // indexed by BranchDifficulty
 
 public:
     BranchDifficulty difficulty;

@@ -1,49 +1,58 @@
 #pragma once
 #include <array>
-#include "game.h"
+
 #include "../libs/input.h"
 #include "../objects/game/practice_menu.h"
+#include "game.h"
 
 class PracticeDrumHitEffect : public DrumHitEffect {
     int player_index;
     TextureObject* t_drum = nullptr;
+
 public:
     PracticeDrumHitEffect(DrumType type, Side side, int player_index)
         : DrumHitEffect(type, side), player_index(player_index) {
         if (type == DrumType::DON) {
             t_drum = tex.get_texture("practice/large_drum_don");
         } else if (type == DrumType::KAT) {
-            if (side == Side::LEFT)
+            if (side == Side::LEFT) {
                 t_drum = tex.get_texture("practice/large_drum_kat_l");
-            else if (side == Side::RIGHT)
+            } else if (side == Side::RIGHT) {
                 t_drum = tex.get_texture("practice/large_drum_kat_r");
+            }
         }
     }
 
-    void draw(float y) override {
-        tex.draw_texture(t_drum, {.fade = fade->attribute, .index = player_index});
-    }
+    void draw(float y) override { tex.draw_texture(t_drum, {.fade = fade->attribute, .index = player_index}); }
 };
 
 class PracticePlayer : public Player {
 public:
     bool paused = false;
 
-    PracticePlayer(std::optional<SongParser>& parser_ref, PlayerNum player_num_param,
-                   int difficulty_param, bool is_2p_param, const Modifiers& modifiers_param)
+    PracticePlayer(std::optional<SongParser>& parser_ref, PlayerNum player_num_param, int difficulty_param,
+                   bool is_2p_param, const Modifiers& modifiers_param)
         : Player(parser_ref, player_num_param, difficulty_param, is_2p_param, modifiers_param) {
         judge_counter = JudgeCounter();
     }
 
     void handle_input(double ms_from_start, double current_ms, std::optional<Background>& background) override {
-        if (paused) return;
+        if (paused) {
+            return;
+        }
         if (is_auto_play()) {
             while (true) {
-                if      (is_l_don_pressed(player_num)) spawn_hit_effects(DrumType::DON, Side::LEFT);
-                else if (is_r_don_pressed(player_num)) spawn_hit_effects(DrumType::DON, Side::RIGHT);
-                else if (is_l_kat_pressed(player_num)) spawn_hit_effects(DrumType::KAT, Side::LEFT);
-                else if (is_r_kat_pressed(player_num)) spawn_hit_effects(DrumType::KAT, Side::RIGHT);
-                else break;
+                if (is_l_don_pressed(player_num)) {
+                    spawn_hit_effects(DrumType::DON, Side::LEFT);
+                } else if (is_r_don_pressed(player_num)) {
+                    spawn_hit_effects(DrumType::DON, Side::RIGHT);
+                } else if (is_l_kat_pressed(player_num)) {
+                    spawn_hit_effects(DrumType::KAT, Side::LEFT);
+                } else if (is_r_kat_pressed(player_num)) {
+                    spawn_hit_effects(DrumType::KAT, Side::RIGHT);
+                } else {
+                    break;
+                }
             }
             return;
         }
@@ -51,7 +60,7 @@ public:
     }
 
     void spawn_hit_effects(DrumType drum_type, Side side) override {
-        lane_hit_effect = LaneHitEffect(drum_type, Judgments::BAD); //judgment parameter workaround
+        lane_hit_effect = LaneHitEffect(drum_type, Judgments::BAD); // judgment parameter workaround
         if (draw_drum_hit_list.size() < 4) {
             draw_drum_hit_list.push_back(std::make_unique<DrumHitEffect>(drum_type, side));
         }

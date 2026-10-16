@@ -3,69 +3,91 @@
 #include <tracy/TracyLua.hpp>
 #endif
 
-#include <cstring>
-#include <string_view>
-#include <cmath>
 #include <algorithm>
-#include "global_data.h"
-#include "text.h"
-#include "audio.h"
-#include "input.h"
-#include "filesystem.h"
-#include "webcam.h"
-#include "screen.h"
-#include "../objects/song_select/file_navigator/box_lua_bindings.h"
-#include "../objects/enums.h"
+#include <cmath>
+#include <cstring>
 #include <spdlog/spdlog.h>
+#include <string_view>
+
+#include "../objects/enums.h"
+#include "../objects/song_select/file_navigator/box_lua_bindings.h"
+#include "audio.h"
+#include "filesystem.h"
+#include "global_data.h"
+#include "input.h"
+#include "screen.h"
+#include "text.h"
+#include "webcam.h"
 
 namespace {
-constexpr int LUA_SITE_MAX_LEVELS = 8;
+    constexpr int LUA_SITE_MAX_LEVELS = 8;
 
-struct LuaStackGuard {
-    lua_State* state;
-    int top;
-    explicit LuaStackGuard(lua_State* state) : state(state), top(lua_gettop(state)) {}
-    ~LuaStackGuard() { lua_settop(state, top); }
-};
-}
+    struct LuaStackGuard {
+        lua_State* state;
+        int top;
+        explicit LuaStackGuard(lua_State* state) : state(state), top(lua_gettop(state)) {}
+        ~LuaStackGuard() { lua_settop(state, top); }
+    };
+} // namespace
 
 void log_lua_site(DrawLogEntry& entry, lua_State* state) {
-    if (!state) return;
+    if (!state) {
+        return;
+    }
     LuaStackGuard guard(state);
     lua_Debug frame;
     for (int level = 0; level < LUA_SITE_MAX_LEVELS; level++) {
-        if (!lua_getstack(state, level, &frame) || !lua_getinfo(state, "Sln", &frame)) return;
-        if (frame.what && frame.what[0] == 'C') continue;
+        if (!lua_getstack(state, level, &frame) || !lua_getinfo(state, "Sln", &frame)) {
+            return;
+        }
+        if (frame.what && frame.what[0] == 'C') {
+            continue;
+        }
         entry.from_lua = true;
         entry.lua_line = frame.currentline;
         entry.lua_defined_line = frame.linedefined;
         entry.lua_function = frame.name ? frame.name : "";
-        if (frame.source && frame.source[0] == '@') entry.lua_source = frame.source + 1;
+        if (frame.source && frame.source[0] == '@') {
+            entry.lua_source = frame.source + 1;
+        }
         return;
     }
 }
 
 static std::optional<EaseType> parse_ease_type(const sol::optional<std::string>& ease_str) {
-    if (!ease_str) return std::nullopt;
-    if (ease_str == "quadratic") return EaseType::Quadratic;
-    if (ease_str == "cubic") return EaseType::Cubic;
-    if (ease_str == "exponential") return EaseType::Exponential;
+    if (!ease_str) {
+        return std::nullopt;
+    }
+    if (ease_str == "quadratic") {
+        return EaseType::Quadratic;
+    }
+    if (ease_str == "cubic") {
+        return EaseType::Cubic;
+    }
+    if (ease_str == "exponential") {
+        return EaseType::Exponential;
+    }
     spdlog::error("Unknown ease type: {}", ease_str.value());
     return std::nullopt;
 }
 
 static SessionData& current_session() {
     static SessionData fallback{};
-    if (global_data.session_data.empty()) return fallback;
+    if (global_data.session_data.empty()) {
+        return fallback;
+    }
     int idx = (int)global_data.player_num;
-    if (idx < 0 || idx >= (int)global_data.session_data.size()) idx = 0;
+    if (idx < 0 || idx >= (int)global_data.session_data.size()) {
+        idx = 0;
+    }
     return global_data.session_data[idx];
 }
 
-static DrawTextureParams parse_draw_params_legacy(const sol::optional<sol::table>& params_table,
-                                                  bool allow_blend) {
+static DrawTextureParams parse_draw_params_legacy(const sol::optional<sol::table>& params_table, bool allow_blend) {
     DrawTextureParams params;
-    if (!params_table) return params;
+    if (!params_table) {
+        return params;
+    }
     sol::table t = params_table.value();
 
     sol::optional<sol::table> color = t["color"];
@@ -76,23 +98,27 @@ static DrawTextureParams parse_draw_params_legacy(const sol::optional<sol::table
         params.color.a = color.value()[4].get_or(params.color.a);
     }
 
-    params.frame    = t["frame"].get_or(params.frame);
-    params.scale    = t["scale"].get_or(params.scale);
-    params.center   = t["center"].get_or(params.center);
-    params.x        = t["x"].get_or(params.x);
-    params.y        = t["y"].get_or(params.y);
-    params.x2       = t["x2"].get_or(params.x2);
-    params.y2       = t["y2"].get_or(params.y2);
+    params.frame = t["frame"].get_or(params.frame);
+    params.scale = t["scale"].get_or(params.scale);
+    params.center = t["center"].get_or(params.center);
+    params.x = t["x"].get_or(params.x);
+    params.y = t["y"].get_or(params.y);
+    params.x2 = t["x2"].get_or(params.x2);
+    params.y2 = t["y2"].get_or(params.y2);
     params.rotation = t["rotation"].get_or(params.rotation);
-    params.fade     = t["fade"].get_or(params.fade);
-    params.index    = t["index"].get_or(params.index);
+    params.fade = t["fade"].get_or(params.fade);
+    params.index = t["index"].get_or(params.index);
 
     sol::optional<std::string> mirror = t["mirror"];
-    if (mirror) params.mirror = mirror_from_string(mirror.value());
+    if (mirror) {
+        params.mirror = mirror_from_string(mirror.value());
+    }
 
     if (allow_blend) {
         sol::optional<std::string> blend = t["blend"];
-        if (blend) params.blend = blend_from_string(blend.value());
+        if (blend) {
+            params.blend = blend_from_string(blend.value());
+        }
     }
 
     sol::optional<sol::table> origin = t["origin"];
@@ -104,11 +130,11 @@ static DrawTextureParams parse_draw_params_legacy(const sol::optional<sol::table
     sol::optional<sol::table> src = t["src"];
     if (src) {
         ray::Rectangle rect;
-        rect.x      = src.value()["x"].get_or(0.0f);
-        rect.y      = src.value()["y"].get_or(0.0f);
-        rect.width  = src.value()["width"].get_or(0.0f);
+        rect.x = src.value()["x"].get_or(0.0f);
+        rect.y = src.value()["y"].get_or(0.0f);
+        rect.width = src.value()["width"].get_or(0.0f);
         rect.height = src.value()["height"].get_or(0.0f);
-        params.src  = rect;
+        params.src = rect;
     }
 
     return params;
@@ -116,11 +142,15 @@ static DrawTextureParams parse_draw_params_legacy(const sol::optional<sol::table
 
 // One value the way sol's get_or reads it in release builds: anything but a number keeps the
 // default, integers convert directly, other numbers round to the nearest integer for integral T.
-template <typename T>
+template<typename T>
 static T lua_number_or(lua_State* L, int idx, T def) {
-    if (lua_type(L, idx) != LUA_TNUMBER) return def;
+    if (lua_type(L, idx) != LUA_TNUMBER) {
+        return def;
+    }
     if constexpr (std::is_integral_v<T>) {
-        if (lua_isinteger(L, idx)) return static_cast<T>(lua_tointeger(L, idx));
+        if (lua_isinteger(L, idx)) {
+            return static_cast<T>(lua_tointeger(L, idx));
+        }
         return static_cast<T>(llround(lua_tonumber(L, idx)));
     } else {
         return static_cast<T>(lua_tonumber(L, idx));
@@ -128,14 +158,14 @@ static T lua_number_or(lua_State* L, int idx, T def) {
 }
 
 // t[i] / t.key of the table or userdata at idx, metamethods included (like sol's proxies)
-template <typename T>
+template<typename T>
 static T lua_index_or(lua_State* L, int idx, lua_Integer i, T def) {
     lua_geti(L, idx, i);
     T v = lua_number_or(L, -1, def);
     lua_pop(L, 1);
     return v;
 }
-template <typename T>
+template<typename T>
 static T lua_field_or(lua_State* L, int idx, const char* key, T def) {
     lua_getfield(L, idx, key);
     T v = lua_number_or(L, -1, def);
@@ -152,9 +182,10 @@ static bool lua_is_table_like(lua_State* L, int idx) {
 // instead of looking up all ~17 names through sol proxies: draw_texture is called a few hundred
 // times per frame by Lua skins and the lookups were most of its cost. A table with a metatable
 // (fields could come from __index) or a userdata goes through the legacy path.
-static DrawTextureParams parse_draw_params(const sol::optional<sol::table>& params_table,
-                                            bool allow_blend = true) {
-    if (!params_table) return DrawTextureParams{};
+static DrawTextureParams parse_draw_params(const sol::optional<sol::table>& params_table, bool allow_blend = true) {
+    if (!params_table) {
+        return DrawTextureParams{};
+    }
     lua_State* L = params_table->lua_state();
     params_table->push();
     const int t = lua_gettop(L);
@@ -172,17 +203,28 @@ static DrawTextureParams parse_draw_params(const sol::optional<sol::table>& para
             const char* k = lua_tolstring(L, -2, &len);
             const std::string_view key(k, len);
             const int v = lua_gettop(L);
-            if      (key == "x")        params.x        = lua_number_or(L, v, params.x);
-            else if (key == "y")        params.y        = lua_number_or(L, v, params.y);
-            else if (key == "x2")       params.x2       = lua_number_or(L, v, params.x2);
-            else if (key == "y2")       params.y2       = lua_number_or(L, v, params.y2);
-            else if (key == "fade")     params.fade     = lua_number_or(L, v, params.fade);
-            else if (key == "frame")    params.frame    = lua_number_or(L, v, params.frame);
-            else if (key == "scale")    params.scale    = lua_number_or(L, v, params.scale);
-            else if (key == "rotation") params.rotation = lua_number_or(L, v, params.rotation);
-            else if (key == "index")    params.index    = lua_number_or(L, v, params.index);
-            else if (key == "center") {
-                if (lua_isboolean(L, v)) params.center = lua_toboolean(L, v) != 0;
+            if (key == "x") {
+                params.x = lua_number_or(L, v, params.x);
+            } else if (key == "y") {
+                params.y = lua_number_or(L, v, params.y);
+            } else if (key == "x2") {
+                params.x2 = lua_number_or(L, v, params.x2);
+            } else if (key == "y2") {
+                params.y2 = lua_number_or(L, v, params.y2);
+            } else if (key == "fade") {
+                params.fade = lua_number_or(L, v, params.fade);
+            } else if (key == "frame") {
+                params.frame = lua_number_or(L, v, params.frame);
+            } else if (key == "scale") {
+                params.scale = lua_number_or(L, v, params.scale);
+            } else if (key == "rotation") {
+                params.rotation = lua_number_or(L, v, params.rotation);
+            } else if (key == "index") {
+                params.index = lua_number_or(L, v, params.index);
+            } else if (key == "center") {
+                if (lua_isboolean(L, v)) {
+                    params.center = lua_toboolean(L, v) != 0;
+                }
             } else if (key == "color") {
                 if (lua_is_table_like(L, v)) {
                     params.color.r = lua_index_or(L, v, 1, params.color.r);
@@ -193,11 +235,11 @@ static DrawTextureParams parse_draw_params(const sol::optional<sol::table>& para
             } else if (key == "src") {
                 if (lua_is_table_like(L, v)) {
                     ray::Rectangle rect;
-                    rect.x      = lua_field_or(L, v, "x", 0.0f);
-                    rect.y      = lua_field_or(L, v, "y", 0.0f);
-                    rect.width  = lua_field_or(L, v, "width", 0.0f);
+                    rect.x = lua_field_or(L, v, "x", 0.0f);
+                    rect.y = lua_field_or(L, v, "y", 0.0f);
+                    rect.width = lua_field_or(L, v, "width", 0.0f);
                     rect.height = lua_field_or(L, v, "height", 0.0f);
-                    params.src  = rect;
+                    params.src = rect;
                 }
             } else if (key == "origin") {
                 if (lua_is_table_like(L, v)) {
@@ -205,9 +247,13 @@ static DrawTextureParams parse_draw_params(const sol::optional<sol::table>& para
                     params.origin.y = lua_index_or(L, v, 2, params.origin.y);
                 }
             } else if (key == "mirror") {
-                if (lua_type(L, v) == LUA_TSTRING) params.mirror = mirror_from_string(lua_tostring(L, v));
+                if (lua_type(L, v) == LUA_TSTRING) {
+                    params.mirror = mirror_from_string(lua_tostring(L, v));
+                }
             } else if (key == "blend") {
-                if (allow_blend && lua_type(L, v) == LUA_TSTRING) params.blend = blend_from_string(lua_tostring(L, v));
+                if (allow_blend && lua_type(L, v) == LUA_TSTRING) {
+                    params.blend = blend_from_string(lua_tostring(L, v));
+                }
             }
         }
         lua_pop(L, 1);
@@ -241,7 +287,9 @@ void ScriptManager::index_scripts(const fs::path& script_path) {
                     scripts[sub_p.stem().string()] = sub_p.string();
                 }
             }
-            if (sub_ec) spdlog::warn("Unable to index scripts in {}: {}", p.string(), sub_ec.message());
+            if (sub_ec) {
+                spdlog::warn("Unable to index scripts in {}: {}", p.string(), sub_ec.message());
+            }
         } else if (p.extension() == ".lua" && !scripts.count(p.stem().string())) {
             scripts[p.stem().string()] = p.string();
         }
@@ -250,10 +298,9 @@ void ScriptManager::index_scripts(const fs::path& script_path) {
 
 void ScriptManager::init(fs::path script_path) {
     lua = std::make_unique<sol::state>();
-    lua->open_libraries(sol::lib::base, sol::lib::package, sol::lib::string,
-                        sol::lib::math, sol::lib::table);
+    lua->open_libraries(sol::lib::base, sol::lib::package, sol::lib::string, sol::lib::math, sol::lib::table);
 #ifdef TRACY_ENABLE
-    tracy::LuaRegister(lua->lua_state());   // tracy.ZoneBeginN / ZoneEnd / ZoneText / Message for skins
+    tracy::LuaRegister(lua->lua_state()); // tracy.ZoneBeginN / ZoneEnd / ZoneText / Message for skins
 #endif
 
     scripts.clear();
@@ -261,20 +308,22 @@ void ScriptManager::init(fs::path script_path) {
 
     // the parent's Scripts, and its parent's ..., nearest first
     std::vector<fs::path> ancestor_scripts;
-    for (const fs::path& root : skin_ancestor_roots()) ancestor_scripts.push_back(root / "Scripts");
+    for (const fs::path& root : skin_ancestor_roots()) {
+        ancestor_scripts.push_back(root / "Scripts");
+    }
 
     std::string skin_scripts_dir = script_path.string();
-    std::string package_path = skin_scripts_dir + "/?.lua;" +
-                               skin_scripts_dir + "/?/init.lua";
+    std::string package_path = skin_scripts_dir + "/?.lua;" + skin_scripts_dir + "/?/init.lua";
     for (const fs::path& dir : ancestor_scripts) {
-        package_path += ";" + dir.string() + "/?.lua;" +
-                        dir.string() + "/?/init.lua";
+        package_path += ";" + dir.string() + "/?.lua;" + dir.string() + "/?/init.lua";
     }
     std::string default_path = (*lua)["package"]["path"];
     (*lua)["package"]["path"] = package_path + ";" + default_path;
 
     std::vector<std::string> script_dirs{skin_scripts_dir};
-    for (const fs::path& dir : ancestor_scripts) script_dirs.push_back(dir.string());
+    for (const fs::path& dir : ancestor_scripts) {
+        script_dirs.push_back(dir.string());
+    }
     sol::function make_require = lua->load(R"(
         local orig, caller_source, dirs = ...
         local searchpath, loaded = package.searchpath, package.loaded
@@ -298,17 +347,22 @@ void ScriptManager::init(fs::path script_path) {
             end
             return orig(name)
         end
-    )", "=skin_require");
+    )",
+                                           "=skin_require");
     auto caller_source = [](sol::this_state s) -> std::string {
-        lua_Debug ar;   // level 0 = this function, 1 = the require wrapper, 2 = its caller
-        if (!lua_getstack(s, 2, &ar) || !lua_getinfo(s, "S", &ar) || !ar.source) return "";
+        lua_Debug ar; // level 0 = this function, 1 = the require wrapper, 2 = its caller
+        if (!lua_getstack(s, 2, &ar) || !lua_getinfo(s, "S", &ar) || !ar.source) {
+            return "";
+        }
         return ar.source;
     };
-    (*lua)["require"] = make_require.call<sol::function>(
-        (*lua)["require"], sol::make_object(*lua, caller_source), sol::as_table(script_dirs));
+    (*lua)["require"] = make_require.call<sol::function>((*lua)["require"], sol::make_object(*lua, caller_source),
+                                                         sol::as_table(script_dirs));
 
     index_scripts(script_path);
-    for (const fs::path& dir : ancestor_scripts) index_scripts(dir);
+    for (const fs::path& dir : ancestor_scripts) {
+        index_scripts(dir);
+    }
 
     spdlog::debug("Loaded scripts:");
     for (const auto& [name, path] : scripts) {
@@ -347,28 +401,37 @@ void ScriptManager::shutdown() {
 static sol::optional<std::shared_ptr<TextureObject>> resolve_lua_texture(const std::string& path) {
     auto first_slash = path.find('/');
     auto last_slash = path.rfind('/');
-    if (first_slash == std::string::npos) return sol::nullopt;
+    if (first_slash == std::string::npos) {
+        return sol::nullopt;
+    }
 
     std::string screen_name = last_slash == first_slash ? "game" : path.substr(0, first_slash);
-    std::string subset = last_slash == first_slash
-        ? path.substr(0, first_slash)
-        : path.substr(first_slash + 1, last_slash - first_slash - 1);
+    std::string subset = last_slash == first_slash ? path.substr(0, first_slash)
+                                                   : path.substr(first_slash + 1, last_slash - first_slash - 1);
     std::string texture_name = path.substr(last_slash + 1);
 
     std::string subset_key = fs::path(subset).filename().string();
     std::string base = subset_key + "/" + texture_name;
 
     for (const auto& v : script_manager.tex.language_variants(base + "_" + global_data.config->general.language)) {
-        if (script_manager.tex.has_texture(v)) return script_manager.tex.get_texture_shared(v);
+        if (script_manager.tex.has_texture(v)) {
+            return script_manager.tex.get_texture_shared(v);
+        }
     }
-    if (script_manager.tex.has_texture(base)) return script_manager.tex.get_texture_shared(base);
+    if (script_manager.tex.has_texture(base)) {
+        return script_manager.tex.get_texture_shared(base);
+    }
 
     script_manager.tex.load_folder(screen_name, subset);
 
     for (const auto& v : script_manager.tex.language_variants(base + "_" + global_data.config->general.language)) {
-        if (script_manager.tex.has_texture(v)) return script_manager.tex.get_texture_shared(v);
+        if (script_manager.tex.has_texture(v)) {
+            return script_manager.tex.get_texture_shared(v);
+        }
     }
-    if (script_manager.tex.has_texture(base)) return script_manager.tex.get_texture_shared(base);
+    if (script_manager.tex.has_texture(base)) {
+        return script_manager.tex.get_texture_shared(base);
+    }
     return sol::nullopt;
 }
 
@@ -380,7 +443,9 @@ static sol::optional<std::shared_ptr<TextureObject>> resolve_lua_texture(const s
 static int cached_method_index(lua_State* L) {
     // upvalue 1: cache table (method name -> function), upvalue 2: sol's __index
     lua_pushvalue(L, 2);
-    if (lua_rawget(L, lua_upvalueindex(1)) != LUA_TNIL) return 1;
+    if (lua_rawget(L, lua_upvalueindex(1)) != LUA_TNIL) {
+        return 1;
+    }
     lua_pop(L, 1);
     lua_pushvalue(L, lua_upvalueindex(2));
     lua_pushvalue(L, 1);
@@ -418,63 +483,73 @@ void ScriptManager::register_lua_bindings() {
     sol::state& lua = *this->lua;
     // Calling an animation returns it: box:fade() and box.fade (a property) are the same object,
     // for skins written against either binding of the box animations.
-    lua.new_usertype<BaseAnimation>("BaseAnimation",
-        sol::meta_function::call, [](BaseAnimation& self, sol::variadic_args) { return &self; },
-        "update", [](BaseAnimation& self, double t) { self.update(t); return self.attribute; },
-        "restart", &BaseAnimation::restart,
-        "start", &BaseAnimation::start,
-        "reset", &BaseAnimation::reset,
-        "attribute", &BaseAnimation::attribute,
-        "duration", &BaseAnimation::duration,
-        "is_finished", &BaseAnimation::is_finished,
+    lua.new_usertype<BaseAnimation>(
+        "BaseAnimation", sol::meta_function::call, [](BaseAnimation& self, sol::variadic_args) { return &self; },
+        "update",
+        [](BaseAnimation& self, double t) {
+            self.update(t);
+            return self.attribute;
+        },
+        "restart", &BaseAnimation::restart, "start", &BaseAnimation::start, "reset", &BaseAnimation::reset, "attribute",
+        &BaseAnimation::attribute, "duration", &BaseAnimation::duration, "is_finished", &BaseAnimation::is_finished,
         "is_started", &BaseAnimation::is_started,
         // tex.get_animation() returns BaseAnimation*, so a MoveAnimation's start_position
         // must be reachable here (the C++ YellowBox does the same C-style cast).
         "start_position", sol::property([](BaseAnimation& self) -> int {
-            if (auto* move = dynamic_cast<MoveAnimation*>(&self)) return move->start_position;
+            if (auto* move = dynamic_cast<MoveAnimation*>(&self)) {
+                return move->start_position;
+            }
             return 0;
-        })
-    );
+        }));
 
     // Fade animation bindings
-    lua.new_usertype<FadeAnimation>("FadeAnimation",
-        sol::base_classes, sol::bases<BaseAnimation>(),
-        sol::meta_function::call, [](FadeAnimation& self, sol::variadic_args) { return &self; },
-        "update", [](FadeAnimation& self, double t) { self.update(t); return self.attribute; },
-        "restart", &FadeAnimation::restart
-    );
+    lua.new_usertype<FadeAnimation>(
+        "FadeAnimation", sol::base_classes, sol::bases<BaseAnimation>(), sol::meta_function::call,
+        [](FadeAnimation& self, sol::variadic_args) { return &self; }, "update",
+        [](FadeAnimation& self, double t) {
+            self.update(t);
+            return self.attribute;
+        },
+        "restart", &FadeAnimation::restart);
 
     // Move animation bindings
-    lua.new_usertype<MoveAnimation>("MoveAnimation",
-        sol::base_classes, sol::bases<BaseAnimation>(),
-        sol::meta_function::call, [](MoveAnimation& self, sol::variadic_args) { return &self; },
-        "update", [](MoveAnimation& self, double t) { self.update(t); return self.attribute; },
-        "restart", &MoveAnimation::restart,
-        "start_position", &MoveAnimation::start_position
-    );
+    lua.new_usertype<MoveAnimation>(
+        "MoveAnimation", sol::base_classes, sol::bases<BaseAnimation>(), sol::meta_function::call,
+        [](MoveAnimation& self, sol::variadic_args) { return &self; }, "update",
+        [](MoveAnimation& self, double t) {
+            self.update(t);
+            return self.attribute;
+        },
+        "restart", &MoveAnimation::restart, "start_position", &MoveAnimation::start_position);
 
     // Texture change animation bindings
-    lua.new_usertype<TextureChangeAnimation>("TextureChangeAnimation",
-        sol::base_classes, sol::bases<BaseAnimation>(),
-        sol::meta_function::call, [](TextureChangeAnimation& self, sol::variadic_args) { return &self; },
-        "update", [](TextureChangeAnimation& self, double t) { self.update(t); return self.attribute; },
-        "reset", &TextureChangeAnimation::reset
-    );
+    lua.new_usertype<TextureChangeAnimation>(
+        "TextureChangeAnimation", sol::base_classes, sol::bases<BaseAnimation>(), sol::meta_function::call,
+        [](TextureChangeAnimation& self, sol::variadic_args) { return &self; }, "update",
+        [](TextureChangeAnimation& self, double t) {
+            self.update(t);
+            return self.attribute;
+        },
+        "reset", &TextureChangeAnimation::reset);
 
     // Text stretch animation bindings
-    lua.new_usertype<TextStretchAnimation>("TextStretchAnimation",
-        sol::base_classes, sol::bases<BaseAnimation>(),
-        sol::meta_function::call, [](TextStretchAnimation& self, sol::variadic_args) { return &self; },
-        "update", [](TextStretchAnimation& self, double t) { self.update(t); return self.attribute; }
-    );
+    lua.new_usertype<TextStretchAnimation>(
+        "TextStretchAnimation", sol::base_classes, sol::bases<BaseAnimation>(), sol::meta_function::call,
+        [](TextStretchAnimation& self, sol::variadic_args) { return &self; }, "update",
+        [](TextStretchAnimation& self, double t) {
+            self.update(t);
+            return self.attribute;
+        });
 
     // Texture resize animation bindings
-    lua.new_usertype<TextureResizeAnimation>("TextureResizeAnimation",
-        sol::base_classes, sol::bases<BaseAnimation>(),
-        sol::meta_function::call, [](TextureResizeAnimation& self, sol::variadic_args) { return &self; },
-        "update", [](TextureResizeAnimation& self, double t) { self.update(t); return self.attribute; },
-        "restart", &TextureResizeAnimation::restart
-    );
+    lua.new_usertype<TextureResizeAnimation>(
+        "TextureResizeAnimation", sol::base_classes, sol::bases<BaseAnimation>(), sol::meta_function::call,
+        [](TextureResizeAnimation& self, sol::variadic_args) { return &self; }, "update",
+        [](TextureResizeAnimation& self, double t) {
+            self.update(t);
+            return self.attribute;
+        },
+        "restart", &TextureResizeAnimation::restart);
 
     // Animation creation helper functions
     sol::table anim = lua.create_table();
@@ -501,10 +576,13 @@ void ScriptManager::register_lua_bindings() {
             ease_out = parse_ease_type(t["ease_out"]);
 
             sol::optional<double> reverse_delay_opt = t["reverse_delay"];
-            if (reverse_delay_opt) reverse_delay = reverse_delay_opt.value();
+            if (reverse_delay_opt) {
+                reverse_delay = reverse_delay_opt.value();
+            }
         }
 
-        return std::make_unique<FadeAnimation>(duration, initial_opacity, loop, lock_input, final_opacity, delay, ease_in, ease_out, reverse_delay);
+        return std::make_unique<FadeAnimation>(duration, initial_opacity, loop, lock_input, final_opacity, delay,
+                                               ease_in, ease_out, reverse_delay);
     });
 
     anim.set_function("move", [](double duration, sol::optional<sol::table> params) -> std::unique_ptr<MoveAnimation> {
@@ -526,68 +604,77 @@ void ScriptManager::register_lua_bindings() {
             lock_input = t["lock_input"].get_or(lock_input);
 
             sol::optional<double> reverse_delay_opt = t["reverse_delay"];
-            if (reverse_delay_opt) reverse_delay = reverse_delay_opt.value();
+            if (reverse_delay_opt) {
+                reverse_delay = reverse_delay_opt.value();
+            }
 
             ease_in = parse_ease_type(t["ease_in"]);
             ease_out = parse_ease_type(t["ease_out"]);
         }
 
-        return std::make_unique<MoveAnimation>(duration, total_distance, loop, lock_input, start_position, delay, reverse_delay, ease_in, ease_out);
+        return std::make_unique<MoveAnimation>(duration, total_distance, loop, lock_input, start_position, delay,
+                                               reverse_delay, ease_in, ease_out);
     });
 
-    anim.set_function("texture_change", [](double duration, sol::table textures_table, sol::optional<sol::table> params) -> std::unique_ptr<TextureChangeAnimation> {
-        std::vector<std::tuple<double, double, int>> keyframes;
+    anim.set_function("texture_change",
+                      [](double duration, sol::table textures_table,
+                         sol::optional<sol::table> params) -> std::unique_ptr<TextureChangeAnimation> {
+                          std::vector<std::tuple<double, double, int>> keyframes;
 
-        for (size_t i = 1; i <= textures_table.size(); ++i) {
-            sol::optional<sol::table> entry_opt = textures_table[i];
-            if (!entry_opt) continue;
-            sol::table tex_entry = entry_opt.value();
-            sol::optional<double> start = tex_entry[1];
-            sol::optional<double> end   = tex_entry[2];
-            sol::optional<int>    index = tex_entry[3];
-            if (!start || !end || !index) {
-                spdlog::error("anim.texture_change: malformed keyframe at index {}", i);
-                continue;
-            }
-            keyframes.emplace_back(start.value(), end.value(), index.value());
-        }
+                          for (size_t i = 1; i <= textures_table.size(); ++i) {
+                              sol::optional<sol::table> entry_opt = textures_table[i];
+                              if (!entry_opt) {
+                                  continue;
+                              }
+                              sol::table tex_entry = entry_opt.value();
+                              sol::optional<double> start = tex_entry[1];
+                              sol::optional<double> end = tex_entry[2];
+                              sol::optional<int> index = tex_entry[3];
+                              if (!start || !end || !index) {
+                                  spdlog::error("anim.texture_change: malformed keyframe at index {}", i);
+                                  continue;
+                              }
+                              keyframes.emplace_back(start.value(), end.value(), index.value());
+                          }
 
-        double delay = 0.0;
-        bool loop = false;
-        bool lock_input = false;
+                          double delay = 0.0;
+                          bool loop = false;
+                          bool lock_input = false;
 
-        if (params) {
-            sol::table t = params.value();
-            delay = t["delay"].get_or(delay);
-            loop = t["loop"].get_or(loop);
-            lock_input = t["lock_input"].get_or(lock_input);
-        }
+                          if (params) {
+                              sol::table t = params.value();
+                              delay = t["delay"].get_or(delay);
+                              loop = t["loop"].get_or(loop);
+                              lock_input = t["lock_input"].get_or(lock_input);
+                          }
 
-        return std::make_unique<TextureChangeAnimation>(duration, keyframes, loop, lock_input, delay);
-    });
+                          return std::make_unique<TextureChangeAnimation>(duration, keyframes, loop, lock_input, delay);
+                      });
 
-    anim.set_function("text_stretch", [](double duration, sol::optional<sol::table> params) -> std::unique_ptr<TextStretchAnimation> {
-        double delay = 0.0;
-        bool loop = false;
-        bool lock_input = false;
+    anim.set_function("text_stretch",
+                      [](double duration, sol::optional<sol::table> params) -> std::unique_ptr<TextStretchAnimation> {
+                          double delay = 0.0;
+                          bool loop = false;
+                          bool lock_input = false;
 
-        if (params) {
-            sol::table t = params.value();
-            delay = t["delay"].get_or(delay);
-            loop = t["loop"].get_or(loop);
-            lock_input = t["lock_input"].get_or(lock_input);
-        }
+                          if (params) {
+                              sol::table t = params.value();
+                              delay = t["delay"].get_or(delay);
+                              loop = t["loop"].get_or(loop);
+                              lock_input = t["lock_input"].get_or(lock_input);
+                          }
 
-        return std::make_unique<TextStretchAnimation>(duration, delay, loop, lock_input);
-    });
+                          return std::make_unique<TextStretchAnimation>(duration, delay, loop, lock_input);
+                      });
 
     lua["anim"] = anim;
 
     sol::table tex = lua.create_table();
 
     tex.set_function("get_animation", [](double anim_id, sol::object second_arg) -> BaseAnimation* {
-        if (second_arg.get_type() == sol::type::string)
+        if (second_arg.get_type() == sol::type::string) {
             return ::tex.get_animation(static_cast<int>(anim_id), second_arg.as<std::string>());
+        }
         // true: a private copy of the current screen's animation
         return ::tex.get_animation(static_cast<int>(anim_id), second_arg.is<bool>() && second_arg.as<bool>());
     });
@@ -600,31 +687,22 @@ void ScriptManager::register_lua_bindings() {
         script_manager.tex.unload_folder(screen_name, subset);
     });
 
-    tex.set_function("current_screen", []() -> std::string {
-        return global_data.current_screen;
-    });
+    tex.set_function("current_screen", []() -> std::string { return global_data.current_screen; });
 
-    tex.set_function("in_transition", []() -> bool {
-        return global_data.in_transition;
-    });
+    tex.set_function("in_transition", []() -> bool { return global_data.in_transition; });
 
-    tex.set_function("get_screen_width", []() -> float {
-        return script_manager.tex.screen_width;
-    });
+    tex.set_function("get_screen_width", []() -> float { return script_manager.tex.screen_width; });
 
-    tex.set_function("get_screen_height", []() -> float {
-        return script_manager.tex.screen_height;
-    });
+    tex.set_function("get_screen_height", []() -> float { return script_manager.tex.screen_height; });
 
-    tex.set_function("get_screen_scale", []() -> float {
-        return script_manager.tex.screen_scale;
-    });
+    tex.set_function("get_screen_scale", []() -> float { return script_manager.tex.screen_scale; });
 
     tex.set_function("get_draw_offset", []() -> std::pair<float, float> {
         return {script_manager.tex.draw_offset_x, script_manager.tex.draw_offset_y};
     });
 
-    tex.set_function("draw_rect", [](float x, float y, float w, float h, double r, double g, double b, double a, sol::this_state state) {
+    tex.set_function("draw_rect", [](float x, float y, float w, float h, double r, double g, double b, double a,
+                                     sol::this_state state) {
         auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
         if (debug_log_draws) {
             debug_draw_log.push_back({"rect", {x, y, w, h}});
@@ -637,7 +715,7 @@ void ScriptManager::register_lua_bindings() {
         ray::DrawRectangle(sx, sy, ex - sx, ey - sy, ray::Color{to_u8(r), to_u8(g), to_u8(b), to_u8(a)});
     });
 
-// rounded rectangle with an outline; roundness is raylib's 0..1 corner factor, the outline thickness is in pixels
+    // rounded rectangle with an outline; roundness is raylib's 0..1 corner factor, the outline thickness is in pixels
     tex.set_function("draw_rounded_rect", [](float x, float y, float w, float h, float roundness,
                                              std::array<double, 4> fill, double thickness, std::array<double, 4> line) {
         auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
@@ -646,13 +724,16 @@ void ScriptManager::register_lua_bindings() {
         int sy = virtual_to_screen_y(y);
         int ey = virtual_to_screen_y(y + h);
         ray::Rectangle r{(float)sx, (float)sy, (float)(ex - sx), (float)(ey - sy)};
-        ray::DrawRectangleRounded(r, roundness, 16, ray::Color{to_u8(fill[0]), to_u8(fill[1]), to_u8(fill[2]), to_u8(fill[3])});
-        if (thickness > 0)
-            ray::DrawRectangleRoundedLinesEx(r, roundness, 16, (float)thickness,
-                                             ray::Color{to_u8(line[0]), to_u8(line[1]), to_u8(line[2]), to_u8(line[3])});
+        ray::DrawRectangleRounded(r, roundness, 16,
+                                  ray::Color{to_u8(fill[0]), to_u8(fill[1]), to_u8(fill[2]), to_u8(fill[3])});
+        if (thickness > 0) {
+            ray::DrawRectangleRoundedLinesEx(
+                r, roundness, 16, (float)thickness,
+                ray::Color{to_u8(line[0]), to_u8(line[1]), to_u8(line[2]), to_u8(line[3])});
+        }
     });
 
-tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
+    tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
         int sx = virtual_to_screen_x(x);
         int ex = virtual_to_screen_x(x + w);
         int sy = virtual_to_screen_y(y);
@@ -660,9 +741,7 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
         ray::BeginScissorMode(sx, sy, ex - sx, ey - sy);
     });
 
-    tex.set_function("end_scissor", []() {
-        ray::EndScissorMode();
-    });
+    tex.set_function("end_scissor", []() { ray::EndScissorMode(); });
 
     tex.set_function("get_skin_config", [](const std::string& config_key) -> sol::optional<sol::table> {
         const SkinInfo* skin_ptr = font_manager.get_text_info(config_key);
@@ -689,7 +768,9 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
 
     tex.set_function("get_option", [](const std::string& name) -> bool {
         auto it = screen_options_map.find(name);
-        if (it == screen_options_map.end()) return false;
+        if (it == screen_options_map.end()) {
+            return false;
+        }
         auto o = script_manager.tex.options.find(it->second);
         return o != script_manager.tex.options.end() && o->second;
     });
@@ -704,44 +785,50 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
                 ++index;
             }
         }
-        if (index == 1) return sol::nullopt;
+        if (index == 1) {
+            return sol::nullopt;
+        }
         return keys;
     });
 
-    tex.set_function("get_texture_info", [](const std::string& subset, const std::string& texture_name) -> sol::optional<sol::table> {
-        auto tex_it = script_manager.tex.textures.find(subset + "/" + texture_name);
-        if (tex_it == script_manager.tex.textures.end()) return sol::nullopt;
+    tex.set_function("get_texture_info",
+                     [](const std::string& subset, const std::string& texture_name) -> sol::optional<sol::table> {
+                         auto tex_it = script_manager.tex.textures.find(subset + "/" + texture_name);
+                         if (tex_it == script_manager.tex.textures.end()) {
+                             return sol::nullopt;
+                         }
 
-        const auto& tex_obj = tex_it->second;
+                         const auto& tex_obj = tex_it->second;
 
-        sol::table info = script_manager.lua->create_table();
-        info["name"] = tex_obj->name;
-        info["x"] = sol::as_table(tex_obj->x);
-        info["y"] = sol::as_table(tex_obj->y);
-        info["x2"] = sol::as_table(tex_obj->x2);
-        info["y2"] = sol::as_table(tex_obj->y2);
-        info["width"] = tex_obj->width;
-        info["height"] = tex_obj->height;
+                         sol::table info = script_manager.lua->create_table();
+                         info["name"] = tex_obj->name;
+                         info["x"] = sol::as_table(tex_obj->x);
+                         info["y"] = sol::as_table(tex_obj->y);
+                         info["x2"] = sol::as_table(tex_obj->x2);
+                         info["y2"] = sol::as_table(tex_obj->y2);
+                         info["width"] = tex_obj->width;
+                         info["height"] = tex_obj->height;
 
-        int frame_count = 1;
-        if (auto framed = dynamic_cast<FramedTexture*>(tex_obj.get())) {
-            frame_count = static_cast<int>(framed->textures.size());
-        }
-        if (tex_obj->crop_data.has_value()) {
-            frame_count = std::max(frame_count, static_cast<int>(tex_obj->crop_data->size()));
-        }
-        info["frame_count"] = frame_count;
+                         int frame_count = 1;
+                         if (auto framed = dynamic_cast<FramedTexture*>(tex_obj.get())) {
+                             frame_count = static_cast<int>(framed->textures.size());
+                         }
+                         if (tex_obj->crop_data.has_value()) {
+                             frame_count = std::max(frame_count, static_cast<int>(tex_obj->crop_data->size()));
+                         }
+                         info["frame_count"] = frame_count;
 
-        return info;
-    });
+                         return info;
+                     });
 
-    tex.set_function("draw_texture", [](std::shared_ptr<TextureObject> id, sol::optional<sol::table> params_table, sol::this_state state) {
+    tex.set_function("draw_texture", [](std::shared_ptr<TextureObject> id, sol::optional<sol::table> params_table,
+                                        sol::this_state state) {
         if (!id) {
             DrawLogEntry entry{"null_texture", {}};
             log_lua_site(entry, state);
             if (entry.from_lua) {
-                spdlog::warn("draw_texture: null texture (called from {}:{} in {})",
-                             entry.lua_source, entry.lua_line, entry.lua_function.empty() ? "?" : entry.lua_function);
+                spdlog::warn("draw_texture: null texture (called from {}:{} in {})", entry.lua_source, entry.lua_line,
+                             entry.lua_function.empty() ? "?" : entry.lua_function);
             } else {
                 spdlog::warn("draw_texture: null texture");
             }
@@ -758,7 +845,9 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
             w.lua_texture_lookup_lang = lang;
         }
         if (auto it = w.lua_texture_lookup.find(path); it != w.lua_texture_lookup.end()) {
-            if (it->second) return it->second;
+            if (it->second) {
+                return it->second;
+            }
             return sol::nullopt;
         }
         // resolve_lua_texture may load the folder, which empties the lookup: store afterwards
@@ -770,11 +859,16 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
     tex.set_function("language", []() { return global_data.config->general.language; });
     tex.set_function("skin_text", [](const std::string& key, sol::optional<std::string> lang_opt) -> std::string {
         const SkinInfo* info = font_manager.get_text_info(key);
-        if (!info) return "";
+        if (!info) {
+            return "";
+        }
         const auto& m = info->text;
-        for (const std::string& l : {lang_opt.value_or(global_data.config->general.language), std::string("ja"), std::string("en")}) {
+        for (const std::string& l :
+             {lang_opt.value_or(global_data.config->general.language), std::string("ja"), std::string("en")}) {
             auto t = m.find(l);
-            if (t != m.end() && !t->second.empty()) return t->second;
+            if (t != m.end() && !t->second.empty()) {
+                return t->second;
+            }
         }
         return m.empty() ? std::string() : m.begin()->second;
     });
@@ -783,166 +877,156 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
 
     lua["tex"] = tex;
 
-    lua.new_usertype<OutlinedText>("OutlinedText",
-        "width",          &OutlinedText::width,
-        "height",         &OutlinedText::height,
-        "text",           sol::property([](OutlinedText& self) { return self.get_text(); }),
-        "draw",           [](OutlinedText& self, sol::optional<sol::table> params_table) {
-            DrawTextureParams params = parse_draw_params(params_table, false);
-            self.draw(params);
-        }
-    );
+    lua.new_usertype<OutlinedText>("OutlinedText", "width", &OutlinedText::width, "height", &OutlinedText::height,
+                                   "text", sol::property([](OutlinedText& self) { return self.get_text(); }), "draw",
+                                   [](OutlinedText& self, sol::optional<sol::table> params_table) {
+                                       DrawTextureParams params = parse_draw_params(params_table, false);
+                                       self.draw(params);
+                                   });
 
     sol::table text = lua.create_table();
-    text.set_function("create_text", [](const std::string& skin_config_key, std::array<double, 4> color,
-        std::array<double, 4> outline_color, bool is_vertical, float outline_thickness, float spacing,
-        sol::optional<std::string> font) -> std::unique_ptr<OutlinedText> {
-            const SkinInfo* cfg = font_manager.get_text_info(skin_config_key);
-            std::string text;
-            if (cfg) {
-                text = font_manager.get_text_label(skin_config_key);
-            } else {   // a position-only skin_config entry draws empty text
-                cfg = [&]() -> const SkinInfo* {
-                    auto it = script_manager.tex.skin_config_by_name.find(skin_config_key);
-                    return it == script_manager.tex.skin_config_by_name.end() ? nullptr : &it->second;
-                }();
-                if (!cfg) {
-                    spdlog::error("Skin config key not found: {}", skin_config_key);
-                    throw sol::error("Skin config key not found: " + skin_config_key);
-                }
-            }
-            int font_size = cfg->font_size;
-            auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
-            ray::Color color_val;
-            color_val.r = to_u8(color[0]);
-            color_val.g = to_u8(color[1]);
-            color_val.b = to_u8(color[2]);
-            color_val.a = to_u8(color[3]);
-            ray::Color outline_color_val;
-            outline_color_val.r = to_u8(outline_color[0]);
-            outline_color_val.g = to_u8(outline_color[1]);
-            outline_color_val.b = to_u8(outline_color[2]);
-            outline_color_val.a = to_u8(outline_color[3]);
-            std::unique_ptr<OutlinedText> ptr = std::make_unique<OutlinedText>(text, font_size, color_val, outline_color_val, is_vertical, outline_thickness, spacing, 1.0f, font.value_or(""));
-            ptr->x_offset = cfg->x;
-            ptr->y_offset = cfg->y;
-            return ptr;
-    });
+    text.set_function("create_text",
+                      [](const std::string& skin_config_key, std::array<double, 4> color,
+                         std::array<double, 4> outline_color, bool is_vertical, float outline_thickness, float spacing,
+                         sol::optional<std::string> font) -> std::unique_ptr<OutlinedText> {
+                          const SkinInfo* cfg = font_manager.get_text_info(skin_config_key);
+                          std::string text;
+                          if (cfg) {
+                              text = font_manager.get_text_label(skin_config_key);
+                          } else { // a position-only skin_config entry draws empty text
+                              cfg = [&]() -> const SkinInfo* {
+                                  auto it = script_manager.tex.skin_config_by_name.find(skin_config_key);
+                                  return it == script_manager.tex.skin_config_by_name.end() ? nullptr : &it->second;
+                              }();
+                              if (!cfg) {
+                                  spdlog::error("Skin config key not found: {}", skin_config_key);
+                                  throw sol::error("Skin config key not found: " + skin_config_key);
+                              }
+                          }
+                          int font_size = cfg->font_size;
+                          auto to_u8 = [](double v) {
+                              return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255));
+                          };
+                          ray::Color color_val;
+                          color_val.r = to_u8(color[0]);
+                          color_val.g = to_u8(color[1]);
+                          color_val.b = to_u8(color[2]);
+                          color_val.a = to_u8(color[3]);
+                          ray::Color outline_color_val;
+                          outline_color_val.r = to_u8(outline_color[0]);
+                          outline_color_val.g = to_u8(outline_color[1]);
+                          outline_color_val.b = to_u8(outline_color[2]);
+                          outline_color_val.a = to_u8(outline_color[3]);
+                          std::unique_ptr<OutlinedText> ptr =
+                              std::make_unique<OutlinedText>(text, font_size, color_val, outline_color_val, is_vertical,
+                                                             outline_thickness, spacing, 1.0f, font.value_or(""));
+                          ptr->x_offset = cfg->x;
+                          ptr->y_offset = cfg->y;
+                          return ptr;
+                      });
 
-    text.set_function("create_raw_text", [](const std::string& content, double font_size,
-        std::array<double, 4> color, std::array<double, 4> outline_color,
-        bool is_vertical, sol::optional<float> thickness, sol::optional<float> spacing,
-        sol::optional<float> v_advance, sol::optional<std::string> font)
-        -> std::unique_ptr<OutlinedText> {
+    text.set_function(
+        "create_raw_text",
+        [](const std::string& content, double font_size, std::array<double, 4> color,
+           std::array<double, 4> outline_color, bool is_vertical, sol::optional<float> thickness,
+           sol::optional<float> spacing, sol::optional<float> v_advance,
+           sol::optional<std::string> font) -> std::unique_ptr<OutlinedText> {
             auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
-            ray::Color c  = { to_u8(color[0]),         to_u8(color[1]),         to_u8(color[2]),         to_u8(color[3]) };
-            ray::Color oc = { to_u8(outline_color[0]), to_u8(outline_color[1]), to_u8(outline_color[2]), to_u8(outline_color[3]) };
+            ray::Color c = {to_u8(color[0]), to_u8(color[1]), to_u8(color[2]), to_u8(color[3])};
+            ray::Color oc = {to_u8(outline_color[0]), to_u8(outline_color[1]), to_u8(outline_color[2]),
+                             to_u8(outline_color[3])};
             return std::make_unique<OutlinedText>(content, static_cast<int>(font_size), c, oc, is_vertical,
-                thickness.value_or(5.0f), spacing.value_or(2.0f), v_advance.value_or(1.0f), font.value_or(""));
-    });
+                                                  thickness.value_or(5.0f), spacing.value_or(2.0f),
+                                                  v_advance.value_or(1.0f), font.value_or(""));
+        });
 
     lua["text"] = text;
 
-    tex.set_function("get_current_ms", []() -> double {
-        return script_manager.current_ms_override.value_or(get_current_ms());
-    });
+    tex.set_function("get_current_ms",
+                     []() -> double { return script_manager.current_ms_override.value_or(get_current_ms()); });
 
-    tex.set_function("player_num", []() -> int {
-        return (int)global_data.player_num;
-    });
+    tex.set_function("player_num", []() -> int { return (int)global_data.player_num; });
 
-    tex.set_function("display_bpm", []() -> bool {
-        return global_data.config->general.display_bpm;
-    });
+    tex.set_function("display_bpm", []() -> bool { return global_data.config->general.display_bpm; });
 
     tex.set_function("timing_offset", [](int player_num) -> sol::optional<std::string> {
-        if (!global_data.config->general.show_timing_offset) return sol::nullopt;
+        if (!global_data.config->general.show_timing_offset) {
+            return sol::nullopt;
+        }
         const ResultData& r = global_data.session_data[player_num].result_data;
-        if (r.hit_offset_count <= 0) return std::string("-- ms");
+        if (r.hit_offset_count <= 0) {
+            return std::string("-- ms");
+        }
         const long ms = std::lround(r.hit_offset_sum_ms / r.hit_offset_count);
         return (ms > 0 ? "+" : "") + std::to_string(ms) + " ms";
     });
 
-    tex.set_function("song_title", []() -> std::string {
-        return current_session().song_title;
-    });
+    tex.set_function("song_title", []() -> std::string { return current_session().song_title; });
 
-    tex.set_function("song_subtitle", []() -> std::string {
-        return current_session().song_subtitle;
-    });
+    tex.set_function("song_subtitle", []() -> std::string { return current_session().song_subtitle; });
 
     tex.set_function("genre_frame", [](double genre_index) -> int {
-        return genre_to_ref_frame((GenreIndex)static_cast<int>(genre_index));
+        return genre_to_ref_frame((GenreIndex) static_cast<int>(genre_index));
     });
 
-    tex.set_function("songs_played", []() -> int {
-        return global_data.songs_played;
-    });
+    tex.set_function("songs_played", []() -> int { return global_data.songs_played; });
 
-    tex.set_function("song_limit", []() -> int {
-        return global_data.config->limits.song_limit;
-    });
+    tex.set_function("song_limit", []() -> int { return global_data.config->limits.song_limit; });
 
-    tex.set_function("last_input_ms", []() -> double {
-        return get_last_input_ms();
-    });
+    tex.set_function("last_input_ms", []() -> double { return get_last_input_ms(); });
 
-    tex.set_function("log", [](const std::string& msg) {
-        spdlog::info("[lua] {}", msg);
-    });
+    tex.set_function("log", [](const std::string& msg) { spdlog::info("[lua] {}", msg); });
 
     sol::table audio_tbl = lua.create_table();
 
-    audio_tbl.set_function("play_sound", [](const std::string& name, sol::optional<std::string> preset_str,
-                                            sol::optional<bool> loop) {
-        VolumePreset preset = VolumePreset::NONE;
-        if (preset_str) {
-            const std::string& p = preset_str.value();
-            if      (p == "sound")    preset = VolumePreset::SOUND;
-            else if (p == "music")    preset = VolumePreset::MUSIC;
-            else if (p == "voice")    preset = VolumePreset::VOICE;
-            else if (p == "hitsound") preset = VolumePreset::HITSOUND;
-            else if (p == "attract_mode") preset = VolumePreset::ATTRACT_MODE;
-        }
-        audio.set_sound_loop(name, loop.value_or(false));
-        audio.play_sound(name, preset);
-    });
+    audio_tbl.set_function(
+        "play_sound", [](const std::string& name, sol::optional<std::string> preset_str, sol::optional<bool> loop) {
+            VolumePreset preset = VolumePreset::NONE;
+            if (preset_str) {
+                const std::string& p = preset_str.value();
+                if (p == "sound") {
+                    preset = VolumePreset::SOUND;
+                } else if (p == "music") {
+                    preset = VolumePreset::MUSIC;
+                } else if (p == "voice") {
+                    preset = VolumePreset::VOICE;
+                } else if (p == "hitsound") {
+                    preset = VolumePreset::HITSOUND;
+                } else if (p == "attract_mode") {
+                    preset = VolumePreset::ATTRACT_MODE;
+                }
+            }
+            audio.set_sound_loop(name, loop.value_or(false));
+            audio.play_sound(name, preset);
+        });
 
     audio_tbl.set_function("stop_sound", [](const std::string& name) {
         audio.set_sound_loop(name, false);
         audio.stop_sound(name);
     });
 
-    audio_tbl.set_function("is_sound_playing", [](const std::string& name) -> bool {
-        return audio.is_sound_playing(name);
-    });
+    audio_tbl.set_function("is_sound_playing",
+                           [](const std::string& name) -> bool { return audio.is_sound_playing(name); });
 
-    audio_tbl.set_function("play_count", [](const std::string& name) -> double {
-        return (double)audio.sound_play_count(name);
-    });
+    audio_tbl.set_function("play_count",
+                           [](const std::string& name) -> double { return (double)audio.sound_play_count(name); });
 
-    audio_tbl.set_function("has_sound", [](const std::string& name) -> bool {
-        return audio.has_sound(name);
-    });
+    audio_tbl.set_function("has_sound", [](const std::string& name) -> bool { return audio.has_sound(name); });
 
     lua["audio"] = audio_tbl;
 
     sol::table camera_tbl = lua.create_table();
 
-    camera_tbl.set_function("open", []() -> bool {
-        return webcam.open(global_data.config->general.webcam_number);
-    });
+    camera_tbl.set_function("open", []() -> bool { return webcam.open(global_data.config->general.webcam_number); });
 
-    camera_tbl.set_function("close", []() {
-        webcam.close();
-    });
+    camera_tbl.set_function("close", []() { webcam.close(); });
 
-    camera_tbl.set_function("update", []() {
-        webcam.update();
-    });
+    camera_tbl.set_function("update", []() { webcam.update(); });
 
     camera_tbl.set_function("draw", [](float x, float y, float w, float h) {
-        if (!webcam.is_ready()) return;
+        if (!webcam.is_ready()) {
+            return;
+        }
         ray::Rectangle src{0, 0, (float)webcam.width(), (float)webcam.height()};
         ray::Rectangle dst{x, y, w, h};
         ray::DrawTexturePro(webcam.get_texture(), src, dst, ray::Vector2{0, 0}, 0, ray::WHITE);
@@ -958,7 +1042,9 @@ tex.set_function("begin_scissor", [](float x, float y, float w, float h) {
 // sol creates some metatables lazily (e.g. the unique_ptr variant the first time an anim.fade()
 // object is pushed), so new ones are wrapped after script loads and once a second.
 void ScriptManager::refresh_method_cache() {
-    if (lua) cache_usertype_method_lookups(lua->lua_state());
+    if (lua) {
+        cache_usertype_method_lookups(lua->lua_state());
+    }
 }
 
 ScriptManager script_manager;

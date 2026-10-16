@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../../../libs/scores.h"
-#include "../../../libs/script.h"
-
 #include <array>
 #include <optional>
+
+#include "../../../libs/scores.h"
+#include "../../../libs/script.h"
 
 class ScoreHistory : public LuaScript {
 public:

@@ -2,18 +2,18 @@
 
 #include "../libs/screen.h"
 #include "../libs/text.h"
-#include "../objects/result/background.h"
-#include "../objects/result/player.h"
-#include "../objects/result/fade_in.h"
 #include "../objects/game/song_info.h"
 #include "../objects/global/allnet_indicator.h"
 #include "../objects/global/coin_overlay.h"
+#include "../objects/result/background.h"
+#include "../objects/result/fade_in.h"
+#include "../objects/result/player.h"
 #include "../objects/result/retry_message.h"
 
 class ResultScreen : public Screen {
 protected:
     std::string song_title;
-    std::string song_subtitle;   // empty when the chart hides it
+    std::string song_subtitle; // empty when the chart hides it
     int song_number = 0;
     FadeAnimation* fade_out = nullptr;
     // after the fade out of a failed run: the revive message, then the retry mini-game
@@ -26,9 +26,9 @@ protected:
     std::optional<ResultBackground> background;
     std::optional<ray::Texture2D> loading_graphic;
     double skipped_time = 0;
-    static constexpr double kFrameMs        = 1000.0 / 120.0;
-    static constexpr double kEnableSkipMs   = 100 * kFrameMs;
-    static constexpr double kWaitEffectEndMs =  500 * kFrameMs;
+    static constexpr double kFrameMs = 1000.0 / 120.0;
+    static constexpr double kEnableSkipMs = 100 * kFrameMs;
+    static constexpr double kWaitEffectEndMs = 500 * kFrameMs;
     static constexpr double kWaitNextSceneMs = 500 * kFrameMs;
     static constexpr double kFastInputDelayMs = 250.0;
     static constexpr double kAutoNextSceneMs = 3600 * kFrameMs;
@@ -48,9 +48,9 @@ protected:
     void draw_overlay();
 
     void draw_song_info();
+
 public:
-    ResultScreen() : Screen("result") {
-    }
+    ResultScreen() : Screen("result") {}
 
     void on_screen_start() override;
 

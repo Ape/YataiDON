@@ -17,6 +17,7 @@ private:
     TextureObject* t_pop = nullptr;
     TextureObject* t_bubble = nullptr;
     TextureObject* t_counter = nullptr;
+
 public:
     BalloonCounter(int count, bool is_2p);
 

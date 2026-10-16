@@ -1,10 +1,11 @@
 #pragma once
 
-#include "../../libs/script.h"
 #include "../../libs/global_data.h"
+#include "../../libs/script.h"
 
 class FadeIn : public LuaScript {
     sol::protected_function fn_update, fn_is_finished, fn_draw, fn_start_reverse;
+
 public:
     FadeIn() = default;
     FadeIn(PlayerNum player_num);

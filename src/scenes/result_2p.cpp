@@ -1,4 +1,5 @@
 #include "result_2p.h"
+
 #include <algorithm>
 
 void Result2PScreen::on_screen_start() {
@@ -17,16 +18,24 @@ void Result2PScreen::on_screen_start() {
 double Result2PScreen::reveal_end_ms() {
     double a = player_1.has_value() ? player_1->reveal_end_ms() : 0.0;
     double b = player_2.has_value() ? player_2->reveal_end_ms() : 0.0;
-    if (a == 0 || b == 0) return 0.0;
+    if (a == 0 || b == 0) {
+        return 0.0;
+    }
     return std::max(a, b);
 }
 
 std::optional<Screens> Result2PScreen::update() {
     Screen::update();
     double current_time = get_current_ms();
-    if (fade_in.has_value()) fade_in->update(current_time);
-    if (player_1.has_value()) player_1->update(current_time, fade_in.has_value() && fade_in->is_finished(), skipped_time > 0);
-    if (player_2.has_value()) player_2->update(current_time, fade_in.has_value() && fade_in->is_finished(), skipped_time > 0);
+    if (fade_in.has_value()) {
+        fade_in->update(current_time);
+    }
+    if (player_1.has_value()) {
+        player_1->update(current_time, fade_in.has_value() && fade_in->is_finished(), skipped_time > 0);
+    }
+    if (player_2.has_value()) {
+        player_2->update(current_time, fade_in.has_value() && fade_in->is_finished(), skipped_time > 0);
+    }
 
     update_input_and_timeout(current_time);
 
@@ -41,9 +50,15 @@ std::optional<Screens> Result2PScreen::update() {
 }
 
 void Result2PScreen::draw() {
-    if (background.has_value()) background->draw();
+    if (background.has_value()) {
+        background->draw();
+    }
     draw_song_info();
-    if (player_1.has_value()) player_1->draw();
-    if (player_2.has_value()) player_2->draw();
+    if (player_1.has_value()) {
+        player_1->draw();
+    }
+    if (player_2.has_value()) {
+        player_2->draw();
+    }
     draw_overlay();
 }

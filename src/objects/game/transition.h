@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../libs/text.h"
 #include "../../libs/script.h"
+#include "../../libs/text.h"
 
 class Transition : public LuaScript {
 private:
@@ -9,7 +9,7 @@ private:
     double cur_rainbow = 0, cur_fade = 0, cur_fade_out = 0;
     bool finished = false;
 
-    int  dan_color   = -1;
+    int dan_color = -1;
     double dan_start_ms = 0.0;
     std::unique_ptr<OutlinedText> dan_rank_text;
     void draw_dan(float total_offset);
@@ -23,8 +23,8 @@ private:
     TextureObject* t_rainbow_text_bg = nullptr;
     TextureObject* t_loading_dan_night = nullptr;
     TextureObject* t_loading_dan_plaque = nullptr;
-public:
 
+public:
     Transition(const std::string& title, const std::string& subtitle, bool is_second);
     ~Transition();
     void start();

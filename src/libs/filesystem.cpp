@@ -1,4 +1,5 @@
 #include "filesystem.h"
+
 #include "miniz.h" // IWYU pragma: keep
 #ifdef SUPPORT_FUMEN
 #include "optional/gen3.h"
@@ -7,23 +8,23 @@
 #include <algorithm>
 #include <fstream>
 #include <mutex>
-#include <unordered_set>
 #include <spdlog/spdlog.h>
+#include <unordered_set>
 
 #ifdef YATAIDON_PLATFORM_IOS
-    #include "../platform/platform_ios.h"
+#include "../platform/platform_ios.h"
 #endif
 
 #ifdef _WIN32
-    #include "../platform/platform_windows.h"
+#include "../platform/platform_windows.h"
 #elif defined(__APPLE__) && !defined(YATAIDON_PLATFORM_IOS)
-    #include "../platform/platform_macos.h"
+#include "../platform/platform_macos.h"
 #elif defined(__ANDROID__)
-    #include "../platform/platform_android.h"
+#include "../platform/platform_android.h"
 #elif defined(__EMSCRIPTEN__)
-    #include "../platform/platform_emscripten.h"
+#include "../platform/platform_emscripten.h"
 #else
-    #include "../platform/platform_linux.h"
+#include "../platform/platform_linux.h"
 #endif
 
 void set_working_directory_to_executable() {
@@ -54,18 +55,24 @@ void set_working_directory_to_executable() {
 }
 
 static bool resolve_safe_extract_path(const fs::path& base_dir, const fs::path& canonical_base_dir,
-                                       const std::string& entry_name, fs::path& out_file) {
+                                      const std::string& entry_name, fs::path& out_file) {
     out_file = (base_dir / entry_name).lexically_normal();
     const fs::path rel = out_file.lexically_relative(base_dir);
-    if (rel.empty() || *rel.begin() == "..") return false;
+    if (rel.empty() || *rel.begin() == "..") {
+        return false;
+    }
 
     std::error_code ec;
     fs::create_directories(out_file.parent_path(), ec);
 
     fs::path canonical_parent = fs::canonical(out_file.parent_path(), ec);
-    if (ec) return false;
+    if (ec) {
+        return false;
+    }
     const fs::path parent_rel = canonical_parent.lexically_relative(canonical_base_dir);
-    if (parent_rel.empty() || *parent_rel.begin() == "..") return false;
+    if (parent_rel.empty() || *parent_rel.begin() == "..") {
+        return false;
+    }
 
     return true;
 }
@@ -90,8 +97,13 @@ void extract_osz(const fs::path& osz_path) {
     bool all_ok = true;
     for (int i = 0; i < num_files; i++) {
         mz_zip_archive_file_stat stat;
-        if (!mz_zip_reader_file_stat(&zip, i, &stat)) { all_ok = false; continue; }
-        if (mz_zip_reader_is_file_a_directory(&zip, i)) continue;
+        if (!mz_zip_reader_file_stat(&zip, i, &stat)) {
+            all_ok = false;
+            continue;
+        }
+        if (mz_zip_reader_is_file_a_directory(&zip, i)) {
+            continue;
+        }
 
         fs::path out_file;
         if (!resolve_safe_extract_path(out_dir, canonical_out_dir, stat.m_filename, out_file)) {
@@ -119,10 +131,14 @@ void ensure_skin_extracted(const std::string& skin_name) {
     fs::path skin_dir = fs::path("Skins") / skin_name;
     fs::path marker = skin_dir / ".extracted";
     std::error_code ec;
-    if (fs::exists(marker, ec)) return;
+    if (fs::exists(marker, ec)) {
+        return;
+    }
 
     fs::path zip_path = fs::path("Skins") / (skin_name + ".zip");
-    if (!fs::exists(zip_path, ec)) return;
+    if (!fs::exists(zip_path, ec)) {
+        return;
+    }
 
     mz_zip_archive zip = {};
     if (!mz_zip_reader_init_file(&zip, zip_path.string().c_str(), 0)) {
@@ -136,13 +152,23 @@ void ensure_skin_extracted(const std::string& skin_name) {
     bool prefix_initialized = false;
     for (int i = 0; i < num_files; i++) {
         mz_zip_archive_file_stat stat;
-        if (!mz_zip_reader_file_stat(&zip, i, &stat)) continue;
+        if (!mz_zip_reader_file_stat(&zip, i, &stat)) {
+            continue;
+        }
         std::string name = stat.m_filename;
         auto slash = name.find('/');
-        if (slash == std::string::npos) { common_prefix.clear(); break; }
+        if (slash == std::string::npos) {
+            common_prefix.clear();
+            break;
+        }
         std::string top = name.substr(0, slash + 1);
-        if (!prefix_initialized) { common_prefix = top; prefix_initialized = true; }
-        else if (top != common_prefix) { common_prefix.clear(); break; }
+        if (!prefix_initialized) {
+            common_prefix = top;
+            prefix_initialized = true;
+        } else if (top != common_prefix) {
+            common_prefix.clear();
+            break;
+        }
     }
 
     fs::create_directories(skin_dir, ec);
@@ -154,13 +180,20 @@ void ensure_skin_extracted(const std::string& skin_name) {
     }
     for (int i = 0; i < num_files; i++) {
         mz_zip_archive_file_stat stat;
-        if (!mz_zip_reader_file_stat(&zip, i, &stat)) continue;
-        if (mz_zip_reader_is_file_a_directory(&zip, i)) continue;
+        if (!mz_zip_reader_file_stat(&zip, i, &stat)) {
+            continue;
+        }
+        if (mz_zip_reader_is_file_a_directory(&zip, i)) {
+            continue;
+        }
 
         std::string name = stat.m_filename;
-        if (!common_prefix.empty() && name.rfind(common_prefix, 0) == 0)
+        if (!common_prefix.empty() && name.rfind(common_prefix, 0) == 0) {
             name = name.substr(common_prefix.size());
-        if (name.empty()) continue;
+        }
+        if (name.empty()) {
+            continue;
+        }
 
         fs::path out_file;
         if (!resolve_safe_extract_path(skin_dir, canonical_skin_dir, name, out_file)) {
@@ -168,16 +201,18 @@ void ensure_skin_extracted(const std::string& skin_name) {
             continue;
         }
 
-        if (!mz_zip_reader_extract_to_file(&zip, i, out_file.string().c_str(), 0))
+        if (!mz_zip_reader_extract_to_file(&zip, i, out_file.string().c_str(), 0)) {
             spdlog::warn("ensure_skin_extracted: failed to extract {} from {}", stat.m_filename, zip_path.string());
+        }
     }
 
     mz_zip_reader_end(&zip);
     spdlog::info("ensure_skin_extracted: extracted {} to {}", zip_path.string(), skin_dir.string());
 
     std::ofstream marker_file(marker, std::ios::trunc);
-    if (!marker_file)
+    if (!marker_file) {
         spdlog::warn("ensure_skin_extracted: failed to write completion marker for {}", skin_name);
+    }
 }
 
 std::vector<std::string> list_available_skins() {
@@ -211,7 +246,9 @@ struct ChartWalk {
         if (ext == ".tja" || ext == ".osu") {
             songs.push_back(p);
         } else if (ext == ".osz") {
-            if (osz_out) osz_out->push_back(p);
+            if (osz_out) {
+                osz_out->push_back(p);
+            }
         } else if (ext == ".bin" && under_fumen) {
             songs.push_back(p);
         }
@@ -232,38 +269,53 @@ struct ChartWalk {
                 spdlog::warn("collect_charts_from: cannot canonicalize {}, skipping recursion", p.string());
                 continue;
             }
-            if (!visited_dirs.insert(child_resolved).second) continue;
+            if (!visited_dirs.insert(child_resolved).second) {
+                continue;
+            }
 
             std::vector<Win32DirEntry> children;
             const bool listed = win32_list_dir(p, children);
 #ifdef SUPPORT_FUMEN
             // Both data roots have a fumen folder: only then ask them
             bool has_fumen = false;
-            for (const Win32DirEntry& c : children)
-                if (c.is_dir && _wcsicmp(c.name.c_str(), L"fumen") == 0) { has_fumen = true; break; }
-            if (has_fumen && (gen4::find_data_root(p) == p || gen3::find_data_root(p) == p))
+            for (const Win32DirEntry& c : children) {
+                if (c.is_dir && _wcsicmp(c.name.c_str(), L"fumen") == 0) {
+                    has_fumen = true;
+                    break;
+                }
+            }
+            if (has_fumen && (gen4::find_data_root(p) == p || gen3::find_data_root(p) == p)) {
                 continue;
+            }
 #endif
             add(p, p.extension(), under_fumen);
-            if (listed) walk(p, child_resolved, children, under_fumen || e.name == L"fumen");
+            if (listed) {
+                walk(p, child_resolved, children, under_fumen || e.name == L"fumen");
+            }
         }
     }
 };
 #endif
 
-static void collect_charts_from(const fs::path& path, std::vector<fs::path>& songs,
-                                 std::vector<fs::path>* osz_out) {
+static void collect_charts_from(const fs::path& path, std::vector<fs::path>& songs, std::vector<fs::path>* osz_out) {
 #ifdef _WIN32
     std::vector<Win32DirEntry> entries;
-    if (!win32_list_dir(path, entries))
-        throw fs::filesystem_error("cannot open directory", path, std::make_error_code(std::errc::no_such_file_or_directory));
+    if (!win32_list_dir(path, entries)) {
+        throw fs::filesystem_error("cannot open directory", path,
+                                   std::make_error_code(std::errc::no_such_file_or_directory));
+    }
     bool under_fumen = false;
     for (fs::path dir = path; !dir.empty() && dir != dir.parent_path(); dir = dir.parent_path()) {
-        if (dir.filename() == "fumen") { under_fumen = true; break; }
+        if (dir.filename() == "fumen") {
+            under_fumen = true;
+            break;
+        }
     }
     ChartWalk w{songs, osz_out, {}};
     std::wstring root = win32_final_path(path);
-    if (root.empty()) root = fs::absolute(path).wstring();
+    if (root.empty()) {
+        root = fs::absolute(path).wstring();
+    }
     w.visited_dirs.insert(root);
     w.walk(path, root, entries, under_fumen);
 #else
@@ -275,14 +327,17 @@ static void collect_charts_from(const fs::path& path, std::vector<fs::path>& son
     std::error_code canon_ec;
     {
         fs::path root_canonical = fs::canonical(path, canon_ec);
-        if (!canon_ec) visited_dirs.insert(root_canonical.string());
+        if (!canon_ec) {
+            visited_dirs.insert(root_canonical.string());
+        }
     }
     std::error_code it_ec;
-    auto it = fs::recursive_directory_iterator(
-        path, fs::directory_options::skip_permission_denied | fs::directory_options::follow_directory_symlink);
+    auto it = fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied |
+                                                         fs::directory_options::follow_directory_symlink);
     for (; it != fs::end(it); it.increment(it_ec)) {
         if (it_ec) {
-            spdlog::warn("collect_charts_from: stopping scan of {} after iteration error: {}", path.string(), it_ec.message());
+            spdlog::warn("collect_charts_from: stopping scan of {} after iteration error: {}", path.string(),
+                         it_ec.message());
             break;
         }
         const auto& entry = *it;
@@ -304,9 +359,8 @@ static void collect_charts_from(const fs::path& path, std::vector<fs::path>& son
         }
 
 #ifdef SUPPORT_FUMEN
-        if (is_dir &&
-            (gen4::find_data_root(entry.path()) == entry.path() ||
-             gen3::find_data_root(entry.path()) == entry.path())) {
+        if (is_dir && (gen4::find_data_root(entry.path()) == entry.path() ||
+                       gen3::find_data_root(entry.path()) == entry.path())) {
             it.disable_recursion_pending();
             continue;
         }
@@ -316,14 +370,21 @@ static void collect_charts_from(const fs::path& path, std::vector<fs::path>& son
         if (ext == ".tja" || ext == ".osu") {
             songs.push_back(entry.path());
         } else if (ext == ".osz") {
-            if (osz_out) osz_out->push_back(entry.path());
+            if (osz_out) {
+                osz_out->push_back(entry.path());
+            }
         } else if (ext == ".bin") {
             bool under_fumen = false;
-            for (fs::path dir = entry.path().parent_path();
-                 !dir.empty() && dir != dir.parent_path(); dir = dir.parent_path()) {
-                if (dir.filename() == "fumen") { under_fumen = true; break; }
+            for (fs::path dir = entry.path().parent_path(); !dir.empty() && dir != dir.parent_path();
+                 dir = dir.parent_path()) {
+                if (dir.filename() == "fumen") {
+                    under_fumen = true;
+                    break;
+                }
             }
-            if (under_fumen) songs.push_back(entry.path());
+            if (under_fumen) {
+                songs.push_back(entry.path());
+            }
         }
     }
 #endif
@@ -333,8 +394,9 @@ std::vector<fs::path> get_song_files(const std::vector<fs::path>& root_path) {
     std::vector<fs::path> songs;
     for (const fs::path& path : root_path) {
 #ifdef SUPPORT_FUMEN
-        if (!gen4::find_data_root(path).empty() || !gen3::find_data_root(path).empty())
+        if (!gen4::find_data_root(path).empty() || !gen3::find_data_root(path).empty()) {
             continue;
+        }
 #endif
 
         std::vector<fs::path> osz_files;
@@ -346,12 +408,15 @@ std::vector<fs::path> get_song_files(const std::vector<fs::path>& root_path) {
         }
 
         if (!osz_files.empty()) {
-            for (const auto& osz : osz_files)
+            for (const auto& osz : osz_files) {
                 extract_osz(osz);
+            }
             for (const auto& osz : osz_files) {
                 fs::path out_dir = osz.parent_path() / osz.stem();
                 std::error_code ec;
-                if (!fs::exists(out_dir, ec)) continue;
+                if (!fs::exists(out_dir, ec)) {
+                    continue;
+                }
                 try {
                     collect_charts_from(out_dir, songs, nullptr);
                 } catch (const std::filesystem::filesystem_error& e) {
@@ -364,7 +429,9 @@ std::vector<fs::path> get_song_files(const std::vector<fs::path>& root_path) {
     std::vector<fs::path> deduped;
     deduped.reserve(songs.size());
     for (auto& p : songs) {
-        if (seen.insert(p.string()).second) deduped.push_back(std::move(p));
+        if (seen.insert(p.string()).second) {
+            deduped.push_back(std::move(p));
+        }
     }
     return deduped;
 }
@@ -397,29 +464,35 @@ rapidjson::Document read_json_file(fs::path file_path) {
 std::vector<SongListEntry> read_song_list(const fs::path& path) {
     std::vector<SongListEntry> entries;
     std::ifstream file(path);
-    if (!file) return entries;
+    if (!file) {
+        return entries;
+    }
 
     std::string line;
     while (std::getline(file, line)) {
-        if (!line.empty() && line.back() == '\r')
+        if (!line.empty() && line.back() == '\r') {
             line.pop_back();
+        }
 
         std::vector<std::string> fields;
         std::stringstream ss(line);
         std::string field;
-        while (std::getline(ss, field, '|'))
+        while (std::getline(ss, field, '|')) {
             fields.push_back(field);
-        if (!line.empty() && line.back() == '|')
+        }
+        if (!line.empty() && line.back() == '|') {
             fields.push_back("");
+        }
 
-        if (fields.size() < 3) continue;
+        if (fields.size() < 3) {
+            continue;
+        }
 
         std::string hash = fields[0];
-        if (hash.size() >= 3 &&
-            (unsigned char)hash[0] == 0xEF &&
-            (unsigned char)hash[1] == 0xBB &&
-            (unsigned char)hash[2] == 0xBF)
+        if (hash.size() >= 3 && (unsigned char)hash[0] == 0xEF && (unsigned char)hash[1] == 0xBB &&
+            (unsigned char)hash[2] == 0xBF) {
             hash = hash.substr(3);
+        }
 
         entries.push_back({std::move(hash), std::move(fields[1]), std::move(fields[2])});
     }
@@ -432,27 +505,29 @@ void write_song_list(const fs::path& path, const std::vector<SongListEntry>& ent
         spdlog::error("write_song_list: failed to open {}", path.string());
         return;
     }
-    for (const auto& e : entries)
+    for (const auto& e : entries) {
         out << e.hash << "|" << e.title << "|" << e.subtitle << "\n";
+    }
     out.flush();
-    if (!out)
+    if (!out) {
         spdlog::error("write_song_list: failed to write {}", path.string());
+    }
 }
 
 namespace {
-fs::path g_skin_graphics_path;
-fs::path g_parent_skin_graphics_path;
-std::vector<fs::path> g_skin_chain;   // Graphics paths: the skin, its parent, the parent's parent ...
-std::mutex g_skin_path_mutex;
+    fs::path g_skin_graphics_path;
+    fs::path g_parent_skin_graphics_path;
+    std::vector<fs::path> g_skin_chain; // Graphics paths: the skin, its parent, the parent's parent ...
+    std::mutex g_skin_path_mutex;
 
-fs::path skin_root(const fs::path& graphics_path) {
-    return graphics_path.parent_path();
-}
+    fs::path skin_root(const fs::path& graphics_path) {
+        return graphics_path.parent_path();
+    }
 
-bool skin_has_parent_locked() {
-    return g_skin_graphics_path != g_parent_skin_graphics_path;
-}
-}
+    bool skin_has_parent_locked() {
+        return g_skin_graphics_path != g_parent_skin_graphics_path;
+    }
+} // namespace
 
 fs::path resolve_parent_graphics_path(const fs::path& graphics_path) {
     rapidjson::Document skin_config_file;
@@ -462,9 +537,8 @@ fs::path resolve_parent_graphics_path(const fs::path& graphics_path) {
         spdlog::warn("resolve_parent_graphics_path: {}", e.what());
         return graphics_path;
     }
-    if (skin_config_file.IsObject() && skin_config_file.HasMember("screen") &&
-        skin_config_file["screen"].IsObject() && skin_config_file["screen"].HasMember("parent") &&
-        skin_config_file["screen"]["parent"].IsString()) {
+    if (skin_config_file.IsObject() && skin_config_file.HasMember("screen") && skin_config_file["screen"].IsObject() &&
+        skin_config_file["screen"].HasMember("parent") && skin_config_file["screen"]["parent"].IsString()) {
         std::string parent = skin_config_file["screen"]["parent"].GetString();
         fs::path skins_root("Skins");
         fs::path candidate = (skins_root / parent).lexically_normal();
@@ -483,7 +557,9 @@ std::vector<fs::path> resolve_skin_chain(const fs::path& graphics_path) {
     std::vector<fs::path> chain{graphics_path};
     for (int depth = 0; depth < 8; depth++) {
         fs::path parent = resolve_parent_graphics_path(chain.back());
-        if (parent == chain.back()) break;
+        if (parent == chain.back()) {
+            break;
+        }
         if (std::find(chain.begin(), chain.end(), parent) != chain.end()) {
             spdlog::warn("resolve_skin_chain: parent cycle at '{}'", parent.string());
             break;
@@ -504,7 +580,9 @@ void set_skin_graphics_path(const fs::path& graphics_path) {
 std::vector<fs::path> skin_ancestor_roots() {
     std::lock_guard<std::mutex> lock(g_skin_path_mutex);
     std::vector<fs::path> roots;
-    for (size_t i = 1; i < g_skin_chain.size(); i++) roots.push_back(skin_root(g_skin_chain[i]));
+    for (size_t i = 1; i < g_skin_chain.size(); i++) {
+        roots.push_back(skin_root(g_skin_chain[i]));
+    }
     return roots;
 }
 
@@ -527,10 +605,14 @@ fs::path resolve_skin_path(const fs::path& relative_path) {
         chain = g_skin_chain;
     }
     fs::path child = child_root / relative_path;
-    if (fs::exists(child)) return child;
+    if (fs::exists(child)) {
+        return child;
+    }
     for (size_t i = 1; i < chain.size(); i++) {
         fs::path ancestor = skin_root(chain[i]) / relative_path;
-        if (fs::exists(ancestor)) return ancestor;
+        if (fs::exists(ancestor)) {
+            return ancestor;
+        }
     }
     return child;
 }

@@ -1,4 +1,5 @@
 #include "background.h"
+
 #include "../../libs/script.h"
 
 Background::Background(PlayerNum player_num, float bpm, const std::string& scene_preset) {
@@ -38,31 +39,33 @@ Background::Background(PlayerNum player_num, float bpm, const std::string& scene
         spdlog::error("Background.new did not return a table");
     } else {
         lua_object = call_result;
-        fn_update        = lua_object["update"];
-        fn_handle_good   = lua_object["handle_good"];
-        fn_handle_ok     = lua_object["handle_ok"];
-        fn_handle_bad    = lua_object["handle_bad"];
+        fn_update = lua_object["update"];
+        fn_handle_good = lua_object["handle_good"];
+        fn_handle_ok = lua_object["handle_ok"];
+        fn_handle_bad = lua_object["handle_bad"];
         fn_handle_drumroll = lua_object["handle_drumroll"];
-        fn_handle_balloon  = lua_object["handle_balloon"];
+        fn_handle_balloon = lua_object["handle_balloon"];
         fn_handle_kusudama = lua_object["handle_kusudama"];
-        fn_handle_gauge  = lua_object["handle_gauge"];
+        fn_handle_gauge = lua_object["handle_gauge"];
         fn_handle_song_end = lua_object["handle_song_end"];
-        fn_handle_dan      = lua_object["handle_dan"];
-        fn_handle_skip     = lua_object["handle_skip"];
-        fn_handle_score    = lua_object["handle_score"];
-        fn_handle_ending   = lua_object["handle_ending"];
-        fn_draw_ending     = lua_object["draw_ending"];
-        fn_draw_back     = lua_object["draw_back"];
-        fn_draw_fore     = lua_object["draw_fore"];
-        fn_draw_gauge    = lua_object["draw_gauge"];
+        fn_handle_dan = lua_object["handle_dan"];
+        fn_handle_skip = lua_object["handle_skip"];
+        fn_handle_score = lua_object["handle_score"];
+        fn_handle_ending = lua_object["handle_ending"];
+        fn_draw_ending = lua_object["draw_ending"];
+        fn_draw_back = lua_object["draw_back"];
+        fn_draw_fore = lua_object["draw_fore"];
+        fn_draw_gauge = lua_object["draw_gauge"];
         fn_handle_balloon_end = lua_object["handle_balloon_end"];
-        fn_handle_gogo   = lua_object["handle_gogo"];
+        fn_handle_gogo = lua_object["handle_gogo"];
         fn_handle_miss_streak = lua_object["handle_miss_streak"];
     }
 }
 
 Background::~Background() {
-    if (!lua_object.valid() || !script_manager.lua) return;
+    if (!lua_object.valid() || !script_manager.lua) {
+        return;
+    }
     sol::optional<sol::protected_function> destroy = lua_object["destroy"];
     if (destroy) {
         auto result = destroy.value()(lua_object);
@@ -74,7 +77,9 @@ Background::~Background() {
 }
 
 void Background::update(double current_ms, float bpm) {
-    if (!fn_update.valid()) return;
+    if (!fn_update.valid()) {
+        return;
+    }
     auto result = fn_update(lua_object, current_ms, bpm);
     if (!result.valid()) {
         sol::error err = result;
@@ -83,7 +88,9 @@ void Background::update(double current_ms, float bpm) {
 }
 
 void Background::handle_good(PlayerNum player_num) {
-    if (!fn_handle_good.valid()) return;
+    if (!fn_handle_good.valid()) {
+        return;
+    }
     auto result = fn_handle_good(lua_object, static_cast<int>(player_num));
     if (!result.valid()) {
         sol::error err = result;
@@ -92,7 +99,9 @@ void Background::handle_good(PlayerNum player_num) {
 }
 
 void Background::handle_ok(PlayerNum player_num) {
-    if (!fn_handle_ok.valid()) return;
+    if (!fn_handle_ok.valid()) {
+        return;
+    }
     auto result = fn_handle_ok(lua_object, static_cast<int>(player_num));
     if (!result.valid()) {
         sol::error err = result;
@@ -101,7 +110,9 @@ void Background::handle_ok(PlayerNum player_num) {
 }
 
 void Background::handle_bad(PlayerNum player_num) {
-    if (!fn_handle_bad.valid()) return;
+    if (!fn_handle_bad.valid()) {
+        return;
+    }
     auto result = fn_handle_bad(lua_object, static_cast<int>(player_num));
     if (!result.valid()) {
         sol::error err = result;
@@ -110,7 +121,9 @@ void Background::handle_bad(PlayerNum player_num) {
 }
 
 void Background::handle_drumroll(PlayerNum player_num) {
-    if (!fn_handle_drumroll.valid()) return;
+    if (!fn_handle_drumroll.valid()) {
+        return;
+    }
     auto result = fn_handle_drumroll(lua_object, static_cast<int>(player_num));
     if (!result.valid()) {
         sol::error err = result;
@@ -119,7 +132,9 @@ void Background::handle_drumroll(PlayerNum player_num) {
 }
 
 void Background::handle_balloon(PlayerNum player_num, int remaining) {
-    if (!fn_handle_balloon.valid()) return;
+    if (!fn_handle_balloon.valid()) {
+        return;
+    }
     auto result = fn_handle_balloon(lua_object, static_cast<int>(player_num), remaining);
     if (!result.valid()) {
         sol::error err = result;
@@ -129,7 +144,10 @@ void Background::handle_balloon(PlayerNum player_num, int remaining) {
 
 // A kusudama hit: skins without handle_kusudama get handle_balloon, as before.
 void Background::handle_kusudama(PlayerNum player_num) {
-    if (!fn_handle_kusudama.valid()) { handle_balloon(player_num); return; }
+    if (!fn_handle_kusudama.valid()) {
+        handle_balloon(player_num);
+        return;
+    }
     auto result = fn_handle_kusudama(lua_object, static_cast<int>(player_num));
     if (!result.valid()) {
         sol::error err = result;
@@ -139,7 +157,9 @@ void Background::handle_kusudama(PlayerNum player_num) {
 
 void Background::handle_gauge(PlayerNum player_num, float progress, bool is_clear, bool is_rainbow,
                               float clear_progress, float flash) {
-    if (!fn_handle_gauge.valid()) return;
+    if (!fn_handle_gauge.valid()) {
+        return;
+    }
     auto result = fn_handle_gauge(lua_object, static_cast<int>(player_num), progress, is_clear, is_rainbow,
                                   clear_progress, flash);
     if (!result.valid()) {
@@ -149,7 +169,9 @@ void Background::handle_gauge(PlayerNum player_num, float progress, bool is_clea
 }
 
 void Background::handle_song_end(PlayerNum player_num, int good, int ok, int bad, int total_notes) {
-    if (!fn_handle_song_end.valid()) return;
+    if (!fn_handle_song_end.valid()) {
+        return;
+    }
     auto result = fn_handle_song_end(lua_object, static_cast<int>(player_num), good, ok, bad, total_notes);
     if (!result.valid()) {
         sol::error err = result;
@@ -158,7 +180,9 @@ void Background::handle_song_end(PlayerNum player_num, int good, int ok, int bad
 }
 
 void Background::handle_dan(PlayerNum player_num, const sol::table& state) {
-    if (!fn_handle_dan.valid()) return;
+    if (!fn_handle_dan.valid()) {
+        return;
+    }
     auto result = fn_handle_dan(lua_object, static_cast<int>(player_num), state);
     if (!result.valid()) {
         sol::error err = result;
@@ -167,7 +191,9 @@ void Background::handle_dan(PlayerNum player_num, const sol::table& state) {
 }
 
 void Background::handle_score(PlayerNum player_num, int score) {
-    if (!fn_handle_score.valid()) return;
+    if (!fn_handle_score.valid()) {
+        return;
+    }
     auto result = fn_handle_score(lua_object, static_cast<int>(player_num), score);
     if (!result.valid()) {
         sol::error err = result;
@@ -176,7 +202,9 @@ void Background::handle_score(PlayerNum player_num, int score) {
 }
 
 void Background::handle_ending(PlayerNum player_num, const std::string& kind) {
-    if (!fn_handle_ending.valid()) return;
+    if (!fn_handle_ending.valid()) {
+        return;
+    }
     auto result = fn_handle_ending(lua_object, static_cast<int>(player_num), kind);
     if (!result.valid()) {
         sol::error err = result;
@@ -185,7 +213,9 @@ void Background::handle_ending(PlayerNum player_num, const std::string& kind) {
 }
 
 void Background::draw_ending(PlayerNum player_num) {
-    if (!fn_draw_ending.valid()) return;
+    if (!fn_draw_ending.valid()) {
+        return;
+    }
     auto result = fn_draw_ending(lua_object, static_cast<int>(player_num));
     if (!result.valid()) {
         sol::error err = result;
@@ -194,7 +224,9 @@ void Background::draw_ending(PlayerNum player_num) {
 }
 
 void Background::handle_balloon_end(PlayerNum player_num) {
-    if (!fn_handle_balloon_end.valid()) return;
+    if (!fn_handle_balloon_end.valid()) {
+        return;
+    }
     auto result = fn_handle_balloon_end(lua_object, static_cast<int>(player_num));
     if (!result.valid()) {
         sol::error err = result;
@@ -203,7 +235,9 @@ void Background::handle_balloon_end(PlayerNum player_num) {
 }
 
 void Background::handle_skip(PlayerNum player_num, const sol::table& state) {
-    if (!fn_handle_skip.valid()) return;
+    if (!fn_handle_skip.valid()) {
+        return;
+    }
     auto result = fn_handle_skip(lua_object, static_cast<int>(player_num), state);
     if (!result.valid()) {
         sol::error err = result;
@@ -212,7 +246,9 @@ void Background::handle_skip(PlayerNum player_num, const sol::table& state) {
 }
 
 void Background::draw_back() {
-    if (!fn_draw_back.valid()) return;
+    if (!fn_draw_back.valid()) {
+        return;
+    }
     auto result = fn_draw_back(lua_object);
     if (!result.valid()) {
         sol::error err = result;
@@ -221,7 +257,9 @@ void Background::draw_back() {
 }
 
 void Background::draw_fore() {
-    if (!fn_draw_fore.valid()) return;
+    if (!fn_draw_fore.valid()) {
+        return;
+    }
     auto result = fn_draw_fore(lua_object);
     if (!result.valid()) {
         sol::error err = result;
@@ -230,7 +268,9 @@ void Background::draw_fore() {
 }
 
 void Background::draw_gauge(PlayerNum player_num) {
-    if (!fn_draw_gauge.valid()) return;
+    if (!fn_draw_gauge.valid()) {
+        return;
+    }
     auto result = fn_draw_gauge(lua_object, static_cast<int>(player_num));
     if (!result.valid()) {
         sol::error err = result;
@@ -239,7 +279,9 @@ void Background::draw_gauge(PlayerNum player_num) {
 }
 
 void Background::handle_miss_streak(PlayerNum player_num, bool on) {
-    if (!fn_handle_miss_streak.valid()) return;
+    if (!fn_handle_miss_streak.valid()) {
+        return;
+    }
     auto result = fn_handle_miss_streak(lua_object, static_cast<int>(player_num), on);
     if (!result.valid()) {
         sol::error err = result;
@@ -248,7 +290,9 @@ void Background::handle_miss_streak(PlayerNum player_num, bool on) {
 }
 
 void Background::handle_gogo(PlayerNum player_num, bool on) {
-    if (!fn_handle_gogo.valid()) return;
+    if (!fn_handle_gogo.valid()) {
+        return;
+    }
     auto result = fn_handle_gogo(lua_object, static_cast<int>(player_num), on);
     if (!result.valid()) {
         sol::error err = result;

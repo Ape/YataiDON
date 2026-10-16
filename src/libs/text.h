@@ -1,6 +1,5 @@
 #pragma once
 
-#include "texture.h"
 #include <future>
 #include <mutex>
 #include <optional>
@@ -10,20 +9,22 @@
 #include <unordered_set>
 #include <vector>
 
+#include "texture.h"
+
 class FontManager {
 private:
     fs::path font_path;
 
     struct SizedFont {
-        ray::Font font{};                    // texture + recs + glyph structs; glyph images are fresh crops, not aliases of `cache`
-        std::unordered_set<int> codepoints;  // only what was asked for AT THIS SIZE
-        std::vector<ray::GlyphInfo> cache;   // rasterized once per codepoint (images owned here)
+        ray::Font font{}; // texture + recs + glyph structs; glyph images are fresh crops, not aliases of `cache`
+        std::unordered_set<int> codepoints; // only what was asked for AT THIS SIZE
+        std::vector<ray::GlyphInfo> cache;  // rasterized once per codepoint (images owned here)
         bool atlas_dirty = false;
         uint64_t last_used = 0;
         bool loaded = false;
     };
 
-    std::vector<unsigned char> font_data;    // the .ttf bytes, read once
+    std::vector<unsigned char> font_data; // the .ttf bytes, read once
 
     bool rasterize_new(SizedFont& entry, int font_size, const std::vector<int>& cps);   // font_mutex held
     void rebuild_atlas(SizedFont& entry, int font_size);                                // font_mutex held
@@ -40,8 +41,8 @@ private:
 
     static constexpr size_t MAX_SIZED_FONTS = 32;
 
-    SizedFont& acquire(const std::string& text, int font_size);  // font_mutex held
-    void evict_lru(int keep_size);                               // font_mutex held
+    SizedFont& acquire(const std::string& text, int font_size); // font_mutex held
+    void evict_lru(int keep_size);                              // font_mutex held
 
 public:
     FontManager();
@@ -65,14 +66,18 @@ enum class LocalizedTextFallback {
     REQUIRED_ENGLISH,
 };
 
-inline std::string localized_text(const std::map<std::string, std::string>& values,
-                                  const std::string& language, LocalizedTextFallback fallback) {
+inline std::string localized_text(const std::map<std::string, std::string>& values, const std::string& language,
+                                  LocalizedTextFallback fallback) {
     if (auto it = values.find(language); it != values.end()) {
         return it->second;
     }
 
-    if (fallback == LocalizedTextFallback::NONE) return "";
-    if (fallback == LocalizedTextFallback::REQUIRED_ENGLISH) return values.at("en");
+    if (fallback == LocalizedTextFallback::NONE) {
+        return "";
+    }
+    if (fallback == LocalizedTextFallback::REQUIRED_ENGLISH) {
+        return values.at("en");
+    }
 
     if (auto it = values.find("en"); it != values.end()) {
         return it->second;
@@ -101,24 +106,22 @@ private:
 
     std::future<void> build_future;
 
-    struct BuildData { ray::Image img; };
+    struct BuildData {
+        ray::Image img;
+    };
 
     BuildData build_horizontal_text(ray::Color color, ray::Color outline_color, float spacing);
-    BuildData build_vertical_text  (ray::Color color, ray::Color outline_color, float spacing);
+    BuildData build_vertical_text(ray::Color color, ray::Color outline_color, float spacing);
 
 public:
-    float width  = 0.0f;
+    float width = 0.0f;
     float height = 0.0f;
     float x_offset = 0.0f;
     float y_offset = 0.0f;
-    int   top_extra = 0;
+    int top_extra = 0;
 
-    OutlinedText(std::string text, int font_size,
-                 ray::Color color, ray::Color outline_color,
-                 bool is_vertical,
-                 float outline_thickness = 5.0f,
-                 float spacing = 2.0f,
-                 float v_advance = 1.0f,
+    OutlinedText(std::string text, int font_size, ray::Color color, ray::Color outline_color, bool is_vertical,
+                 float outline_thickness = 5.0f, float spacing = 2.0f, float v_advance = 1.0f,
                  const std::string& font_name = "");
 
     ~OutlinedText();

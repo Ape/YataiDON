@@ -1,12 +1,11 @@
 #include "platform_android.h"
 
-#include <spdlog/spdlog.h>
+#include <cpr/cpr.h>
 #include <csignal>
 #include <filesystem>
 #include <optional>
+#include <spdlog/spdlog.h>
 #include <unistd.h>
-
-#include <cpr/cpr.h>
 
 std::filesystem::path android_get_working_directory() {
     std::filesystem::path exe_dir("/sdcard/YataiDON");
@@ -32,7 +31,9 @@ static std::optional<cpr::AsyncResponse> g_pending_update_checksum;
 static bool g_android_update_checked = false;
 
 void android_check_and_install_update() {
-    if (g_android_update_checked) return;
+    if (g_android_update_checked) {
+        return;
+    }
     g_android_update_checked = true;
 
     constexpr char kUpdateChecksumUrl[] =

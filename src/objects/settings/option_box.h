@@ -1,19 +1,20 @@
 #pragma once
 
-#include "config_ref.h"
-#include "../../libs/text.h"
-#include "../../libs/screen.h"
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
+#include "../../libs/screen.h"
+#include "../../libs/text.h"
+#include "config_ref.h"
+
 class BaseOptionBox {
 protected:
-    std::string     description_text;
-    ConfigRef       config_ref;
-    std::unique_ptr<OutlinedText>   name_text;
+    std::string description_text;
+    ConfigRef config_ref;
+    std::unique_ptr<OutlinedText> name_text;
 
     TextureObject* t_overlay = nullptr;
     TextureObject* t_title = nullptr;
@@ -28,148 +29,145 @@ public:
 
     bool is_highlighted;
 
-    BaseOptionBox(const std::string& name, const std::string& description,
-                  const std::string& path);
+    BaseOptionBox(const std::string& name, const std::string& description, const std::string& path);
 
     virtual void confirm() {}
     virtual bool needs_text_input() const { return false; }
 
     virtual void update(double /*current_time*/) {}
-    virtual void move_left()  {}
+    virtual void move_left() {}
     virtual void move_right() {}
     virtual void draw() { draw_base(); }
 };
 
 class BoolOptionBox : public BaseOptionBox {
-    bool          value;
+    bool value;
     std::unique_ptr<OutlinedText> on_text;
     std::unique_ptr<OutlinedText> off_text;
+
 public:
-    BoolOptionBox(const std::string& name, const std::string& description,
-                  const std::string& path,
+    BoolOptionBox(const std::string& name, const std::string& description, const std::string& path,
                   const std::string& true_label, const std::string& false_label);
 
-    void confirm()    override;
-    void move_left()  override;  // set false
-    void move_right() override;  // set true
-    void draw()       override;
+    void confirm() override;
+    void move_left() override;  // set false
+    void move_right() override; // set true
+    void draw() override;
 };
 
 class IntOptionBox : public BaseOptionBox {
-    int           value;
+    int value;
     std::unique_ptr<OutlinedText> value_text;
     std::unique_ptr<FadeAnimation> flicker_fade;
-    std::vector<std::pair<int,std::string>> value_list;
-    int           value_index;
+    std::vector<std::pair<int, std::string>> value_list;
+    int value_index;
 
     void rebuild_text();
-public:
-    IntOptionBox(const std::string& name, const std::string& description,
-                 const std::string& path,
-                 const std::map<std::string,std::string>& values);
 
-    void confirm()    override;
+public:
+    IntOptionBox(const std::string& name, const std::string& description, const std::string& path,
+                 const std::map<std::string, std::string>& values);
+
+    void confirm() override;
     void update(double current_time) override;
-    void move_left()  override;
+    void move_left() override;
     void move_right() override;
-    void draw()       override;
+    void draw() override;
 };
 
 class StrOptionBox : public BaseOptionBox {
-    std::string   value;
-    std::string   input_string;   // used for free-form editing
+    std::string value;
+    std::string input_string; // used for free-form editing
     std::unique_ptr<OutlinedText> value_text;
     std::unique_ptr<FadeAnimation> flicker_fade;
-    std::vector<std::pair<std::string,std::string>> value_list;
-    int           value_index;
+    std::vector<std::pair<std::string, std::string>> value_list;
+    int value_index;
 
     void rebuild_text();
-public:
-    StrOptionBox(const std::string& name, const std::string& description,
-                 const std::string& path,
-                 const std::map<std::string,std::string>& values);
 
-    void confirm()    override;
+public:
+    StrOptionBox(const std::string& name, const std::string& description, const std::string& path,
+                 const std::map<std::string, std::string>& values);
+
+    void confirm() override;
     bool needs_text_input() const override;
     void update(double current_time) override;
-    void move_left()  override;
+    void move_left() override;
     void move_right() override;
-    void draw()       override;
+    void draw() override;
 };
 
 class KeybindOptionBox : public BaseOptionBox {
     std::vector<int> value;
-    std::unique_ptr<OutlinedText>    value_text;
-    std::unique_ptr<FadeAnimation>   flicker_fade;
+    std::unique_ptr<OutlinedText> value_text;
+    std::unique_ptr<FadeAnimation> flicker_fade;
 
     void rebuild_text();
-public:
-    KeybindOptionBox(const std::string& name, const std::string& description,
-                     const std::string& path);
 
-    void confirm()    override;
+public:
+    KeybindOptionBox(const std::string& name, const std::string& description, const std::string& path);
+
+    void confirm() override;
     void update(double current_time) override;
-    void draw()       override;
+    void draw() override;
 };
 
 class KeyBindControllerOptionBox : public BaseOptionBox {
     std::vector<int> value;
-    std::unique_ptr<OutlinedText>    value_text;
-    std::unique_ptr<FadeAnimation>   flicker_fade;
+    std::unique_ptr<OutlinedText> value_text;
+    std::unique_ptr<FadeAnimation> flicker_fade;
     // Capture starts one frame after highlighting, so the press that opened
     // the box isn't immediately bound to it.
     bool capture_armed = false;
 
     void rebuild_text();
-public:
-    KeyBindControllerOptionBox(const std::string& name, const std::string& description,
-                                const std::string& path);
 
-    void confirm()    override;
+public:
+    KeyBindControllerOptionBox(const std::string& name, const std::string& description, const std::string& path);
+
+    void confirm() override;
     void update(double current_time) override;
-    void draw()       override;
+    void draw() override;
 };
 
 class FloatOptionBox : public BaseOptionBox {
-    float         value;
+    float value;
     std::unique_ptr<OutlinedText> value_text;
     std::unique_ptr<FadeAnimation> flicker_fade;
 
     void rebuild_text();
-public:
-    FloatOptionBox(const std::string& name, const std::string& description,
-                   const std::string& path);
 
-    void confirm()    override;
+public:
+    FloatOptionBox(const std::string& name, const std::string& description, const std::string& path);
+
+    void confirm() override;
     void update(double current_time) override;
-    void move_left()  override;
+    void move_left() override;
     void move_right() override;
-    void draw()       override;
+    void draw() override;
 };
 
 class AudioOffsetOptionBox : public BaseOptionBox {
 public:
-    AudioOffsetOptionBox(const std::string& name,
-                         const std::string& description,
-                         const std::string& path,
-                         Screens           calibrate_screen);
+    AudioOffsetOptionBox(const std::string& name, const std::string& description, const std::string& path,
+                         Screens calibrate_screen);
 
-    void confirm()                   override;
-    void move_left()                 override;
-    void move_right()                override;
-    void draw()                      override;
+    void confirm() override;
+    void move_left() override;
+    void move_right() override;
+    void draw() override;
     void update(double current_time) override;
 
-    bool    wants_screen_change = false;
-    Screens pending_screen      = Screens::INPUT_CALI;
+    bool wants_screen_change = false;
+    Screens pending_screen = Screens::INPUT_CALI;
 
 private:
-    int             value;
-    Screens          calibrate_screen;
-    bool             offset_highlighted;  // true = on offset button, false = on calibrate button
-    std::unique_ptr<OutlinedText>   value_text;
-    std::unique_ptr<OutlinedText>   calibrate_text;
-    std::unique_ptr<FadeAnimation>  flicker_fade;
+    int value;
+    Screens calibrate_screen;
+    bool offset_highlighted; // true = on offset button, false = on calibrate button
+    std::unique_ptr<OutlinedText> value_text;
+    std::unique_ptr<OutlinedText> calibrate_text;
+    std::unique_ptr<FadeAnimation> flicker_fade;
 
     void rebuild_text();
 };

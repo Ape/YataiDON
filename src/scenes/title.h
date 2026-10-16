@@ -1,17 +1,18 @@
 #pragma once
 
-#include <vector>
-#include <optional>
 #include <memory>
-#include "../libs/screen.h"
-#include "../libs/video.h"
-#include "../libs/text.h"
+#include <optional>
+#include <vector>
+
 #include "../libs/filesystem.h"
-#include "../objects/title/warning_screen.h"
-#include "../objects/title/attract_scene.h"
+#include "../libs/screen.h"
+#include "../libs/text.h"
+#include "../libs/video.h"
 #include "../objects/global/allnet_indicator.h"
 #include "../objects/global/coin_overlay.h"
 #include "../objects/global/entry_overlay.h"
+#include "../objects/title/attract_scene.h"
+#include "../objects/title/warning_screen.h"
 
 enum class TitleState {
     OP_VIDEO,
@@ -43,9 +44,9 @@ private:
 
     void scene_manager(double current_ms);
     void reset_attract_objects();
+
 public:
-    TitleScreen() : Screen("title") {
-    }
+    TitleScreen() : Screen("title") {}
 
     void on_screen_start() override;
     void load_videos();

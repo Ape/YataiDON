@@ -1,0 +1,18 @@
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: WithoutElse
+BreakTemplateDeclarations: Yes
+ColumnLimit: 120
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<'
+    Priority: 1
+  - Regex: '^"'
+    Priority: 2
+IndentWidth: 4
+InsertBraces: true
+NamespaceIndentation: All
+PointerAlignment: Left
+SpaceAfterTemplateKeyword: false

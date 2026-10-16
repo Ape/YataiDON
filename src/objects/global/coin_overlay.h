@@ -5,6 +5,7 @@
 class CoinOverlay : public LuaScript {
     sol::protected_function fn_update;
     sol::protected_function fn_draw;
+
 public:
     CoinOverlay();
     void update(double current_ms);

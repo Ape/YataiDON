@@ -26,11 +26,10 @@ public:
     bool costume_menu_open;
     PlayerNum opening_player = PlayerNum::P1;
 
-
     explicit BoxManager(bool two_player = false);
     bool check_board_list_change() const;
     bool selection_allowed() const;
-    bool is_disabled(int index) const;  // greyed out: shown but not selectable
+    bool is_disabled(int index) const; // greyed out: shown but not selectable
     void select_box();
     bool is_box_selected() const;
     bool is_finished() const;

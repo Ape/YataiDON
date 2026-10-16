@@ -13,14 +13,16 @@ private:
     double elapsed_ms;
     bool note_finished_handled;
     double start_ms;
-    int firework_frames = 0;   // Lua-reported length of the trailing fireworks
+    int firework_frames = 0; // Lua-reported length of the trailing fireworks
 
     sol::protected_function fn_draw;
+
 public:
     NoteType note_type;
     bool is_big;
 
-    NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bool big, bool is_balloon, float start_x = 0, float start_y = 0);
+    NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bool big, bool is_balloon, float start_x = 0,
+            float start_y = 0);
 
     void update(double current_ms);
 

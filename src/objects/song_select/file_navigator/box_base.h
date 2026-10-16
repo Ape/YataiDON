@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+
 #include "../../../libs/text.h"
 #include "../../enums.h"
 
@@ -19,7 +20,9 @@ struct BoxDef {
 inline size_t utf8_char_count(const std::string& s) {
     size_t count = 0;
     for (unsigned char c : s) {
-        if ((c & 0xC0) != 0x80) ++count;
+        if ((c & 0xC0) != 0x80) {
+            ++count;
+        }
     }
     return count;
 }
@@ -45,16 +48,22 @@ public:
     float position;
     float cross_pos = 0.0f;
     float cross_target = 0.0f;
-    float cross_lead   = 0.0f;   // cross_pos - cross_target at glide start
-    float move_delta   = 0.0f;   // row-axis span of the active move (0 = none)
-    void snap_cross(float x)  { cross_pos = cross_target = x; cross_lead = 0.0f; }
-    void glide_cross(float x) { cross_lead = cross_pos - x; cross_target = x; }
+    float cross_lead = 0.0f; // cross_pos - cross_target at glide start
+    float move_delta = 0.0f; // row-axis span of the active move (0 = none)
+    void snap_cross(float x) {
+        cross_pos = cross_target = x;
+        cross_lead = 0.0f;
+    }
+    void glide_cross(float x) {
+        cross_lead = cross_pos - x;
+        cross_target = x;
+    }
     bool vertical = false;
     float left_bound = 0.0f;
     float right_bound = 0.0f;
 
     float box_x() const { return vertical ? cross_pos : position; }
-    float box_y() const { return vertical ? position  : 0.0f; }
+    float box_y() const { return vertical ? position : 0.0f; }
 
     fs::path path;
 
@@ -87,14 +96,20 @@ public:
     virtual void update(double current_ms);
 
     const char* draw_state() const {
-        if (yellow_box_active && is_diff_select) return "diff_select";
-        if (yellow_box_active && yellow_box_opened) return "open";
+        if (yellow_box_active && is_diff_select) {
+            return "diff_select";
+        }
+        if (yellow_box_active && yellow_box_opened) {
+            return "open";
+        }
         return "closed";
     }
     virtual const char* lua_kind() const { return "box"; }
     float bar_anime_count() const {
         double elapsed = get_current_ms() - bar_open_started_at;
-        if (elapsed <= 200.0) return 0.0f;
+        if (elapsed <= 200.0) {
+            return 0.0f;
+        }
         float deg = std::min((float)(elapsed - 200.0) * 1.5f, 90.0f);
         return std::sin(deg * 3.14159265f / 180.0f) * 62.0f;
     }
@@ -105,15 +120,25 @@ public:
     // recolor is exposed as begin/end guards wrapping the same draw_texture calls the skin
     // already makes (see draw_closed() / draw_open_bg()).
     bool has_recolor() const { return shader_loaded && texture_index == TextureIndex::NONE; }
-    void begin_recolor() { if (shader_loaded) ray::BeginShaderMode(shader); }
-    void end_recolor()   { if (shader_loaded) ray::EndShaderMode(); }
+    void begin_recolor() {
+        if (shader_loaded) {
+            ray::BeginShaderMode(shader);
+        }
+    }
+    void end_recolor() {
+        if (shader_loaded) {
+            ray::EndShaderMode();
+        }
+    }
 
     OutlinedText* horizontal_name() {
         if (!horizontal_name_cache) {
             float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
-            if (utf8_char_count(text_name) >= 30)
+            if (utf8_char_count(text_name) >= 30) {
                 font_size -= (int)(10 * tex.screen_scale);
-            horizontal_name_cache = std::make_unique<OutlinedText>(text_name, font_size, text_color, fore_color.value_or(text_color), false);
+            }
+            horizontal_name_cache = std::make_unique<OutlinedText>(text_name, font_size, text_color,
+                                                                   fore_color.value_or(text_color), false);
         }
         return horizontal_name_cache.get();
     }
@@ -121,9 +146,11 @@ public:
     OutlinedText* horizontal_name_large() {
         if (!horizontal_name_large_cache) {
             float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
-            if (utf8_char_count(text_name) >= 30)
+            if (utf8_char_count(text_name) >= 30) {
                 font_size -= (int)(10 * tex.screen_scale);
-            horizontal_name_large_cache = std::make_unique<OutlinedText>(text_name, (int)(font_size * 1.5f), text_color, fore_color.value_or(text_color), false, 6);
+            }
+            horizontal_name_large_cache = std::make_unique<OutlinedText>(text_name, (int)(font_size * 1.5f), text_color,
+                                                                         fore_color.value_or(text_color), false, 6);
         }
         return horizontal_name_large_cache.get();
     }
@@ -144,8 +171,8 @@ protected:
     bool yellow_box_active = false;
     bool yellow_box_opened = false;
     bool is_diff_select = false;
-    float yellow_right_width = 0.0f;   // yellow_box_right texture width (non-diff right bound)
-    float folder_texture_left_width = 0.0f;   // closed-box left/right bounds
+    float yellow_right_width = 0.0f;        // yellow_box_right texture width (non-diff right bound)
+    float folder_texture_left_width = 0.0f; // closed-box left/right bounds
     float folder_texture_right_width = 0.0f;
 
     float target_position;

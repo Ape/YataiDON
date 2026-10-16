@@ -1,14 +1,15 @@
 #pragma once
 
-#include <rapidjson/document.h>
 #include <map>
 #include <memory>
 #include <optional>
+#include <rapidjson/document.h>
+#include <set>
 #include <string>
 #include <tuple>
 #include <unordered_map>
-#include <set>
 #include <vector>
+
 #include "time.h"
 
 enum class EaseType {
@@ -35,7 +36,7 @@ protected:
     double easeOut(double progress, EaseType ease_type);
 
     double applyEasing(double progress, const std::optional<EaseType>& ease_in_opt,
-                      const std::optional<EaseType>& ease_out_opt);
+                       const std::optional<EaseType>& ease_out_opt);
 
 public:
     double attribute;
@@ -79,11 +80,9 @@ private:
     std::optional<double> reverse_delay_saved;
 
 public:
-    FadeAnimation(double duration, double initial_opacity = 1.0, bool loop = false,
-                  bool lock_input = false, double final_opacity = 0.0, double delay = 0.0,
-                  std::optional<EaseType> ease_in = std::nullopt,
-                  std::optional<EaseType> ease_out = std::nullopt,
-                  std::optional<double> reverse_delay = std::nullopt);
+    FadeAnimation(double duration, double initial_opacity = 1.0, bool loop = false, bool lock_input = false,
+                  double final_opacity = 0.0, double delay = 0.0, std::optional<EaseType> ease_in = std::nullopt,
+                  std::optional<EaseType> ease_out = std::nullopt, std::optional<double> reverse_delay = std::nullopt);
 
     void restart() override;
 
@@ -116,11 +115,9 @@ private:
 
 public:
     int start_position;
-    MoveAnimation(double duration, int total_distance = 0, bool loop = false,
-                  bool lock_input = false, int start_position = 0, double delay = 0.0,
-                  std::optional<double> reverse_delay = std::nullopt,
-                  std::optional<EaseType> ease_in = std::nullopt,
-                  std::optional<EaseType> ease_out = std::nullopt,
+    MoveAnimation(double duration, int total_distance = 0, bool loop = false, bool lock_input = false,
+                  int start_position = 0, double delay = 0.0, std::optional<double> reverse_delay = std::nullopt,
+                  std::optional<EaseType> ease_in = std::nullopt, std::optional<EaseType> ease_out = std::nullopt,
                   std::vector<Waypoint> waypoints = {});
 
     void restart() override;
@@ -141,7 +138,7 @@ private:
 
 public:
     TextureChangeAnimation(double duration, const std::vector<std::tuple<double, double, int>>& textures,
-                          bool loop = false, bool lock_input = false, double delay = 0.0);
+                           bool loop = false, bool lock_input = false, double delay = 0.0);
 
     void reset() override;
 
@@ -171,11 +168,11 @@ private:
     std::optional<double> reverse_delay_saved;
 
 public:
-    TextureResizeAnimation(double duration, double initial_size = 1.0, bool loop = false,
-                          bool lock_input = false, double final_size = 0.0, double delay = 0.0,
-                          std::optional<double> reverse_delay = std::nullopt,
-                          std::optional<EaseType> ease_in = std::nullopt,
-                          std::optional<EaseType> ease_out = std::nullopt);
+    TextureResizeAnimation(double duration, double initial_size = 1.0, bool loop = false, bool lock_input = false,
+                           double final_size = 0.0, double delay = 0.0,
+                           std::optional<double> reverse_delay = std::nullopt,
+                           std::optional<EaseType> ease_in = std::nullopt,
+                           std::optional<EaseType> ease_out = std::nullopt);
 
     void restart() override;
 

@@ -1,8 +1,9 @@
 #include "gauge_hit_effect.h"
+
 #include <stdexcept>
 
 GaugeHitEffect::GaugeHitEffect(NoteType note_type, bool is_big, bool is_2p)
-            : note_type(note_type), is_big(is_big), is_2p(is_2p) {
+    : note_type(note_type), is_big(is_big), is_2p(is_2p) {
     texture_change = dynamic_cast<TextureChangeAnimation*>(tex.get_animation(2, true));
     circle_fadein = dynamic_cast<FadeAnimation*>(tex.get_animation(31, true));
     resize = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(32, true));
@@ -33,7 +34,7 @@ GaugeHitEffect::GaugeHitEffect(NoteType note_type, bool is_big, bool is_2p)
 
     dest_width = width * tex.screen_scale;
     dest_height = width * tex.screen_scale;
-    origin = {width/2, width/2};
+    origin = {width / 2, width / 2};
     rotation_angle = 0;
     x2_pos = -width;
     y2_pos = -width;
@@ -73,35 +74,33 @@ void GaugeHitEffect::update(double current_ms) {
     y2_pos = -width + (width * scale);
 
     rotation_angle = ring ? rotation->attribute : 0;
-
 }
 
 void GaugeHitEffect::draw(float y) {
-    //Main hit effect texture
-    tex.draw_texture(t_hit_effect,
-                    {.color=ray::Fade(color, fade_out->attribute),
-                    .frame=(int)texture_change->attribute,
-                    .center=true,
-                    .y=y,
-                    .x2=x2_pos,
-                    .y2=y2_pos,
-                    .origin=origin,
-                    .rotation=rotation_angle,
-                    .index=is_2p});
+    // Main hit effect texture
+    tex.draw_texture(t_hit_effect, {.color = ray::Fade(color, fade_out->attribute),
+                                    .frame = (int)texture_change->attribute,
+                                    .center = true,
+                                    .y = y,
+                                    .x2 = x2_pos,
+                                    .y2 = y2_pos,
+                                    .origin = origin,
+                                    .rotation = rotation_angle,
+                                    .index = is_2p});
 
-    //Note type texture
+    // Note type texture
     const SkinInfo& pos_data = *tex.get_skin_config(SC::GAME_GAUGE_HIT_EFFECT_NOTE);
     tex.draw_texture(t_note,
-        {.x=pos_data.x, .y=y+pos_data.y + (pos_data.height * is_2p), .fade=fade_out->attribute});
+                     {.x = pos_data.x, .y = y + pos_data.y + (pos_data.height * is_2p), .fade = fade_out->attribute});
 
-    //Circle effect texture
+    // Circle effect texture
     ray::Color texture_color;
     if (circle_fadein->is_finished) {
         texture_color = ray::Fade(ray::WHITE, std::min(circle_fadein->attribute, fade_out->attribute));
     } else {
         texture_color = ray::Fade(ray::YELLOW, std::min(circle_fadein->attribute, fade_out->attribute));
     }
-    tex.draw_texture(t_circle, {.color=texture_color, .y=y, .index=is_2p});
+    tex.draw_texture(t_circle, {.color = texture_color, .y = y, .index = is_2p});
 }
 
 bool GaugeHitEffect::is_finished() const {

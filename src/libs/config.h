@@ -1,9 +1,9 @@
 #pragma once
 
-#include <toml++/toml.h>
 #include <cstdint>
 #include <filesystem>
 #include <string>
+#include <toml++/toml.h>
 #include <vector>
 
 namespace fs = std::filesystem;
@@ -94,7 +94,7 @@ struct MidiConfig {
 
 struct AudioConfig {
     int device_type = 0;
-    std::string device;   // Output device name (empty = system default)
+    std::string device; // Output device name (empty = system default)
     int sample_rate = 44100;
     int buffer_size = 512;
     std::vector<int> asio_channel;

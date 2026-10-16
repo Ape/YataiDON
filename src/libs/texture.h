@@ -1,8 +1,5 @@
 #pragma once
 
-#include "animation.h"
-#include "ray.h" // IWYU pragma: keep
-#include "skin_config.h"
 #include <cstdint>
 #include <filesystem>
 #include <map>
@@ -13,13 +10,25 @@
 #include <unordered_set>
 #include <vector>
 
+#include "animation.h"
+#include "ray.h" // IWYU pragma: keep
+#include "skin_config.h"
+
 namespace fs = std::filesystem;
 
-enum class Mirror : uint8_t { NONE, HORIZONTAL, VERTICAL };
+enum class Mirror : uint8_t {
+    NONE,
+    HORIZONTAL,
+    VERTICAL
+};
 
 inline Mirror mirror_from_string(const std::string& s) {
-    if (s == "horizontal") return Mirror::HORIZONTAL;
-    if (s == "vertical") return Mirror::VERTICAL;
+    if (s == "horizontal") {
+        return Mirror::HORIZONTAL;
+    }
+    if (s == "vertical") {
+        return Mirror::VERTICAL;
+    }
     return Mirror::NONE;
 }
 
@@ -39,11 +48,21 @@ struct DrawTextureParams {
 };
 
 inline int blend_from_string(const std::string& s) {
-    if (s == "additive")   return ray::BLEND_ADDITIVE;
-    if (s == "multiplied") return ray::BLEND_MULTIPLIED;
-    if (s == "add_colors") return ray::BLEND_ADD_COLORS;
-    if (s == "subtract_colors") return ray::BLEND_SUBTRACT_COLORS;
-    if (s == "alpha_premultiply") return ray::BLEND_ALPHA_PREMULTIPLY;
+    if (s == "additive") {
+        return ray::BLEND_ADDITIVE;
+    }
+    if (s == "multiplied") {
+        return ray::BLEND_MULTIPLIED;
+    }
+    if (s == "add_colors") {
+        return ray::BLEND_ADD_COLORS;
+    }
+    if (s == "subtract_colors") {
+        return ray::BLEND_SUBTRACT_COLORS;
+    }
+    if (s == "alpha_premultiply") {
+        return ray::BLEND_ALPHA_PREMULTIPLY;
+    }
     return ray::BLEND_ALPHA;
 }
 
@@ -56,12 +75,9 @@ struct SkinInfo {
     std::map<std::string, std::string> text;
     float outline = -1.0f;
 
-    SkinInfo(float x = 0, float y = 0, int font_size = 0,
-             float width = 0, float height = 0,
-             const std::map<std::string, std::string>& text = {},
-             float outline = -1.0f)
-        : x(x), y(y), font_size(font_size), width(width), height(height), text(text),
-          outline(outline) {}
+    SkinInfo(float x = 0, float y = 0, int font_size = 0, float width = 0, float height = 0,
+             const std::map<std::string, std::string>& text = {}, float outline = -1.0f)
+        : x(x), y(y), font_size(font_size), width(width), height(height), text(text), outline(outline) {}
 };
 
 struct Chara3DConfig {
@@ -87,7 +103,9 @@ struct TextureObject {
     virtual ~TextureObject() = default;
 
     float scissor_right() const {
-        if (opaque_right > 0.0f) return opaque_right;
+        if (opaque_right > 0.0f) {
+            return opaque_right;
+        }
         return x2.empty() ? 0.0f : static_cast<float>(x2[0]);
     }
 
@@ -111,8 +129,8 @@ struct FramedTexture : public TextureObject {
     std::vector<std::shared_ptr<ray::Texture2D>> textures;
 
     FramedTexture(const std::string& name, std::vector<std::shared_ptr<ray::Texture2D>> texs)
-        : TextureObject(name, texs.empty() ? 0 : texs[0]->width,
-                       texs.empty() ? 0 : texs[0]->height), textures(std::move(texs)) {
+        : TextureObject(name, texs.empty() ? 0 : texs[0]->width, texs.empty() ? 0 : texs[0]->height),
+          textures(std::move(texs)) {
         for (auto& tex : textures) {
             SetTextureWrap(*tex, ray::TEXTURE_WRAP_CLAMP);
         }
@@ -122,8 +140,7 @@ struct FramedTexture : public TextureObject {
 
     const ray::Texture2D* frame_texture(int frame) const override {
         if (frame < 0 || frame >= static_cast<int>(textures.size())) {
-            throw std::runtime_error("Frame " + std::to_string(frame) +
-                " not available in framed texture " + name);
+            throw std::runtime_error("Frame " + std::to_string(frame) + " not available in framed texture " + name);
         }
         return textures[frame].get();
     }
@@ -174,7 +191,7 @@ public:
     // it every frame. Emptied whenever `textures` changes, and when the language changes.
     std::unordered_map<std::string, std::shared_ptr<TextureObject>> lua_texture_lookup;
     std::string lua_texture_lookup_lang;
-    std::unordered_map<SC, SkinInfo> skin_info;   // read through get_skin_config
+    std::unordered_map<SC, SkinInfo> skin_info; // read through get_skin_config
     std::unordered_map<std::string, SkinInfo> skin_config_by_name;
     std::unordered_map<SCO, bool> options;
     Chara3DConfig chara_3d_config;
@@ -191,7 +208,9 @@ public:
     static std::pair<float, float> lookup_xy(const std::map<std::string, std::pair<float, float>>& m,
                                              const std::string& name, const std::string& fallback) {
         auto it = m.find(name);
-        if (it == m.end()) it = m.find(fallback);
+        if (it == m.end()) {
+            it = m.find(fallback);
+        }
         return it == m.end() ? std::pair<float, float>{0.0f, 0.0f} : it->second;
     }
     fs::path font_path;
@@ -201,8 +220,7 @@ public:
     float draw_offset_x = 0.0f;
     float draw_offset_y = 0.0f;
 
-    TextureWrapper() : screen_width(1280), screen_height(720), screen_scale(1.0) {
-    }
+    TextureWrapper() : screen_width(1280), screen_height(720), screen_scale(1.0) {}
 
     void init(const fs::path& skin_path);
 
@@ -212,10 +230,9 @@ public:
     }
 
     // text_config label for `key` in exactly `language` (see font_manager.get_text_label)
-    std::string skin_text(const std::string& key, const std::string& language,
-                          const std::string& fallback = "") const;
+    std::string skin_text(const std::string& key, const std::string& language, const std::string& fallback = "") const;
 
-    fs::path skin_root()   const { return graphics_path.parent_path(); }
+    fs::path skin_root() const { return graphics_path.parent_path(); }
     fs::path parent_root() const { return parent_graphics_path.parent_path(); }
     bool has_parent_skin() const { return parent_graphics_path != graphics_path; }
     // Graphics dirs of the skin and all its ancestors, nearest first
@@ -226,14 +243,23 @@ public:
     }
 
     fs::path resolve_skin_path(const fs::path& relative_path) const {
-        if (relative_path.is_absolute()) return {};
-        for (const auto& part : relative_path)
-            if (part == "..") return {};
+        if (relative_path.is_absolute()) {
+            return {};
+        }
+        for (const auto& part : relative_path) {
+            if (part == "..") {
+                return {};
+            }
+        }
         fs::path child = skin_root() / relative_path;
-        if (fs::exists(child)) return child;
+        if (fs::exists(child)) {
+            return child;
+        }
         for (const fs::path& ancestor : ancestor_graphics_paths) {
             fs::path p = ancestor.parent_path() / relative_path;
-            if (fs::exists(p)) return p;
+            if (fs::exists(p)) {
+                return p;
+            }
         }
         return child;
     }

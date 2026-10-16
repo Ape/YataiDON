@@ -1,15 +1,17 @@
 #include "global_data.h"
-#include <unordered_map>
+
+#include <spdlog/spdlog.h>
 #include <stdexcept>
+#include <unordered_map>
 #include <utility>
-#include "filesystem.h"
-#include "texture.h"
-#include "script.h"
-#include "text.h"
-#include "audio.h"
+
 #include "../objects/global/debug_menu.h"
 #include "../objects/song_select/file_navigator/navigator.h"
-#include <spdlog/spdlog.h>
+#include "audio.h"
+#include "filesystem.h"
+#include "script.h"
+#include "text.h"
+#include "texture.h"
 
 GlobalData global_data;
 
@@ -23,15 +25,21 @@ void queue_window_resize(int width, int height) {
 
 bool apply_queued_window_resize() {
 #ifndef YATAIDON_PLATFORM_IOS
-    if (!queued_window_resize) return false;
-    const int width  = queued_window_resize->first;
+    if (!queued_window_resize) {
+        return false;
+    }
+    const int width = queued_window_resize->first;
     const int height = queued_window_resize->second;
     queued_window_resize.reset();
 
     const bool was_fullscreen = ray::IsWindowFullscreen();
-    if (was_fullscreen) ray::ToggleFullscreen();
+    if (was_fullscreen) {
+        ray::ToggleFullscreen();
+    }
     ray::SetWindowSize(width, height);
-    if (was_fullscreen) ray::ToggleFullscreen();
+    if (was_fullscreen) {
+        ray::ToggleFullscreen();
+    }
     return true;
 #else
     queued_window_resize.reset();
@@ -51,13 +59,17 @@ void load_skin() {
         set_skin_graphics_path(root_skin_path / "Graphics");
 
         static const std::unordered_map<std::string, std::string> font_family = {
-            {"zh", "cn"}, {"ko", "kr"}, {"ja", "jp"}, {"zh_tw", "tw"}, {"zh-tw", "tw"}, {"zh_cn", "cn"}, {"zh-cn", "cn"},
+            {"zh", "cn"},    {"ko", "kr"},    {"ja", "jp"},    {"zh_tw", "tw"},
+            {"zh-tw", "tw"}, {"zh_cn", "cn"}, {"zh-cn", "cn"},
         };
         const std::string& lang = global_data.config->general.language;
         fs::path font_path = resolve_skin_path("Fonts/font_" + lang + ".ttf");
-        if (!fs::exists(font_path) && font_family.count(lang))
+        if (!fs::exists(font_path) && font_family.count(lang)) {
             font_path = resolve_skin_path("Fonts/font_" + font_family.at(lang) + ".ttf");
-        if (!fs::exists(font_path)) font_path = resolve_skin_path("Fonts/font.ttf");
+        }
+        if (!fs::exists(font_path)) {
+            font_path = resolve_skin_path("Fonts/font.ttf");
+        }
         if (!fs::exists(font_path)) {
             spdlog::error("No skin font found (tried font_{}.ttf and font.ttf) in {}", lang, root_skin_path.string());
             throw std::runtime_error("load_skin: no usable font found in " + root_skin_path.string());
@@ -109,7 +121,6 @@ std::string get_player_id(PlayerNum player_num) {
         spdlog::error("get_player_id() called with invalid player_num: {}", (int)player_num);
         return "";
     }
-    return (player_num == global_data.first_login_player)
-        ? global_data.config->network.access_code_1
-        : global_data.config->network.access_code_2;
+    return (player_num == global_data.first_login_player) ? global_data.config->network.access_code_1
+                                                          : global_data.config->network.access_code_2;
 }

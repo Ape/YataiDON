@@ -1,4 +1,5 @@
 #include "neiro.h"
+
 #include "../../libs/audio.h"
 #include "../../libs/filesystem.h"
 
@@ -19,12 +20,16 @@ NeiroSelector::NeiroSelector(PlayerNum player_num, PlayerData* player) : player_
     } else {
         std::string line;
         while (std::getline(neiro_list, line)) {
-            if (!line.empty() && line.back() == '\r') line.pop_back();
+            if (!line.empty() && line.back() == '\r') {
+                line.pop_back();
+            }
             sounds.push_back(line);
         }
     }
     sounds.push_back("無音");
-    if (selected_sound == -1) selected_sound = (int)sounds.size() - 1;
+    if (selected_sound == -1) {
+        selected_sound = (int)sounds.size() - 1;
+    }
     selected_sound = std::clamp(selected_sound, 0, (int)sounds.size() - 1);
     load_sound();
     audio.play_sound("voice_hitsound_select_" + std::to_string((int)player_num) + "p", VolumePreset::VOICE);
@@ -36,52 +41,73 @@ NeiroSelector::NeiroSelector(PlayerNum player_num, PlayerData* player) : player_
     blue_arrow_move = (MoveAnimation*)tex.get_animation(30, true);
     move_sideways = (MoveAnimation*)tex.get_animation(31, true);
     fade_sideways = (FadeAnimation*)tex.get_animation(32, true);
-
 }
 
 void NeiroSelector::load_sound() {
-    if (selected_sound == (int)sounds.size() - 1) { curr_sound.clear(); return; }
+    if (selected_sound == (int)sounds.size() - 1) {
+        curr_sound.clear();
+        return;
+    }
     fs::path base = fs::path("Sounds/hit_sounds") / std::to_string(selected_sound);
     fs::path rel = base / (selected_sound == 0 ? "don.wav" : "don.ogg");
     curr_sound = audio.load_sound(resolve_skin_path(rel), "hit_sound");
-    if (curr_sound.empty())
+    if (curr_sound.empty()) {
         spdlog::error("NeiroSelector: failed to load hit sound {}", rel.string());
+    }
 }
 
 void NeiroSelector::left() {
-    if (move->is_started && !move->is_finished) return;
+    if (move->is_started && !move->is_finished) {
+        return;
+    }
     selected_sound = ((selected_sound - 1) % (int)sounds.size() + (int)sounds.size()) % (int)sounds.size();
-    if (!curr_sound.empty()) audio.unload_sound(curr_sound);
+    if (!curr_sound.empty()) {
+        audio.unload_sound(curr_sound);
+    }
     load_sound();
     move_sideways->start();
     fade_sideways->start();
     change_seq++;
 
     direction = 1;
-    if (selected_sound == (int)sounds.size() - 1) return;
+    if (selected_sound == (int)sounds.size() - 1) {
+        return;
+    }
     audio.play_sound(curr_sound, VolumePreset::HITSOUND);
 }
 
 void NeiroSelector::right() {
-    if (move->is_started && !move->is_finished) return;
+    if (move->is_started && !move->is_finished) {
+        return;
+    }
     selected_sound = (selected_sound + 1) % (int)sounds.size();
-    if (!curr_sound.empty()) audio.unload_sound(curr_sound);
+    if (!curr_sound.empty()) {
+        audio.unload_sound(curr_sound);
+    }
     load_sound();
     move_sideways->start();
     fade_sideways->start();
     change_seq++;
 
     direction = -1;
-    if (selected_sound == (int)sounds.size() - 1) return;
+    if (selected_sound == (int)sounds.size() - 1) {
+        return;
+    }
     audio.play_sound(curr_sound, VolumePreset::HITSOUND);
 }
 
 void NeiroSelector::confirm() {
-    if (move->is_started && !move->is_finished) return;
+    if (move->is_started && !move->is_finished) {
+        return;
+    }
     player->neiro_index = selected_sound == (int)sounds.size() - 1 ? -1 : selected_sound;
     is_confirmed = true;
-    if (move_out) { move = move_out; move->start(); }
-    else          { move->restart(); }
+    if (move_out) {
+        move = move_out;
+        move->start();
+    } else {
+        move->restart();
+    }
 }
 
 void NeiroSelector::update(double current_ms) {

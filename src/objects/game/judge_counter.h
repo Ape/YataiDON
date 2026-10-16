@@ -10,7 +10,9 @@ private:
 
 public:
     JudgeCounter() {
-        if (load("JudgeCounter", "judge_counter")) fn_draw = lua_object["draw"];
+        if (load("JudgeCounter", "judge_counter")) {
+            fn_draw = lua_object["draw"];
+        }
     }
 
     void update(int good, int ok, int bad, int drumrolls) {

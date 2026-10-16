@@ -1,10 +1,12 @@
 #include "fade_in.h"
 
 FadeIn::FadeIn(PlayerNum player_num) {
-    if (!load("ResultFadeIn", "result_fade_in", (int)player_num)) return;
-    fn_update     = lua_object["update"];
+    if (!load("ResultFadeIn", "result_fade_in", (int)player_num)) {
+        return;
+    }
+    fn_update = lua_object["update"];
     fn_is_finished = lua_object["is_finished"];
-    fn_draw       = lua_object["draw"];
+    fn_draw = lua_object["draw"];
     fn_start_reverse = lua_object["start_reverse"];
 }
 

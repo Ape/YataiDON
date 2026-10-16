@@ -1,11 +1,13 @@
 #include "attract_scene.h"
 
 AttractScene::AttractScene() {
-    if (!load("AttractScene", "attract_scene")) return;
-    fn_update      = lua_object["update"];
-    fn_draw        = lua_object["draw"];
+    if (!load("AttractScene", "attract_scene")) {
+        return;
+    }
+    fn_update = lua_object["update"];
+    fn_draw = lua_object["draw"];
     fn_is_finished = lua_object["is_finished"];
-    fn_close       = lua_object["close"];
+    fn_close = lua_object["close"];
 }
 
 AttractScene::~AttractScene() {

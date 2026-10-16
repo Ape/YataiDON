@@ -1,12 +1,14 @@
 #include "kusudama_counter.h"
 
 KusudamaCounter::KusudamaCounter(int total) {
-    if (!load("KusudamaCounter", "kusudama_counter", total)) return;
-    fn_update   = lua_object["update"];
-    fn_miss     = lua_object["miss"];
-    fn_draw     = lua_object["draw"];
-    fn_popped   = lua_object["has_popped"];
-    fn_missed   = lua_object["has_missed"];
+    if (!load("KusudamaCounter", "kusudama_counter", total)) {
+        return;
+    }
+    fn_update = lua_object["update"];
+    fn_miss = lua_object["miss"];
+    fn_draw = lua_object["draw"];
+    fn_popped = lua_object["has_popped"];
+    fn_missed = lua_object["has_missed"];
     fn_finished = lua_object["is_finished"];
     fx = lua_object["fx"].get_or(false);
 }

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../enums.h"
 #include "../../libs/animation.h"
 #include "../../libs/texture.h"
+#include "../enums.h"
 
 class DrumHitEffect {
 protected:
@@ -20,5 +20,4 @@ public:
     virtual void draw(float y);
 
     bool is_finished() const;
-
 };

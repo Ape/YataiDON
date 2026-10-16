@@ -4,9 +4,9 @@
 #define YATAIDON_PLATFORM_WIN32_H
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
-#include <optional>
 #include <vector>
 
 // Win32-specific platform services.
@@ -17,7 +17,8 @@ std::filesystem::path win32_path_from_utf8(const std::string& utf8_str);
 
 // Converts a path string with a specific encoding to a filesystem::path.
 // encoding: "utf-8", "utf-8-sig", "shift-jis", etc.
-std::filesystem::path win32_path_from_encoded(const std::string& path_str, const std::string& encoding, const std::filesystem::path& base_path = {});
+std::filesystem::path win32_path_from_encoded(const std::string& path_str, const std::string& encoding,
+                                              const std::filesystem::path& base_path = {});
 
 // Gets the directory containing the current executable.
 std::filesystem::path win32_get_executable_dir();
@@ -47,7 +48,7 @@ std::string win32_utf8_from_sjis(std::string_view text);
 struct Win32DirEntry {
     std::wstring name;
     bool is_dir = false;
-    bool is_reparse = false;  // symlink, junction or other reparse point
+    bool is_reparse = false; // symlink, junction or other reparse point
 };
 
 // Lists `dir` (without "." and "..") in the order the file system returns it.

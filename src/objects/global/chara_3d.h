@@ -1,68 +1,69 @@
 #pragma once
 
-#include "../../libs/texture.h"
-#include "../../libs/ray.h"
 #include <limits>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include "../../libs/ray.h"
+#include "../../libs/texture.h"
+
 class BaseAnimation;
 
 enum class AnimIndex : int {
-    DON_BALLOON_FAILURE        = 0,
-    DON_BALLOON_LOOP           = 1,
-    DON_BALLOON_NOBEAT         = 2,
-    DON_BALLOON_SUCCESS        = 3,
-    DON_BIND                   = 4,
-    DON_COMBO                  = 5,
-    DON_ENTRY_IN               = 6,
-    DON_ENTRY_LOOP             = 7,
-    DON_FUKKATU_LOOP           = 8,
-    DON_FUKKATU_START          = 9,
-    DON_FULL_COMBO             = 10,
-    DON_FULL_GAGE              = 11,
-    DON_GENERAL_JUMP           = 12,
-    DON_GENERAL_LOOP           = 13,
-    DON_MISS                   = 14,
-    DON_MISS6                  = 15,
-    DON_MISS_NORMAL            = 16,
-    DON_NORM_DOWN               = 17,
-    DON_NORM_LOOP               = 18,
-    DON_NORM_UP                 = 19,
-    DON_NORMAL                 = 20,
-    DON_SABI                   = 21,
-    DON_SABI_START              = 22,
-    DON_SELECT_LOOP              = 23,
-    DON_SELECT_PANELDOWN         = 24,
-    DON_SELECT_PANELUP           = 25,
+    DON_BALLOON_FAILURE = 0,
+    DON_BALLOON_LOOP = 1,
+    DON_BALLOON_NOBEAT = 2,
+    DON_BALLOON_SUCCESS = 3,
+    DON_BIND = 4,
+    DON_COMBO = 5,
+    DON_ENTRY_IN = 6,
+    DON_ENTRY_LOOP = 7,
+    DON_FUKKATU_LOOP = 8,
+    DON_FUKKATU_START = 9,
+    DON_FULL_COMBO = 10,
+    DON_FULL_GAGE = 11,
+    DON_GENERAL_JUMP = 12,
+    DON_GENERAL_LOOP = 13,
+    DON_MISS = 14,
+    DON_MISS6 = 15,
+    DON_MISS_NORMAL = 16,
+    DON_NORM_DOWN = 17,
+    DON_NORM_LOOP = 18,
+    DON_NORM_UP = 19,
+    DON_NORMAL = 20,
+    DON_SABI = 21,
+    DON_SABI_START = 22,
+    DON_SELECT_LOOP = 23,
+    DON_SELECT_PANELDOWN = 24,
+    DON_SELECT_PANELUP = 25,
     DON_BALLOON_FAILURE_MIRROR = 26,
-    DON_BALLOON_LOOP_MIRROR    = 27,
-    DON_BALLOON_NOBEAT_MIRROR  = 28,
+    DON_BALLOON_LOOP_MIRROR = 27,
+    DON_BALLOON_NOBEAT_MIRROR = 28,
     DON_BALLOON_SUCCESS_MIRROR = 29,
-    DON_BIND_MIRROR            = 30,
-    DON_COMBO_MIRROR           = 31,
-    DON_ENTRY_IN_MIRROR        = 32,
-    DON_ENTRY_LOOP_MIRROR      = 33,
-    DON_FUKKATU_LOOP_MIRROR    = 34,
-    DON_FUKKATU_START_MIRROR   = 35,
-    DON_FULL_COMBO_MIRROR      = 36,
-    DON_FULL_GAGE_MIRROR       = 37,
-    DON_GENERAL_JUMP_MIRROR    = 38,
-    DON_GENERAL_LOOP_MIRROR    = 39,
-    DON_MISS6_MIRROR           = 40,
-    DON_MISS_MIRROR            = 41,
-    DON_MISS_NORMAL_MIRROR     = 42,
-    DON_NORM_DOWN_MIRROR       = 43,
-    DON_NORM_LOOP_MIRROR       = 44,
-    DON_NORM_UP_MIRROR         = 45,
-    DON_NORMAL_MIRROR          = 46,
-    DON_SABI_MIRROR            = 47,
-    DON_SABI_START_MIRROR      = 48,
-    DON_SELECT_LOOP_MIRROR     = 49,
+    DON_BIND_MIRROR = 30,
+    DON_COMBO_MIRROR = 31,
+    DON_ENTRY_IN_MIRROR = 32,
+    DON_ENTRY_LOOP_MIRROR = 33,
+    DON_FUKKATU_LOOP_MIRROR = 34,
+    DON_FUKKATU_START_MIRROR = 35,
+    DON_FULL_COMBO_MIRROR = 36,
+    DON_FULL_GAGE_MIRROR = 37,
+    DON_GENERAL_JUMP_MIRROR = 38,
+    DON_GENERAL_LOOP_MIRROR = 39,
+    DON_MISS6_MIRROR = 40,
+    DON_MISS_MIRROR = 41,
+    DON_MISS_NORMAL_MIRROR = 42,
+    DON_NORM_DOWN_MIRROR = 43,
+    DON_NORM_LOOP_MIRROR = 44,
+    DON_NORM_UP_MIRROR = 45,
+    DON_NORMAL_MIRROR = 46,
+    DON_SABI_MIRROR = 47,
+    DON_SABI_START_MIRROR = 48,
+    DON_SELECT_LOOP_MIRROR = 49,
     DON_SELECT_PANELDOWN_MIRROR = 50,
-    DON_SELECT_PANELUP_MIRROR  = 51,
+    DON_SELECT_PANELUP_MIRROR = 51,
 };
 
 class Chara3D {
@@ -71,9 +72,11 @@ private:
     std::vector<std::unordered_map<std::string, int>> part_material_indices;
     std::vector<std::vector<int>> part_recolor_indices;
     std::vector<std::vector<int>> part_additive_indices;
-    std::vector<std::vector<int>> part_cutout_indices;      // alpha-tested (_AT_ZERO_ / _AT_ONE_) materials
-    std::vector<std::vector<int>> part_twosided_indices;    // _CULLNONE materials: drawn without back-face culling, no hull
-    std::vector<std::vector<int>> part_blend_indices;       // alpha-blended (_A_AB / glTF BLEND) materials: drawn after the face
+    std::vector<std::vector<int>> part_cutout_indices; // alpha-tested (_AT_ZERO_ / _AT_ONE_) materials
+    std::vector<std::vector<int>>
+        part_twosided_indices; // _CULLNONE materials: drawn without back-face culling, no hull
+    std::vector<std::vector<int>>
+        part_blend_indices; // alpha-blended (_A_AB / glTF BLEND) materials: drawn after the face
     std::vector<int> part_face_material_index;
     std::vector<ray::ModelAnimation*> part_anims;
     std::vector<int> part_anim_count;
@@ -144,10 +147,11 @@ private:
     void draw_outline(float x, float y, int rt_w, int rt_h, float full_h);
     void draw_3d(float x, float y);
     void draw_full_target(float x, float y, int rw, int rh, const ray::Camera2D& cam2d);
-    bool screen_bounds(float x, float y, const ray::Camera3D& cam3d, float zoom, int rw, int rh,
-                       float& x0, float& y0, float& x1, float& y1);
+    bool screen_bounds(float x, float y, const ray::Camera3D& cam3d, float zoom, int rw, int rh, float& x0, float& y0,
+                       float& x1, float& y1);
     void ensure_render_targets(int rw, int rh);
     void prewarm_render_targets();
+
 public:
     Chara3D(std::string& model_name, bool mirror = false, bool use_skin_config = false);
     Chara3D(std::string& head_name, std::string& body_name, bool mirror = false, bool use_skin_config = false);
@@ -166,7 +170,7 @@ public:
     void set_rotation(float x, float y, float z);
     void set_frozen(bool frozen);
     void set_anim_progress(float progress);
-    int  get_anim_count() const;
+    int get_anim_count() const;
     std::string get_anim_name(int idx);
 
     void update(double current_ms);
@@ -175,4 +179,5 @@ public:
 };
 
 struct PlayerData;
-std::unique_ptr<Chara3D> make_chara_from_player_data(const PlayerData* pd, bool mirror = false, bool use_skin_config = false);
+std::unique_ptr<Chara3D> make_chara_from_player_data(const PlayerData* pd, bool mirror = false,
+                                                     bool use_skin_config = false);

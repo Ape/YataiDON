@@ -1,8 +1,10 @@
-#include "../libs/text.h"
 #include "game_2p.h"
+
+#include <algorithm>
+
 #include "../libs/animation.h"
 #include "../libs/input.h"
-#include <algorithm>
+#include "../libs/text.h"
 
 void Game2PScreen::init_tja(fs::path song) {
     int delay = (song.extension() == ".osu") ? 0 : start_delay;
@@ -30,14 +32,12 @@ void Game2PScreen::init_tja(fs::path song) {
         song_music = audio.load_sound(parser->metadata.wave, "song");
     }
 
-    players.push_back(std::make_unique<Player>(
-        parser, PlayerNum::P1,
-        global_data.session_data[(int)PlayerNum::P1].selected_difficulty, false,
-        get_player_modifiers(PlayerNum::P1)));
-    players.push_back(std::make_unique<Player>(
-        parser_2p, PlayerNum::P2,
-        global_data.session_data[(int)PlayerNum::P2].selected_difficulty, true,
-        get_player_modifiers(PlayerNum::P2)));
+    players.push_back(std::make_unique<Player>(parser, PlayerNum::P1,
+                                               global_data.session_data[(int)PlayerNum::P1].selected_difficulty, false,
+                                               get_player_modifiers(PlayerNum::P1)));
+    players.push_back(std::make_unique<Player>(parser_2p, PlayerNum::P2,
+                                               global_data.session_data[(int)PlayerNum::P2].selected_difficulty, true,
+                                               get_player_modifiers(PlayerNum::P2)));
 
     players[0]->kusudama_partner = players[1].get();
     players[1]->kusudama_partner = players[0].get();
@@ -61,8 +61,7 @@ std::optional<Screens> Game2PScreen::update() {
 
     if (result_transition.is_finished && !audio.is_sound_playing("result_transition")) {
         return on_screen_end(Screens::RESULT_2P);
-    }
-    else if (ms_from_start >= std::max(players[0]->end_time, players[1]->end_time)) {
+    } else if (ms_from_start >= std::max(players[0]->end_time, players[1]->end_time)) {
         const double end_time = std::max(players[0]->end_time, players[1]->end_time);
         if (ms_from_start >= end_time + 1000 && !score_saved) {
             global_data.session_data[(int)PlayerNum::P1].result_data = players[0]->get_result_score();
@@ -75,8 +74,8 @@ std::optional<Screens> Game2PScreen::update() {
             global_data.songs_played += 1;
             score_saved = true;
         }
-        const double transition_delay = global_data.config->general.fast_transitions
-            ? kFastResultTransitionDelayMs : 8533.34;
+        const double transition_delay =
+            global_data.config->general.fast_transitions ? kFastResultTransitionDelayMs : 8533.34;
         if (ms_from_start >= end_time + transition_delay) {
             if (!result_transition.is_started) {
                 result_transition.start();
@@ -100,11 +99,13 @@ std::optional<Screens> Game2PScreen::update() {
         pause_time = 0;
         last_resync_ms = 0;
         result_transition = ResultTransition(global_data.player_num);
-        start_ms = get_current_ms() - parser->metadata.offset*1000 - (double)global_data.config->general.audio_offset;
+        start_ms = get_current_ms() - parser->metadata.offset * 1000 - (double)global_data.config->general.audio_offset;
         ms_from_start = get_current_ms() - start_ms;
     }
     if (check_key_pressed(global_data.config->keys.back_key)) {
-        if (song_music.has_value()) audio.stop_sound(song_music.value());
+        if (song_music.has_value()) {
+            audio.stop_sound(song_music.value());
+        }
         return on_screen_end(Screens::SONG_SELECT_2P);
     }
     if (check_key_pressed(global_data.config->keys.pause_key)) {

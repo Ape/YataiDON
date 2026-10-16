@@ -1,15 +1,13 @@
 #include "box_base.h"
-#include "../../../libs/text.h"
-#include "color_utils.h"
+
 #include <string_view>
 
+#include "../../../libs/text.h"
+#include "color_utils.h"
+
 BaseBox::BaseBox(const fs::path& path, const BoxDef& box_def)
-    : path(path), texture_index(box_def.texture_index),
-      genre_index(box_def.genre_index),
-      genre_label(box_def.genre_label),
-      collection(box_def.collection),
-      explanation(box_def.explanation)
-{
+    : path(path), texture_index(box_def.texture_index), genre_index(box_def.genre_index),
+      genre_label(box_def.genre_label), collection(box_def.collection), explanation(box_def.explanation) {
     BoxColors colors = resolve_box_colors(box_def.box_color, box_def.back_color, box_def.fore_color);
     this->back_color = colors.box;
     this->fore_color = colors.outline;
@@ -23,37 +21,40 @@ BaseBox::BaseBox(const fs::path& path, const BoxDef& box_def)
     move = std::make_unique<MoveAnimation>(133, 0, false, false, 0, 0.0, std::nullopt, std::nullopt, EaseType::Cubic);
     move->start();
 
-    yellow_right_width  = tex.get_texture("yellow_box/yellow_box_right")->width;
-    folder_texture_left_width  = tex.get_texture("box/folder_texture_left")->width;
+    yellow_right_width = tex.get_texture("yellow_box/yellow_box_right")->width;
+    folder_texture_left_width = tex.get_texture("box/folder_texture_left")->width;
     folder_texture_right_width = tex.get_texture("box/folder_texture_right")->width;
 
     fade_in(100);
 }
 
 BaseBox::~BaseBox() {
-    if (shader_loaded)
+    if (shader_loaded) {
         ray::UnloadShader(shader);
+    }
 }
 
 void BaseBox::preregister_text() {
     float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
-    if (utf8_char_count(text_name) >= 30)
+    if (utf8_char_count(text_name) >= 30) {
         font_size -= (int)(10 * tex.screen_scale);
+    }
     font_manager.register_text(text_name, (int)font_size);
 }
 
 void BaseBox::load_text() {
     float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
-    if (utf8_char_count(text_name) >= 30)
+    if (utf8_char_count(text_name) >= 30) {
         font_size -= (int)(10 * tex.screen_scale);
+    }
     name = make_unique<OutlinedText>(text_name, font_size, text_color, fore_color.value(), true);
 
     if (back_color.has_value()) {
         shader = load_shader("shader/dummy.vs", "shader/colortransform.fs");
         shader_loaded = true;
         const auto& target_rgb = back_color.value();
-        float src[3] = { 142 / 255.0f, 212 / 255.0f, 30 / 255.0f };
-        float tgt[3] = { target_rgb.r / 255.0f, target_rgb.g / 255.0f, target_rgb.b / 255.0f };
+        float src[3] = {142 / 255.0f, 212 / 255.0f, 30 / 255.0f};
+        float tgt[3] = {target_rgb.r / 255.0f, target_rgb.g / 255.0f, target_rgb.b / 255.0f};
         int source_loc = ray::GetShaderLocation(shader, "sourceColor");
         int target_loc = ray::GetShaderLocation(shader, "targetColor");
         ray::SetShaderValue(shader, source_loc, src, ray::SHADER_UNIFORM_VEC3);
@@ -86,7 +87,9 @@ void BaseBox::close_box() {
 }
 
 void BaseBox::enter_box() {
-    if (!yellow_box_active) return;
+    if (!yellow_box_active) {
+        return;
+    }
     is_diff_select = true;
 }
 
@@ -130,7 +133,11 @@ void BaseBox::update(double current_time) {
         position += move->attribute - prev_position;
         if (move_delta != 0.0f && cross_lead != 0.0f) {
             float p = (float)(move->attribute / move_delta);
-            if (p < 0.0f) p = 0.0f; else if (p > 1.0f) p = 1.0f;
+            if (p < 0.0f) {
+                p = 0.0f;
+            } else if (p > 1.0f) {
+                p = 1.0f;
+            }
             cross_pos = cross_target + cross_lead * (1.0f - p);
         }
     } else {
@@ -155,6 +162,7 @@ void BaseBox::update(double current_time) {
         }
     } else {
         left_bound = position;
-        right_bound = position + folder_texture_left_width + folder_texture_right_width + (tex.get_skin_config(SC::SONG_SELECT_BOX_BG)->width);
+        right_bound = position + folder_texture_left_width + folder_texture_right_width +
+                      (tex.get_skin_config(SC::SONG_SELECT_BOX_BG)->width);
     }
 }
