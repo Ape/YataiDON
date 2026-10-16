@@ -73,7 +73,7 @@ message(STATUS "Fetching raylib...")
 FetchContent_Declare(
   raylib
   GIT_REPOSITORY https://github.com/raysan5/raylib.git
-  GIT_TAG        master
+  GIT_TAG        6.2
   GIT_SHALLOW    TRUE
   UPDATE_DISCONNECTED TRUE
 )
