@@ -105,6 +105,7 @@ private:
     std::set<std::string> favorite_songs;
     std::unordered_map<std::string, bool> def_file_cache;
     std::unordered_map<std::string, bool> child_folders_cache; // has_child_folders; cleared with def_file_cache
+    std::mutex child_folders_mutex; // def_file_cache + child_folders_cache: the loader thread fills them too
     std::unordered_map<std::string, BoxDef> box_def_cache;
 
     bool awaiting_diff_sort = false;
@@ -132,6 +133,7 @@ private:
     fs::path find_box_def_folder(const fs::path& song_path);
 
     void setup_back_box(const fs::path& path, bool has_children, const BaseBox* from = nullptr);
+    void prefetch_child_folders(const fs::path& parent);
     bool has_child_folders(const fs::path& path);
     bool scan_child_folders(const fs::path& path);
 
