@@ -74,7 +74,7 @@ void InputCaliScreen::draw() {
     players[0]->draw(ms_from_start, 0, 232 * tex.screen_scale);
     if (average_latency_text.has_value()) {
         average_latency_text->draw(
-            {.x = (int)(tex.screen_width / 2) - average_latency_text->width / 2,
+            {.x = (tex.screen_width / 2) - average_latency_text->width / 2,
              .y = static_cast<float>(tex.screen_height - 40 - (int)(average_latency_text->height * 1.5))});
     }
     if (background.has_value()) {

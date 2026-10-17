@@ -47,7 +47,7 @@ void BaseBox::load_text() {
     if (utf8_char_count(text_name) >= 30) {
         font_size -= (int)(10 * tex.screen_scale);
     }
-    name = make_unique<OutlinedText>(text_name, font_size, text_color, fore_color.value(), true);
+    name = make_unique<OutlinedText>(text_name, font_size, text_color, fore_color, true);
 
     if (back_color.has_value()) {
         shader = load_shader("shader/dummy.vs", "shader/colortransform.fs");

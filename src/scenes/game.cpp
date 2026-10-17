@@ -75,7 +75,7 @@ void GameScreen::on_screen_start() {
     if (first_note.has_value()) {
         double travel_time = first_note->hit_ms - first_note->load_ms;
         double initial_ms = parser->metadata.offset * 1000 + (double)global_data.config->general.audio_offset;
-        double extra_delay = initial_ms - (double)start_delay + travel_time;
+        double extra_delay = initial_ms - start_delay + travel_time;
         if (extra_delay > 0.0) {
             start_ms += extra_delay;
         }
@@ -543,8 +543,8 @@ void GameScreen::poll_skip() {
     const SkinInfo* pos = skin_draws ? nullptr : tex.get_skin_config(SC::SKIP_COUNTER);
     if (pos) {
         skip_text = std::make_unique<OutlinedText>(std::to_string(skip_count) + "/" + std::to_string(SKIP_HITS),
-                                                   (int)(pos->font_size > 0 ? pos->font_size : 40), ray::WHITE,
-                                                   ray::BLACK, false, 4);
+                                                   (pos->font_size > 0 ? pos->font_size : 40), ray::WHITE, ray::BLACK,
+                                                   false, 4);
     }
 
     if (skip_count >= SKIP_HITS) {
@@ -558,8 +558,8 @@ void GameScreen::do_skip() {
     const SkinInfo* used = skin_draws ? nullptr : tex.get_skin_config(SC::SKIP_USED_TEXT);
     if (used) {
         skip_text = std::make_unique<OutlinedText>(tex.skin_text("skip_used", global_data.config->general.language, ""),
-                                                   (int)(used->font_size > 0 ? used->font_size : 40), ray::WHITE,
-                                                   ray::BLACK, false, 4);
+                                                   (used->font_size > 0 ? used->font_size : 40), ray::WHITE, ray::BLACK,
+                                                   false, 4);
     } else {
         skip_text.reset();
     }

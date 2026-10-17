@@ -17,14 +17,18 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
         throw std::runtime_error("Failed to open database: " + err);
     }
 
-    int version = 0;
-    auto callback = [](void* data, int argc, char** argv, char**) -> int {
-        if (argc > 0 && argv && argv[0]) {
-            *static_cast<int*>(data) = std::atoi(argv[0]);
-        }
-        return 0;
-    };
-    sqlite3_exec(db_fsd, "PRAGMA user_version;", callback, &version, nullptr);
+    sqlite3_stmt* version_stmt = nullptr;
+    if (sqlite3_prepare_v2(db_fsd, "PRAGMA user_version;", -1, &version_stmt, nullptr) != SQLITE_OK ||
+        sqlite3_step(version_stmt) != SQLITE_ROW) {
+        std::string err = sqlite3_errmsg(db_fsd);
+        sqlite3_finalize(version_stmt);
+        sqlite3_close(db_fsd);
+        db_fsd = nullptr;
+        throw std::runtime_error("Failed to read database schema version: " + err);
+    }
+
+    int version = sqlite3_column_int(version_stmt, 0);
+    sqlite3_finalize(version_stmt);
 
     std::string create_players = "CREATE TABLE IF NOT EXISTS players"
                                  "(player_id TEXT PRIMARY KEY,"

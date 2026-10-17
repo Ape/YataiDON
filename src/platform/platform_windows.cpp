@@ -16,20 +16,20 @@ namespace {
 
     // dbghelp is not reentrant/thread-safe; serialize entry so two threads
     // crashing concurrently don't call into it at the same time.
-    static std::atomic_flag g_dbghelp_lock = ATOMIC_FLAG_INIT;
+    std::atomic_flag g_dbghelp_lock = ATOMIC_FLAG_INIT;
 
-    static void win_write(const char* data, std::size_t len) {
+    void win_write(const char* data, std::size_t len) {
         HANDLE h = GetStdHandle(STD_ERROR_HANDLE);
         DWORD written = 0;
         if (h != nullptr && h != INVALID_HANDLE_VALUE) {
             WriteFile(h, data, static_cast<DWORD>(len), &written, nullptr);
         }
     }
-    static void win_write(const char* msg) {
+    void win_write(const char* msg) {
         win_write(msg, strlen(msg));
     }
 
-    static void win_write_hex(std::uintptr_t value) {
+    void win_write_hex(std::uintptr_t value) {
         char buf[2 + sizeof(value) * 2];
         buf[0] = '0';
         buf[1] = 'x';
@@ -40,7 +40,7 @@ namespace {
         win_write(buf, sizeof(buf));
     }
 
-    static void log_trace_from_context(CONTEXT* ctx) {
+    void log_trace_from_context(CONTEXT* ctx) {
         HANDLE process = GetCurrentProcess();
         HANDLE thread = GetCurrentThread();
 
@@ -107,7 +107,7 @@ namespace {
         }
     }
 
-    static LONG WINAPI crash_exception_filter(EXCEPTION_POINTERS* ep) {
+    LONG WINAPI crash_exception_filter(EXCEPTION_POINTERS* ep) {
         const char* exc_name = "Unknown exception";
         switch (ep->ExceptionRecord->ExceptionCode) {
         case EXCEPTION_ACCESS_VIOLATION:

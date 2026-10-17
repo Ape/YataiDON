@@ -82,7 +82,7 @@ void WebCamera::close() {
         m_texture.reset();
     }
     if (m_camera) {
-        SDL_CloseCamera(static_cast<SDL_Camera*>(m_camera));
+        SDL_CloseCamera(m_camera);
         m_camera = nullptr;
         SDL_QuitSubSystem(SDL_INIT_CAMERA);
     }
@@ -97,7 +97,7 @@ void WebCamera::update() {
     }
 
     // 0 = pending, -1 = denied
-    int perm = SDL_GetCameraPermissionState(static_cast<SDL_Camera*>(m_camera));
+    int perm = SDL_GetCameraPermissionState(m_camera);
     if (perm == -1) {
         if (!m_permission_denied_logged) {
             spdlog::warn("WebCamera: permission denied");
@@ -115,13 +115,13 @@ void WebCamera::update() {
     }
 
     Uint64 timestamp = 0;
-    SDL_Surface* frame = SDL_AcquireCameraFrame(static_cast<SDL_Camera*>(m_camera), &timestamp);
+    SDL_Surface* frame = SDL_AcquireCameraFrame(m_camera, &timestamp);
     if (!frame) {
         return;
     }
 
     SDL_Surface* rgba = SDL_ConvertSurface(frame, SDL_PIXELFORMAT_RGBA32);
-    SDL_ReleaseCameraFrame(static_cast<SDL_Camera*>(m_camera), frame);
+    SDL_ReleaseCameraFrame(m_camera, frame);
 
     if (!rgba) {
         return;

@@ -30,17 +30,14 @@ void LoadingScreen::init_visuals() {
     tex.load_screen_textures("loading");
     audio.load_screen_sounds("loading");
 
-    progress_bar_width = tex.screen_width * 0.43;
-    progress_bar_height = 50 * tex.screen_scale;
-    progress_bar_x = (tex.screen_width - progress_bar_width) / 2;
-    progress_bar_y = tex.screen_height * 0.85;
+    progress_bar.width = tex.screen_width * 0.43;
+    progress_bar.height = 50 * tex.screen_scale;
+    progress_bar.x = (tex.screen_width - progress_bar.width) / 2;
+    progress_bar.y = tex.screen_height * 0.85;
 
     if (const SkinInfo* bar = tex.get_skin_config(SC::LOADING_PROGRESS_BAR)) {
         if (bar->width > 0 && bar->height > 0) {
-            progress_bar_x = bar->x;
-            progress_bar_y = bar->y;
-            progress_bar_width = bar->width;
-            progress_bar_height = bar->height;
+            progress_bar = {bar->x, bar->y, bar->width, bar->height};
         }
     }
 
@@ -270,13 +267,13 @@ std::optional<Screens> LoadingScreen::update() {
 void LoadingScreen::draw() {
     ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::BLACK);
 
-    ray::DrawRectangle(progress_bar_x, progress_bar_y, progress_bar_width, progress_bar_height,
-                       ray::Color(101, 0, 0, 255));
+    ray::DrawRectangleRec(progress_bar, ray::Color(101, 0, 0, 255));
 
     float clamped_progress = std::max(0.0f, std::min(1.0f, progress.load()));
-    float fill_width = progress_bar_width * clamped_progress;
-    if (fill_width > 0) {
-        ray::DrawRectangle(progress_bar_x, progress_bar_y, fill_width, progress_bar_height, ray::RED);
+    ray::Rectangle fill = progress_bar;
+    fill.width *= clamped_progress;
+    if (fill.width > 0) {
+        ray::DrawRectangleRec(fill, ray::RED);
     }
     tex.draw_texture(t_warning);
 

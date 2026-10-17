@@ -24,7 +24,7 @@
 
 namespace {
 
-    static void write_all(int fd, const char* buf, std::size_t len) {
+    void write_all(int fd, const char* buf, std::size_t len) {
         while (len > 0) {
             ssize_t n = write(fd, buf, len);
             if (n > 0) {
@@ -41,7 +41,7 @@ namespace {
 
 #define CRASH_WRITE_LIT(fd, lit) write_all((fd), (lit), sizeof(lit) - 1)
 
-    static void write_hex(int fd, std::uintptr_t value) {
+    void write_hex(int fd, std::uintptr_t value) {
         char buf[2 + sizeof(value) * 2];
         buf[0] = '0';
         buf[1] = 'x';
@@ -52,7 +52,7 @@ namespace {
         write_all(fd, buf, sizeof(buf));
     }
 
-    static void crash_signal_handler(int sig) {
+    void crash_signal_handler(int sig) {
         switch (sig) {
         case SIGSEGV:
             CRASH_WRITE_LIT(STDERR_FILENO, "Crash: SIGSEGV (Segmentation fault)\n");

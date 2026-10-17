@@ -81,7 +81,7 @@ public:
                     ? tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size
                     : tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size - (int)(10 * tex.screen_scale);
             horizontal_subtitle_cache =
-                std::make_unique<OutlinedText>(text_subtitle, font_size, text_color, fore_color.value(), false);
+                std::make_unique<OutlinedText>(text_subtitle, font_size, text_color, fore_color, false);
         }
         return horizontal_subtitle_cache.get();
     }
@@ -91,8 +91,8 @@ public:
                 utf8_char_count(text_subtitle) < 30
                     ? tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size
                     : tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size - (int)(10 * tex.screen_scale);
-            horizontal_subtitle_large_cache = std::make_unique<OutlinedText>(text_subtitle, (int)(font_size * 1.3f),
-                                                                             text_color, fore_color.value(), false);
+            horizontal_subtitle_large_cache =
+                std::make_unique<OutlinedText>(text_subtitle, (int)(font_size * 1.3f), text_color, fore_color, false);
         }
         return horizontal_subtitle_large_cache.get();
     }

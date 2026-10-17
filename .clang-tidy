@@ -1,8 +1,14 @@
 Checks: >-
   clang-analyzer-*,
-  -clang-analyzer-optin.cplusplus.UninitializedObject,
   -clang-analyzer-optin.cplusplus.VirtualCall,
+  -clang-analyzer-optin.performance.Padding,
   -clang-analyzer-unix.BlockInCriticalSection,
   -clang-analyzer-unix.Malloc,
+  bugprone-unchecked-string-to-number-conversion,
   bugprone-use-after-move,
+  readability-redundant-casting,
+  readability-redundant-member-init,
+  readability-static-definition-in-anonymous-namespace,
+  readability-use-std-min-max,
 HeaderFilterRegex: '(^|/)src/'
+ExcludeHeaderFilterRegex: '(^|/)\.cmake-deps/'

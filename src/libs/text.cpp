@@ -343,16 +343,12 @@ bool FontManager::register_codepoints(SizedFont& entry, int font_size, const std
 
 void FontManager::register_text(const std::string& text, int font_size) {
     std::lock_guard<std::mutex> lock(font_mutex);
-    if (font_size < 1) {
-        font_size = 1;
-    }
+    font_size = std::max(font_size, 1);
     register_codepoints(fonts[font_size], font_size, text);
 }
 
 FontManager::SizedFont& FontManager::acquire(const std::string& text, int font_size) {
-    if (font_size < 1) {
-        font_size = 1;
-    }
+    font_size = std::max(font_size, 1);
 
     SizedFont& entry = fonts[font_size];
     register_codepoints(entry, font_size, text);
@@ -494,16 +490,10 @@ static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* te
             if (w <= 0.0f) {
                 continue;
             }
-            if (w > 1.0f) {
-                w = 1.0f;
-            }
+            w = std::min(w, 1.0f);
             wt[(dy + r) * D + (dx + r)] = (unsigned char)(w * 255.0f + 0.5f);
-            if (dx + r < lo[dy + r]) {
-                lo[dy + r] = dx + r;
-            }
-            if (dx + r > hi[dy + r]) {
-                hi[dy + r] = dx + r;
-            }
+            lo[dy + r] = std::min(lo[dy + r], dx + r);
+            hi[dy + r] = std::max(hi[dy + r], dx + r);
         }
     }
     // H*W*D*D byte ops -- fine for HUD text
@@ -524,9 +514,7 @@ static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* te
                 for (int k = lo[row]; k <= hi[row]; k++) {
                     const unsigned char c = (unsigned char)((v * wrow[k] + 127) / 255);
                     unsigned char& o = orow[k]; // ox = x + (k - r) + r = x + k
-                    if (o < c) {
-                        o = c;
-                    }
+                    o = std::max(o, c);
                 }
             }
         }
@@ -700,7 +688,7 @@ OutlinedText::OutlinedText(std::string text, int font_size, ray::Color color, ra
                            bool is_vertical, float outline_thickness, float spacing, float v_advance,
                            const std::string& font_name)
     : text(std::move(text)), font_size(static_cast<float>(font_size)),
-      outline_thickness(static_cast<float>(outline_thickness * global_tex.screen_scale)), v_advance(v_advance) {
+      outline_thickness(outline_thickness * global_tex.screen_scale), v_advance(v_advance) {
     worker_font = named_font_manager(font_name).copy_font(this->text, font_size);
 
     if (is_vertical) {
@@ -716,9 +704,7 @@ OutlinedText::OutlinedText(std::string text, int font_size, ray::Color color, ra
             }
             std::string s(ptr, cp_size);
             float w = ray::MeasureTextEx(worker_font, s.c_str(), font_size, spacing).x;
-            if (w > max_char_width) {
-                max_char_width = w;
-            }
+            max_char_width = std::max(max_char_width, w);
             ++char_count;
             ptr += cp_size;
         }
@@ -734,9 +720,7 @@ OutlinedText::OutlinedText(std::string text, int font_size, ray::Color color, ra
         float max_w = 0.0f;
         for (const auto& line : lines) {
             float lw = ray::MeasureTextEx(worker_font, line.c_str(), font_size, sp).x;
-            if (lw > max_w) {
-                max_w = lw;
-            }
+            max_w = std::max(max_w, lw);
         }
         width = max_w + pad * 2;
         height = line_advance * (float)(lines.size() - 1) + line_h + pad * 2;
@@ -793,9 +777,7 @@ OutlinedText::BuildData OutlinedText::build_horizontal_text(ray::Color color, ra
     float max_w = 0.0f;
     for (const auto& line : lines) {
         float lw = ray::MeasureTextEx(worker_font, line.c_str(), font_size, sp).x;
-        if (lw > max_w) {
-            max_w = lw;
-        }
+        max_w = std::max(max_w, lw);
     }
 
     int pad = (int)outline_thickness + 2;
@@ -870,9 +852,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(ray::Color color, ray:
 
     float max_item_width = 0.0f;
     for (const auto& item : items) {
-        if (item.width > max_item_width) {
-            max_item_width = item.width;
-        }
+        max_item_width = std::max(max_item_width, item.width);
     }
 
     int pad = (int)outline_thickness + 2;

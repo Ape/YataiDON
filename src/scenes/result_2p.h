@@ -10,7 +10,7 @@ protected:
     double reveal_end_ms() override;
 
 public:
-    Result2PScreen() : ResultScreen() {}
+    Result2PScreen() {}
 
     void on_screen_start() override;
     std::optional<Screens> update() override;

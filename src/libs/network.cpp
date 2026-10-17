@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <charconv>
 #include <chrono>
+#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -623,7 +625,7 @@ static ReplayData parse_replay_response(const cpr::Response& response) {
     }
 
     rapidjson::Document doc;
-    if (doc.Parse(response.text.c_str()).HasParseError()) {
+    if (doc.Parse(response.text.c_str()).HasParseError() || !doc.IsObject()) {
         return result;
     }
     if (!doc.HasMember("hash") || !doc["hash"].IsString()) {
@@ -642,7 +644,18 @@ static ReplayData parse_replay_response(const cpr::Response& response) {
         if (!m.value.IsInt()) {
             continue;
         }
-        result.input_log.emplace(std::atof(m.name.GetString()), m.value.GetInt());
+
+        const char* begin = m.name.GetString();
+        const char* end = begin + m.name.GetStringLength();
+        double timestamp;
+        auto [ptr, error] = std::from_chars(begin, end, timestamp);
+
+        if (error != std::errc{} || ptr != end || !std::isfinite(timestamp)) {
+            spdlog::warn("Replay contains an invalid timestamp");
+            return {};
+        }
+
+        result.input_log.emplace(timestamp, m.value.GetInt());
     }
 
     if (doc.HasMember("username") && doc["username"].IsString()) {

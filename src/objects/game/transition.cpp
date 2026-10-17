@@ -87,7 +87,7 @@ void Transition::update(double current_ms) {
         finished = true;
         return;
     }
-    call(fn_update, "SongTransition:update", current_ms, (double)cur_rainbow, (double)cur_fade);
+    call(fn_update, "SongTransition:update", current_ms, cur_rainbow, cur_fade);
     if (auto s = call_r<sol::table>(fn_state, "SongTransition:state")) {
         cur_rainbow = s->get_or("rainbow_up", 0.0);
         cur_fade = s->get_or("fade", 0.0);
@@ -133,11 +133,10 @@ void Transition::draw() {
         return;
     }
 
-    call(fn_draw_bg, "SongTransition:draw_bg", total_offset, (double)cur_rainbow);
+    call(fn_draw_bg, "SongTransition:draw_bg", total_offset, cur_rainbow);
     if (!loading_graphic.has_value()) {
         if (fn_draw_info.valid()) {
-            call(fn_draw_info, "SongTransition:draw_info", total_offset, (double)cur_rainbow, (double)cur_fade,
-                 (double)cur_fade_out);
+            call(fn_draw_info, "SongTransition:draw_info", total_offset, cur_rainbow, cur_fade, cur_fade_out);
         } else {
             draw_song_info();
         }
@@ -154,8 +153,7 @@ void Transition::draw() {
     }
 
     if (fn_draw_info.valid()) {
-        call(fn_draw_info, "SongTransition:draw_info", total_offset, (double)cur_rainbow, (double)cur_fade,
-             (double)cur_fade_out);
+        call(fn_draw_info, "SongTransition:draw_info", total_offset, cur_rainbow, cur_fade, cur_fade_out);
     } else {
         draw_song_info();
     }
