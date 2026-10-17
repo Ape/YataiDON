@@ -17,7 +17,7 @@
 #include <iconv.h>
 #endif
 
-FontManager::FontManager() {}
+FontManager::FontManager() = default;
 
 void FontManager::init(const fs::path& font_path) {
     std::lock_guard<std::mutex> lock(font_mutex);

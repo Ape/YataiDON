@@ -183,7 +183,7 @@ static void apply_song_genre(SongBox* song, const BoxDef& box_def) {
 
 namespace ch = std::chrono;
 
-Navigator::Navigator() {}
+Navigator::Navigator() = default;
 
 Navigator::~Navigator() {
     join_loader();

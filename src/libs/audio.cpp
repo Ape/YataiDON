@@ -264,7 +264,7 @@ static void unload_music_stream_from_map(std::unordered_map<std::string, music>&
     }
 }
 
-AudioEngine::AudioEngine() {}
+AudioEngine::AudioEngine() = default;
 
 std::vector<std::string> enumerate_audio_devices(int device_type) {
     std::vector<std::string> names;
