@@ -10,6 +10,7 @@ Checks: >-
   readability-redundant-casting,
   readability-redundant-member-init,
   readability-static-definition-in-anonymous-namespace,
+  readability-use-anyofallof,
   readability-use-std-min-max,
 HeaderFilterRegex: '(^|/)src/'
 ExcludeHeaderFilterRegex: '(^|/)\.cmake-deps/'

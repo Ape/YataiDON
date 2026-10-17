@@ -1,5 +1,6 @@
 #include "texture.h"
 
+#include <algorithm>
 #include <atomic>
 #include <charconv>
 #include <condition_variable>
@@ -1221,12 +1222,7 @@ bool TextureWrapper::has_texture(const std::string& name) {
     if (textures.contains(name)) {
         return true;
     }
-    for (const auto& v : language_variants(name)) {
-        if (textures.contains(v)) {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::any_of(language_variants(name), [this](const auto& v) { return textures.contains(v); });
 }
 
 void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParams& params) {

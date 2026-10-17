@@ -130,12 +130,8 @@ bool is_input_key_pressed(const std::vector<int>& keys, const std::vector<int>& 
         return false;
     }
 
-    for (int button : gamepad_buttons) {
-        if (check_key_pressed(10000 + button, strength)) {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::any_of(gamepad_buttons,
+                               [strength](int button) { return check_key_pressed(10000 + button, strength); });
 }
 
 static bool keys_held(const std::vector<int>& keys, const std::vector<int>& pad) {

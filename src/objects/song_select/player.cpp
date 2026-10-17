@@ -1,5 +1,7 @@
 #include "player.h"
 
+#include <algorithm>
+
 #include "../../libs/audio.h"
 #include "../../libs/input.h"
 #include "../../libs/scores.h"
@@ -343,12 +345,7 @@ static std::string trim_search(std::string s) {
 static bool any_don_key_down(PlayerNum player_num) {
     const auto& c = *global_data.config;
     auto down = [](const std::vector<int>& keys) {
-        for (int k : keys) {
-            if (ray::IsKeyDown(k)) {
-                return true;
-            }
-        }
-        return false;
+        return std::ranges::any_of(keys, [](int k) { return ray::IsKeyDown(k); });
     };
     if (player_num != PlayerNum::P2 && (down(c.keys_1p.left_don) || down(c.keys_1p.right_don))) {
         return true;

@@ -2205,15 +2205,10 @@ bool Navigator::scan_child_folders(const fs::path& path) {
     }
     return false;
 #else
-    for (const auto& entry : fs::directory_iterator(path)) {
-        if (fs::is_directory(entry.path()) && has_def_file(entry.path()) || is_osu_song_folder(entry.path())) {
-            return true;
-        }
-        if (is_gen4_root(entry.path()) || !gen3_root_at(entry.path()).empty()) {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::any_of(fs::directory_iterator(path), [this](const auto& entry) {
+        return (fs::is_directory(entry.path()) && has_def_file(entry.path())) || is_osu_song_folder(entry.path()) ||
+               is_gen4_root(entry.path()) || !gen3_root_at(entry.path()).empty();
+    });
 #endif
 }
 
