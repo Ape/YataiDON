@@ -599,7 +599,7 @@ int main(int argc, char* argv[]) {
     }
 
 #ifdef PLATFORM_ANDROID
-    android_check_and_install_update();
+    network.check_and_install_android_update();
 #endif
     if (global_data.config->general.skin_updater) {
         skin_updater.start();

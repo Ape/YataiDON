@@ -3,12 +3,14 @@
 #include <atomic>
 #include <csignal>
 #include <cstdint>
-#include <dbghelp.h>
 #include <filesystem>
 #include <portaudio.h>
 #include <spdlog/spdlog.h>
 #include <string>
+// clang-format off
 #include <windows.h>
+#include <dbghelp.h> // must follow windows.h
+// clang-format on
 
 namespace {
 
