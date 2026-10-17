@@ -298,8 +298,7 @@ DanInfoCache DanGameScreen::calculate_dan_info() {
     const bool just_before_end = (float)total_notes * 0.05f > (float)cache.remaining_notes;
 
     const auto& exams = global_data.session_data[(int)global_data.player_num].selected_dan_exam;
-    for (int i = 0; i < (int)exams.size(); i++) {
-        const Exam& exam = exams[i];
+    for (const auto& exam : exams) {
         DanExamInfo info;
         info.exam_type = exam.type;
         info.exam_range = exam.range;

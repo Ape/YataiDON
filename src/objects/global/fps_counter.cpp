@@ -1,15 +1,14 @@
 #include "fps_counter.h"
 
 #include <algorithm>
+#include <functional>
 
 #include "../../libs/text.h"
 #include "../../libs/texture.h"
 
 FPSCounter::FPSCounter() {
     lastTime = get_current_ms();
-    for (int i = 0; i < SAMPLE_SIZE; i++) {
-        frameTimes[i] = 16.67f;
-    }
+    std::ranges::fill(frameTimes, 16.67f);
 }
 
 void FPSCounter::update() {
@@ -22,10 +21,7 @@ void FPSCounter::update() {
 }
 
 float FPSCounter::get_fps() const {
-    float sum = 0;
-    for (int i = 0; i < SAMPLE_SIZE; i++) {
-        sum += frameTimes[i];
-    }
+    const float sum = std::ranges::fold_left(frameTimes, 0.0f, std::plus{});
     float avgFrameTime = sum / SAMPLE_SIZE;
     if (!(avgFrameTime > 0.0f)) {
         return 0.0f;

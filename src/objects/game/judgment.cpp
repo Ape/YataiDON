@@ -78,9 +78,9 @@ void Judgment::update(double current_ms) {
     BaseAnimation* animations[] = {fade_animation_1, fade_animation_2, fade_animation_3, move_animation,
                                    texture_animation};
 
-    for (int i = 0; i < 5; i++) {
-        if (animations[i]) {
-            animations[i]->update(current_ms);
+    for (auto& animation : animations) {
+        if (animation) {
+            animation->update(current_ms);
         }
     }
     for (BaseAnimation* a : {(BaseAnimation*)outer_scale, (BaseAnimation*)ray_scale, (BaseAnimation*)ray_fade,

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
+#include <ranges>
 #include <vector>
 
 #include "../../libs/audio.h"
@@ -1993,8 +1994,8 @@ void Player::draw_balloon(double current_ms, float y, const Note& head, int curr
 
 void Player::draw_notes(double current_ms, float y) {
     current_ms += visual_offset;
-    for (auto it = barlines.rbegin(); it != barlines.rend(); ++it) {
-        draw_bar(current_ms, y, *it);
+    for (auto& barline : std::views::reverse(barlines)) {
+        draw_bar(current_ms, y, barline);
     }
 
     if (draw_note_buffer.empty()) {
@@ -2042,8 +2043,7 @@ void Player::draw_notes(double current_ms, float y) {
         return std::make_pair(x_position + judge_x, y_position + judge_y + y);
     };
 
-    for (auto it = draw_note_buffer.rbegin(); it != draw_note_buffer.rend(); ++it) {
-        auto& note = *it;
+    for (auto& note : std::views::reverse(draw_note_buffer)) {
         if (skip_note(note)) {
             continue;
         }
@@ -2063,8 +2063,7 @@ void Player::draw_notes(double current_ms, float y) {
         }
     }
 
-    for (auto it = draw_note_buffer.rbegin(); it != draw_note_buffer.rend(); ++it) {
-        auto& note = *it;
+    for (auto& note : std::views::reverse(draw_note_buffer)) {
         if (skip_note(note)) {
             continue;
         }

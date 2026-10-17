@@ -6,6 +6,7 @@ Checks: >-
   -clang-analyzer-unix.Malloc,
   bugprone-unchecked-string-to-number-conversion,
   bugprone-use-after-move,
+  modernize-loop-convert,
   modernize-use-equals-default,
   modernize-use-ranges,
   modernize-use-starts-ends-with,

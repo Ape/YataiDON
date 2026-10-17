@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <ranges>
 
 #include "../libs/animation.h"
 #include "../libs/input.h"
@@ -963,13 +964,12 @@ void PracticeGameScreen::draw_notes_scrobble(double current_ms) const {
     ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, ray::GetRenderHeight());
 
     // Draw bars
-    for (auto it = bars.rbegin(); it != bars.rend(); ++it) {
-        draw_bar_scrobble(*it, current_ms);
+    for (const auto& bar : std::views::reverse(bars)) {
+        draw_bar_scrobble(bar, current_ms);
     }
     // Draw notes in reverse order
     float y = 184 * tex.screen_scale;
-    for (auto it = scrobble_note_list.rbegin(); it != scrobble_note_list.rend(); ++it) {
-        const Note& note = *it;
+    for (const auto& note : std::views::reverse(scrobble_note_list)) {
         if (note.type == NoteType::TAIL || note.type == NoteType::BARLINE) {
             continue;
         }

@@ -1821,11 +1821,11 @@ void Navigator::begin_inline_load() {
     if (approx_items > 0) {
         const float edge_delay = (float)(genre_bg->stretch->duration * 1.5);
         const float edge_duration = (float)genre_bg->move->duration;
-        for (int i = 0; i < (int)items.size(); i++) {
-            if (items[i]->position >
+        for (const auto& item : items) {
+            if (item->position >
                 items[open_index]->position) { // "18" is a '''magic''' number that should fits for almost everything
-                items[i]->move_box(
-                    std::min(items[i]->position + approx_items * base_spacing, items[i]->position + 18 * base_spacing),
+                item->move_box(
+                    std::min(item->position + approx_items * base_spacing, item->position + 18 * base_spacing),
                     edge_duration, edge_delay, std::nullopt);
             }
         }

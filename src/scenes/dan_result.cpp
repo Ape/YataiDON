@@ -201,8 +201,7 @@ void DanResultScreen::build_page2_timeline() {
         float travel = (rd.exams[i].range == "less") ? (1.0f - p) : p;
         if (!rd.exams[i].gothrough) {
             travel = 0.0f;
-            for (int j = 0; j < 3; j++) {
-                float sp = re.song_progress[j];
+            for (float sp : re.song_progress) {
                 travel = std::max(travel, (rd.exams[i].range == "less") ? (1.0f - sp) : sp);
             }
         }
