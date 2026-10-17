@@ -70,11 +70,7 @@ static bool resolve_safe_extract_path(const fs::path& base_dir, const fs::path& 
         return false;
     }
     const fs::path parent_rel = canonical_parent.lexically_relative(canonical_base_dir);
-    if (parent_rel.empty() || *parent_rel.begin() == "..") {
-        return false;
-    }
-
-    return true;
+    return !(parent_rel.empty() || *parent_rel.begin() == "..");
 }
 
 void extract_osz(const fs::path& osz_path) {
