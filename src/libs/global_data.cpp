@@ -64,7 +64,7 @@ void load_skin() {
         };
         const std::string& lang = global_data.config->general.language;
         fs::path font_path = resolve_skin_path("Fonts/font_" + lang + ".ttf");
-        if (!fs::exists(font_path) && font_family.count(lang)) {
+        if (!fs::exists(font_path) && font_family.contains(lang)) {
             font_path = resolve_skin_path("Fonts/font_" + font_family.at(lang) + ".ttf");
         }
         if (!fs::exists(font_path)) {

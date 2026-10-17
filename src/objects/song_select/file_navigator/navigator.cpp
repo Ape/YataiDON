@@ -482,7 +482,7 @@ void Navigator::init(std::vector<fs::path> songs_paths) {
             }
         }
     }
-    vertical_gallery = tex.options.count(SCO::HORIZONTAL_SONG_SELECT) && tex.options.at(SCO::HORIZONTAL_SONG_SELECT);
+    vertical_gallery = tex.options.contains(SCO::HORIZONTAL_SONG_SELECT) && tex.options.at(SCO::HORIZONTAL_SONG_SELECT);
     background_move = (MoveAnimation*)tex.get_animation(0);
     background_fade_change = (FadeAnimation*)tex.get_animation(5);
     bg_genre_index = items.empty() ? GenreIndex::TUTORIAL : items[open_index]->genre_index;
@@ -555,9 +555,9 @@ void Navigator::enqueue_box(std::unique_ptr<BaseBox> box) {
     if (auto* song = dynamic_cast<SongBox*>(box.get())) {
         auto& t = song->parser.metadata.title;
         auto& s = song->parser.metadata.subtitle;
-        std::string key =
-            (t.count("en") ? t.at("en") : t.begin()->second) + "|" + (s.count("en") ? s.at("en") : s.begin()->second);
-        if (favorite_songs.count(key)) {
+        std::string key = (t.contains("en") ? t.at("en") : t.begin()->second) + "|" +
+                          (s.contains("en") ? s.at("en") : s.begin()->second);
+        if (favorite_songs.contains(key)) {
             song->is_favorite = true;
         }
     }
@@ -569,9 +569,9 @@ void Navigator::enqueue_inline_box(std::unique_ptr<BaseBox> box) {
     if (auto* song = dynamic_cast<SongBox*>(box.get())) {
         auto& t = song->parser.metadata.title;
         auto& s = song->parser.metadata.subtitle;
-        std::string key =
-            (t.count("en") ? t.at("en") : t.begin()->second) + "|" + (s.count("en") ? s.at("en") : s.begin()->second);
-        if (favorite_songs.count(key)) {
+        std::string key = (t.contains("en") ? t.at("en") : t.begin()->second) + "|" +
+                          (s.contains("en") ? s.at("en") : s.begin()->second);
+        if (favorite_songs.contains(key)) {
             song->is_favorite = true;
         }
     }
@@ -760,8 +760,8 @@ void Navigator::parse_song_list(const fs::path& path, BoxDef box_def, bool inlin
         SongParser parser = take_parser(preparsed, final_path);
         const auto& titles = parser.metadata.title;
         const auto& subtitles = parser.metadata.subtitle;
-        const std::string title = titles.count("en") ? titles.at("en") : titles.begin()->second;
-        const std::string subtitle = subtitles.count("en") ? subtitles.at("en") : subtitles.begin()->second;
+        const std::string title = titles.contains("en") ? titles.at("en") : titles.begin()->second;
+        const std::string subtitle = subtitles.contains("en") ? subtitles.at("en") : subtitles.begin()->second;
         const std::string correct_hash = scores_manager.get_single_hash(final_path);
         out_entries.push_back({correct_hash, title, subtitle});
         needs_rewrite |= entry.hash != correct_hash || entry.title != title || entry.subtitle != subtitle;
@@ -1213,14 +1213,14 @@ void Navigator::toggle_favorite(SongBox* song) {
     FolderBox::invalidate_scan_cache(); // song_list.txt counts change
     auto& t = song->parser.metadata.title;
     auto& s = song->parser.metadata.subtitle;
-    std::string title = t.count("en") ? t.at("en") : t.begin()->second;
-    std::string subtitle = s.count("en") ? s.at("en") : s.begin()->second;
+    std::string title = t.contains("en") ? t.at("en") : t.begin()->second;
+    std::string subtitle = s.contains("en") ? s.at("en") : s.begin()->second;
     std::string key = title + "|" + subtitle;
 
     fs::path song_list_path = *favorite_folder_path / "song_list.txt";
     auto entries = read_song_list(song_list_path);
 
-    bool was_favorite = favorite_songs.count(key) > 0;
+    bool was_favorite = favorite_songs.contains(key);
     if (was_favorite) {
         favorite_songs.erase(key);
         entries.erase(
@@ -1258,8 +1258,8 @@ void Navigator::add_to_recent(const SongBox* song) {
 
     auto& titles = song->parser.metadata.title;
     auto& subtitles = song->parser.metadata.subtitle;
-    std::string title = titles.count("en") ? titles.at("en") : titles.begin()->second;
-    std::string subtitle = subtitles.count("en") ? subtitles.at("en") : subtitles.begin()->second;
+    std::string title = titles.contains("en") ? titles.at("en") : titles.begin()->second;
+    std::string subtitle = subtitles.contains("en") ? subtitles.at("en") : subtitles.begin()->second;
     std::string hash = scores_manager.get_single_hash(song->parser.file_path);
 
     auto entries = read_song_list(song_list_path);
@@ -1367,7 +1367,7 @@ void Navigator::load_collection_search(const fs::path& path, const BoxDef& box_d
         }
         auto st = song_search_text.find(song_path.string());
         const std::string& text = (st != song_search_text.end()) ? st->second : search_fold(key.first);
-        if (text.find(query) != std::string::npos) {
+        if (text.contains(query)) {
             hits.push_back(song_path);
         }
     }
@@ -3044,8 +3044,7 @@ std::optional<fs::path> Navigator::find_song_by_title(const std::string& title, 
     for (auto& [indexed_title, path] : normalized_titles) {
 
         // Check if norm_title is inside indexed_title or vice-versa
-        if (indexed_title.find(norm_title) != std::string::npos ||
-            norm_title.find(indexed_title) != std::string::npos) {
+        if (indexed_title.contains(norm_title) || norm_title.contains(indexed_title)) {
 
             // Safety: Don't match tiny fragments like "a" or "the"
             if (norm_title.length() < 3 && indexed_title != norm_title) {

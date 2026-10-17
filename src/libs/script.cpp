@@ -276,21 +276,21 @@ void ScriptManager::index_scripts(const fs::path& script_path) {
         fs::path p = script.path();
         if (fs::is_directory(p)) {
             fs::path lua_file = p / (p.stem().string() + ".lua");
-            if (fs::exists(lua_file) && !scripts.count(p.stem().string())) {
+            if (fs::exists(lua_file) && !scripts.contains(p.stem().string())) {
                 scripts[p.stem().string()] = lua_file.string();
             }
             std::error_code sub_ec;
             for (const auto& sub : fs::directory_iterator(p, sub_ec)) {
                 fs::path sub_p = sub.path();
                 if (!fs::is_directory(sub_p) && sub_p.extension() == ".lua" && sub_p.stem() != p.stem() &&
-                    !scripts.count(sub_p.stem().string())) {
+                    !scripts.contains(sub_p.stem().string())) {
                     scripts[sub_p.stem().string()] = sub_p.string();
                 }
             }
             if (sub_ec) {
                 spdlog::warn("Unable to index scripts in {}: {}", p.string(), sub_ec.message());
             }
-        } else if (p.extension() == ".lua" && !scripts.count(p.stem().string())) {
+        } else if (p.extension() == ".lua" && !scripts.contains(p.stem().string())) {
             scripts[p.stem().string()] = p.string();
         }
     }
@@ -377,11 +377,11 @@ void ScriptManager::init(fs::path script_path) {
 }
 
 bool ScriptManager::has_lua_script(const std::string& script_name) const {
-    return scripts.count(script_name) != 0;
+    return scripts.contains(script_name);
 }
 
 std::string ScriptManager::get_lua_script_path(const std::string& script_name) {
-    if (scripts.find(script_name) == scripts.end()) {
+    if (!scripts.contains(script_name)) {
         throw std::runtime_error("Unable to find lua script: " + script_name);
     }
     return scripts[script_name];

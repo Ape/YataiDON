@@ -215,8 +215,7 @@ void TJAParser::get_metadata() {
             }
             metadata.subtitle[region_code] = value;
 
-            if (metadata.subtitle.find("ja") != metadata.subtitle.end() &&
-                metadata.subtitle["ja"].find("限定") != std::string::npos) {
+            if (metadata.subtitle.contains("ja") && metadata.subtitle["ja"].contains("限定")) {
                 ex_data.limited_time = true;
             }
         } else if (item.find("TITLE") == 0) {
@@ -368,7 +367,7 @@ void TJAParser::get_metadata() {
                     }
                 }
             } else if (item.find("BALLOON") == 0) {
-                if (item.find(':') == std::string::npos) {
+                if (!item.contains(':')) {
                     metadata.course_data[current_diff].balloon.clear();
                     continue;
                 }
@@ -405,15 +404,15 @@ void TJAParser::get_metadata() {
     }
 
     for (auto& [region_code, title] : metadata.title) {
-        if (title.find("-New Audio-") != std::string::npos || title.find("-新曲-") != std::string::npos) {
+        if (title.contains("-New Audio-") || title.contains("-新曲-")) {
             replace_all(title, "-New Audio-", "");
             replace_all(title, "-新曲-", "");
             ex_data.new_audio = true;
-        } else if (title.find("-Old Audio-") != std::string::npos || title.find("-旧曲-") != std::string::npos) {
+        } else if (title.contains("-Old Audio-") || title.contains("-旧曲-")) {
             replace_all(title, "-Old Audio-", "");
             replace_all(title, "-旧曲-", "");
             ex_data.old_audio = true;
-        } else if (title.find("限定") != std::string::npos) {
+        } else if (title.contains("限定")) {
             ex_data.limited_time = true;
         }
     }
@@ -422,7 +421,7 @@ void TJAParser::get_metadata() {
 std::tuple<NoteList, std::deque<NoteList>, std::deque<NoteList>, std::deque<NoteList>>
 TJAParser::notes_to_position(int diff) {
     PROFILE_SCOPE();
-    if (metadata.course_data.count(diff) == 0) {
+    if (!metadata.course_data.contains(diff)) {
         return std::make_tuple(NoteList(), std::deque<NoteList>(), std::deque<NoteList>(), std::deque<NoteList>());
     }
     last_diff = diff;
@@ -643,17 +642,17 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
             }
             // Like Taiko-san Jiro, the scroll mode only counts before #START
             bool started = note_start != -1 || p1_start != -1 || p2_start != -1;
-            if (line.find("#NMSCROLL") != std::string::npos) {
+            if (line.contains("#NMSCROLL")) {
                 if (!started) {
                     scroll_type = ScrollType::NMSCROLL;
                 }
                 continue;
-            } else if (line.find("#BMSCROLL") != std::string::npos) {
+            } else if (line.contains("#BMSCROLL")) {
                 if (!started) {
                     scroll_type = ScrollType::BMSCROLL;
                 }
                 continue;
-            } else if (line.find("#HBSCROLL") != std::string::npos) {
+            } else if (line.contains("#HBSCROLL")) {
                 if (!started) {
                     scroll_type = ScrollType::HBSCROLL;
                 }
@@ -847,10 +846,10 @@ void TJAParser::register_extended_commands(std::map<std::string, CommandHandler>
             ev.from = d[0];
             ev.to = d[1];
             ev.ease = true;
-            if (a.size() > 2 && dirs.count(a[2])) {
+            if (a.size() > 2 && dirs.contains(a[2])) {
                 ev.dir = dirs.at(a[2]);
             }
-            if (a.size() > 3 && calcs.count(a[3])) {
+            if (a.size() > 3 && calcs.contains(a[3])) {
                 ev.calc = calcs.at(a[3]);
             }
             s.open_cam[prop] = push(s, ev);
@@ -931,7 +930,7 @@ void TJAParser::handle_SCROLL(const std::string& value, ParserState& state) {
 
     // Polar form (TaikoManyGimmicks): #SCROLL <speed>, <rotation-lower>, <rotation-upper>, the
     // speed rotated rotation-upper/rotation-lower turns counterclockwise
-    if (value.find(',') != std::string::npos && value.find('i') == std::string::npos) {
+    if (value.contains(',') && !value.contains('i')) {
         std::vector<double> parts;
         std::stringstream ss(value);
         std::string part;
@@ -952,7 +951,7 @@ void TJAParser::handle_SCROLL(const std::string& value, ParserState& state) {
         return;
     }
 
-    if (value.find('i') != std::string::npos) {
+    if (value.contains('i')) {
         std::string normalized = value;
         replace_all(normalized, ".i", "j");
         replace_all(normalized, "i", "j");

@@ -230,7 +230,7 @@ Screens check_args(int argc, char* argv[]) {
     int selected_difficulty;
     if (difficulty.has_value()) {
         auto& course_data = tja.metadata.course_data;
-        if (course_data.find(difficulty.value()) == course_data.end()) {
+        if (!course_data.contains(difficulty.value())) {
             std::cerr << "Error: Invalid difficulty: " << difficulty.value() << ". Available: ";
             for (const auto& [key, value] : course_data) {
                 std::cerr << key << " ";

@@ -224,7 +224,7 @@ std::optional<DanSongEntry> DanNavigator::load_song_entry(const rapidjson::Value
         }
 
         auto meta = song_metadata(*path_opt);
-        int level = meta->course_data.count(diff) ? meta->course_data.at(diff).level : 10;
+        int level = meta->course_data.contains(diff) ? meta->course_data.at(diff).level : 10;
 
         if (titles_out && global_data.config) {
             const std::string& lang = global_data.config->general.language;

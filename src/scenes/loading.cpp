@@ -119,8 +119,8 @@ void LoadingScreen::load_song_hashes() {
                                 hashes[course] = parser.get_diff_hash(course);
                             }
                         }
-                        title = parser.metadata.title.count("en") ? parser.metadata.title.at("en") : "";
-                        subtitle = parser.metadata.subtitle.count("en") ? parser.metadata.subtitle.at("en") : "";
+                        title = parser.metadata.title.contains("en") ? parser.metadata.title.at("en") : "";
+                        subtitle = parser.metadata.subtitle.contains("en") ? parser.metadata.subtitle.at("en") : "";
                         stamp.hashes = hashes;
                         stamp.title = title;
                         stamp.subtitle = subtitle;
@@ -186,7 +186,7 @@ void LoadingScreen::load_song_hashes() {
                 present.emplace(u8.begin(), u8.end());
             }
             for (const auto& [path, entry] : cache) {
-                if (!present.count(path)) {
+                if (!present.contains(path)) {
                     scores_manager.remove_song_cache(path);
                 }
             }

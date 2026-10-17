@@ -179,7 +179,7 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
 
     std::vector<int> missing, alts;
     for (int cp : cps) {
-        if (got.count(cp)) {
+        if (got.contains(cp)) {
             continue;
         }
         int alt = (int)han_fold_codepoint((uint32_t)cp);
@@ -580,7 +580,7 @@ static bool is_beside_prev_char(const std::string& s) {
         "\xe3\x80\x82", // 。
         "\xe3\x80\x81", // 、
     };
-    return beside_set.count(s) > 0;
+    return beside_set.contains(s);
 }
 
 // Extra downward draw offset for beside chars whose glyphs sit near the top
@@ -621,14 +621,14 @@ static bool is_small_kana(const std::string& s) {
         "ヵ",
         "ヶ",
     };
-    return sutegana.count(s) > 0;
+    return sutegana.contains(s);
 }
 
 static bool needs_less_spacing_above(const std::string& s) {
     static const std::unordered_set<std::string> alphabet = {
         " ", "a", "c", "e", "g", "m", "n", "o", "p", "q", "r", "s", "u", "v", "w", "x", "y", "z",
     };
-    return is_small_kana(s) || alphabet.count(s) > 0;
+    return is_small_kana(s) || alphabet.contains(s);
 }
 
 // Consecutive runs of 2+ of these are drawn horizontally side-by-side.
@@ -640,7 +640,7 @@ static bool is_hgroup_char(const std::string& s) {
         "\xef\xbc\x9f", // ？
         "\xe2\x80\xa0", // chaos time the dark
     };
-    return hgroup_set.count(s) > 0;
+    return hgroup_set.contains(s);
 }
 
 static std::vector<std::string> split_lines(const std::string& text) {
@@ -681,7 +681,7 @@ static bool in_rotate_set(const std::string& s) {
         ":",
         "\xef\xbc\x9a",
     };
-    return rotate_set.count(s) > 0;
+    return rotate_set.contains(s);
 }
 
 OutlinedText::OutlinedText(std::string text, int font_size, ray::Color color, ray::Color outline_color,

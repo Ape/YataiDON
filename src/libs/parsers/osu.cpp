@@ -183,7 +183,7 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
     hit_objects_data = read_hitobjects_fields(lines);
 
     // Slider multiplier
-    if (difficulty.count("SliderMultiplier")) {
+    if (difficulty.contains("SliderMultiplier")) {
         try {
             double sm = std::stod(difficulty["SliderMultiplier"]);
             if (sm > 0.0) {
@@ -215,26 +215,26 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
                      });
 
     // Metadata
-    if (osu_meta.count("Title")) {
+    if (osu_meta.contains("Title")) {
         metadata.title["en"] = osu_meta["Title"];
     }
-    if (osu_meta.count("Artist")) {
+    if (osu_meta.contains("Artist")) {
         metadata.subtitle["en"] = osu_meta["Artist"];
     }
-    if (osu_meta.count("TitleUnicode")) {
+    if (osu_meta.contains("TitleUnicode")) {
         metadata.title["ja"] = osu_meta["TitleUnicode"];
     }
-    if (osu_meta.count("ArtistUnicode")) {
+    if (osu_meta.contains("ArtistUnicode")) {
         metadata.subtitle["ja"] = osu_meta["ArtistUnicode"];
     }
-    if (osu_meta.count("Version")) {
+    if (osu_meta.contains("Version")) {
         difficulty_name = osu_meta["Version"];
     }
 
-    if (general.count("AudioFilename")) {
+    if (general.contains("AudioFilename")) {
         metadata.wave = path.parent_path() / general["AudioFilename"];
     }
-    if (general.count("PreviewTime")) {
+    if (general.contains("PreviewTime")) {
         try {
             metadata.demostart = std::stod(general["PreviewTime"]) / 1000.0;
         } catch (const std::exception& e) {

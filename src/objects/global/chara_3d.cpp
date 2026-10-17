@@ -268,20 +268,20 @@ parse_glb_material_indices(const std::string& path, std::vector<int>& recolor_ou
         }
         if (mat_name_raw) {
             std::string nl = name_lower(mat_name_raw);
-            if (nl.find("_aa_add") != std::string::npos) {
+            if (nl.contains("_aa_add")) {
                 additive_out.push_back(raylib_idx);
-            } else if (nl.find("_color_s_cus_") != std::string::npos && nl.find("_a_ab") == std::string::npos) {
+            } else if (nl.contains("_color_s_cus_") && !nl.contains("_a_ab")) {
                 cutout_out.push_back(raylib_idx); // _AT_ZERO_ / _AT_ONE_: alpha-tested, never blended
             }
-            const bool cutout = nl.find("_color_s_cus_") != std::string::npos && nl.find("_a_ab") == std::string::npos;
+            const bool cutout = nl.contains("_color_s_cus_") && !nl.contains("_a_ab");
             const bool gltf_blend = materials[i].HasMember("alphaMode") && materials[i]["alphaMode"].IsString() &&
                                     std::string(materials[i]["alphaMode"].GetString()) == "BLEND";
             // alpha-blended: _A_AB by name, or any other glTF BLEND material that is not an
             // alpha-tested one (e.g. a plain "lambert" glint sheet) -- drawn after the face
-            if (nl.find("_a_ab") != std::string::npos || (gltf_blend && !cutout)) {
+            if (nl.contains("_a_ab") || (gltf_blend && !cutout)) {
                 blend_out.push_back(raylib_idx);
             }
-            if (nl.find("cullnone") != std::string::npos) {
+            if (nl.contains("cullnone")) {
                 twosided_out.push_back(raylib_idx);
             }
         }
@@ -688,7 +688,7 @@ void Chara3D::set_anim(AnimIndex idx) {
     if (i >= 0 && i < anim_count) {
         if (base == (int)AnimIndex::DON_NORMAL || base == (int)AnimIndex::DON_SABI ||
             base == (int)AnimIndex::DON_BALLOON_NOBEAT || base == (int)AnimIndex::DON_MISS6 ||
-            get_anim_name(i).find("loop") != std::string::npos) {
+            get_anim_name(i).contains("loop")) {
             is_looping = true;
         } else {
             if (is_looping) {

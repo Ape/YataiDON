@@ -294,7 +294,7 @@ void SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
 
     int removed = 0;
     for (const auto& [rel, e] : cache) {
-        if (listed.count(rel)) {
+        if (listed.contains(rel)) {
             continue;
         }
         const fs::path local_file = (skin_dir / rel).lexically_normal();

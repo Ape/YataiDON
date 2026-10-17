@@ -148,7 +148,7 @@ void CostumeMenu::load_preset_data() {
             spdlog::warn("CostumeMenu: failed to parse {}: {}", presets_path.string(), ex.what());
         }
     }
-    if (!preset_sets.count("costume_select/default")) {
+    if (!preset_sets.contains("costume_select/default")) {
         preset_sets["costume_select/default"] = {0};
     }
 }

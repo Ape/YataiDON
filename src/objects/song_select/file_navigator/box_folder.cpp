@@ -51,11 +51,11 @@ namespace {
                     continue;
                 }
 
-                if (disqualified.count(diff)) {
+                if (disqualified.contains(diff)) {
                     continue;
                 }
 
-                if (out_crown.find(diff) == out_crown.end()) {
+                if (!out_crown.contains(diff)) {
                     out_crown[diff] = score->crown;
                 } else {
                     out_crown[diff] = std::min(out_crown[diff], score->crown);
@@ -178,7 +178,7 @@ void FolderBox::run_deferred_scans(std::atomic<bool>& abort_flag) {
         }
         {
             std::lock_guard<std::mutex> lock(scan_cache_mutex);
-            if (scan_cache.count(next)) {
+            if (scan_cache.contains(next)) {
                 continue;
             }
         }

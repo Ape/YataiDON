@@ -103,7 +103,7 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
         if (sqlite3_exec(db_fsd, sql, nullptr, nullptr, &mig_errmsg) == SQLITE_OK) {
             return true;
         }
-        bool duplicate_column = mig_errmsg && std::string(mig_errmsg).find("duplicate column") != std::string::npos;
+        bool duplicate_column = mig_errmsg && std::string(mig_errmsg).contains("duplicate column");
         if (!duplicate_column) {
             spdlog::error("ScoresManager migration failed: {} ({})", mig_errmsg ? mig_errmsg : "?", sql);
         }
@@ -322,7 +322,7 @@ void ScoresManager::load_score_cache() {
 
         // Rows are ordered best-first, so the first row seen for a key is the best one.
         auto key = std::make_tuple(hash, difficulty, player_id);
-        if (score_cache.count(key)) {
+        if (score_cache.contains(key)) {
             continue;
         }
 
@@ -359,8 +359,8 @@ void ScoresManager::py_taiko_import(const fs::path& old_db_path) {
     for (const auto& [path, hashes] : path_to_hashes_snapshot) {
         try {
             SongParser parser(path);
-            std::string en = parser.metadata.title.count("en") ? parser.metadata.title.at("en") : "";
-            std::string ja = parser.metadata.title.count("ja") ? parser.metadata.title.at("ja") : "";
+            std::string en = parser.metadata.title.contains("en") ? parser.metadata.title.at("en") : "";
+            std::string ja = parser.metadata.title.contains("ja") ? parser.metadata.title.at("ja") : "";
             name_to_hashes[{en, ja}] = hashes;
         } catch (const std::exception& e) {
             spdlog::warn("py_taiko_import: failed to parse metadata for {}: {}", path.string(), e.what());

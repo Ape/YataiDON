@@ -96,7 +96,7 @@ public:
         }
         return horizontal_subtitle_large_cache.get();
     }
-    bool has_ura() const { return parser.metadata.course_data.count((int)Difficulty::URA) > 0; }
+    bool has_ura() const { return parser.metadata.course_data.contains((int)Difficulty::URA); }
     int ex_data_flag() const {
         if (parser.ex_data.new_audio) {
             return 1;

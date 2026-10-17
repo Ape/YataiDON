@@ -60,7 +60,7 @@ static void refresh_sdl_joysticks() {
     std::unordered_set<SDL_JoystickID> current(ids, ids + count);
 
     for (auto it = sdl_joysticks.begin(); it != sdl_joysticks.end();) {
-        if (!current.count(it->first)) {
+        if (!current.contains(it->first)) {
             SDL_CloseJoystick(it->second);
             it = sdl_joysticks.erase(it);
         } else {
@@ -72,7 +72,7 @@ static void refresh_sdl_joysticks() {
         if (SDL_IsGamepad(ids[i])) {
             continue; // already handled by raylib
         }
-        if (!sdl_joysticks.count(ids[i])) {
+        if (!sdl_joysticks.contains(ids[i])) {
             SDL_Joystick* joy = SDL_OpenJoystick(ids[i]);
             if (joy) {
                 sdl_joysticks[ids[i]] = joy;
@@ -346,7 +346,7 @@ static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
         }
         SDL_FingerID id = event->tfinger.fingerID;
         std::lock_guard<std::mutex> lock(input_mutex);
-        if (!touch_id_to_vkey.count(id)) {
+        if (!touch_id_to_vkey.contains(id)) {
             int sw = ray::GetScreenWidth();
             int sh = ray::GetScreenHeight();
             ray::Vector2 pos = {event->tfinger.x * sw, event->tfinger.y * sh};
@@ -757,8 +757,8 @@ void process_midi_events() {
 
         spdlog::info("MIDI input available: {}", event.port.display_name);
 
-        if (state.port || (event.port.display_name.find(state.device) == std::string::npos &&
-                           event.port.device_name.find(state.device) == std::string::npos)) {
+        if (state.port ||
+            (!event.port.display_name.contains(state.device) && !event.port.device_name.contains(state.device))) {
             continue;
         }
 

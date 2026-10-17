@@ -1338,7 +1338,7 @@ void AudioEngine::play_sound(const std::string& name, VolumePreset volume_preset
 
 bool AudioEngine::has_sound(const std::string& name) {
     std::shared_lock<std::shared_mutex> guard(rw_lock);
-    return sounds.find(name) != sounds.end();
+    return sounds.contains(name);
 }
 
 void AudioEngine::stop_sound(const std::string& name) {
@@ -1760,7 +1760,7 @@ void AudioEngine::set_music_volume(const std::string& name, float volume) {
 
 bool AudioEngine::is_music_stream_valid(const std::string& name) const {
     std::shared_lock<std::shared_mutex> guard(rw_lock);
-    return music_streams.find(name) != music_streams.end();
+    return music_streams.contains(name);
 }
 
 bool AudioEngine::is_music_stream_playing(const std::string& name) const {

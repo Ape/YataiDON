@@ -466,7 +466,7 @@ public:
             if (row >= 0 && row < row_count) {
                 const VisualRow& vr = visible_rows[row];
                 if (vr.is_header) {
-                    if (expanded_subsets.count(vr.subset)) {
+                    if (expanded_subsets.contains(vr.subset)) {
                         expanded_subsets.erase(vr.subset);
                     } else {
                         expanded_subsets.insert(vr.subset);
@@ -602,13 +602,13 @@ private:
     }
 
     static const char* loaded_by(const std::string& name) {
-        if (script_manager.tex.textures.count(name)) {
+        if (script_manager.tex.textures.contains(name)) {
             return "a lua script (tex.load_folder)";
         }
-        if (tex.textures.count(name)) {
+        if (tex.textures.contains(name)) {
             return "c++ (load_screen_textures)";
         }
-        if (global_tex.textures.count(name)) {
+        if (global_tex.textures.contains(name)) {
             return "c++ (global textures)";
         }
         return "unknown";
@@ -1171,7 +1171,7 @@ private:
                 return split_subset(debug_draw_log_prev[a]).second < split_subset(debug_draw_log_prev[b]).second;
             });
             visible_rows.push_back({true, subset, subset + " (" + std::to_string(indices.size()) + ")", -1});
-            if (expanded_subsets.count(subset)) {
+            if (expanded_subsets.contains(subset)) {
                 for (int idx : indices) {
                     visible_rows.push_back({false, "", split_subset(debug_draw_log_prev[idx]).second, idx});
                 }
@@ -1258,7 +1258,7 @@ private:
             float row_y = list_top + row * ROW_HEIGHT;
 
             if (vr.is_header) {
-                bool expanded = expanded_subsets.count(vr.subset) != 0;
+                bool expanded = expanded_subsets.contains(vr.subset);
                 ray::DrawRectangle((int)panel_x, (int)row_y, (int)PANEL_WIDTH, (int)ROW_HEIGHT,
                                    ray::Fade(ray::WHITE, 0.12f));
                 draw_text(expanded ? "v" : ">", (int)panel_x + 4, (int)row_y + 3, 14, ray::WHITE);

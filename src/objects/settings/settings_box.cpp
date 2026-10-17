@@ -38,8 +38,8 @@ std::unique_ptr<BaseOptionBox> SettingsBox::make_option_box(const rapidjson::Val
         return std::make_unique<AudioOffsetOptionBox>(name, desc, path, Screens::INPUT_CALI);
     }
     if (type == "bool") {
-        std::string true_label = values_map.count("true") ? values_map["true"] : "Enabled";
-        std::string false_label = values_map.count("false") ? values_map["false"] : "Disabled";
+        std::string true_label = values_map.contains("true") ? values_map["true"] : "Enabled";
+        std::string false_label = values_map.contains("false") ? values_map["false"] : "Disabled";
         return std::make_unique<BoolOptionBox>(name, desc, path, true_label, false_label);
     }
     if (type == "int") {

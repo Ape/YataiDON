@@ -429,7 +429,7 @@ Value AnimationParser::resolveValue(const Value& ref_obj, std::set<int>& visited
     }
     std::string ref_property = ref_obj["property"].GetString();
 
-    if (raw_anims.find(ref_id) == raw_anims.end()) {
+    if (!raw_anims.contains(ref_id)) {
         throw std::runtime_error("Referenced animation " + std::to_string(ref_id) + " not found");
     }
 
@@ -481,7 +481,7 @@ Value AnimationParser::resolveValue(const Value& ref_obj, std::set<int>& visited
 }
 
 Value AnimationParser::findRefs(int anim_id, std::set<int>& visited) {
-    if (visited.find(anim_id) != visited.end()) {
+    if (visited.contains(anim_id)) {
         throw runtime_error("Circular reference detected involving animation " + std::to_string(anim_id));
     }
 
@@ -655,7 +655,7 @@ std::unordered_map<int, std::unique_ptr<BaseAnimation>> AnimationParser::parse_a
                 throw std::runtime_error("Animation 'id' must be an int");
             }
             int id = item["id"].GetInt();
-            if (raw_anims.find(id) != raw_anims.end()) {
+            if (raw_anims.contains(id)) {
                 throw std::runtime_error("Duplicate animation id: " + std::to_string(id));
             }
             Value item_copy;

@@ -129,7 +129,7 @@ inline GenreIndex get_genre_index(const std::string& genreString) {
                    [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
 
     for (const auto& [genreIndex, genreSet] : GENRE_MAP) {
-        if (genreSet.count(genreUpper)) {
+        if (genreSet.contains(genreUpper)) {
             return genreIndex;
         }
     }

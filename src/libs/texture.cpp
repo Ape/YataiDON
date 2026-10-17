@@ -221,7 +221,7 @@ void TextureWrapper::unload_textures() {
 }
 
 BaseAnimation* TextureWrapper::get_animation(const int id, bool is_copy) {
-    if (animations.find(id) == animations.end()) {
+    if (!animations.contains(id)) {
         throw std::runtime_error("Unable to find animation: " + std::to_string(id));
     }
 
@@ -239,7 +239,7 @@ BaseAnimation* TextureWrapper::get_animation(const int id, bool is_copy) {
 }
 
 BaseAnimation* TextureWrapper::get_animation(const int id, const std::string& screen_name) {
-    if (screen_animations.find(screen_name) == screen_animations.end()) {
+    if (!screen_animations.contains(screen_name)) {
         Document anim_config;
         if (read_screen_animations(screen_name, anim_config)) {
             AnimationParser parser;
@@ -619,12 +619,12 @@ public:
         for (size_t g = 0; g < groups.size(); ++g) {
             for (const fs::path& p : groups[g]) {
                 std::string key = image_key(p);
-                if (index.count(key)) {
+                if (index.contains(key)) {
                     continue;
                 }
                 index.emplace(key, items.size());
                 items.push_back(Item{p, g});
-                items.back().want_border = border_keys.count(key) > 0;
+                items.back().want_border = border_keys.contains(key);
             }
         }
         unsigned hw = std::thread::hardware_concurrency();
@@ -791,7 +791,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
     const std::string subset_key = fs::path(subset).filename().string();
     const std::string dedup_key = screen_name + "/" + subset_key;
 
-    if (loaded_subsets.count(dedup_key)) {
+    if (loaded_subsets.contains(dedup_key)) {
         return;
     }
 
@@ -839,7 +839,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
             for (auto& m : tex_config.GetObject()) {
                 std::string tex_name = m.name.GetString();
 
-                if (skip && skip->count(tex_name)) {
+                if (skip && skip->contains(tex_name)) {
                     continue;
                 }
 
@@ -1033,7 +1033,7 @@ void TextureWrapper::unload_folder(const std::string& screen_name, const std::st
     const std::string subset_key = fs::path(subset).filename().string();
     const std::string dedup_key = screen_name + "/" + subset_key;
 
-    if (!loaded_subsets.count(dedup_key)) {
+    if (!loaded_subsets.contains(dedup_key)) {
         return;
     }
 
@@ -1101,7 +1101,7 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
                 continue;
             }
             std::string name = entry.path.filename().string();
-            if (seen.insert(name).second && !loaded_subsets.count(screen_name + "/" + name)) {
+            if (seen.insert(name).second && !loaded_subsets.contains(screen_name + "/" + name)) {
                 subsets.push_back(std::move(name));
             }
         }
@@ -1218,11 +1218,11 @@ std::shared_ptr<TextureObject> TextureWrapper::get_texture_shared(const std::str
 }
 
 bool TextureWrapper::has_texture(const std::string& name) {
-    if (textures.find(name) != textures.end()) {
+    if (textures.contains(name)) {
         return true;
     }
     for (const auto& v : language_variants(name)) {
-        if (textures.find(v) != textures.end()) {
+        if (textures.contains(v)) {
             return true;
         }
     }
