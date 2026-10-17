@@ -3,6 +3,7 @@
 #include <atomic>
 #include <charconv>
 #include <condition_variable>
+#include <cwctype>
 #include <mutex>
 #include <spdlog/spdlog.h>
 #include <thread>
@@ -12,6 +13,10 @@
 #include "profiler.h"
 #include "script.h"
 #include "text.h"
+
+#ifdef _WIN32
+#include "../platform/platform_windows.h"
+#endif
 
 namespace {
 
@@ -484,11 +489,91 @@ void decode_images_parallel(const std::vector<fs::path>& files, std::vector<ray:
     }
 }
 
-std::vector<fs::path> sorted_frames(const fs::path& dir) {
+// A screen's texture folders, each listed once. Loading a screen asked the file system about
+// every texture.json entry separately (is it a frame folder, is its PNG there) in the child skin
+// and again in each ancestor, a few thousand calls for a 1080p skin -- about a third of the time
+// song select took to open. Names match case-insensitively on Windows, as the file system does.
+class DirIndex {
+public:
+    struct Entry {
+        fs::path path;
+        bool is_dir;
+    };
+
+    // the folder's entries, or nullptr when it cannot be listed
+    const std::vector<Entry>* list(const fs::path& dir) {
+        const Listing& l = get(dir);
+        return l.ok ? &l.entries : nullptr;
+    }
+    bool exists(const fs::path& dir, const fs::path& name) { return find(dir, name) != nullptr; }
+    bool is_dir(const fs::path& dir, const fs::path& name) {
+        const Entry* e = find(dir, name);
+        return e && e->is_dir;
+    }
+    bool is_file(const fs::path& dir, const fs::path& name) {
+        const Entry* e = find(dir, name);
+        return e && !e->is_dir;
+    }
+
+private:
+    struct Listing {
+        bool ok = false;
+        std::vector<Entry> entries;
+        std::unordered_map<fs::path::string_type, size_t> by_name;
+    };
+    std::unordered_map<fs::path::string_type, Listing> listings;
+
+    static fs::path::string_type key(const fs::path& p) {
+        fs::path::string_type k = p.native();
+#ifdef _WIN32
+        for (auto& c : k) {
+            c = static_cast<wchar_t>(towlower(c));
+        }
+#endif
+        return k;
+    }
+
+    const Listing& get(const fs::path& dir) {
+        auto [it, inserted] = listings.try_emplace(key(dir));
+        Listing& l = it->second;
+        if (!inserted) {
+            return l;
+        }
+#ifdef _WIN32
+        std::vector<Win32DirEntry> raw;
+        l.ok = win32_list_dir(dir, raw);
+        for (Win32DirEntry& e : raw) {
+            l.entries.push_back({dir / e.name, e.is_dir});
+        }
+#else
+        std::error_code ec;
+        fs::directory_iterator iter(dir, ec);
+        l.ok = !ec;
+        for (; !ec && iter != fs::directory_iterator(); iter.increment(ec)) {
+            std::error_code type_ec;
+            l.entries.push_back({iter->path(), iter->is_directory(type_ec)});
+        }
+#endif
+        for (size_t i = 0; i < l.entries.size(); ++i) {
+            l.by_name.emplace(key(l.entries[i].path.filename()), i);
+        }
+        return l;
+    }
+
+    const Entry* find(const fs::path& dir, const fs::path& name) {
+        const Listing& l = get(dir);
+        auto it = l.by_name.find(key(name));
+        return it == l.by_name.end() ? nullptr : &l.entries[it->second];
+    }
+};
+
+std::vector<fs::path> sorted_frames(DirIndex& dirs, const fs::path& dir) {
     std::vector<fs::path> frames;
-    for (const auto& entry : fs::directory_iterator(dir)) {
-        if (entry.is_regular_file()) {
-            frames.push_back(entry.path());
+    if (const auto* entries = dirs.list(dir)) {
+        for (const DirIndex::Entry& entry : *entries) {
+            if (!entry.is_dir) {
+                frames.push_back(entry.path);
+            }
         }
     }
     std::sort(frames.begin(), frames.end(), [](const fs::path& a, const fs::path& b) {
@@ -509,13 +594,13 @@ std::vector<fs::path> sorted_frames(const fs::path& dir) {
     return frames;
 }
 
-std::unordered_set<std::string> overridden_names(const fs::path& child_folder) {
+std::unordered_set<std::string> overridden_names(DirIndex& dirs, const fs::path& child_folder) {
     std::unordered_set<std::string> names;
     try {
         auto cfg = read_json_file(child_folder / "texture.json");
         for (auto& m : cfg.GetObject()) {
             std::string n = m.name.GetString();
-            if (fs::is_directory(child_folder / n) || fs::exists(child_folder / (n + ".png"))) {
+            if (dirs.is_dir(child_folder, n) || dirs.exists(child_folder, n + ".png")) {
                 names.insert(n);
             }
         }
@@ -712,6 +797,8 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
 
     int loaded_count = 0;
     std::unordered_set<std::string> ids_this_call;
+    DirIndex local_dirs;
+    DirIndex& dirs = dir_index ? *dir_index : local_dirs;
 
     // A texture.json entry whose PNG(s) still have to be read off disk.
     struct PendingTex {
@@ -726,7 +813,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
 
     auto load_from_path = [&](const fs::path& folder, float tex_scale, const std::unordered_set<std::string>* skip) {
         fs::path tex_json = folder / "texture.json";
-        if (!fs::exists(tex_json)) {
+        if (!dirs.is_file(folder, "texture.json")) {
             return;
         }
 
@@ -778,14 +865,14 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                     tex_file = folder / m.value["file"].GetString();
                 }
 
-                if (!file_override && fs::is_directory(tex_dir)) {
-                    auto frames = sorted_frames(tex_dir);
+                if (!file_override && dirs.is_dir(folder, tex_name)) {
+                    auto frames = sorted_frames(dirs, tex_dir);
                     size_t first = files.size();
                     for (const auto& frame : frames) {
                         push_file(frame);
                     }
                     pending.push_back({tex_id, tex_name, &m.value, cache_key, first, frames.size(), true});
-                } else if (fs::exists(tex_file)) {
+                } else if (dirs.exists(tex_file.parent_path(), tex_file.filename())) {
                     size_t first = push_file(tex_file);
                     pending.push_back({tex_id, tex_name, &m.value, cache_key, first, size_t{1}, false});
                 } else {
@@ -905,24 +992,24 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
     // Farthest ancestor first, child last (later loads overwrite), each ancestor skipping
     // the names already provided by the child or a closer ancestor.
     const fs::path own_dir = graphics_path / screen_name / subset;
-    const bool child_has_folder = ancestor_graphics_paths.empty() || fs::exists(own_dir / "texture.json");
+    const bool child_has_folder = ancestor_graphics_paths.empty() || dirs.is_file(own_dir, "texture.json");
     std::vector<std::unordered_set<std::string>> skips(ancestor_graphics_paths.size());
     std::unordered_set<std::string> claimed;
     if (child_has_folder && !ancestor_graphics_paths.empty()) {
-        claimed = overridden_names(own_dir);
+        claimed = overridden_names(dirs, own_dir);
     }
     for (size_t i = 0; i < ancestor_graphics_paths.size(); i++) {
         const fs::path dir = ancestor_graphics_paths[i] / screen_name / subset;
         skips[i] = claimed;
-        if (fs::exists(dir / "texture.json")) {
-            for (const std::string& n : overridden_names(dir)) {
+        if (dirs.is_file(dir, "texture.json")) {
+            for (const std::string& n : overridden_names(dirs, dir)) {
                 claimed.insert(n);
             }
         }
     }
     for (size_t i = ancestor_graphics_paths.size(); i-- > 0;) {
         const fs::path dir = ancestor_graphics_paths[i] / screen_name / subset;
-        if (fs::exists(dir / "texture.json")) {
+        if (dirs.is_file(dir, "texture.json")) {
             load_from_path(dir, ancestor_scales[i], &skips[i]);
         }
     }
@@ -981,9 +1068,15 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     PROFILE_ZONE_TEXT(screen_name);
     std::vector<fs::path> roots{graphics_path};
     roots.insert(roots.end(), ancestor_graphics_paths.begin(), ancestor_graphics_paths.end());
+    DirIndex dirs;
+    dir_index = &dirs;
+    struct ResetDirs {
+        DirIndex*& p;
+        ~ResetDirs() { p = nullptr; }
+    } reset_dirs{dir_index};
     std::vector<fs::path> screen_dirs;
     for (const fs::path& root : roots) {
-        if (fs::exists(root / screen_name)) {
+        if (dirs.is_dir(root, screen_name)) {
             screen_dirs.push_back(root / screen_name);
         }
     }
@@ -999,11 +1092,15 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     std::vector<std::string> subsets;
     std::unordered_set<std::string> seen;
     for (const fs::path& dir : screen_dirs) {
-        for (const auto& entry : fs::directory_iterator(dir)) {
-            if (!entry.is_directory()) {
+        const auto* entries = dirs.list(dir);
+        if (!entries) {
+            continue;
+        }
+        for (const DirIndex::Entry& entry : *entries) {
+            if (!entry.is_dir) {
                 continue;
             }
-            std::string name = entry.path().filename().string();
+            std::string name = entry.path.filename().string();
             if (seen.insert(name).second && !loaded_subsets.count(screen_name + "/" + name)) {
                 subsets.push_back(std::move(name));
             }
@@ -1016,7 +1113,7 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     for (size_t g = 0; g < subsets.size(); ++g) {
         for (const fs::path& root : roots) {
             const fs::path dir = root / screen_name / subsets[g];
-            if (!fs::exists(dir / "texture.json")) {
+            if (!dirs.is_file(dir, "texture.json")) {
                 continue;
             }
 
@@ -1028,7 +1125,7 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
                     }
                     const bool file_override = m.value.HasMember("file") && m.value["file"].IsString();
                     const std::string name = m.name.GetString();
-                    if (!file_override && fs::is_directory(dir / name)) {
+                    if (!file_override && dirs.is_dir(dir, name)) {
                         continue;
                     }
                     border_keys.insert(ImagePrefetch::image_key(
@@ -1036,14 +1133,18 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
                 }
             } catch (const std::exception&) {
             }
-            std::error_code ec;
-            for (const auto& entry : fs::directory_iterator(dir, ec)) {
-                const fs::path& p = entry.path();
-                if (entry.is_directory()) {
-                    std::error_code sub_ec;
-                    for (const auto& frame : fs::directory_iterator(p, sub_ec)) {
-                        if (frame.is_regular_file() && frame.path().extension() == ".png") {
-                            groups[g].push_back(frame.path());
+            const auto* entries = dirs.list(dir);
+            if (!entries) {
+                continue;
+            }
+            for (const DirIndex::Entry& entry : *entries) {
+                const fs::path& p = entry.path;
+                if (entry.is_dir) {
+                    if (const auto* frames = dirs.list(p)) {
+                        for (const DirIndex::Entry& frame : *frames) {
+                            if (!frame.is_dir && frame.path.extension() == ".png") {
+                                groups[g].push_back(frame.path);
+                            }
                         }
                     }
                 } else if (p.extension() == ".png") {
