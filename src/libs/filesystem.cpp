@@ -221,8 +221,8 @@ std::vector<std::string> list_available_skins() {
             names.push_back(e.path().stem().string());
         }
     }
-    std::sort(names.begin(), names.end());
-    names.erase(std::unique(names.begin(), names.end()), names.end());
+    std::ranges::sort(names);
+    names.erase(std::ranges::unique(names).begin(), names.end());
     return names;
 }
 
@@ -556,7 +556,7 @@ std::vector<fs::path> resolve_skin_chain(const fs::path& graphics_path) {
         if (parent == chain.back()) {
             break;
         }
-        if (std::find(chain.begin(), chain.end(), parent) != chain.end()) {
+        if (std::ranges::contains(chain, parent)) {
             spdlog::warn("resolve_skin_chain: parent cycle at '{}'", parent.string());
             break;
         }

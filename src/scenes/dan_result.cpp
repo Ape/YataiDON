@@ -1,5 +1,6 @@
 #include "dan_result.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "../libs/filesystem.h"
@@ -383,8 +384,7 @@ void DanResultScreen::update_sounds(double now) {
         if (r == 0) {
             audio.play_sound("stamp_notclear", VolumePreset::SOUND);
         } else if (r < 0) {
-            bool any_failed =
-                std::any_of(rd.exam_data.begin(), rd.exam_data.end(), [](const DanResultExam& e) { return e.failed; });
+            bool any_failed = std::ranges::any_of(rd.exam_data, [](const DanResultExam& e) { return e.failed; });
             audio.play_sound(any_failed ? "stamp_notclear" : "stamp_clear_normal", VolumePreset::SOUND);
         } else if (r <= 3) {
             audio.play_sound("stamp_clear_normal", VolumePreset::SOUND);

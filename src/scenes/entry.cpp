@@ -618,8 +618,7 @@ std::optional<Screens> EntryScreen::update() {
             last_card_poll_ms_ = current_time;
             if (card_reader_->poll_once()) {
                 const auto& ci = card_reader_->get_card_info();
-                if (ci.valid && !ci.card_id_hex.empty() &&
-                    std::find(used_cards_.begin(), used_cards_.end(), ci.card_id_hex) == used_cards_.end()) {
+                if (ci.valid && !ci.card_id_hex.empty() && !std::ranges::contains(used_cards_, ci.card_id_hex)) {
                     used_cards_.push_back(ci.card_id_hex);
                     card_reader_->set_led_color(0, 255, 0);
                     join_with_card(ci.card_id_hex);

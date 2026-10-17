@@ -201,8 +201,7 @@ MoveAnimation::MoveAnimation(double duration, int total_distance, bool loop, boo
     : BaseAnimation(duration, delay, loop, lock_input), total_distance(total_distance), start_position(start_position),
       total_distance_saved(total_distance), start_position_saved(start_position), ease_in(ease_in), ease_out(ease_out),
       reverse_delay(reverse_delay), reverse_delay_saved(reverse_delay), waypoints(std::move(waypoints)) {
-    std::stable_sort(this->waypoints.begin(), this->waypoints.end(),
-                     [](const Waypoint& a, const Waypoint& b) { return a.at < b.at; });
+    std::ranges::stable_sort(this->waypoints, {}, &Waypoint::at);
     attribute = start_position;
 }
 

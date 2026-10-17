@@ -136,9 +136,9 @@ namespace crypto {
         std::array<uint8_t, block_size> key_block{};
         if (key.size() > block_size) {
             auto hashed = sha256(key);
-            std::copy(hashed.begin(), hashed.end(), key_block.begin());
+            std::ranges::copy(hashed, key_block.begin());
         } else {
-            std::copy(key.begin(), key.end(), key_block.begin());
+            std::ranges::copy(key, key_block.begin());
         }
 
         std::array<uint8_t, block_size> ipad, opad;

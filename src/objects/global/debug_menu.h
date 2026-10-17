@@ -1167,7 +1167,7 @@ private:
             groups[split_subset(debug_draw_log_prev[i]).first].push_back(i);
         }
         for (auto& [subset, indices] : groups) {
-            std::sort(indices.begin(), indices.end(), [](int a, int b) {
+            std::ranges::sort(indices, [](int a, int b) {
                 return split_subset(debug_draw_log_prev[a]).second < split_subset(debug_draw_log_prev[b]).second;
             });
             visible_rows.push_back({true, subset, subset + " (" + std::to_string(indices.size()) + ")", -1});

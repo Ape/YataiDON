@@ -10,6 +10,7 @@
 #include <numbers>
 #include <numeric>
 #include <random>
+#include <ranges>
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <stdexcept>
@@ -159,8 +160,7 @@ TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int pla
             cleaned = line;
         } else if (comment_pos > 0) {
             std::string prefix = line.substr(0, comment_pos);
-            auto non_space =
-                std::find_if(prefix.begin(), prefix.end(), [](unsigned char c) { return !std::isspace(c); });
+            auto non_space = std::ranges::find_if(prefix, [](unsigned char c) { return !std::isspace(c); });
             if (non_space != prefix.end()) {
                 cleaned = std::move(prefix);
             }
@@ -433,8 +433,8 @@ TJAParser::notes_to_position(int diff) {
     if (cached_cmds.empty()) {
         auto cmds = build_command_registry();
         cached_cmds = std::vector<std::pair<std::string, CommandHandler>>(cmds.begin(), cmds.end());
-        std::sort(cached_cmds.begin(), cached_cmds.end(),
-                  [](const auto& a, const auto& b) { return a.first.length() > b.first.length(); });
+        std::ranges::sort(cached_cmds,
+                          [](const auto& a, const auto& b) { return a.first.length() > b.first.length(); });
     }
     auto notes = data_to_notes(diff);
 
@@ -542,7 +542,7 @@ std::vector<std::string> TJAParser::read_file_lines(const std::filesystem::path&
 
 std::string TJAParser::to_lower(const std::string& str) {
     std::string result = str;
-    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) { return std::tolower(c); });
+    std::ranges::transform(result, result.begin(), [](unsigned char c) { return std::tolower(c); });
     return result;
 }
 
@@ -571,8 +571,9 @@ void TJAParser::replace_all(std::string& str, const std::string& from, const std
 }
 
 std::string TJAParser::trim(const std::string& str) {
-    auto start = std::find_if(str.begin(), str.end(), [](unsigned char ch) { return !std::isspace(ch); });
-    auto end = std::find_if(str.rbegin(), str.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base();
+    auto start = std::ranges::find_if(str, [](unsigned char ch) { return !std::isspace(ch); });
+    auto end =
+        std::ranges::find_if(std::views::reverse(str), [](unsigned char ch) { return !std::isspace(ch); }).base();
     return (start < end) ? std::string(start, end) : std::string();
 }
 
@@ -622,8 +623,8 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
         if (line.starts_with("COURSE:")) {
             std::string course_value = to_lower(trim(line.substr(7)));
 
-            bool is_digit = !course_value.empty() && std::all_of(course_value.begin(), course_value.end(),
-                                                                 [](unsigned char c) { return std::isdigit(c) != 0; });
+            bool is_digit = !course_value.empty() &&
+                            std::ranges::all_of(course_value, [](unsigned char c) { return std::isdigit(c) != 0; });
 
             target_found = (is_digit && std::stoi(course_value) == diff) || course_value == diff_name;
         } else if (target_found) {
@@ -712,8 +713,7 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
             }
             bar.push_back(line);
         } else if (line == ",") {
-            if (bar.empty() ||
-                std::all_of(bar.begin(), bar.end(), [](const std::string& item) { return item[0] == '#'; })) {
+            if (bar.empty() || std::ranges::all_of(bar, [](const std::string& item) { return item[0] == '#'; })) {
                 bar.push_back("");
             }
             notes.push_back(bar);
@@ -1427,7 +1427,7 @@ void modifier_random(NoteList& notes, int value) {
     std::mt19937 gen(rd());
 
     std::vector<int> indices(notes.notes.size());
-    std::iota(indices.begin(), indices.end(), 0);
+    std::ranges::iota(indices, 0);
     std::shuffle(indices.begin(), indices.end(), gen);
 
     std::vector<int> selected_notes(indices.begin(), indices.begin() + percentage);

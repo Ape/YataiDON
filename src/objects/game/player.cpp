@@ -350,27 +350,25 @@ void Player::merge_branch_section(const NoteList& branch_section, double current
 
     draw_note_list.insert(draw_note_list.end(), notes.begin(), notes.end());
 
-    std::sort(draw_note_list.begin(), draw_note_list.end(),
-              [](const Note& a, const Note& b) { return a.load_ms < b.load_ms; });
+    std::ranges::sort(draw_note_list, {}, &Note::load_ms);
 
     timeline.insert(timeline.begin(), branch_section.timeline.begin(), branch_section.timeline.end());
 
-    std::sort(timeline.begin(), timeline.end(),
-              [](const TimelineObject& a, const TimelineObject& b) { return a.start_time < b.start_time; });
+    std::ranges::sort(timeline, {}, &TimelineObject::start_time);
 
     for (const auto& note : notes) {
 
         if (note.type == NoteType::DON || note.type == NoteType::DON_L) {
-            auto pos = std::lower_bound(don_notes.begin(), don_notes.end(), note,
-                                        [](const auto& a, const auto& b) { return a.hit_ms < b.hit_ms; });
+            auto pos = std::ranges::lower_bound(don_notes, note,
+                                                [](const auto& a, const auto& b) { return a.hit_ms < b.hit_ms; });
             don_notes.insert(pos, note);
         } else if (note.type == NoteType::KAT || note.type == NoteType::KAT_L) {
-            auto pos = std::lower_bound(kat_notes.begin(), kat_notes.end(), note,
-                                        [](const auto& a, const auto& b) { return a.hit_ms < b.hit_ms; });
+            auto pos = std::ranges::lower_bound(kat_notes, note,
+                                                [](const auto& a, const auto& b) { return a.hit_ms < b.hit_ms; });
             kat_notes.insert(pos, note);
         } else if (note.type != NoteType::BARLINE) {
-            auto pos = std::lower_bound(other_notes.begin(), other_notes.end(), note,
-                                        [](const auto& a, const auto& b) { return a.hit_ms < b.hit_ms; });
+            auto pos = std::ranges::lower_bound(other_notes, note,
+                                                [](const auto& a, const auto& b) { return a.hit_ms < b.hit_ms; });
             other_notes.insert(pos, note);
         }
     }
@@ -791,8 +789,7 @@ void Player::reset_chart() {
         if (note.type == NoteType::TAIL && last_note != nullptr) {
             note.load_ms = last_note->load_ms;
             last_note->unload_ms = note.unload_ms;
-            auto it = std::find_if(draw_note_list.begin(), draw_note_list.end(),
-                                   [&](const Note& n) { return n.index == last_note->index; });
+            auto it = std::ranges::find_if(draw_note_list, [&](const Note& n) { return n.index == last_note->index; });
             if (it != draw_note_list.end()) {
                 it->unload_ms = note.unload_ms;
             }
@@ -817,8 +814,7 @@ void Player::reset_chart() {
         }
     }
 
-    std::sort(draw_note_list.begin(), draw_note_list.end(),
-              [](const Note& a, const Note& b) { return a.load_ms < b.load_ms; });
+    std::ranges::sort(draw_note_list, {}, &Note::load_ms);
 
     this->branch_m = branch_m_temp;
     this->branch_e = branch_e_temp;
@@ -869,8 +865,7 @@ void Player::reset_chart() {
         }
     }
 
-    std::sort(this->timeline.begin(), this->timeline.end(),
-              [](const TimelineObject& a, const TimelineObject& b) { return a.start_time < b.start_time; });
+    std::ranges::sort(this->timeline, {}, &TimelineObject::start_time);
 
     is_drumroll = false;
     curr_drumroll_count = 0;
@@ -887,8 +882,8 @@ void Player::reset_chart() {
 
     NoteList total_notes; // all notes including master branch
 
-    std::copy_if(notes.notes.begin(), notes.notes.end(), std::back_inserter(total_notes.notes),
-                 [&](const Note& n) { return !unplayable(n); });
+    std::ranges::copy_if(notes.notes, std::back_inserter(total_notes.notes),
+                         [&](const Note& n) { return !unplayable(n); });
     for (NoteList section : branch_m) {
         total_notes.notes.insert(total_notes.notes.end(), section.notes.begin(), section.notes.end());
     }
@@ -952,7 +947,7 @@ std::optional<Note> Player::get_first_note() {
     // beat count that stops or runs back), so the earliest-loading note says nothing about how
     // long the lead-in has to be; take the first note to hit
     if (scroll_type != ScrollType::NMSCROLL) {
-        auto first = std::min_element(draw_note_list.begin(), draw_note_list.end(), [](const Note& a, const Note& b) {
+        auto first = std::ranges::min_element(draw_note_list, [](const Note& a, const Note& b) {
             if ((a.type == NoteType::BARLINE) != (b.type == NoteType::BARLINE)) {
                 return b.type == NoteType::BARLINE;
             }
@@ -1371,38 +1366,35 @@ void Player::draw_note_manager(double current_ms) {
         draw_note_list.pop_front();
 
         if (current_note.type >= NoteType::ROLL_HEAD && current_note.type <= NoteType::BALLOON_HEAD) {
-            auto pos = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(), current_note,
-                                        [](const auto& a, const auto& b) { return a.index < b.index; });
+            auto pos = std::ranges::lower_bound(draw_note_buffer, current_note,
+                                                [](const auto& a, const auto& b) { return a.index < b.index; });
             draw_note_buffer.insert(pos, current_note);
 
-            auto tail_it =
-                std::find_if(draw_note_list.begin(), draw_note_list.end(), [&current_note](const auto& note) {
-                    return note.type == NoteType::TAIL && note.index > current_note.index;
-                });
+            auto tail_it = std::ranges::find_if(draw_note_list, [&current_note](const auto& note) {
+                return note.type == NoteType::TAIL && note.index > current_note.index;
+            });
 
             if (tail_it != draw_note_list.end()) {
                 auto tail_note = *tail_it;
 
-                pos = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(), tail_note,
-                                       [](const auto& a, const auto& b) { return a.index < b.index; });
+                pos = std::ranges::lower_bound(draw_note_buffer, tail_note,
+                                               [](const auto& a, const auto& b) { return a.index < b.index; });
                 draw_note_buffer.insert(pos, tail_note);
 
                 draw_note_list.erase(tail_it);
             }
         } else if (current_note.type == NoteType::BARLINE) {
-            auto pos = std::lower_bound(barlines.begin(), barlines.end(), current_note,
-                                        [](const auto& a, const auto& b) { return a.index < b.index; });
+            auto pos = std::ranges::lower_bound(barlines, current_note,
+                                                [](const auto& a, const auto& b) { return a.index < b.index; });
             barlines.insert(pos, current_note);
         } else {
-            auto pos = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(), current_note,
-                                        [](const auto& a, const auto& b) { return a.index < b.index; });
+            auto pos = std::ranges::lower_bound(draw_note_buffer, current_note,
+                                                [](const auto& a, const auto& b) { return a.index < b.index; });
             draw_note_buffer.insert(pos, current_note);
         }
     }
 
-    barlines.erase(std::remove_if(barlines.begin(), barlines.end(),
-                                  [current_ms](const Note& n) { return current_ms >= n.unload_ms; }),
-                   barlines.end());
+    std::erase_if(barlines, [current_ms](const Note& n) { return current_ms >= n.unload_ms; });
 
     if (draw_note_buffer.empty()) {
         return;
@@ -1410,8 +1402,7 @@ void Player::draw_note_manager(double current_ms) {
 
     if (is_drumroll && !other_notes.empty()) {
         int active_drumroll_index = other_notes.front().index;
-        auto drumroll_it = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(), active_drumroll_index,
-                                            [](const Note& n, int idx) { return n.index < idx; });
+        auto drumroll_it = std::ranges::lower_bound(draw_note_buffer, active_drumroll_index, {}, &Note::index);
         if (drumroll_it != draw_note_buffer.end() && drumroll_it->index == active_drumroll_index &&
             (drumroll_it->type == NoteType::ROLL_HEAD || drumroll_it->type == NoteType::ROLL_HEAD_L) &&
             drumroll_it->color.has_value() && last_drumroll_color_time + 16.67f < current_ms) {
@@ -1420,9 +1411,7 @@ void Player::draw_note_manager(double current_ms) {
         }
     }
 
-    draw_note_buffer.erase(std::remove_if(draw_note_buffer.begin(), draw_note_buffer.end(),
-                                          [current_ms](const Note& n) { return current_ms >= n.unload_ms; }),
-                           draw_note_buffer.end());
+    std::erase_if(draw_note_buffer, [current_ms](const Note& n) { return current_ms >= n.unload_ms; });
 }
 
 void Player::note_manager(double current_ms, std::optional<Background>& background) {
@@ -1467,8 +1456,7 @@ void Player::note_correct(const Note& note, double current_ms) {
         draw_arc_list.push_back(NoteArc(note.type, current_ms, arc_player(), is_big,
                                         note.type == NoteType::BALLOON_HEAD, judge_x, judge_y));
     }
-    auto it = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(), note.index,
-                               [](const Note& n, int idx) { return n.index < idx; });
+    auto it = std::ranges::lower_bound(draw_note_buffer, note.index, {}, &Note::index);
     if (it != draw_note_buffer.end() && *it == note) {
         draw_note_buffer.erase(it);
     }
@@ -1490,8 +1478,7 @@ void Player::check_drumroll(double current_ms, DrumType drum_type, std::optional
     }
     if (!other_notes.empty()) {
         int active_drumroll_index = other_notes[0].index;
-        auto drumroll_it = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(), active_drumroll_index,
-                                            [](const Note& n, int idx) { return n.index < idx; });
+        auto drumroll_it = std::ranges::lower_bound(draw_note_buffer, active_drumroll_index, {}, &Note::index);
         if (drumroll_it != draw_note_buffer.end() && drumroll_it->index == active_drumroll_index &&
             (drumroll_it->type == NoteType::ROLL_HEAD || drumroll_it->type == NoteType::ROLL_HEAD_L) &&
             drumroll_it->color.has_value()) {
@@ -1641,8 +1628,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
     if (!modifiers.auto_play && lane.size() > 1 && ms_from_start > curr_note.hit_ms + ok_window_ms) {
         const Note& next = lane[1];
         auto blocked_by = [&](const std::deque<Note>& notes) {
-            auto it =
-                std::find_if(notes.begin(), notes.end(), [&](const Note& n) { return n.index > curr_note.index; });
+            auto it = std::ranges::find_if(notes, [&](const Note& n) { return n.index > curr_note.index; });
             return it != notes.end() && it->index < next.index;
         };
         const auto& other_lane = (drum_type == DrumType::DON) ? kat_notes : don_notes;
@@ -1733,8 +1719,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
             record_hit_offset(note);
             lane.erase(lane.begin() + lane_pos);
             note_judgments[note.index] = Judgments::BAD;
-            auto it = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(), note.index,
-                                       [](const Note& n, int idx) { return n.index < idx; });
+            auto it = std::ranges::lower_bound(draw_note_buffer, note.index, {}, &Note::index);
             if (it != draw_note_buffer.end() && *it == note) {
                 draw_note_buffer.erase(it);
             }
@@ -1915,8 +1900,7 @@ void Player::draw_drumroll(double current_ms, float y, const Note& head, int cur
         current_ms = std::max(current_ms, moving_start_ms);
     }
     float start_position = get_position_x(head, current_ms);
-    auto it = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(), head.index + 1,
-                               [](const Note& n, int idx) { return n.index < idx; });
+    auto it = std::ranges::lower_bound(draw_note_buffer, head.index + 1, {}, &Note::index);
     while (it != draw_note_buffer.end() && it->type != NoteType::TAIL) {
         ++it;
     }
@@ -1971,8 +1955,7 @@ void Player::draw_balloon(double current_ms, float y, const Note& head, int curr
         current_ms = std::max(current_ms, moving_start_ms);
     }
     float start_position = get_position_x(head, current_ms);
-    auto it = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(), head.index + 1,
-                               [](const Note& n, int idx) { return n.index < idx; });
+    auto it = std::ranges::lower_bound(draw_note_buffer, head.index + 1, {}, &Note::index);
     while (it != draw_note_buffer.end() && it->type != NoteType::TAIL) {
         ++it;
     }
@@ -2329,8 +2312,6 @@ void Player::seek_to(double resume_time) {
     filter(kat_notes);
     filter(other_notes);
 
-    draw_note_list.erase(
-        std::remove_if(draw_note_list.begin(), draw_note_list.end(),
-                       [resume_time, boundary_eps](const Note& n) { return n.hit_ms < resume_time - boundary_eps; }),
-        draw_note_list.end());
+    std::erase_if(draw_note_list,
+                  [resume_time, boundary_eps](const Note& n) { return n.hit_ms < resume_time - boundary_eps; });
 }

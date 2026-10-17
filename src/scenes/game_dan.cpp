@@ -656,7 +656,7 @@ std::optional<Screens> DanGameScreen::update() {
     if (!failed_out && ms_from_start >= players[0]->end_time) {
         check_exam_failures(false, true);
         {
-            bool boundary_failed = std::any_of(exam_failed.begin(), exam_failed.end(), [](bool f) { return f; });
+            bool boundary_failed = std::ranges::any_of(exam_failed, [](bool f) { return f; });
             bool is_final_song = song_index >= (int)sd.selected_dan.size() - 1;
             if (boundary_failed && !is_final_song) {
                 spdlog::info("Dan course fails out at the END of song {}/{} "
@@ -683,7 +683,7 @@ std::optional<Screens> DanGameScreen::update() {
             sd.dan_result_data.songs.push_back(song_res);
         }
 
-        bool any_failed = std::any_of(exam_failed.begin(), exam_failed.end(), [](bool failed) { return failed; });
+        bool any_failed = std::ranges::any_of(exam_failed, [](bool failed) { return failed; });
         bool is_last = (song_index == (int)sd.selected_dan.size() - 1) || any_failed;
         if (is_last) {
             if (ms_from_start >= players[0]->end_time + 1000 && !score_saved) {

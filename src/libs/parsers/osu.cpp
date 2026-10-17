@@ -206,13 +206,12 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
     // stable_sort + tie-breaker: an inherited (green) and uninherited (red) point
     // often share the same offset, and get_scroll_multiplier()/get_bpm_at() depend
     // on the uninherited (positive beatLength) one being processed first.
-    std::stable_sort(timing_points.begin(), timing_points.end(),
-                     [](const std::array<double, 2>& a, const std::array<double, 2>& b) {
-                         if (a[0] != b[0]) {
-                             return a[0] < b[0];
-                         }
-                         return a[1] > b[1]; // uninherited (positive beatLength) first
-                     });
+    std::ranges::stable_sort(timing_points, [](const std::array<double, 2>& a, const std::array<double, 2>& b) {
+        if (a[0] != b[0]) {
+            return a[0] < b[0];
+        }
+        return a[1] > b[1]; // uninherited (positive beatLength) first
+    });
 
     // Metadata
     if (osu_meta.contains("Title")) {
@@ -272,8 +271,7 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
             if (std::regex_search(el, m, bg_re)) {
                 fs::path candidate = path.parent_path() / m[1].str();
                 std::string ext = candidate.extension().string();
-                std::transform(ext.begin(), ext.end(), ext.begin(),
-                               [](unsigned char c) { return (char)std::tolower(c); });
+                std::ranges::transform(ext, ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
                 if (ext == ".mp4" || ext == ".avi" || ext == ".mkv" || ext == ".mov" || ext == ".flv") {
                     metadata.bgmovie = candidate;
                     break;

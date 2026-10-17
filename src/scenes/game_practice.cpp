@@ -184,9 +184,8 @@ void PracticeGameScreen::sync_branch_display() {
         }
     }
 
-    auto by_hit_ms = [](const Note& a, const Note& b) { return a.hit_ms < b.hit_ms; };
-    std::sort(scrobble_note_list.begin(), scrobble_note_list.end(), by_hit_ms);
-    std::sort(markers.begin(), markers.end());
+    std::ranges::sort(scrobble_note_list, {}, &Note::hit_ms);
+    std::ranges::sort(markers);
     for (const Note& note : scrobble_note_list) {
         if (note.type == NoteType::BARLINE) {
             bars.push_back(note);
@@ -612,16 +611,16 @@ std::optional<Screens> PracticeGameScreen::global_keys_practice() {
                             marks.push_back(b);
                         }
                     }
-                    std::sort(marks.begin(), marks.end());
+                    std::ranges::sort(marks);
 
                     if (!marks.empty()) {
                         bool right = !step_l && step_r;
                         int new_index;
                         if (right) {
-                            auto it = std::upper_bound(marks.begin(), marks.end(), scrobble_index);
+                            auto it = std::ranges::upper_bound(marks, scrobble_index);
                             new_index = (it != marks.end()) ? *it : marks.front();
                         } else {
-                            auto it = std::lower_bound(marks.begin(), marks.end(), scrobble_index);
+                            auto it = std::ranges::lower_bound(marks, scrobble_index);
                             new_index = (it == marks.begin()) ? marks.back() : *(--it);
                         }
                         audio.play_sound("kat", VolumePreset::SOUND);
@@ -662,11 +661,11 @@ std::optional<Screens> PracticeGameScreen::global_keys_practice() {
                 if (p1_don) {
                     audio.play_sound("don", VolumePreset::SOUND);
                     mark_action_anim->start();
-                    auto marked = std::find(jump_bars.begin(), jump_bars.end(), scrobble_index);
+                    auto marked = std::ranges::find(jump_bars, scrobble_index);
                     if (marked != jump_bars.end()) {
                         *marked = -1; // already marked here: remove it
                     } else {
-                        auto free_slot = std::find(jump_bars.begin(), jump_bars.end(), -1);
+                        auto free_slot = std::ranges::find(jump_bars, -1);
                         if (free_slot != jump_bars.end()) {
                             *free_slot = scrobble_index; // append
                             jump_arrow_bar = scrobble_index;
@@ -1066,7 +1065,7 @@ void PracticeGameScreen::draw() {
             tex.draw_texture(t_finish, {.scale = mark_finish_anim ? (float)mark_finish_anim->attribute : 1.0f,
                                         .center = true,
                                         .index = other_idx});
-            bool marked = std::find(jump_bars.begin(), jump_bars.end(), scrobble_index) != jump_bars.end();
+            bool marked = std::ranges::contains(jump_bars, scrobble_index);
             tex.draw_texture(marked ? t_delete : t_confirm,
                              {.scale = mark_action_anim ? (float)mark_action_anim->attribute : 1.0f,
                               .center = true,

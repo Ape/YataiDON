@@ -1,5 +1,6 @@
 #include "dan_navigator.h"
 
+#include <algorithm>
 #include <climits>
 #include <tuple>
 
@@ -97,7 +98,7 @@ int DanNavigator::box_genre(const fs::path& box_def_dir) {
 }
 
 static std::string normalize_exam_type(std::string t) {
-    std::transform(t.begin(), t.end(), t.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    std::ranges::transform(t, t.begin(), [](unsigned char c) { return (char)std::tolower(c); });
     static const std::map<std::string, std::string> names = {
         {"judgeperfect", "judgeperfect"},
         {"jp", "judgeperfect"},
@@ -131,8 +132,7 @@ Exam DanNavigator::parse_exam(const rapidjson::Value& e) {
         exam.type = normalize_exam_type(e["type"].GetString());
     }
     exam.range = e.HasMember("range") && e["range"].IsString() ? e["range"].GetString() : "";
-    std::transform(exam.range.begin(), exam.range.end(), exam.range.begin(),
-                   [](unsigned char c) { return (char)std::tolower(c); });
+    std::ranges::transform(exam.range, exam.range.begin(), [](unsigned char c) { return (char)std::tolower(c); });
     if (exam.range != "less") {
         exam.range = "more";
     }
@@ -196,7 +196,7 @@ std::optional<DanSongEntry> DanNavigator::load_song_entry(const rapidjson::Value
                 diff = d.GetInt();
             } else if (d.IsString()) {
                 std::string n = d.GetString();
-                std::transform(n.begin(), n.end(), n.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+                std::ranges::transform(n, n.begin(), [](unsigned char c) { return (char)std::tolower(c); });
                 static const std::map<std::string, int> names = {{"easy", 0}, {"normal", 1}, {"hard", 2}, {"oni", 3},
                                                                  {"edit", 4}, {"0", 0},      {"1", 1},    {"2", 2},
                                                                  {"3", 3},    {"4", 4}};
@@ -522,7 +522,7 @@ std::vector<DanBoxData> DanNavigator::scan_all_data(const std::vector<fs::path>&
     if (data.empty() && global_data.config && !scan_abort.load()) {
         std::vector<fs::path> library;
         for (const fs::path& lib_root : global_data.config->paths.tja_path) {
-            if (std::find(song_paths.begin(), song_paths.end(), lib_root) == song_paths.end()) {
+            if (!std::ranges::contains(song_paths, lib_root)) {
                 library.push_back(lib_root);
             }
         }
@@ -559,8 +559,8 @@ void DanNavigator::publish(std::vector<DanBoxData>&& data) {
         }
         return std::make_tuple(set, num, name);
     };
-    std::stable_sort(data.begin(), data.end(),
-                     [&](const DanBoxData& x, const DanBoxData& y) { return order_key(x) < order_key(y); });
+    std::ranges::stable_sort(data,
+                             [&](const DanBoxData& x, const DanBoxData& y) { return order_key(x) < order_key(y); });
     boxes.reserve(data.size());
     for (const DanBoxData& d : data) {
         boxes.push_back(make_box(d));

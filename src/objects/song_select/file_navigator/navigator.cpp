@@ -1,5 +1,6 @@
 #include "navigator.h"
 
+#include <algorithm>
 #include <cctype>
 
 #include "../../../libs/filesystem.h"
@@ -592,15 +593,14 @@ void sort_items(std::vector<std::unique_ptr<BaseBox>>& items, int first_index, i
             }
         }
 
-        std::sort(sortable.begin(), sortable.end(),
-                  [](const std::unique_ptr<BaseBox>& a, const std::unique_ptr<BaseBox>& b) {
-                      return alpha_less(a->text_name, b->text_name);
-                  });
+        std::ranges::sort(sortable, [](const std::unique_ptr<BaseBox>& a, const std::unique_ptr<BaseBox>& b) {
+            return alpha_less(a->text_name, b->text_name);
+        });
 
         int sortable_idx = 0;
         for (int i = first_index; i <= last_index; i++) {
             int relative = i - first_index;
-            if (std::find(back_box_positions.begin(), back_box_positions.end(), relative) != back_box_positions.end()) {
+            if (std::ranges::contains(back_box_positions, relative)) {
                 // BACK_BOX slot — item was never moved, nothing to do
             } else {
                 items[i] = std::move(sortable[sortable_idx++]);
@@ -664,10 +664,9 @@ void Navigator::flush_pending_boxes() {
                     sortable.push_back(std::move(items[i]));
                 }
             }
-            std::sort(sortable.begin(), sortable.end(),
-                      [](const std::unique_ptr<BaseBox>& a, const std::unique_ptr<BaseBox>& b) {
-                          return alpha_less(a->path.filename().string(), b->path.filename().string());
-                      });
+            std::ranges::sort(sortable, [](const std::unique_ptr<BaseBox>& a, const std::unique_ptr<BaseBox>& b) {
+                return alpha_less(a->path.filename().string(), b->path.filename().string());
+            });
             for (int j = 0; j < (int)sortable_indices.size(); j++) {
                 items[sortable_indices[j]] = std::move(sortable[j]);
             }
@@ -1012,7 +1011,7 @@ std::vector<fs::path> Navigator::find_new_songs(const fs::path& path) const {
     for (const auto& [path_str, levels] : song_levels) {
         index.push_back(path_str);
     }
-    std::sort(index.begin(), index.end());
+    std::ranges::sort(index);
     for (const auto& path_str : index) {
         if (abort_loading) {
             break;
@@ -1093,7 +1092,7 @@ void Navigator::load_collection_difficulty(const fs::path& path, const BoxDef& b
     const fs::path parent = path.parent_path();
     // the scan thread is joined above, so song_levels is read without a lock
     std::vector<std::pair<std::string, std::array<int, 5>>> index(song_levels.begin(), song_levels.end());
-    std::sort(index.begin(), index.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    std::ranges::sort(index, [](const auto& a, const auto& b) { return a.first < b.first; });
     for (const auto& [path_str, levels] : index) {
         if (abort_loading) {
             break;
@@ -1128,7 +1127,7 @@ void Navigator::load_collection_difficulty(const fs::path& path, const BoxDef& b
     }
 
     if (crown_needed > 0) {
-        std::stable_partition(hits.begin(), hits.end(), [](const Hit& h) { return h.unmet; });
+        std::ranges::stable_partition(hits, [](const Hit& h) { return h.unmet; });
     }
 
     std::vector<fs::path> hit_paths;
@@ -1223,10 +1222,7 @@ void Navigator::toggle_favorite(SongBox* song) {
     bool was_favorite = favorite_songs.contains(key);
     if (was_favorite) {
         favorite_songs.erase(key);
-        entries.erase(
-            std::remove_if(entries.begin(), entries.end(),
-                           [&](const SongListEntry& e) { return e.title == title && e.subtitle == subtitle; }),
-            entries.end());
+        std::erase_if(entries, [&](const SongListEntry& e) { return e.title == title && e.subtitle == subtitle; });
         song->is_favorite = false;
     } else {
         favorite_songs.insert(key);
@@ -1263,9 +1259,7 @@ void Navigator::add_to_recent(const SongBox* song) {
     std::string hash = scores_manager.get_single_hash(song->parser.file_path);
 
     auto entries = read_song_list(song_list_path);
-    entries.erase(std::remove_if(entries.begin(), entries.end(),
-                                 [&](const SongListEntry& e) { return e.title == title && e.subtitle == subtitle; }),
-                  entries.end());
+    std::erase_if(entries, [&](const SongListEntry& e) { return e.title == title && e.subtitle == subtitle; });
     entries.insert(entries.begin(), {std::move(hash), title, subtitle});
     if ((int)entries.size() > 25) {
         entries.resize(25);
@@ -1688,7 +1682,7 @@ BoxDef Navigator::parse_box_def_uncached(const fs::path& path) {
         } else if (line.starts_with("#TITLE")) {
             const std::string& lang = global_data.config->general.language;
             std::string lang_upper = lang;
-            std::transform(lang_upper.begin(), lang_upper.end(), lang_upper.begin(), ::toupper);
+            std::ranges::transform(lang_upper, lang_upper.begin(), ::toupper);
             std::string lang_prefix = "#TITLE" + lang_upper + ":";
             if (line.starts_with(lang_prefix)) {
                 result.name = get_value(lang_prefix);
@@ -1718,7 +1712,7 @@ BoxDef Navigator::parse_box_def_uncached(const fs::path& path) {
             }
             const std::string& lang = global_data.config->general.language;
             std::string lang_upper = lang;
-            std::transform(lang_upper.begin(), lang_upper.end(), lang_upper.begin(), ::toupper);
+            std::ranges::transform(lang_upper, lang_upper.begin(), ::toupper);
             for (int n = 0; n < 3; n++) {
                 std::string lang_prefix = "#BOXEXPLANATION" + lang_upper + std::to_string(n + 1) + ":";
                 if (line.starts_with(lang_prefix)) {
@@ -1847,8 +1841,8 @@ void Navigator::load_current_directory(const fs::path path) {
 #else
     bool own_path_is_arcade_root = false;
 #endif
-    if (has_children && root_paths.size() > 1 && !reloading_roots &&
-        std::find(root_paths.begin(), root_paths.end(), path) != root_paths.end() && !own_path_is_arcade_root) {
+    if (has_children && root_paths.size() > 1 && !reloading_roots && std::ranges::contains(root_paths, path) &&
+        !own_path_is_arcade_root) {
         if (inline_state.has_value()) {
             collapse_inline_now();
             return;
@@ -1945,7 +1939,7 @@ bool Navigator::jump_to_song_path(const fs::path& song_path) {
             break;
         }
         chain.push_back(folder);
-        if (std::find(root_paths.begin(), root_paths.end(), folder.parent_path()) != root_paths.end()) {
+        if (std::ranges::contains(root_paths, folder.parent_path())) {
             break;
         }
         cur = folder.parent_path();
@@ -1954,7 +1948,7 @@ bool Navigator::jump_to_song_path(const fs::path& song_path) {
         spdlog::warn("jump_to_song: could not resolve a genre folder for {}", song_path.string());
         return false;
     }
-    std::reverse(chain.begin(), chain.end());
+    std::ranges::reverse(chain);
 
     BoxDef final_box_def = parse_box_def(chain.back());
     if (!final_box_def.collection.empty()) {
@@ -2090,7 +2084,7 @@ void Navigator::setup_back_box(const fs::path& path, bool has_children, const Ba
         if (!reloading_roots) {
             items.clear();
         }
-        if (std::find(root_paths.begin(), root_paths.end(), path) != root_paths.end()) {
+        if (std::ranges::contains(root_paths, path)) {
             return;
         }
         items.push_back(make_back_box(path.parent_path(), &folder));
@@ -2997,9 +2991,9 @@ std::string normalize_title(std::string s) {
     // Keep UTF-8 (bytes >= 0x80) so a Japanese / Chinese title survives; only ASCII
     // punctuation and spaces are dropped. Stripping every non-alnum byte turned every
     // all-CJK title into "", so any two such songs compared equal.
-    s.erase(std::remove_if(s.begin(), s.end(), [](unsigned char c) { return c < 0x80 && !std::isalnum(c); }), s.end());
+    std::erase_if(s, [](unsigned char c) { return c < 0x80 && !std::isalnum(c); });
 
-    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    std::ranges::transform(s, s.begin(), [](unsigned char c) { return (char)std::tolower(c); });
 
     return s;
 }

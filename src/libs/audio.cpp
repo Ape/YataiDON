@@ -17,6 +17,7 @@ SDL_AudioStream* g_ios_audio_stream = nullptr;
 #include "optional/nub.h"
 #include "optional/nus3bank.h"
 #endif
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -684,11 +685,9 @@ bool AudioEngine::init_rtaudio_device(RtAudio::Api api, const char* label) {
         return false;
     }
 
-    channel_offsets.erase(
-        std::remove_if(channel_offsets.begin(), channel_offsets.end(), [](int off) { return off < 0; }),
-        channel_offsets.end());
-    std::sort(channel_offsets.begin(), channel_offsets.end());
-    channel_offsets.erase(std::unique(channel_offsets.begin(), channel_offsets.end()), channel_offsets.end());
+    std::erase_if(channel_offsets, [](int off) { return off < 0; });
+    std::ranges::sort(channel_offsets);
+    channel_offsets.erase(std::ranges::unique(channel_offsets).begin(), channel_offsets.end());
     if (channel_offsets.empty()) {
         channel_offsets.push_back(0);
     }

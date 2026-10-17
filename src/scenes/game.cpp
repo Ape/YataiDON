@@ -36,10 +36,7 @@ void GameScreen::on_screen_start() {
             SongParser probe(session_data.selected_song, 0);
             auto& course_data = probe.metadata.course_data;
             if (!course_data.empty()) {
-                session_data.selected_difficulty =
-                    std::max_element(course_data.begin(), course_data.end(), [](const auto& a, const auto& b) {
-                        return a.first < b.first;
-                    })->first;
+                session_data.selected_difficulty = course_data.rbegin()->first;
             }
         } catch (const std::exception& e) {
             spdlog::warn("Failed to probe difficulty for fallback song {}: {}", session_data.selected_song.string(),

@@ -35,9 +35,7 @@ private:
     int change_seq = 0;
     int instance_id = 0;
 
-    bool has_row(const std::string& name) const {
-        return std::find(mod_names.begin(), mod_names.end(), name) != mod_names.end();
-    }
+    bool has_row(const std::string& name) const { return std::ranges::contains(mod_names, name); }
     bool has_neiro_row() const { return has_row("neiro"); }
     void load_neiro_names();
     void step_neiro(int dir);

@@ -125,8 +125,8 @@ inline const std::map<GenreIndex, std::set<std::string>> GENRE_MAP = {
 
 inline GenreIndex get_genre_index(const std::string& genreString) {
     std::string genreUpper = genreString;
-    std::transform(genreUpper.begin(), genreUpper.end(), genreUpper.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+    std::ranges::transform(genreUpper, genreUpper.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
 
     for (const auto& [genreIndex, genreSet] : GENRE_MAP) {
         if (genreSet.contains(genreUpper)) {

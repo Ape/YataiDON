@@ -577,7 +577,7 @@ std::vector<fs::path> sorted_frames(DirIndex& dirs, const fs::path& dir) {
             }
         }
     }
-    std::sort(frames.begin(), frames.end(), [](const fs::path& a, const fs::path& b) {
+    std::ranges::sort(frames, [](const fs::path& a, const fs::path& b) {
         const std::string as = a.stem().string(), bs = b.stem().string();
         int an = 0, bn = 0;
         auto ar = std::from_chars(as.data(), as.data() + as.size(), an);

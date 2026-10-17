@@ -181,8 +181,7 @@ struct TempoMap {
         if (points.empty()) {
             return 0.0;
         }
-        auto it =
-            std::upper_bound(points.begin(), points.end(), ms, [](double v, const TempoPoint& p) { return v < p.ms; });
+        auto it = std::ranges::upper_bound(points, ms, {}, &TempoPoint::ms);
         if (it == points.begin()) {
             return points.front().beat + (ms - points.front().ms) * lead() / 60000.0;
         }

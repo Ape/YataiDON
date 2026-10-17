@@ -29,14 +29,11 @@ static void draw_model_face_last(ray::Model& model, int face_material_index, con
     ray::Matrix matTransform = ray::MatrixMultiply(ray::MatrixScale(scale, scale, scale),
                                                    ray::MatrixTranslate(position.x, position.y, position.z));
     ray::Matrix transform = ray::MatrixMultiply(model.transform, matTransform);
-    auto is_blend = [&](int mat) {
-        return std::find(blend_materials.begin(), blend_materials.end(), mat) != blend_materials.end();
-    };
+    auto is_blend = [&](int mat) { return std::ranges::contains(blend_materials, mat); };
     // _CULLNONE materials are drawn two-sided, as the name asks.
     auto draw = [&](int i) {
         const int mat = model.meshMaterial[i];
-        const bool two_sided =
-            std::find(twosided_materials.begin(), twosided_materials.end(), mat) != twosided_materials.end();
+        const bool two_sided = std::ranges::contains(twosided_materials, mat);
         if (two_sided) {
             rlDisableBackfaceCulling();
         }
@@ -334,7 +331,7 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
         face_material_index = -1;
     }
     auto filter_materials = [&](std::vector<int>& v) {
-        v.erase(std::remove_if(v.begin(), v.end(), [&](int idx) { return !valid_material(idx); }), v.end());
+        std::erase_if(v, [&](int idx) { return !valid_material(idx); });
     };
     filter_materials(recolor_indices);
     filter_materials(additive_indices);
@@ -378,10 +375,8 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
         model.materials[face_material_index].shader = face_shader;
     }
 #endif
-    additive_indices.erase(std::remove(additive_indices.begin(), additive_indices.end(), face_material_index),
-                           additive_indices.end());
-    blend_indices.erase(std::remove(blend_indices.begin(), blend_indices.end(), face_material_index),
-                        blend_indices.end());
+    std::erase(additive_indices, face_material_index);
+    std::erase(blend_indices, face_material_index);
     for (int idx : additive_indices) {
         model.materials[idx].maps[ray::MATERIAL_MAP_DIFFUSE].color = {255, 255, 255, 255};
     }
@@ -554,7 +549,7 @@ void Chara3D::load_face_textures(fs::path& face_dir) {
     if (paths.empty()) {
         return;
     }
-    std::sort(paths.begin(), paths.end());
+    std::ranges::sort(paths);
     ray::Image sheet = ray::LoadImage(paths[0].string().c_str());
     // Frames are square and stacked vertically; derive the size from the
     // sheet width instead of assuming 128px, so higher-resolution skins

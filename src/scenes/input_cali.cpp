@@ -1,5 +1,7 @@
 #include "input_cali.h"
 
+#include <algorithm>
+
 #include "../libs/input.h"
 
 static const fs::path CALI_TJA_PATH = "Songs/Calibration.tja";
@@ -51,7 +53,7 @@ std::optional<Screens> InputCaliScreen::update() {
         double latency = players[0]->last_note_hit - current_ms;
         latencies.push_back(latency);
         size_t n = latencies.size();
-        std::sort(latencies.begin(), latencies.end());
+        std::ranges::sort(latencies);
 
         if (n % 2 == 0) {
             average_latency = (latencies[n / 2 - 1] + latencies[n / 2]) / 2.0;
