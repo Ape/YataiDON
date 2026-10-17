@@ -7,5 +7,6 @@ Checks: >-
   bugprone-unchecked-string-to-number-conversion,
   bugprone-use-after-move,
   readability-redundant-casting,
+  readability-static-definition-in-anonymous-namespace,
   readability-use-std-min-max,
 HeaderFilterRegex: '(^|/)src/'

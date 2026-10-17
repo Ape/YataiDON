@@ -600,15 +600,15 @@ namespace {
 #endif
     };
 
-    static std::unique_ptr<MidiInput> midi_input;
+    std::unique_ptr<MidiInput> midi_input;
 
 #ifdef _WIN32
-    static constexpr auto midi_api = libremidi::API::WINDOWS_UWP;
+    constexpr auto midi_api = libremidi::API::WINDOWS_UWP;
 #else
-    static constexpr auto midi_api = libremidi::midi1::default_api();
+    constexpr auto midi_api = libremidi::midi1::default_api();
 #endif
 
-    static void midi_message_received(const libremidi::message& message, const MidiInput& state) {
+    void midi_message_received(const libremidi::message& message, const MidiInput& state) {
         const auto& bytes = message.bytes;
         if (bytes.size() != 3 || (bytes[0] & 0xf0) != 0x90 || bytes[2] == 0) {
             return;
@@ -634,7 +634,7 @@ namespace {
     }
 
     // Device notifications can arrive on background threads; open and close ports on the main thread.
-    static void queue_midi_port_event(MidiInput& state, const libremidi::input_port& port, bool added) {
+    void queue_midi_port_event(MidiInput& state, const libremidi::input_port& port, bool added) {
         std::lock_guard<std::mutex> lock(state.events_mutex);
         state.events.push_back({port, added});
         state.events_pending.store(true, std::memory_order_release);
