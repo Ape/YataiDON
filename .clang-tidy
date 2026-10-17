@@ -11,3 +11,4 @@ Checks: >-
   readability-static-definition-in-anonymous-namespace,
   readability-use-std-min-max,
 HeaderFilterRegex: '(^|/)src/'
+ExcludeHeaderFilterRegex: '(^|/)\.cmake-deps/'
