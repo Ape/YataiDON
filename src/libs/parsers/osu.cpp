@@ -376,9 +376,7 @@ NoteList& OsuParser::get_notes() {
                 } catch (const std::exception&) {
                 }
             }
-            if (slides < 1) {
-                slides = 1;
-            }
+            slides = std::max(slides, 1);
 
             double beat_len_at = first_beat_length;
             // Effective slider velocity multiplier from inherited (green) timing

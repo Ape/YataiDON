@@ -198,12 +198,8 @@ static sf_count_t vf_seek(sf_count_t offset, int whence, void* user_data) {
         return -1;
     }
 
-    if (vf->pos < 0) {
-        vf->pos = 0;
-    }
-    if (vf->pos > size) {
-        vf->pos = size;
-    }
+    vf->pos = std::max<sf_count_t>(vf->pos, 0);
+    vf->pos = std::min(vf->pos, size);
     return vf->pos;
 }
 
@@ -1829,9 +1825,7 @@ void AudioEngine::seek_music_stream(const std::string& name, float position) {
         if (mus.file_handle) {
             sf_count_t frame_position = static_cast<sf_count_t>(position * mus.file_info.samplerate);
 
-            if (frame_position < 0) {
-                frame_position = 0;
-            }
+            frame_position = std::max<sf_count_t>(frame_position, 0);
             if (frame_position >= mus.file_info.frames) {
                 frame_position = mus.file_info.frames - 1;
             }
@@ -1848,9 +1842,7 @@ void AudioEngine::seek_music_stream(const std::string& name, float position) {
         } else if (mus.pcm_data) {
             unsigned long long frame_pos =
                 static_cast<unsigned long long>(std::max(position, 0.0f) * static_cast<float>(target_sample_rate));
-            if (frame_pos > static_cast<unsigned long long>(mus.pcm_total_frames)) {
-                frame_pos = static_cast<unsigned long long>(mus.pcm_total_frames);
-            }
+            frame_pos = std::min(frame_pos, static_cast<unsigned long long>(mus.pcm_total_frames));
             std::atomic_ref<unsigned long long>(mus.current_frame).store(frame_pos, std::memory_order_relaxed);
             mus.buffer_position = 0;
             mus.frames_in_buffer = 0;

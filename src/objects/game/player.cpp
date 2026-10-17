@@ -842,9 +842,7 @@ void Player::reset_chart() {
                     }
                     last_note = &note;
 
-                    if (note.hit_ms > end_time) {
-                        end_time = note.hit_ms;
-                    }
+                    end_time = std::max(end_time, note.hit_ms);
                 }
             }
         }
@@ -1456,9 +1454,7 @@ void Player::note_correct(const Note& note, double current_ms) {
         if (combo % 100 == 0) {
             combo_announce = ComboAnnounce(combo, current_ms, player_num);
         }
-        if (combo > max_combo) {
-            max_combo = combo;
-        }
+        max_combo = std::max(max_combo, combo);
         if (combo % 100 == 0 && score_method == ScoreMethod::GEN3) {
             score += 10000;
             score_counter.add_popup(10000);
@@ -1916,9 +1912,7 @@ void Player::draw_drumroll(double current_ms, float y, const Note& head, int cur
         if (current_ms < appear_ms) {
             return;
         }
-        if (current_ms < moving_start_ms) {
-            current_ms = moving_start_ms;
-        }
+        current_ms = std::max(current_ms, moving_start_ms);
     }
     float start_position = get_position_x(head, current_ms);
     auto it = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(), head.index + 1,
@@ -1974,9 +1968,7 @@ void Player::draw_balloon(double current_ms, float y, const Note& head, int curr
         if (current_ms < appear_ms) {
             return;
         }
-        if (current_ms < moving_start_ms) {
-            current_ms = moving_start_ms;
-        }
+        current_ms = std::max(current_ms, moving_start_ms);
     }
     float start_position = get_position_x(head, current_ms);
     auto it = std::lower_bound(draw_note_buffer.begin(), draw_note_buffer.end(), head.index + 1,
