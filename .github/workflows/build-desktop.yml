@@ -389,7 +389,11 @@ jobs:
       - name: Package release assets
         run: |
           # Skins are bundled here, not in the build jobs (the binary doesn't need them to compile)
-          for d in linux windows macos; do cp -r Skins $d/; done
+          # Drop each skin's .git (a full pack of the content, doubles the zip past GitHub's 2 GiB asset limit)
+          for d in linux windows macos; do
+            cp -r Skins $d/
+            find $d/Skins -maxdepth 2 -name .git -prune -exec rm -rf {} +
+          done
 
           # Full zips for manual download
           (cd linux   && zip -r ../YataiDON-Linux.zip .)
