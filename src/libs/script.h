@@ -65,9 +65,6 @@ private:
     std::set<std::string> executed_scripts;
 
 public:
-    // Alias to the engine's global TextureWrapper (::tex) rather than a separate
-    // copy, so C++ screens and Lua scripts share one texture/animation store and
-    // each asset is only decoded and uploaded once per screen change.
     TextureWrapper& tex;
     std::unique_ptr<sol::state> lua;
     std::optional<double> current_ms_override;

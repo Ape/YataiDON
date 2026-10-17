@@ -1089,6 +1089,7 @@ std::vector<std::string> TextureWrapper::language_variants(const std::string& na
             out.push_back(base + "_" + fb);
         }
     }
+    out.push_back(base); // art with no language variants at all
     return out;
 }
 

@@ -2,8 +2,14 @@
 
 #include <cmath>
 
+#include "../libs/filesystem.h"
 #include "../libs/input.h"
 #include "../libs/scores.h"
+
+// the shoudan celebration and the congrats popup are skin art: a skin without the folder skips them
+static bool has_dan_result_art(const char* subset) {
+    return fs::exists(resolve_skin_path(fs::path("Graphics") / "dan_result" / subset));
+}
 
 namespace {
     constexpr double FRAME_MS = 1000.0 / 60.0;
@@ -244,7 +250,7 @@ void DanResultScreen::handle_input(double current_ms) {
         const double on_cel = current_ms - celebrate_start_ms;
         constexpr double CEL_EXIT_GATE_MS = 3500.0;
         if (on_cel >= CEL_EXIT_GATE_MS || timed_out) {
-            if (congrats_due) {
+            if (congrats_due && has_dan_result_art("congrats")) {
 
                 congrats_showing = true;
                 congrats_start_ms = current_ms;
@@ -278,10 +284,16 @@ void DanResultScreen::handle_input(double current_ms) {
         }
 
         if (shodan && !celebrating) {
-
-            celebrating = true;
-            celebrate_start_ms = current_ms;
-            return;
+            if (has_dan_result_art("shoudan")) {
+                celebrating = true;
+                celebrate_start_ms = current_ms;
+                return;
+            }
+            if (congrats_due && has_dan_result_art("congrats")) {
+                congrats_showing = true;
+                congrats_start_ms = current_ms;
+                return;
+            }
         }
         if (!fade_out->is_started) {
             fade_out->start();

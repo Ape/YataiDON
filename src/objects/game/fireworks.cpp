@@ -24,7 +24,7 @@ void Fireworks::update(double current_ms) {
 }
 
 void Fireworks::draw() {
-    if (!explosion_anim) {
+    if (!explosion_anim || !t_explosion) { // a skin without gogo_time/explosion art
         return;
     }
     if (!explosion_anim->is_finished) {

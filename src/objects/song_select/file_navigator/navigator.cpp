@@ -2815,6 +2815,9 @@ void Navigator::draw_background() {
     if (script && script->draw_background(this)) {
         return;
     }
+    if (!t_background) { // a skin without box/background art
+        return;
+    }
 
     int width = t_background->width;
     for (int i = 0; i < width * 4; i += width) {

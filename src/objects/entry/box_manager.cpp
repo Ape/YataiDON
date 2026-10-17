@@ -46,6 +46,10 @@ void BoxManager::build_board_list() {
         if (label.empty()) {
             continue;
         }
+        // no 3D characters: nothing to dress up, so no costume board
+        if (screen == Screens::ENTRY && tex.options[SCO::DISABLE_CHARA_3D]) {
+            continue;
+        }
         box_locations.push_back(screen);
         boxes.push_back(std::make_unique<Box>(label, font_size, screen));
     }
