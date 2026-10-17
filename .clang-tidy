@@ -6,4 +6,5 @@ Checks: >-
   -clang-analyzer-unix.Malloc,
   bugprone-unchecked-string-to-number-conversion,
   bugprone-use-after-move,
+  readability-redundant-casting,
 HeaderFilterRegex: '(^|/)src/'

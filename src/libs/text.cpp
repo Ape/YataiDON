@@ -700,7 +700,7 @@ OutlinedText::OutlinedText(std::string text, int font_size, ray::Color color, ra
                            bool is_vertical, float outline_thickness, float spacing, float v_advance,
                            const std::string& font_name)
     : text(std::move(text)), font_size(static_cast<float>(font_size)),
-      outline_thickness(static_cast<float>(outline_thickness * global_tex.screen_scale)), v_advance(v_advance) {
+      outline_thickness(outline_thickness * global_tex.screen_scale), v_advance(v_advance) {
     worker_font = named_font_manager(font_name).copy_font(this->text, font_size);
 
     if (is_vertical) {

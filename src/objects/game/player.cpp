@@ -2262,7 +2262,7 @@ void Player::draw_lyric(float y) {
     float lyric_y = (lyric_cfg && lyric_cfg->y > 0)
                         ? lyric_cfg->y
                         : static_cast<float>(tex.screen_height - (int)(current_lyric->height * 1.5));
-    current_lyric->draw({.x = (int)(tex.screen_width / 2) - current_lyric->width / 2, .y = lyric_y});
+    current_lyric->draw({.x = (tex.screen_width / 2) - current_lyric->width / 2, .y = lyric_y});
 }
 
 void Player::seek_to(double resume_time) {
