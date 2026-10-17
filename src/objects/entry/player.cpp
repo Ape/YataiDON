@@ -139,8 +139,8 @@ void EntryPlayer::handle_input() {
             }
             apply_pd_look(*chara, pd_ptr, player_num);
         }
-        if (costume_menu->get_index().has_value()) {
-            int selected_index = costume_menu->get_index().value();
+        if (auto selection = costume_menu->get_index()) {
+            int selected_index = *selection;
             CostumePickStage stage = costume_menu->get_pick_stage();
             if (selected_index != chara_index || stage != chara_pick_stage) {
                 chara_index = selected_index;

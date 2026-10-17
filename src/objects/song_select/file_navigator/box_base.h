@@ -38,7 +38,7 @@ public:
 
     TextureIndex texture_index;
     std::optional<ray::Color> back_color;
-    std::optional<ray::Color> fore_color;
+    ray::Color fore_color;
     ray::Color text_color = ray::WHITE;
 
     std::unique_ptr<FadeAnimation> fade;
@@ -137,8 +137,7 @@ public:
             if (utf8_char_count(text_name) >= 30) {
                 font_size -= (int)(10 * tex.screen_scale);
             }
-            horizontal_name_cache = std::make_unique<OutlinedText>(text_name, font_size, text_color,
-                                                                   fore_color.value_or(text_color), false);
+            horizontal_name_cache = std::make_unique<OutlinedText>(text_name, font_size, text_color, fore_color, false);
         }
         return horizontal_name_cache.get();
     }
@@ -149,8 +148,8 @@ public:
             if (utf8_char_count(text_name) >= 30) {
                 font_size -= (int)(10 * tex.screen_scale);
             }
-            horizontal_name_large_cache = std::make_unique<OutlinedText>(text_name, (int)(font_size * 1.5f), text_color,
-                                                                         fore_color.value_or(text_color), false, 6);
+            horizontal_name_large_cache =
+                std::make_unique<OutlinedText>(text_name, (int)(font_size * 1.5f), text_color, fore_color, false, 6);
         }
         return horizontal_name_large_cache.get();
     }
