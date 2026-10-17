@@ -236,8 +236,11 @@ void Navigator::load_all_roots() {
     inline_streaming = false;
     items.clear();
     open_index = 0;
-    def_file_cache.clear();
-    child_folders_cache.clear();
+    {
+        std::lock_guard<std::mutex> lock(child_folders_mutex);
+        def_file_cache.clear();
+        child_folders_cache.clear();
+    }
     box_def_cache.clear();
     is_processing = true;
     loading_complete = false;
@@ -254,6 +257,9 @@ void Navigator::load_all_roots() {
         reloading_roots = false;
         loading_complete = true;
         FolderBox::run_deferred_scans(abort_loading);
+        for (const fs::path& root : root_paths) {
+            prefetch_child_folders(root);
+        }
     };
 
 #ifndef __EMSCRIPTEN__
@@ -989,6 +995,7 @@ void Navigator::load_current_directory_async(const fs::path path) {
     current_path = path;
     if (!reloading_roots) {
         FolderBox::run_deferred_scans(abort_loading);
+        prefetch_child_folders(path);
     }
 }
 
@@ -1726,15 +1733,22 @@ BoxDef Navigator::parse_box_def_uncached(const fs::path& path) {
 
 bool Navigator::has_def_file(const std::filesystem::path& path) {
     std::string key = path.string();
-    auto it = def_file_cache.find(key);
-    if (it != def_file_cache.end()) {
-        return it->second;
+    {
+        std::lock_guard<std::mutex> lock(child_folders_mutex);
+        auto it = def_file_cache.find(key);
+        if (it != def_file_cache.end()) {
+            return it->second;
+        }
     }
+    auto remember = [&](bool result) {
+        std::lock_guard<std::mutex> lock(child_folders_mutex);
+        def_file_cache[key] = result;
+        return result;
+    };
 
     std::error_code ec;
     if (fs::exists(path / "box.def", ec)) {
-        def_file_cache[key] = true;
-        return true;
+        return remember(true);
     }
 
     for (const auto& entry : fs::directory_iterator(path, fs::directory_options::skip_permission_denied, ec)) {
@@ -1745,12 +1759,10 @@ bool Navigator::has_def_file(const std::filesystem::path& path) {
             continue;
         }
         if (has_def_file(entry.path())) {
-            def_file_cache[key] = true;
-            return true;
+            return remember(true);
         }
     }
-    def_file_cache[key] = false;
-    return false;
+    return remember(false);
 }
 
 void Navigator::exit_inline() {
@@ -1897,8 +1909,11 @@ void Navigator::load_current_directory(const fs::path path) {
     }
 
     open_index = 0;
-    def_file_cache.clear();
-    child_folders_cache.clear();
+    {
+        std::lock_guard<std::mutex> lock(child_folders_mutex);
+        def_file_cache.clear();
+        child_folders_cache.clear();
+    }
     box_def_cache.clear();
     setup_back_box(path, true);
     is_processing = true;
@@ -1959,8 +1974,11 @@ bool Navigator::jump_to_song_path(const fs::path& song_path) {
 
     auto load_full = [&](const fs::path& folder) {
         open_index = 0;
-        def_file_cache.clear();
-        child_folders_cache.clear();
+        {
+            std::lock_guard<std::mutex> lock(child_folders_mutex);
+            def_file_cache.clear();
+            child_folders_cache.clear();
+        }
         box_def_cache.clear();
         setup_back_box(folder, true);
         loading_complete = false;
@@ -2087,12 +2105,37 @@ void Navigator::setup_back_box(const fs::path& path, bool has_children, const Ba
 // Asked again for the same folder on every open and close (closing a folder asks it of the parent).
 bool Navigator::has_child_folders(const fs::path& path) {
     const std::string key = path.string();
-    if (auto it = child_folders_cache.find(key); it != child_folders_cache.end()) {
-        return it->second;
+    {
+        std::lock_guard<std::mutex> lock(child_folders_mutex);
+        if (auto it = child_folders_cache.find(key); it != child_folders_cache.end()) {
+            return it->second;
+        }
     }
     const bool result = scan_child_folders(path);
+    std::lock_guard<std::mutex> lock(child_folders_mutex);
     child_folders_cache[key] = result;
     return result;
+}
+
+// Loader thread: answer has_child_folders for every folder under `parent` ahead of time. Opening a
+// genre of several hundred songs otherwise lists each song folder on the main thread first (~80 ms
+// warm, far longer from a cold disk) before the folder starts to open.
+void Navigator::prefetch_child_folders(const fs::path& parent) {
+    std::error_code ec;
+    for (fs::directory_iterator it(parent, ec), end; !ec && it != end; it.increment(ec)) {
+        if (abort_loading) {
+            return;
+        }
+        std::error_code dir_ec;
+        if (!it->is_directory(dir_ec) || dir_ec) {
+            continue;
+        }
+        try {
+            has_child_folders(it->path());
+        } catch (const std::exception& e) {
+            spdlog::warn("Folder scan of {} failed: {}", it->path().string(), e.what());
+        }
+    }
 }
 
 bool Navigator::scan_child_folders(const fs::path& path) {
