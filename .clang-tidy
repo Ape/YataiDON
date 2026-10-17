@@ -12,6 +12,7 @@ Checks: >-
   modernize-use-ranges,
   modernize-use-scoped-lock,
   modernize-use-starts-ends-with,
+  modernize-use-std-numbers,
   readability-container-contains,
   readability-redundant-casting,
   readability-redundant-member-init,

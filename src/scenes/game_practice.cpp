@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 #include <ranges>
 
 #include "../libs/animation.h"
@@ -873,7 +874,7 @@ void PracticeGameScreen::draw_bar_scrobble(const Note& bar, double current_ms) c
     float y_off =
         (float)((bar.hit_ms - current_ms) * (bar.bpm / 240000.0f * bar.scroll_y *
                                              ((tex.screen_width - JudgePos::X) / tex.screen_width) * tex.screen_width));
-    float angle = (y_off != 0) ? std::atan2(bar.scroll_y, bar.scroll_x) * 180.0f / PI : 0.0f;
+    float angle = (y_off != 0) ? std::atan2(bar.scroll_y, bar.scroll_x) * 180.0f / std::numbers::pi_v<float> : 0.0f;
     tex.draw_texture(t_notes_0, {.frame = bar.is_branch_start,
                                  .x = x + tex.get_skin_config(SC::GAME_MOJI_DRUMROLL)->x - t_notes_9->width / 2.0f,
                                  .y = y_off + tex.get_skin_config(SC::GAME_MOJI_DRUMROLL)->y + (184 * tex.screen_scale),

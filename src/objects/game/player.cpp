@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 #include <optional>
 #include <ranges>
 #include <vector>
@@ -1880,7 +1881,7 @@ void Player::draw_bar(double current_ms, float y, const Note& bar) {
     float y_position = get_position_y(bar, current_ms) + judge_y + y;
     float angle;
     if (y_position != 0) {
-        angle = std::atan2(bar.scroll_y, bar.scroll_x) * 180.0 / PI;
+        angle = std::atan2(bar.scroll_y, bar.scroll_x) * 180.0 / std::numbers::pi_v<float>;
     } else {
         angle = 0;
     }
