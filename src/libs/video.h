@@ -26,7 +26,7 @@ private:
     std::optional<ray::Texture2D> texture;
     std::array<bool, 2> is_finished_arr = {false, false};
     bool audio_started = false;
-    std::string audio_s = {};
+    std::string audio_s;
     bool is_static = false;
 
     float fps = 0.f;
