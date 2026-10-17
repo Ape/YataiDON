@@ -33,14 +33,14 @@ int DanNavigator::total_notes_for(const std::vector<DanSongEntry>& songs) {
 
 std::shared_ptr<const TJAMetadata> DanNavigator::song_metadata(const fs::path& path) {
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         if (auto it = memo_->metadata.find(path); it != memo_->metadata.end()) {
             return it->second;
         }
     }
     auto meta = std::make_shared<const TJAMetadata>(SongParser(path).metadata);
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         memo_->metadata.emplace(path, meta);
     }
     return meta;
@@ -48,7 +48,7 @@ std::shared_ptr<const TJAMetadata> DanNavigator::song_metadata(const fs::path& p
 
 int DanNavigator::song_note_count(const fs::path& path, int difficulty) {
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         if (auto it = memo_->note_counts.find({path, difficulty}); it != memo_->note_counts.end()) {
             return it->second;
         }
@@ -73,7 +73,7 @@ int DanNavigator::song_note_count(const fs::path& path, int difficulty) {
         spdlog::warn("DanNavigator::total_notes_for: failed to parse '{}': {}", path.string(), e.what());
     }
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         memo_->note_counts.emplace(std::make_pair(path, difficulty), total);
     }
     return total;
@@ -81,7 +81,7 @@ int DanNavigator::song_note_count(const fs::path& path, int difficulty) {
 
 int DanNavigator::box_genre(const fs::path& box_def_dir) {
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         if (auto it = memo_->genres.find(box_def_dir); it != memo_->genres.end()) {
             return it->second;
         }
@@ -91,7 +91,7 @@ int DanNavigator::box_genre(const fs::path& box_def_dir) {
         genre = (int)Navigator::parse_box_def_uncached(box_def_dir).genre_index;
     }
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         memo_->genres.emplace(box_def_dir, genre);
     }
     return genre;
@@ -475,7 +475,7 @@ std::vector<DanBoxData> DanNavigator::scan_roots(const std::vector<fs::path>& ro
     const std::string language = global_data.config ? global_data.config->general.language : std::string();
 
     {
-        std::lock_guard<std::mutex> lock(cache_mutex);
+        std::scoped_lock lock(cache_mutex);
         if (auto it = cache.find(roots); it != cache.end() && it->second.signature == signature &&
                                          it->second.library_size == library_size && it->second.language == language) {
             return it->second.data;
@@ -486,7 +486,7 @@ std::vector<DanBoxData> DanNavigator::scan_roots(const std::vector<fs::path>& ro
     if (scan_abort.load()) {
         return data;
     }
-    std::lock_guard<std::mutex> lock(cache_mutex);
+    std::scoped_lock lock(cache_mutex);
     cache[roots] = Cached{std::move(signature), library_size, language, data};
     return data;
 }
@@ -611,7 +611,7 @@ void DanNavigator::begin_init(const std::vector<fs::path>& song_paths) {
     scan_abort.store(false);
     scan_published = false;
     {
-        std::lock_guard<std::mutex> lock(scan_mutex);
+        std::scoped_lock lock(scan_mutex);
         scan_result.clear();
     }
 
@@ -625,7 +625,7 @@ void DanNavigator::begin_init(const std::vector<fs::path>& song_paths) {
             spdlog::error("DanNavigator: course scan threw (unknown)");
         }
         {
-            std::lock_guard<std::mutex> lock(scan_mutex);
+            std::scoped_lock lock(scan_mutex);
             scan_result = std::move(data);
         }
         scan_done.store(true);
@@ -645,7 +645,7 @@ bool DanNavigator::poll_init() {
     scan_thread.join();
     std::vector<DanBoxData> data;
     {
-        std::lock_guard<std::mutex> lock(scan_mutex);
+        std::scoped_lock lock(scan_mutex);
         data = std::move(scan_result);
         scan_result.clear();
     }
@@ -663,7 +663,7 @@ void DanNavigator::abort_init() {
     scan_done.store(false);
     scan_published = false;
     {
-        std::lock_guard<std::mutex> lock(scan_mutex);
+        std::scoped_lock lock(scan_mutex);
         scan_result.clear();
     }
 }

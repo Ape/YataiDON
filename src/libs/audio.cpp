@@ -1297,14 +1297,14 @@ void AudioEngine::unload_all_sounds() {
 }
 
 uint64_t AudioEngine::sound_play_count(const std::string& name) {
-    std::lock_guard<std::mutex> g(play_count_lock);
+    std::scoped_lock g(play_count_lock);
     auto it = play_counts.find(name);
     return it == play_counts.end() ? 0 : it->second;
 }
 
 void AudioEngine::play_sound(const std::string& name, VolumePreset volume_preset, float gain) {
     {
-        std::lock_guard<std::mutex> g(play_count_lock);
+        std::scoped_lock g(play_count_lock);
         ++play_counts[name];
     }
     std::shared_lock<std::shared_mutex> guard(rw_lock);

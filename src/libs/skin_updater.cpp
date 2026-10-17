@@ -167,18 +167,18 @@ namespace {
 } // namespace
 
 void SkinUpdater::set_current_skin(const std::string& name) {
-    std::lock_guard<std::mutex> lock(status_mutex_);
+    std::scoped_lock lock(status_mutex_);
     current_skin_ = name;
     current_file_.clear();
 }
 
 void SkinUpdater::set_current_file(const std::string& file) {
-    std::lock_guard<std::mutex> lock(status_mutex_);
+    std::scoped_lock lock(status_mutex_);
     current_file_ = file;
 }
 
 void SkinUpdater::note_file_updated() {
-    std::lock_guard<std::mutex> lock(status_mutex_);
+    std::scoped_lock lock(status_mutex_);
     ++files_updated_;
 }
 
@@ -373,7 +373,7 @@ void SkinUpdater::start() {
             spdlog::error("Skin update: unhandled exception: {}", e.what());
         }
         running_ = false;
-        std::lock_guard<std::mutex> lock(status_mutex_);
+        std::scoped_lock lock(status_mutex_);
         current_skin_.clear();
         current_file_.clear();
     });
@@ -400,7 +400,7 @@ SkinUpdater::Status SkinUpdater::snapshot() {
     s.running = running_.load();
     s.finished = finished();
     s.any_updated = any_updated_.load();
-    std::lock_guard<std::mutex> lock(status_mutex_);
+    std::scoped_lock lock(status_mutex_);
     s.current_skin = current_skin_;
     s.current_file = current_file_;
     s.files_updated = files_updated_;

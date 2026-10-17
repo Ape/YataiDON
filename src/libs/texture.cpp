@@ -637,7 +637,7 @@ public:
 
     ~ImagePrefetch() {
         {
-            std::lock_guard<std::mutex> lock(mutex);
+            std::scoped_lock lock(mutex);
             stop = true;
         }
         cv.notify_all();
@@ -682,7 +682,7 @@ public:
 
     // Folder group g has been loaded: whatever it (and earlier groups) left untaken goes.
     void finish_group(size_t g) {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         finished_groups = std::max(finished_groups, g + 1);
         for (Item& it : items) {
             if (it.group > g) {

@@ -104,7 +104,7 @@ struct AnimSource {
 static const AnimSource& anim_source(const fs::path& path) {
     static std::mutex mutex;
     static std::map<fs::path, AnimSource> cache;
-    std::lock_guard<std::mutex> lock(mutex);
+    std::scoped_lock lock(mutex);
 
     std::error_code ec;
     const auto mtime = fs::last_write_time(path, ec);

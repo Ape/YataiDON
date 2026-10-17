@@ -20,7 +20,7 @@
 FontManager::FontManager() = default;
 
 void FontManager::init(const fs::path& font_path) {
-    std::lock_guard<std::mutex> lock(font_mutex);
+    std::scoped_lock lock(font_mutex);
     if (!exists(font_path)) {
         throw std::runtime_error("Failed to load font: " + font_path.string());
     }
@@ -124,7 +124,7 @@ std::string FontManager::get_text_label(const std::string& key) {
 }
 
 void FontManager::unload() {
-    std::lock_guard<std::mutex> lock(font_mutex);
+    std::scoped_lock lock(font_mutex);
     for (auto& [size, entry] : fonts) {
         release_font(entry);
         release_cache(entry);
@@ -342,7 +342,7 @@ bool FontManager::register_codepoints(SizedFont& entry, int font_size, const std
 }
 
 void FontManager::register_text(const std::string& text, int font_size) {
-    std::lock_guard<std::mutex> lock(font_mutex);
+    std::scoped_lock lock(font_mutex);
     font_size = std::max(font_size, 1);
     register_codepoints(fonts[font_size], font_size, text);
 }
@@ -558,12 +558,12 @@ static ray::Font deep_copy_font(const ray::Font& src) {
 // NOTE: the returned Font aliases manager-owned glyphs/recs/texture; it is only valid
 // until the next acquire()/register_text() call for any size. Use copy_font() to keep it.
 ray::Font FontManager::get_font(const std::string& text, int font_size) {
-    std::lock_guard<std::mutex> lock(font_mutex);
+    std::scoped_lock lock(font_mutex);
     return acquire(text, font_size).font;
 }
 
 ray::Font FontManager::copy_font(const std::string& text, int font_size) {
-    std::lock_guard<std::mutex> lock(font_mutex);
+    std::scoped_lock lock(font_mutex);
     ray::Font copy = deep_copy_font(acquire(text, font_size).font);
     copy.texture = sentinel_texture;
     return copy;
@@ -736,13 +736,13 @@ OutlinedText::OutlinedText(std::string text, int font_size, ray::Color color, ra
     if (is_vertical) {
         build_future = std::async(std::launch::async, [this, color, outline_color, spacing]() {
             auto data = build_vertical_text(color, outline_color, spacing);
-            std::lock_guard<std::mutex> lock(pending_mutex);
+            std::scoped_lock lock(pending_mutex);
             pending_image = std::move(data.img);
         });
     } else {
         build_future = std::async(std::launch::async, [this, color, outline_color, spacing]() {
             auto data = build_horizontal_text(color, outline_color, spacing);
-            std::lock_guard<std::mutex> lock(pending_mutex);
+            std::scoped_lock lock(pending_mutex);
             pending_image = std::move(data.img);
         });
     }
@@ -754,7 +754,7 @@ OutlinedText::~OutlinedText() {
         build_future.wait();
     }
     {
-        std::lock_guard<std::mutex> lock(pending_mutex);
+        std::scoped_lock lock(pending_mutex);
         if (pending_image.has_value()) {
             ray::UnloadImage(pending_image.value());
             pending_image.reset();
@@ -960,7 +960,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(ray::Color color, ray:
 bool OutlinedText::upload_pending() {
     std::optional<ray::Image> img;
     {
-        std::lock_guard<std::mutex> lock(pending_mutex);
+        std::scoped_lock lock(pending_mutex);
         if (!pending_image.has_value()) {
             return false;
         }

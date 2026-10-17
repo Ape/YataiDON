@@ -97,13 +97,13 @@ namespace {
             }
         }
 
-        std::lock_guard<std::mutex> lock(scan_cache_mutex);
+        std::scoped_lock lock(scan_cache_mutex);
         scan_cache[path] = {crown, crown_p2, tja_count};
     }
 } // namespace
 
 void FolderBox::invalidate_scan_cache() {
-    std::lock_guard<std::mutex> lock(scan_cache_mutex);
+    std::scoped_lock lock(scan_cache_mutex);
     scan_cache.clear();
 }
 
@@ -118,7 +118,7 @@ FolderBox::FolderBox(const fs::path& path, const BoxDef& box_def,
 void FolderBox::refresh_scores(const std::map<std::pair<std::string, std::string>, fs::path>& song_files) {
     (void)song_files;
     {
-        std::lock_guard<std::mutex> lock(scan_cache_mutex);
+        std::scoped_lock lock(scan_cache_mutex);
         auto it = scan_cache.find(path);
         if (it != scan_cache.end()) {
             crown = it->second.crown;
@@ -158,7 +158,7 @@ void FolderBox::refresh_scores(const std::map<std::pair<std::string, std::string
 #endif
 
     scan_pending = true;
-    std::lock_guard<std::mutex> lock(deferred_mutex);
+    std::scoped_lock lock(deferred_mutex);
     deferred_scans.push_back(path);
 }
 
@@ -169,7 +169,7 @@ void FolderBox::run_deferred_scans(std::atomic<bool>& abort_flag) {
         }
         fs::path next;
         {
-            std::lock_guard<std::mutex> lock(deferred_mutex);
+            std::scoped_lock lock(deferred_mutex);
             if (deferred_scans.empty()) {
                 return;
             }
@@ -177,7 +177,7 @@ void FolderBox::run_deferred_scans(std::atomic<bool>& abort_flag) {
             deferred_scans.pop_front();
         }
         {
-            std::lock_guard<std::mutex> lock(scan_cache_mutex);
+            std::scoped_lock lock(scan_cache_mutex);
             if (scan_cache.contains(next)) {
                 continue;
             }
@@ -216,7 +216,7 @@ void FolderBox::load_text() {
 
 void FolderBox::update(double current_time) {
     if (scan_pending) {
-        std::lock_guard<std::mutex> lock(scan_cache_mutex);
+        std::scoped_lock lock(scan_cache_mutex);
         auto it = scan_cache.find(path);
         if (it != scan_cache.end()) {
             crown = it->second.crown;

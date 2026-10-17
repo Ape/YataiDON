@@ -301,7 +301,7 @@ ScoresManager::~ScoresManager() {
 }
 
 void ScoresManager::load_score_cache() {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     score_cache.clear();
 
     sqlite3_stmt* stmt;
@@ -352,7 +352,7 @@ void ScoresManager::py_taiko_import(const fs::path& old_db_path) {
 
     std::unordered_map<fs::path, std::array<std::string, 5>> path_to_hashes_snapshot;
     {
-        std::lock_guard<std::mutex> lock(maps_mutex);
+        std::scoped_lock lock(maps_mutex);
         path_to_hashes_snapshot = path_to_hashes;
     }
 
@@ -582,7 +582,7 @@ int ScoresManager::apply_remote_scores(const std::vector<RemoteScore>& scores, c
 }
 
 std::optional<Score> ScoresManager::get_score(const std::string& hash, int difficulty, const std::string& player_id) {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = score_cache.find(std::make_tuple(hash, difficulty, player_id));
     if (it != score_cache.end()) {
         return it->second;
@@ -631,7 +631,7 @@ Score ScoresManager::save_score(const std::string& hash, int difficulty, const s
     spdlog::info("Saved score for hash: {} score: {} crown: {}", hash, score.score, (int)score.crown);
 
     auto key = std::make_tuple(hash, difficulty, player_id);
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = score_cache.find(key);
     bool is_better = it == score_cache.end() || score.crown > it->second.crown ||
                      (score.crown == it->second.crown && score.score > it->second.score);
@@ -643,7 +643,7 @@ Score ScoresManager::save_score(const std::string& hash, int difficulty, const s
 }
 
 void ScoresManager::add_path_binding(const fs::path& path, const std::array<std::string, 5>& hashes) {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     path_to_hashes[path] = hashes;
     std::string single = std::accumulate(hashes.begin(), hashes.end(), std::string{});
     if (!single.empty()) {
@@ -660,7 +660,7 @@ std::optional<fs::path> ScoresManager::get_path_by_hash(const std::string& singl
     if (single_hash.empty()) {
         return std::nullopt;
     }
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = single_hash_to_path.find(single_hash);
     if (it != single_hash_to_path.end()) {
         return it->second;
@@ -669,7 +669,7 @@ std::optional<fs::path> ScoresManager::get_path_by_hash(const std::string& singl
 }
 
 std::optional<fs::path> ScoresManager::get_path_by_diff_hash(const std::string& diff_hash) {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = diff_hash_to_path.find(diff_hash);
     if (it != diff_hash_to_path.end()) {
         return it->second;
@@ -678,13 +678,13 @@ std::optional<fs::path> ScoresManager::get_path_by_diff_hash(const std::string& 
 }
 
 std::array<std::string, 5> ScoresManager::get_hashes(const fs::path& path) {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = path_to_hashes.find(path);
     return it != path_to_hashes.end() ? it->second : std::array<std::string, 5>{};
 }
 
 std::string ScoresManager::get_single_hash(const fs::path& path) {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = path_to_hashes.find(path);
     if (it == path_to_hashes.end()) {
         return "";
@@ -773,12 +773,12 @@ static std::array<int, 5> decode_levels(const std::string& s) {
 }
 
 void ScoresManager::set_song_meta(const std::string& path, const SongCacheEntry& entry) {
-    std::lock_guard<std::mutex> lock(song_meta_mutex);
+    std::scoped_lock lock(song_meta_mutex);
     song_meta[path] = entry;
 }
 
 std::optional<SongCacheEntry> ScoresManager::get_song_meta(const std::string& path) {
-    std::lock_guard<std::mutex> lock(song_meta_mutex);
+    std::scoped_lock lock(song_meta_mutex);
     auto it = song_meta.find(path);
     if (it == song_meta.end()) {
         return std::nullopt;

@@ -94,7 +94,7 @@ void VideoPlayer::decode_loop() {
 
             DecodedFrame frame;
             {
-                std::lock_guard<std::mutex> lock(queue_mutex);
+                std::scoped_lock lock(queue_mutex);
                 if (!spare_buffers.empty()) {
                     frame.bytes = std::move(spare_buffers.back());
                     spare_buffers.pop_back();
@@ -119,7 +119,7 @@ void VideoPlayer::decode_loop() {
     } catch (const std::exception& e) {
         spdlog::error("Video decode thread error: {}", e.what());
     }
-    std::lock_guard<std::mutex> lock(queue_mutex);
+    std::scoped_lock lock(queue_mutex);
     decode_eof = true;
 #endif
 }
@@ -134,7 +134,7 @@ void VideoPlayer::stop_decode_thread() {
     // fmt_ctx_ pointer is never left dangling
     frame_generator.reset();
     current_decoded_frame.reset();
-    std::lock_guard<std::mutex> lock(queue_mutex);
+    std::scoped_lock lock(queue_mutex);
     frame_queue.clear();
     spare_buffers.clear();
     decode_eof = false;
@@ -222,7 +222,7 @@ void VideoPlayer::update(double current_ms) {
     bool drained_at_eof;
     bool queue_empty;
     {
-        std::lock_guard<std::mutex> lock(queue_mutex);
+        std::scoped_lock lock(queue_mutex);
         while (!frame_queue.empty() && frame_queue.front().index <= target_frame) {
             if (latest.has_value()) {
                 spare_buffers.push_back(std::move(latest->bytes));
@@ -238,7 +238,7 @@ void VideoPlayer::update(double current_ms) {
     if (latest.has_value()) {
         upload_frame(latest.value());
         frame_index = latest->index + 1;
-        std::lock_guard<std::mutex> lock(queue_mutex);
+        std::scoped_lock lock(queue_mutex);
         spare_buffers.push_back(std::move(latest->bytes));
     } else if (drained_at_eof) {
         is_finished_arr[0] = true;

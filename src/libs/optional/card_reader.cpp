@@ -389,7 +389,7 @@ namespace card_reader {
     }
 
     bool CardReader::send_command(uint8_t cmd, const std::vector<uint8_t>& payload, bool expect_response) {
-        std::lock_guard<std::recursive_mutex> lk(io_mutex_);
+        std::scoped_lock lk(io_mutex_);
         if (serial_fd_ < 0) {
             return false;
         }
@@ -459,7 +459,7 @@ namespace card_reader {
 
     bool CardReader::send_command_with_payload(uint8_t cmd, const std::vector<uint8_t>& payload,
                                                std::vector<uint8_t>* out_payload, bool expect_response) {
-        std::lock_guard<std::recursive_mutex> lk(io_mutex_);
+        std::scoped_lock lk(io_mutex_);
         if (serial_fd_ < 0) {
             return false;
         }
@@ -552,11 +552,11 @@ namespace card_reader {
             while (!stop_) {
                 bool ok;
                 {
-                    std::lock_guard<std::recursive_mutex> lk(io_mutex_);
+                    std::scoped_lock lk(io_mutex_);
                     ok = poll_blocking();
                 }
                 {
-                    std::lock_guard<std::mutex> lk(snap_mutex_);
+                    std::scoped_lock lk(snap_mutex_);
                     snapshot_ = ok ? card_info_ : CardInfo{};
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -579,12 +579,12 @@ namespace card_reader {
     }
 
     bool CardReader::poll_once() {
-        std::lock_guard<std::mutex> lk(snap_mutex_);
+        std::scoped_lock lk(snap_mutex_);
         return snapshot_.valid;
     }
 
     CardInfo CardReader::get_card_info() const {
-        std::lock_guard<std::mutex> lk(snap_mutex_);
+        std::scoped_lock lk(snap_mutex_);
         return snapshot_;
     }
 

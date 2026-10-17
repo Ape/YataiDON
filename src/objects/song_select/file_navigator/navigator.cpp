@@ -238,7 +238,7 @@ void Navigator::load_all_roots() {
     items.clear();
     open_index = 0;
     {
-        std::lock_guard<std::mutex> lock(child_folders_mutex);
+        std::scoped_lock lock(child_folders_mutex);
         def_file_cache.clear();
         child_folders_cache.clear();
     }
@@ -337,7 +337,7 @@ void Navigator::preload(std::vector<fs::path> songs_paths, std::optional<std::ve
                             }
                         }
                         if (playable) {
-                            std::lock_guard<std::mutex> lock(map_mutex);
+                            std::scoped_lock lock(map_mutex);
                             song_files[{meta->title, meta->subtitle}] = file;
                             std::string text;
                             for (const auto& [lang, t] : meta->titles) {
@@ -362,7 +362,7 @@ void Navigator::preload(std::vector<fs::path> songs_paths, std::optional<std::ve
                             }
                         }
                         if (playable) {
-                            std::lock_guard<std::mutex> lock(map_mutex);
+                            std::scoped_lock lock(map_mutex);
                             song_files[{parsed_entry.metadata.title["en"], parsed_entry.metadata.subtitle["en"]}] =
                                 file;
                             std::string text;
@@ -514,7 +514,7 @@ void Navigator::collapse_inline_now() {
     items[open_index]->exit_box();
 
     {
-        std::lock_guard<std::mutex> lock(pending_mutex);
+        std::scoped_lock lock(pending_mutex);
         std::queue<std::unique_ptr<BaseBox>>().swap(pending_inline_boxes);
     }
 
@@ -552,7 +552,7 @@ void Navigator::enqueue_box(std::unique_ptr<BaseBox> box) {
 
     box->preregister_text(); // glyphs for the whole batch land before the first load_text()
 
-    std::lock_guard<std::mutex> lock(pending_mutex);
+    std::scoped_lock lock(pending_mutex);
     if (auto* song = dynamic_cast<SongBox*>(box.get())) {
         auto& t = song->parser.metadata.title;
         auto& s = song->parser.metadata.subtitle;
@@ -566,7 +566,7 @@ void Navigator::enqueue_box(std::unique_ptr<BaseBox> box) {
 }
 
 void Navigator::enqueue_inline_box(std::unique_ptr<BaseBox> box) {
-    std::lock_guard<std::mutex> lock(pending_mutex);
+    std::scoped_lock lock(pending_mutex);
     if (auto* song = dynamic_cast<SongBox*>(box.get())) {
         auto& t = song->parser.metadata.title;
         auto& s = song->parser.metadata.subtitle;
@@ -621,7 +621,7 @@ void Navigator::refresh_scores() {
 }
 
 void Navigator::flush_pending_boxes() {
-    std::lock_guard<std::mutex> lock(pending_mutex);
+    std::scoped_lock lock(pending_mutex);
 
     while (!pending_boxes.empty()) {
         items.push_back(std::move(pending_boxes.front()));
@@ -1728,14 +1728,14 @@ BoxDef Navigator::parse_box_def_uncached(const fs::path& path) {
 bool Navigator::has_def_file(const std::filesystem::path& path) {
     std::string key = path.string();
     {
-        std::lock_guard<std::mutex> lock(child_folders_mutex);
+        std::scoped_lock lock(child_folders_mutex);
         auto it = def_file_cache.find(key);
         if (it != def_file_cache.end()) {
             return it->second;
         }
     }
     auto remember = [&](bool result) {
-        std::lock_guard<std::mutex> lock(child_folders_mutex);
+        std::scoped_lock lock(child_folders_mutex);
         def_file_cache[key] = result;
         return result;
     };
@@ -1904,7 +1904,7 @@ void Navigator::load_current_directory(const fs::path path) {
 
     open_index = 0;
     {
-        std::lock_guard<std::mutex> lock(child_folders_mutex);
+        std::scoped_lock lock(child_folders_mutex);
         def_file_cache.clear();
         child_folders_cache.clear();
     }
@@ -1969,7 +1969,7 @@ bool Navigator::jump_to_song_path(const fs::path& song_path) {
     auto load_full = [&](const fs::path& folder) {
         open_index = 0;
         {
-            std::lock_guard<std::mutex> lock(child_folders_mutex);
+            std::scoped_lock lock(child_folders_mutex);
             def_file_cache.clear();
             child_folders_cache.clear();
         }
@@ -2100,13 +2100,13 @@ void Navigator::setup_back_box(const fs::path& path, bool has_children, const Ba
 bool Navigator::has_child_folders(const fs::path& path) {
     const std::string key = path.string();
     {
-        std::lock_guard<std::mutex> lock(child_folders_mutex);
+        std::scoped_lock lock(child_folders_mutex);
         if (auto it = child_folders_cache.find(key); it != child_folders_cache.end()) {
             return it->second;
         }
     }
     const bool result = scan_child_folders(path);
-    std::lock_guard<std::mutex> lock(child_folders_mutex);
+    std::scoped_lock lock(child_folders_mutex);
     child_folders_cache[key] = result;
     return result;
 }
@@ -3005,7 +3005,7 @@ std::optional<fs::path> Navigator::find_song_by_title(const std::string& title, 
         return std::nullopt; // nothing to match on
     }
 
-    std::lock_guard<std::mutex> lock(title_index_mutex);
+    std::scoped_lock lock(title_index_mutex);
     if (title_index_size != song_files.size()) {
         // First match in song_files order wins, as with the linear scans this replaced
         title_subtitle_index.clear();
