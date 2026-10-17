@@ -48,35 +48,35 @@ jobs:
           java-version: "17"
           distribution: "temurin"
 
-      - name: Install NDK r27d and CMake 3.31.6
+      - name: Install NDK r30 and CMake 3.31.6
         run: |
           SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
           yes | $SDKMANAGER --licenses >/dev/null 2>&1 || true
-          $SDKMANAGER "ndk;27.3.13750724" "cmake;3.31.6"
+          $SDKMANAGER "ndk;30.0.16248370" "cmake;3.31.6"
 
       - name: Cache FFmpeg for Android arm64
         id: cache-ffmpeg
         uses: actions/cache@v4
         with:
           path: .android-ffmpeg
-          key: android-ffmpeg-${{ hashFiles('tools/build_ffmpeg_android.sh') }}
+          key: android-ffmpeg-ndk30-${{ hashFiles('tools/build_ffmpeg_android.sh') }}
 
       - name: Build FFmpeg for Android
         if: steps.cache-ffmpeg.outputs.cache-hit != 'true'
         run: |
-          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.3.13750724
+          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/30.0.16248370
           bash tools/build_ffmpeg_android.sh
 
       - name: Build OpenSSL for Android
         run: |
-          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.3.13750724
+          export ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/30.0.16248370
           bash tools/build_openssl_android.sh
 
       - name: Cache CMake dependencies
         uses: actions/cache@v4
         with:
           path: .cmake-deps
-          key: android-cmake-deps-${{ hashFiles('cmake/deps.cmake') }}
+          key: android-cmake-deps-ndk30-${{ hashFiles('cmake/deps.cmake') }}
 
       - name: Write local.properties
         run: |
@@ -124,7 +124,7 @@ jobs:
 
   build-ios:
     name: Build unsigned iOS IPA
-    runs-on: macos-15
+    runs-on: macos-26
     env:
       CONFIGURATION: Release
       IOS_DEPLOYMENT_TARGET: "16.3"
@@ -133,6 +133,9 @@ jobs:
       IOS_DEVELOPMENT_TEAM: ""
 
     steps:
+      - name: Select Xcode 26.6
+        run: sudo xcode-select --switch /Applications/Xcode_26.6.app/Contents/Developer
+
       - name: Configure Git credentials
         env:
           GITEA_USER: ${{ secrets.GITEA_USER }}
