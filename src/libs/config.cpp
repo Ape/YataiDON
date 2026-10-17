@@ -97,7 +97,7 @@ std::string getKeyString(int key_code) {
 static int getKeyCode(const std::string& key) {
     // Unambiguous escaped form for round-tripping key codes that have no
     // known string representation (see getKeyStringSafe).
-    if (key.rfind("code:", 0) == 0) {
+    if (key.starts_with("code:")) {
         std::string num = key.substr(5);
         try {
             std::size_t pos = 0;

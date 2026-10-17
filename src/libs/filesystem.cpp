@@ -184,7 +184,7 @@ void ensure_skin_extracted(const std::string& skin_name) {
         }
 
         std::string name = stat.m_filename;
-        if (!common_prefix.empty() && name.rfind(common_prefix, 0) == 0) {
+        if (!common_prefix.empty() && name.starts_with(common_prefix)) {
             name = name.substr(common_prefix.size());
         }
         if (name.empty()) {

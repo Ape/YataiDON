@@ -1182,7 +1182,7 @@ std::vector<std::string> TextureWrapper::language_variants(const std::string& na
     }
     const std::string& lang = global_data.config->general.language;
     const std::string suffix = "_" + lang;
-    if (name.size() <= suffix.size() || name.compare(name.size() - suffix.size(), suffix.size(), suffix) != 0) {
+    if (name.size() <= suffix.size() || !name.ends_with(suffix)) {
         return out;
     }
     const std::string base = name.substr(0, name.size() - suffix.size());

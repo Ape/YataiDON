@@ -32,7 +32,7 @@ namespace fs = std::filesystem;
 namespace {
 
     std::string strip_dot_git(std::string url) {
-        if (url.size() >= 4 && url.compare(url.size() - 4, 4, ".git") == 0) {
+        if (url.size() >= 4 && url.ends_with(".git")) {
             url.resize(url.size() - 4);
         }
         return url;
@@ -161,7 +161,7 @@ namespace {
 
     bool is_lfs_pointer(const std::string& body) {
         static const std::string kLfsMarker = "version https://git-lfs.github.com/spec/v1";
-        return body.compare(0, kLfsMarker.size(), kLfsMarker) == 0;
+        return body.starts_with(kLfsMarker);
     }
 
 } // namespace

@@ -193,23 +193,23 @@ void TJAParser::get_metadata() {
     int current_diff = -1;
 
     for (const auto& item : data) {
-        if (item.find("#BRANCH") == 0 && current_diff != -1) {
+        if (item.starts_with("#BRANCH") && current_diff != -1) {
             metadata.course_data[current_diff].is_branching = true;
         } else if (item[0] == '#' || std::isdigit(static_cast<unsigned char>(item[0]))) {
             continue;
-        } else if (item.find("SUBTITLE") == 0) {
+        } else if (item.starts_with("SUBTITLE")) {
             std::string region_code = "en";
             if (item.size() > 8 && item[8] != ':') {
                 region_code = to_lower(item.substr(8, 2));
             }
             std::string value = join_after_colon(item);
-            if (value.rfind("++", 0) == 0) {
+            if (value.starts_with("++")) {
                 metadata.subtitle_full_display = true;
                 value = value.substr(2);
-            } else if (value.rfind("/ ", 0) == 0) {
+            } else if (value.starts_with("/ ")) {
                 metadata.subtitle_full_display = true;
                 value = value.substr(2);
-            } else if (value.rfind("--", 0) == 0) {
+            } else if (value.starts_with("--")) {
                 metadata.subtitle_full_display = false;
                 value = value.substr(2);
             }
@@ -218,13 +218,13 @@ void TJAParser::get_metadata() {
             if (metadata.subtitle.contains("ja") && metadata.subtitle["ja"].contains("限定")) {
                 ex_data.limited_time = true;
             }
-        } else if (item.find("TITLE") == 0) {
+        } else if (item.starts_with("TITLE")) {
             std::string region_code = "en";
             if (item.size() > 5 && item[5] != ':') {
                 region_code = to_lower(item.substr(5, 2));
             }
             metadata.title[region_code] = join_after_colon(item);
-        } else if (item.find("BPM") == 0) {
+        } else if (item.starts_with("BPM")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 metadata.bpm = 0.0f;
@@ -236,12 +236,12 @@ void TJAParser::get_metadata() {
                     metadata.bpm = 0.0f;
                 }
             }
-        } else if (item.find("WAVE") == 0) {
+        } else if (item.starts_with("WAVE")) {
             std::string data_str = trim(split_after_colon(item));
 
             fs::path wave_path = get_proper_path(data_str, encoding, file_path.parent_path());
             metadata.wave = wave_path;
-        } else if (item.find("OFFSET") == 0) {
+        } else if (item.starts_with("OFFSET")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 metadata.offset = 0.0f;
@@ -253,7 +253,7 @@ void TJAParser::get_metadata() {
                     metadata.offset = 0.0f;
                 }
             }
-        } else if (item.find("DEMOSTART") == 0) {
+        } else if (item.starts_with("DEMOSTART")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 metadata.demostart = 0.0f;
@@ -265,7 +265,7 @@ void TJAParser::get_metadata() {
                     metadata.demostart = 0.0f;
                 }
             }
-        } else if (item.find("BGMOVIE") == 0) {
+        } else if (item.starts_with("BGMOVIE")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 spdlog::warn("Invalid BGMOVIE value in TJA file: {}", file_path.string());
@@ -273,7 +273,7 @@ void TJAParser::get_metadata() {
             } else {
                 metadata.bgmovie = get_proper_path(trim(data_str), encoding, file_path.parent_path());
             }
-        } else if (item.find("MOVIEOFFSET") == 0) {
+        } else if (item.starts_with("MOVIEOFFSET")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 metadata.movieoffset = 0.0f;
@@ -285,16 +285,16 @@ void TJAParser::get_metadata() {
                     metadata.movieoffset = 0.0f;
                 }
             }
-        } else if (item.find("PREIMAGE") == 0) {
+        } else if (item.starts_with("PREIMAGE")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 metadata.preimage = std::filesystem::path();
             } else {
                 metadata.preimage = get_proper_path(trim(data_str), encoding, file_path.parent_path());
             }
-        } else if (item.find("SCENEPRESET") == 0) {
+        } else if (item.starts_with("SCENEPRESET")) {
             metadata.scene_preset = split_after_colon(item);
-        } else if (item.find("COURSE") == 0) {
+        } else if (item.starts_with("COURSE")) {
             std::string course = to_lower(trim(split_after_colon(item)));
 
             if (course == "6" || course == "dan") {
@@ -320,7 +320,7 @@ void TJAParser::get_metadata() {
                 metadata.course_data[current_diff] = CourseData();
             }
         } else if (current_diff != -1) {
-            if (item.find("LEVEL") == 0) {
+            if (item.starts_with("LEVEL")) {
                 std::string data_str = split_after_colon(item);
                 if (data_str.empty()) {
                     metadata.course_data[current_diff].level = 0;
@@ -332,7 +332,7 @@ void TJAParser::get_metadata() {
                         metadata.course_data[current_diff].level = 0;
                     }
                 }
-            } else if (item.find("BALLOONNOR") == 0) {
+            } else if (item.starts_with("BALLOONNOR")) {
                 std::string balloon_data = split_after_colon(item);
                 if (!balloon_data.empty()) {
                     try {
@@ -344,7 +344,7 @@ void TJAParser::get_metadata() {
                                      e.what());
                     }
                 }
-            } else if (item.find("BALLOONEXP") == 0) {
+            } else if (item.starts_with("BALLOONEXP")) {
                 std::string balloon_data = split_after_colon(item);
                 if (!balloon_data.empty()) {
                     try {
@@ -356,7 +356,7 @@ void TJAParser::get_metadata() {
                                      e.what());
                     }
                 }
-            } else if (item.find("BALLOONMAS") == 0) {
+            } else if (item.starts_with("BALLOONMAS")) {
                 std::string balloon_data = split_after_colon(item);
                 if (!balloon_data.empty()) {
                     try {
@@ -366,7 +366,7 @@ void TJAParser::get_metadata() {
                                      e.what());
                     }
                 }
-            } else if (item.find("BALLOON") == 0) {
+            } else if (item.starts_with("BALLOON")) {
                 if (!item.contains(':')) {
                     metadata.course_data[current_diff].balloon.clear();
                     continue;
@@ -380,7 +380,7 @@ void TJAParser::get_metadata() {
                                      e.what());
                     }
                 }
-            } else if (item.find("SCOREINIT") == 0) {
+            } else if (item.starts_with("SCOREINIT")) {
                 std::string score_init = split_after_colon(item);
                 if (!score_init.empty()) {
                     try {
@@ -390,7 +390,7 @@ void TJAParser::get_metadata() {
                         metadata.course_data[current_diff].scoreinit = {0, 0};
                     }
                 }
-            } else if (item.find("SCOREDIFF") == 0) {
+            } else if (item.starts_with("SCOREDIFF")) {
                 std::string score_diff = split_after_colon(item);
                 if (!score_diff.empty()) {
                     try {
@@ -463,7 +463,7 @@ TJAParser::notes_to_position(int diff) {
             // Handle commands (lines starting with #)
             if (!part.empty() && part[0] == '#') {
                 for (const auto& [cmd_prefix, handler] : cached_cmds) {
-                    if (part.find(cmd_prefix) == 0) {
+                    if (part.starts_with(cmd_prefix)) {
                         std::string value = trim(part.substr(cmd_prefix.length()));
                         handler(value, state);
                         break;
@@ -619,7 +619,7 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
     for (size_t i = 0; i < data.size(); i++) {
         const std::string& line = data[i];
 
-        if (line.find("COURSE:") == 0) {
+        if (line.starts_with("COURSE:")) {
             std::string course_value = to_lower(trim(line.substr(7)));
 
             bool is_digit = !course_value.empty() && std::all_of(course_value.begin(), course_value.end(),

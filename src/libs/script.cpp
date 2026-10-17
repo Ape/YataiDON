@@ -780,7 +780,7 @@ void ScriptManager::register_lua_bindings() {
         sol::table keys = script_manager.lua->create_table();
         int index = 1;
         for (const auto& [path, obj] : script_manager.tex.textures) {
-            if (path.size() > prefix.size() && path.compare(0, prefix.size(), prefix) == 0) {
+            if (path.size() > prefix.size() && path.starts_with(prefix)) {
                 keys[index] = path.substr(prefix.size());
                 ++index;
             }

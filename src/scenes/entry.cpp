@@ -218,7 +218,7 @@ void EntryScreen::finish_login(RemoteLogin remote) {
     }
 
     const bool fresh = remote.card || !remote.replaced_code.empty();
-    const bool needs_name = fresh && pd.username.rfind("Player", 0) == 0 || pd.username.rfind("Don-chan", 0) == 0;
+    const bool needs_name = fresh && pd.username.starts_with("Player") || pd.username.starts_with("Don-chan");
 
     finish_slot(slot, pd);
     if (needs_name) {
