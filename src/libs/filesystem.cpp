@@ -477,7 +477,7 @@ std::vector<SongListEntry> read_song_list(const fs::path& path) {
             fields.push_back(field);
         }
         if (!line.empty() && line.back() == '|') {
-            fields.push_back("");
+            fields.emplace_back("");
         }
 
         if (fields.size() < 3) {

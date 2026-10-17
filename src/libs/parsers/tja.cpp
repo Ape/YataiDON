@@ -697,11 +697,11 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
     std::vector<std::string> bar;
 
     if (scroll_type == ScrollType::NMSCROLL) {
-        bar.push_back("#NMSCROLL");
+        bar.emplace_back("#NMSCROLL");
     } else if (scroll_type == ScrollType::BMSCROLL) {
-        bar.push_back("#BMSCROLL");
+        bar.emplace_back("#BMSCROLL");
     } else if (scroll_type == ScrollType::HBSCROLL) {
-        bar.push_back("#HBSCROLL");
+        bar.emplace_back("#HBSCROLL");
     }
 
     for (int i = note_start; i < note_end; i++) {
@@ -714,7 +714,7 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
             bar.push_back(line);
         } else if (line == ",") {
             if (bar.empty() || std::ranges::all_of(bar, [](const std::string& item) { return item[0] == '#'; })) {
-                bar.push_back("");
+                bar.emplace_back("");
             }
             notes.push_back(bar);
             bar.clear();
@@ -1234,7 +1234,7 @@ void TJAParser::handle_JPOSSCROLL(const std::string& part, ParserState& state) {
 }
 
 void TJAParser::handle_N(const std::string& value, ParserState& state) {
-    branch_n.push_back(NoteList());
+    branch_n.emplace_back();
     state.curr_note_list = &branch_n.back().notes;
     state.curr_timeline = &branch_n.back().timeline;
     this->current_ms = state.start_branch_ms;
@@ -1249,7 +1249,7 @@ void TJAParser::handle_N(const std::string& value, ParserState& state) {
 }
 
 void TJAParser::handle_E(const std::string& value, ParserState& state) {
-    branch_e.push_back(NoteList());
+    branch_e.emplace_back();
     state.curr_note_list = &branch_e.back().notes;
     state.curr_timeline = &branch_e.back().timeline;
     this->current_ms = state.start_branch_ms;
@@ -1264,7 +1264,7 @@ void TJAParser::handle_E(const std::string& value, ParserState& state) {
 }
 
 void TJAParser::handle_M(const std::string& value, ParserState& state) {
-    branch_m.push_back(NoteList());
+    branch_m.emplace_back();
     state.curr_note_list = &branch_m.back().notes;
     state.curr_timeline = &branch_m.back().timeline;
     this->current_ms = state.start_branch_ms;
@@ -1569,7 +1569,7 @@ std::vector<std::pair<int, int>> find_streams(const std::deque<Note>& modded_not
         }
 
         if (stream_length >= 2) {
-            streams.push_back({stream_start, stream_length});
+            streams.emplace_back(stream_start, stream_length);
         }
 
         i++;

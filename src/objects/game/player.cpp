@@ -515,7 +515,7 @@ void Player::update(double ms_from_start, double current_ms, std::optional<Backg
             if (note_type == NoteType::BALLOON_HEAD || is_balloon) {
                 note_type = NoteType::DON_L;
             }
-            gauge_hit_effect.push_back(GaugeHitEffect(note_type, is_big, arc_player() == PlayerNum::P2));
+            gauge_hit_effect.emplace_back(note_type, is_big, arc_player() == PlayerNum::P2);
         } else if (it->is_finished()) {
             it = draw_arc_list.erase(it);
         } else {
@@ -1454,8 +1454,8 @@ void Player::note_correct(const Note& note, double current_ms) {
     if (note.type != NoteType::KUSUDAMA) {
         bool is_big =
             note.type == NoteType::DON_L || note.type == NoteType::KAT_L || note.type == NoteType::BALLOON_HEAD;
-        draw_arc_list.push_back(NoteArc(note.type, current_ms, arc_player(), is_big,
-                                        note.type == NoteType::BALLOON_HEAD, judge_x, judge_y));
+        draw_arc_list.emplace_back(note.type, current_ms, arc_player(), is_big, note.type == NoteType::BALLOON_HEAD,
+                                   judge_x, judge_y);
     }
     auto it = std::ranges::lower_bound(draw_note_buffer, note.index, {}, &Note::index);
     if (it != draw_note_buffer.end() && *it == note) {
@@ -1465,7 +1465,7 @@ void Player::note_correct(const Note& note, double current_ms) {
 
 void Player::check_drumroll(double current_ms, DrumType drum_type, std::optional<Background>& background) {
     const bool is_big = !other_notes.empty() && other_notes.front().type == NoteType::ROLL_HEAD_L;
-    draw_arc_list.push_back(NoteArc(NoteType(drum_type), current_ms, arc_player(), is_big, false));
+    draw_arc_list.emplace_back(NoteType(drum_type), current_ms, arc_player(), is_big, false);
     curr_drumroll_count++;
     total_drumroll++;
     branch_r_count++;
@@ -1662,7 +1662,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
             (ms_from_start <= curr_note.hit_ms + good_window_ms)) {
             record_hit_offset(curr_note);
             if (draw_judge_list.size() < 7) {
-                draw_judge_list.push_back(Judgment(Judgments::GOOD, big));
+                draw_judge_list.emplace_back(Judgments::GOOD, big);
             }
             lane_hit_effect = LaneHitEffect(drum_type, Judgments::GOOD);
             note_judgments[curr_note.index] = Judgments::GOOD;
@@ -1687,7 +1687,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
         } else if ((curr_note.hit_ms - ok_window_ms) <= ms_from_start &&
                    ms_from_start <= (curr_note.hit_ms + ok_window_ms)) {
             record_hit_offset(curr_note);
-            draw_judge_list.push_back(Judgment(Judgments::OK, big));
+            draw_judge_list.emplace_back(Judgments::OK, big);
             lane_hit_effect = LaneHitEffect(drum_type, Judgments::OK);
             note_judgments[curr_note.index] = Judgments::OK;
             ok_count++;
@@ -1710,7 +1710,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
 
         } else if ((curr_note.hit_ms - bad_window_ms) <= ms_from_start &&
                    ms_from_start <= (curr_note.hit_ms + bad_window_ms)) {
-            draw_judge_list.push_back(Judgment(Judgments::BAD, big));
+            draw_judge_list.emplace_back(Judgments::BAD, big);
             bad_count++;
             on_miss();
             combo = 0;

@@ -58,7 +58,7 @@ void CostumeMenu::load_costume_icons(const std::string& subdir, const std::strin
     for (auto& e : fs::directory_iterator(dir)) {
         if (e.path().extension() == ".png") {
             try {
-                entries.push_back({std::stoi(e.path().stem().string()), e.path()});
+                entries.emplace_back(std::stoi(e.path().stem().string()), e.path());
             } catch (const std::exception& ex) {
                 spdlog::warn("CostumeMenu: skipping icon with non-numeric filename {}: {}", e.path().string(),
                              ex.what());

@@ -26,7 +26,7 @@ NeiroSelector::NeiroSelector(PlayerNum player_num, PlayerData* player) : player_
             sounds.push_back(line);
         }
     }
-    sounds.push_back("無音");
+    sounds.emplace_back("無音");
     if (selected_sound == -1) {
         selected_sound = (int)sounds.size() - 1;
     }
