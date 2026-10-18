@@ -2,6 +2,7 @@
 
 #include <future>
 
+#include "../libs/playback_clock.h"
 #include "../libs/screen.h"
 #include "../libs/video.h"
 #include "../objects/game/player.h"
@@ -14,24 +15,42 @@ class GameScreen : public Screen {
 protected:
     GameScreen(const std::string& name) : Screen(name) {}
 
+    PlaybackClock clock;
+
     void update_gameplay(double current_ms);
+    virtual void create_players();
+    virtual float song_playback_rate() const { return 1.0f; }
+    enum class AudioLoadMode {
+        Sync,
+        Async
+    };
+
+    enum class BackgroundNotification {
+        Enabled,
+        Disabled
+    };
+
+    void end_song(double end_time, double transition_delay, BackgroundNotification notification);
+    void initialize_song_movie();
+    void set_session_song_info(PlayerNum player_num);
+    void load_song_audio(AudioLoadMode mode);
+    double audio_start_ms() const;
+    void reset_playback();
+    void reset_song_clock(double opening_delay_ms = 0.0);
+    void stop_song_audio();
+    void unload_song();
+    virtual void release_chart_resources() {}
+    void pause_playback();
+    void resume_playback(std::optional<double> chart_ms = std::nullopt);
+    virtual PlayerNum restart_player_num() const { return global_data.player_num; }
 
 public:
     GameScreen() : Screen("game") {}
 
-    double start_ms;
-    double ms_from_start;
-    double start_delay;
-    double last_resync_ms;
-    double resync_drift_ema = 0.0;  // smoothed audio - chart drift (resync_song)
-    double resync_rate_bias = 0.0;  // learned audio clock rate offset (resync_song)
-    double resync_chart_ms = 0.0;   // chart time after the previous resync_song
-    double refresh_period_ms = 0.0; // display refresh period, 0 = unknown (resync_song)
-    bool song_started;
-    bool paused;
-    bool score_saved;
-    int pause_time;
-    float bpm;
+    double start_delay = 1000.0;
+    bool song_started = false;
+    bool score_saved = false;
+    float bpm = 0.0f;
 
     std::optional<VideoPlayer> movie;
     std::optional<std::string> song_music;
@@ -56,20 +75,18 @@ public:
 
     void load_hitsounds();
 
-    virtual void init_tja(fs::path song);
+    virtual void initialize_chart(const fs::path& song);
 
-    void start_song(double ms_from_start);
+    void start_song(double chart_ms);
 
     void poll_pending_song();
     void set_players_audio_end();
 
     void restart_song();
 
-    void pause_song();
+    void toggle_pause();
 
-    void resync_song(double ms_from_start);
-
-    void end_song();
+    void resync_song(double current_ms);
 
     static constexpr int SKIP_HITS = 10;
     PlayerNum skip_lane = PlayerNum::ALL;
@@ -100,6 +117,8 @@ public:
     void draw() override;
 
 private:
+    void play_song_audio(double position_seconds);
+
     float paused_audio_time = 0.0f;
     std::future<std::string> pending_song_load;
 };
