@@ -89,9 +89,9 @@ void DanBox::load_text() {
         }
 
         const bool vertical = !tex.options[SCO::DAN_TITLE_HORIZONTAL];
-        song_texts.push_back(
-            {std::make_unique<OutlinedText>(title_str, font_size, ray::WHITE, ray::BLACK, vertical),
-             std::make_unique<OutlinedText>(sub_str, sub_font, ray::WHITE, ray::BLACK, vertical, sub_outline)});
+        song_texts.emplace_back(
+            std::make_unique<OutlinedText>(title_str, font_size, ray::WHITE, ray::BLACK, vertical),
+            std::make_unique<OutlinedText>(sub_str, sub_font, ray::WHITE, ray::BLACK, vertical, sub_outline));
     }
     text_loaded = true;
 }

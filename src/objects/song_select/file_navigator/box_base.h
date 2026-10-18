@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <numbers>
 
 #include "../../../libs/text.h"
 #include "../../enums.h"
@@ -111,7 +112,7 @@ public:
             return 0.0f;
         }
         float deg = std::min((float)(elapsed - 200.0) * 1.5f, 90.0f);
-        return std::sin(deg * 3.14159265f / 180.0f) * 62.0f;
+        return std::sin(deg * std::numbers::pi_v<float> / 180.0f) * 62.0f;
     }
     OutlinedText* name_text() const { return name.get(); }
 

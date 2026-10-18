@@ -6,7 +6,7 @@ on:
 jobs:
   build-linux:
     name: Build on Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     steps:
       - name: Configure Git credentials
@@ -197,9 +197,12 @@ jobs:
 
   build-macos:
     name: Build on macOS
-    runs-on: macos-latest
+    runs-on: macos-26
 
     steps:
+      - name: Select Xcode 26.6
+        run: sudo xcode-select --switch /Applications/Xcode_26.6.app/Contents/Developer
+
       - name: Configure Git credentials
         run: |
           git config --global credential.helper ""

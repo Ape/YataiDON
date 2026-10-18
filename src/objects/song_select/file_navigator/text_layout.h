@@ -10,11 +10,11 @@ inline bool language_is_cjk(const std::string& lang) {
     static const std::unordered_set<std::string> cjk = {
         "ja", "zh", "ko", "zh_tw", "zh-tw", "zh_cn", "zh-cn",
     };
-    return cjk.count(lang) > 0;
+    return cjk.contains(lang);
 }
 
 inline std::string word_wrap(const std::string& text, int font_size, float spacing, float max_width) {
-    if (text.find('\n') != std::string::npos) {
+    if (text.contains('\n')) {
         std::string result;
         size_t start = 0;
         while (start <= text.size()) {

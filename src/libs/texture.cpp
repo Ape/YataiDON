@@ -1,5 +1,6 @@
 #include "texture.h"
 
+#include <algorithm>
 #include <atomic>
 #include <charconv>
 #include <condition_variable>
@@ -221,7 +222,7 @@ void TextureWrapper::unload_textures() {
 }
 
 BaseAnimation* TextureWrapper::get_animation(const int id, bool is_copy) {
-    if (animations.find(id) == animations.end()) {
+    if (!animations.contains(id)) {
         throw std::runtime_error("Unable to find animation: " + std::to_string(id));
     }
 
@@ -239,7 +240,7 @@ BaseAnimation* TextureWrapper::get_animation(const int id, bool is_copy) {
 }
 
 BaseAnimation* TextureWrapper::get_animation(const int id, const std::string& screen_name) {
-    if (screen_animations.find(screen_name) == screen_animations.end()) {
+    if (!screen_animations.contains(screen_name)) {
         Document anim_config;
         if (read_screen_animations(screen_name, anim_config)) {
             AnimationParser parser;
@@ -576,7 +577,7 @@ std::vector<fs::path> sorted_frames(DirIndex& dirs, const fs::path& dir) {
             }
         }
     }
-    std::sort(frames.begin(), frames.end(), [](const fs::path& a, const fs::path& b) {
+    std::ranges::sort(frames, [](const fs::path& a, const fs::path& b) {
         const std::string as = a.stem().string(), bs = b.stem().string();
         int an = 0, bn = 0;
         auto ar = std::from_chars(as.data(), as.data() + as.size(), an);
@@ -619,12 +620,12 @@ public:
         for (size_t g = 0; g < groups.size(); ++g) {
             for (const fs::path& p : groups[g]) {
                 std::string key = image_key(p);
-                if (index.count(key)) {
+                if (index.contains(key)) {
                     continue;
                 }
                 index.emplace(key, items.size());
                 items.push_back(Item{p, g});
-                items.back().want_border = border_keys.count(key) > 0;
+                items.back().want_border = border_keys.contains(key);
             }
         }
         unsigned hw = std::thread::hardware_concurrency();
@@ -636,7 +637,7 @@ public:
 
     ~ImagePrefetch() {
         {
-            std::lock_guard<std::mutex> lock(mutex);
+            std::scoped_lock lock(mutex);
             stop = true;
         }
         cv.notify_all();
@@ -681,7 +682,7 @@ public:
 
     // Folder group g has been loaded: whatever it (and earlier groups) left untaken goes.
     void finish_group(size_t g) {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::scoped_lock lock(mutex);
         finished_groups = std::max(finished_groups, g + 1);
         for (Item& it : items) {
             if (it.group > g) {
@@ -791,7 +792,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
     const std::string subset_key = fs::path(subset).filename().string();
     const std::string dedup_key = screen_name + "/" + subset_key;
 
-    if (loaded_subsets.count(dedup_key)) {
+    if (loaded_subsets.contains(dedup_key)) {
         return;
     }
 
@@ -839,7 +840,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
             for (auto& m : tex_config.GetObject()) {
                 std::string tex_name = m.name.GetString();
 
-                if (skip && skip->count(tex_name)) {
+                if (skip && skip->contains(tex_name)) {
                     continue;
                 }
 
@@ -1033,7 +1034,7 @@ void TextureWrapper::unload_folder(const std::string& screen_name, const std::st
     const std::string subset_key = fs::path(subset).filename().string();
     const std::string dedup_key = screen_name + "/" + subset_key;
 
-    if (!loaded_subsets.count(dedup_key)) {
+    if (!loaded_subsets.contains(dedup_key)) {
         return;
     }
 
@@ -1101,7 +1102,7 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
                 continue;
             }
             std::string name = entry.path.filename().string();
-            if (seen.insert(name).second && !loaded_subsets.count(screen_name + "/" + name)) {
+            if (seen.insert(name).second && !loaded_subsets.contains(screen_name + "/" + name)) {
                 subsets.push_back(std::move(name));
             }
         }
@@ -1181,7 +1182,7 @@ std::vector<std::string> TextureWrapper::language_variants(const std::string& na
     }
     const std::string& lang = global_data.config->general.language;
     const std::string suffix = "_" + lang;
-    if (name.size() <= suffix.size() || name.compare(name.size() - suffix.size(), suffix.size(), suffix) != 0) {
+    if (name.size() <= suffix.size() || !name.ends_with(suffix)) {
         return out;
     }
     const std::string base = name.substr(0, name.size() - suffix.size());
@@ -1218,15 +1219,10 @@ std::shared_ptr<TextureObject> TextureWrapper::get_texture_shared(const std::str
 }
 
 bool TextureWrapper::has_texture(const std::string& name) {
-    if (textures.find(name) != textures.end()) {
+    if (textures.contains(name)) {
         return true;
     }
-    for (const auto& v : language_variants(name)) {
-        if (textures.find(v) != textures.end()) {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::any_of(language_variants(name), [this](const auto& v) { return textures.contains(v); });
 }
 
 void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParams& params) {

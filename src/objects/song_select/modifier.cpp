@@ -45,11 +45,11 @@ ModifierSelector::ModifierSelector(PlayerNum player_num, PlayerData* player) : p
 
     mod_names.assign(BASE_MOD_NAMES.begin(), BASE_MOD_NAMES.end());
     if (tex.options[SCO::OPTION_SKIP_ROW]) {
-        mod_names.push_back("skip");
+        mod_names.emplace_back("skip");
     }
     if (tex.options[SCO::OPTION_NEIRO_ROW]) {
         load_neiro_names();
-        mod_names.push_back("neiro");
+        mod_names.emplace_back("neiro");
     }
 
     blue_arrow_fade = (FadeAnimation*)tex.get_animation(29, true);

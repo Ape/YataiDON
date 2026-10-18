@@ -29,14 +29,11 @@ static void draw_model_face_last(ray::Model& model, int face_material_index, con
     ray::Matrix matTransform = ray::MatrixMultiply(ray::MatrixScale(scale, scale, scale),
                                                    ray::MatrixTranslate(position.x, position.y, position.z));
     ray::Matrix transform = ray::MatrixMultiply(model.transform, matTransform);
-    auto is_blend = [&](int mat) {
-        return std::find(blend_materials.begin(), blend_materials.end(), mat) != blend_materials.end();
-    };
+    auto is_blend = [&](int mat) { return std::ranges::contains(blend_materials, mat); };
     // _CULLNONE materials are drawn two-sided, as the name asks.
     auto draw = [&](int i) {
         const int mat = model.meshMaterial[i];
-        const bool two_sided =
-            std::find(twosided_materials.begin(), twosided_materials.end(), mat) != twosided_materials.end();
+        const bool two_sided = std::ranges::contains(twosided_materials, mat);
         if (two_sided) {
             rlDisableBackfaceCulling();
         }
@@ -107,7 +104,7 @@ struct AnimSource {
 static const AnimSource& anim_source(const fs::path& path) {
     static std::mutex mutex;
     static std::map<fs::path, AnimSource> cache;
-    std::lock_guard<std::mutex> lock(mutex);
+    std::scoped_lock lock(mutex);
 
     std::error_code ec;
     const auto mtime = fs::last_write_time(path, ec);
@@ -268,20 +265,20 @@ parse_glb_material_indices(const std::string& path, std::vector<int>& recolor_ou
         }
         if (mat_name_raw) {
             std::string nl = name_lower(mat_name_raw);
-            if (nl.find("_aa_add") != std::string::npos) {
+            if (nl.contains("_aa_add")) {
                 additive_out.push_back(raylib_idx);
-            } else if (nl.find("_color_s_cus_") != std::string::npos && nl.find("_a_ab") == std::string::npos) {
+            } else if (nl.contains("_color_s_cus_") && !nl.contains("_a_ab")) {
                 cutout_out.push_back(raylib_idx); // _AT_ZERO_ / _AT_ONE_: alpha-tested, never blended
             }
-            const bool cutout = nl.find("_color_s_cus_") != std::string::npos && nl.find("_a_ab") == std::string::npos;
+            const bool cutout = nl.contains("_color_s_cus_") && !nl.contains("_a_ab");
             const bool gltf_blend = materials[i].HasMember("alphaMode") && materials[i]["alphaMode"].IsString() &&
                                     std::string(materials[i]["alphaMode"].GetString()) == "BLEND";
             // alpha-blended: _A_AB by name, or any other glTF BLEND material that is not an
             // alpha-tested one (e.g. a plain "lambert" glint sheet) -- drawn after the face
-            if (nl.find("_a_ab") != std::string::npos || (gltf_blend && !cutout)) {
+            if (nl.contains("_a_ab") || (gltf_blend && !cutout)) {
                 blend_out.push_back(raylib_idx);
             }
-            if (nl.find("cullnone") != std::string::npos) {
+            if (nl.contains("cullnone")) {
                 twosided_out.push_back(raylib_idx);
             }
         }
@@ -334,7 +331,7 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
         face_material_index = -1;
     }
     auto filter_materials = [&](std::vector<int>& v) {
-        v.erase(std::remove_if(v.begin(), v.end(), [&](int idx) { return !valid_material(idx); }), v.end());
+        std::erase_if(v, [&](int idx) { return !valid_material(idx); });
     };
     filter_materials(recolor_indices);
     filter_materials(additive_indices);
@@ -378,10 +375,8 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
         model.materials[face_material_index].shader = face_shader;
     }
 #endif
-    additive_indices.erase(std::remove(additive_indices.begin(), additive_indices.end(), face_material_index),
-                           additive_indices.end());
-    blend_indices.erase(std::remove(blend_indices.begin(), blend_indices.end(), face_material_index),
-                        blend_indices.end());
+    std::erase(additive_indices, face_material_index);
+    std::erase(blend_indices, face_material_index);
     for (int idx : additive_indices) {
         model.materials[idx].maps[ray::MATERIAL_MAP_DIFFUSE].color = {255, 255, 255, 255};
     }
@@ -554,7 +549,7 @@ void Chara3D::load_face_textures(fs::path& face_dir) {
     if (paths.empty()) {
         return;
     }
-    std::sort(paths.begin(), paths.end());
+    std::ranges::sort(paths);
     ray::Image sheet = ray::LoadImage(paths[0].string().c_str());
     // Frames are square and stacked vertically; derive the size from the
     // sheet width instead of assuming 128px, so higher-resolution skins
@@ -688,7 +683,7 @@ void Chara3D::set_anim(AnimIndex idx) {
     if (i >= 0 && i < anim_count) {
         if (base == (int)AnimIndex::DON_NORMAL || base == (int)AnimIndex::DON_SABI ||
             base == (int)AnimIndex::DON_BALLOON_NOBEAT || base == (int)AnimIndex::DON_MISS6 ||
-            get_anim_name(i).find("loop") != std::string::npos) {
+            get_anim_name(i).contains("loop")) {
             is_looping = true;
         } else {
             if (is_looping) {

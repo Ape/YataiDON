@@ -10,6 +10,7 @@
 #include <numbers>
 #include <numeric>
 #include <random>
+#include <ranges>
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <stdexcept>
@@ -159,8 +160,7 @@ TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int pla
             cleaned = line;
         } else if (comment_pos > 0) {
             std::string prefix = line.substr(0, comment_pos);
-            auto non_space =
-                std::find_if(prefix.begin(), prefix.end(), [](unsigned char c) { return !std::isspace(c); });
+            auto non_space = std::ranges::find_if(prefix, [](unsigned char c) { return !std::isspace(c); });
             if (non_space != prefix.end()) {
                 cleaned = std::move(prefix);
             }
@@ -193,39 +193,38 @@ void TJAParser::get_metadata() {
     int current_diff = -1;
 
     for (const auto& item : data) {
-        if (item.find("#BRANCH") == 0 && current_diff != -1) {
+        if (item.starts_with("#BRANCH") && current_diff != -1) {
             metadata.course_data[current_diff].is_branching = true;
         } else if (item[0] == '#' || std::isdigit(static_cast<unsigned char>(item[0]))) {
             continue;
-        } else if (item.find("SUBTITLE") == 0) {
+        } else if (item.starts_with("SUBTITLE")) {
             std::string region_code = "en";
             if (item.size() > 8 && item[8] != ':') {
                 region_code = to_lower(item.substr(8, 2));
             }
             std::string value = join_after_colon(item);
-            if (value.rfind("++", 0) == 0) {
+            if (value.starts_with("++")) {
                 metadata.subtitle_full_display = true;
                 value = value.substr(2);
-            } else if (value.rfind("/ ", 0) == 0) {
+            } else if (value.starts_with("/ ")) {
                 metadata.subtitle_full_display = true;
                 value = value.substr(2);
-            } else if (value.rfind("--", 0) == 0) {
+            } else if (value.starts_with("--")) {
                 metadata.subtitle_full_display = false;
                 value = value.substr(2);
             }
             metadata.subtitle[region_code] = value;
 
-            if (metadata.subtitle.find("ja") != metadata.subtitle.end() &&
-                metadata.subtitle["ja"].find("限定") != std::string::npos) {
+            if (metadata.subtitle.contains("ja") && metadata.subtitle["ja"].contains("限定")) {
                 ex_data.limited_time = true;
             }
-        } else if (item.find("TITLE") == 0) {
+        } else if (item.starts_with("TITLE")) {
             std::string region_code = "en";
             if (item.size() > 5 && item[5] != ':') {
                 region_code = to_lower(item.substr(5, 2));
             }
             metadata.title[region_code] = join_after_colon(item);
-        } else if (item.find("BPM") == 0) {
+        } else if (item.starts_with("BPM")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 metadata.bpm = 0.0f;
@@ -237,12 +236,12 @@ void TJAParser::get_metadata() {
                     metadata.bpm = 0.0f;
                 }
             }
-        } else if (item.find("WAVE") == 0) {
+        } else if (item.starts_with("WAVE")) {
             std::string data_str = trim(split_after_colon(item));
 
             fs::path wave_path = get_proper_path(data_str, encoding, file_path.parent_path());
             metadata.wave = wave_path;
-        } else if (item.find("OFFSET") == 0) {
+        } else if (item.starts_with("OFFSET")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 metadata.offset = 0.0f;
@@ -254,7 +253,7 @@ void TJAParser::get_metadata() {
                     metadata.offset = 0.0f;
                 }
             }
-        } else if (item.find("DEMOSTART") == 0) {
+        } else if (item.starts_with("DEMOSTART")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 metadata.demostart = 0.0f;
@@ -266,7 +265,7 @@ void TJAParser::get_metadata() {
                     metadata.demostart = 0.0f;
                 }
             }
-        } else if (item.find("BGMOVIE") == 0) {
+        } else if (item.starts_with("BGMOVIE")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 spdlog::warn("Invalid BGMOVIE value in TJA file: {}", file_path.string());
@@ -274,7 +273,7 @@ void TJAParser::get_metadata() {
             } else {
                 metadata.bgmovie = get_proper_path(trim(data_str), encoding, file_path.parent_path());
             }
-        } else if (item.find("MOVIEOFFSET") == 0) {
+        } else if (item.starts_with("MOVIEOFFSET")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 metadata.movieoffset = 0.0f;
@@ -286,16 +285,16 @@ void TJAParser::get_metadata() {
                     metadata.movieoffset = 0.0f;
                 }
             }
-        } else if (item.find("PREIMAGE") == 0) {
+        } else if (item.starts_with("PREIMAGE")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
                 metadata.preimage = std::filesystem::path();
             } else {
                 metadata.preimage = get_proper_path(trim(data_str), encoding, file_path.parent_path());
             }
-        } else if (item.find("SCENEPRESET") == 0) {
+        } else if (item.starts_with("SCENEPRESET")) {
             metadata.scene_preset = split_after_colon(item);
-        } else if (item.find("COURSE") == 0) {
+        } else if (item.starts_with("COURSE")) {
             std::string course = to_lower(trim(split_after_colon(item)));
 
             if (course == "6" || course == "dan") {
@@ -321,7 +320,7 @@ void TJAParser::get_metadata() {
                 metadata.course_data[current_diff] = CourseData();
             }
         } else if (current_diff != -1) {
-            if (item.find("LEVEL") == 0) {
+            if (item.starts_with("LEVEL")) {
                 std::string data_str = split_after_colon(item);
                 if (data_str.empty()) {
                     metadata.course_data[current_diff].level = 0;
@@ -333,7 +332,7 @@ void TJAParser::get_metadata() {
                         metadata.course_data[current_diff].level = 0;
                     }
                 }
-            } else if (item.find("BALLOONNOR") == 0) {
+            } else if (item.starts_with("BALLOONNOR")) {
                 std::string balloon_data = split_after_colon(item);
                 if (!balloon_data.empty()) {
                     try {
@@ -345,7 +344,7 @@ void TJAParser::get_metadata() {
                                      e.what());
                     }
                 }
-            } else if (item.find("BALLOONEXP") == 0) {
+            } else if (item.starts_with("BALLOONEXP")) {
                 std::string balloon_data = split_after_colon(item);
                 if (!balloon_data.empty()) {
                     try {
@@ -357,7 +356,7 @@ void TJAParser::get_metadata() {
                                      e.what());
                     }
                 }
-            } else if (item.find("BALLOONMAS") == 0) {
+            } else if (item.starts_with("BALLOONMAS")) {
                 std::string balloon_data = split_after_colon(item);
                 if (!balloon_data.empty()) {
                     try {
@@ -367,8 +366,8 @@ void TJAParser::get_metadata() {
                                      e.what());
                     }
                 }
-            } else if (item.find("BALLOON") == 0) {
-                if (item.find(':') == std::string::npos) {
+            } else if (item.starts_with("BALLOON")) {
+                if (!item.contains(':')) {
                     metadata.course_data[current_diff].balloon.clear();
                     continue;
                 }
@@ -381,7 +380,7 @@ void TJAParser::get_metadata() {
                                      e.what());
                     }
                 }
-            } else if (item.find("SCOREINIT") == 0) {
+            } else if (item.starts_with("SCOREINIT")) {
                 std::string score_init = split_after_colon(item);
                 if (!score_init.empty()) {
                     try {
@@ -391,7 +390,7 @@ void TJAParser::get_metadata() {
                         metadata.course_data[current_diff].scoreinit = {0, 0};
                     }
                 }
-            } else if (item.find("SCOREDIFF") == 0) {
+            } else if (item.starts_with("SCOREDIFF")) {
                 std::string score_diff = split_after_colon(item);
                 if (!score_diff.empty()) {
                     try {
@@ -405,15 +404,15 @@ void TJAParser::get_metadata() {
     }
 
     for (auto& [region_code, title] : metadata.title) {
-        if (title.find("-New Audio-") != std::string::npos || title.find("-新曲-") != std::string::npos) {
+        if (title.contains("-New Audio-") || title.contains("-新曲-")) {
             replace_all(title, "-New Audio-", "");
             replace_all(title, "-新曲-", "");
             ex_data.new_audio = true;
-        } else if (title.find("-Old Audio-") != std::string::npos || title.find("-旧曲-") != std::string::npos) {
+        } else if (title.contains("-Old Audio-") || title.contains("-旧曲-")) {
             replace_all(title, "-Old Audio-", "");
             replace_all(title, "-旧曲-", "");
             ex_data.old_audio = true;
-        } else if (title.find("限定") != std::string::npos) {
+        } else if (title.contains("限定")) {
             ex_data.limited_time = true;
         }
     }
@@ -422,7 +421,7 @@ void TJAParser::get_metadata() {
 std::tuple<NoteList, std::deque<NoteList>, std::deque<NoteList>, std::deque<NoteList>>
 TJAParser::notes_to_position(int diff) {
     PROFILE_SCOPE();
-    if (metadata.course_data.count(diff) == 0) {
+    if (!metadata.course_data.contains(diff)) {
         return std::make_tuple(NoteList(), std::deque<NoteList>(), std::deque<NoteList>(), std::deque<NoteList>());
     }
     last_diff = diff;
@@ -434,8 +433,8 @@ TJAParser::notes_to_position(int diff) {
     if (cached_cmds.empty()) {
         auto cmds = build_command_registry();
         cached_cmds = std::vector<std::pair<std::string, CommandHandler>>(cmds.begin(), cmds.end());
-        std::sort(cached_cmds.begin(), cached_cmds.end(),
-                  [](const auto& a, const auto& b) { return a.first.length() > b.first.length(); });
+        std::ranges::sort(cached_cmds,
+                          [](const auto& a, const auto& b) { return a.first.length() > b.first.length(); });
     }
     auto notes = data_to_notes(diff);
 
@@ -464,7 +463,7 @@ TJAParser::notes_to_position(int diff) {
             // Handle commands (lines starting with #)
             if (!part.empty() && part[0] == '#') {
                 for (const auto& [cmd_prefix, handler] : cached_cmds) {
-                    if (part.find(cmd_prefix) == 0) {
+                    if (part.starts_with(cmd_prefix)) {
                         std::string value = trim(part.substr(cmd_prefix.length()));
                         handler(value, state);
                         break;
@@ -543,7 +542,7 @@ std::vector<std::string> TJAParser::read_file_lines(const std::filesystem::path&
 
 std::string TJAParser::to_lower(const std::string& str) {
     std::string result = str;
-    std::transform(result.begin(), result.end(), result.begin(), [](unsigned char c) { return std::tolower(c); });
+    std::ranges::transform(result, result.begin(), [](unsigned char c) { return std::tolower(c); });
     return result;
 }
 
@@ -572,8 +571,9 @@ void TJAParser::replace_all(std::string& str, const std::string& from, const std
 }
 
 std::string TJAParser::trim(const std::string& str) {
-    auto start = std::find_if(str.begin(), str.end(), [](unsigned char ch) { return !std::isspace(ch); });
-    auto end = std::find_if(str.rbegin(), str.rend(), [](unsigned char ch) { return !std::isspace(ch); }).base();
+    auto start = std::ranges::find_if(str, [](unsigned char ch) { return !std::isspace(ch); });
+    auto end =
+        std::ranges::find_if(std::views::reverse(str), [](unsigned char ch) { return !std::isspace(ch); }).base();
     return (start < end) ? std::string(start, end) : std::string();
 }
 
@@ -620,11 +620,11 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
     for (size_t i = 0; i < data.size(); i++) {
         const std::string& line = data[i];
 
-        if (line.find("COURSE:") == 0) {
+        if (line.starts_with("COURSE:")) {
             std::string course_value = to_lower(trim(line.substr(7)));
 
-            bool is_digit = !course_value.empty() && std::all_of(course_value.begin(), course_value.end(),
-                                                                 [](unsigned char c) { return std::isdigit(c) != 0; });
+            bool is_digit = !course_value.empty() &&
+                            std::ranges::all_of(course_value, [](unsigned char c) { return std::isdigit(c) != 0; });
 
             target_found = (is_digit && std::stoi(course_value) == diff) || course_value == diff_name;
         } else if (target_found) {
@@ -643,17 +643,17 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
             }
             // Like Taiko-san Jiro, the scroll mode only counts before #START
             bool started = note_start != -1 || p1_start != -1 || p2_start != -1;
-            if (line.find("#NMSCROLL") != std::string::npos) {
+            if (line.contains("#NMSCROLL")) {
                 if (!started) {
                     scroll_type = ScrollType::NMSCROLL;
                 }
                 continue;
-            } else if (line.find("#BMSCROLL") != std::string::npos) {
+            } else if (line.contains("#BMSCROLL")) {
                 if (!started) {
                     scroll_type = ScrollType::BMSCROLL;
                 }
                 continue;
-            } else if (line.find("#HBSCROLL") != std::string::npos) {
+            } else if (line.contains("#HBSCROLL")) {
                 if (!started) {
                     scroll_type = ScrollType::HBSCROLL;
                 }
@@ -697,11 +697,11 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
     std::vector<std::string> bar;
 
     if (scroll_type == ScrollType::NMSCROLL) {
-        bar.push_back("#NMSCROLL");
+        bar.emplace_back("#NMSCROLL");
     } else if (scroll_type == ScrollType::BMSCROLL) {
-        bar.push_back("#BMSCROLL");
+        bar.emplace_back("#BMSCROLL");
     } else if (scroll_type == ScrollType::HBSCROLL) {
-        bar.push_back("#HBSCROLL");
+        bar.emplace_back("#HBSCROLL");
     }
 
     for (int i = note_start; i < note_end; i++) {
@@ -713,9 +713,8 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
             }
             bar.push_back(line);
         } else if (line == ",") {
-            if (bar.empty() ||
-                std::all_of(bar.begin(), bar.end(), [](const std::string& item) { return item[0] == '#'; })) {
-                bar.push_back("");
+            if (bar.empty() || std::ranges::all_of(bar, [](const std::string& item) { return item[0] == '#'; })) {
+                bar.emplace_back("");
             }
             notes.push_back(bar);
             bar.clear();
@@ -847,10 +846,10 @@ void TJAParser::register_extended_commands(std::map<std::string, CommandHandler>
             ev.from = d[0];
             ev.to = d[1];
             ev.ease = true;
-            if (a.size() > 2 && dirs.count(a[2])) {
+            if (a.size() > 2 && dirs.contains(a[2])) {
                 ev.dir = dirs.at(a[2]);
             }
-            if (a.size() > 3 && calcs.count(a[3])) {
+            if (a.size() > 3 && calcs.contains(a[3])) {
                 ev.calc = calcs.at(a[3]);
             }
             s.open_cam[prop] = push(s, ev);
@@ -931,7 +930,7 @@ void TJAParser::handle_SCROLL(const std::string& value, ParserState& state) {
 
     // Polar form (TaikoManyGimmicks): #SCROLL <speed>, <rotation-lower>, <rotation-upper>, the
     // speed rotated rotation-upper/rotation-lower turns counterclockwise
-    if (value.find(',') != std::string::npos && value.find('i') == std::string::npos) {
+    if (value.contains(',') && !value.contains('i')) {
         std::vector<double> parts;
         std::stringstream ss(value);
         std::string part;
@@ -952,7 +951,7 @@ void TJAParser::handle_SCROLL(const std::string& value, ParserState& state) {
         return;
     }
 
-    if (value.find('i') != std::string::npos) {
+    if (value.contains('i')) {
         std::string normalized = value;
         replace_all(normalized, ".i", "j");
         replace_all(normalized, "i", "j");
@@ -1235,7 +1234,7 @@ void TJAParser::handle_JPOSSCROLL(const std::string& part, ParserState& state) {
 }
 
 void TJAParser::handle_N(const std::string& value, ParserState& state) {
-    branch_n.push_back(NoteList());
+    branch_n.emplace_back();
     state.curr_note_list = &branch_n.back().notes;
     state.curr_timeline = &branch_n.back().timeline;
     this->current_ms = state.start_branch_ms;
@@ -1250,7 +1249,7 @@ void TJAParser::handle_N(const std::string& value, ParserState& state) {
 }
 
 void TJAParser::handle_E(const std::string& value, ParserState& state) {
-    branch_e.push_back(NoteList());
+    branch_e.emplace_back();
     state.curr_note_list = &branch_e.back().notes;
     state.curr_timeline = &branch_e.back().timeline;
     this->current_ms = state.start_branch_ms;
@@ -1265,7 +1264,7 @@ void TJAParser::handle_E(const std::string& value, ParserState& state) {
 }
 
 void TJAParser::handle_M(const std::string& value, ParserState& state) {
-    branch_m.push_back(NoteList());
+    branch_m.emplace_back();
     state.curr_note_list = &branch_m.back().notes;
     state.curr_timeline = &branch_m.back().timeline;
     this->current_ms = state.start_branch_ms;
@@ -1428,7 +1427,7 @@ void modifier_random(NoteList& notes, int value) {
     std::mt19937 gen(rd());
 
     std::vector<int> indices(notes.notes.size());
-    std::iota(indices.begin(), indices.end(), 0);
+    std::ranges::iota(indices, 0);
     std::shuffle(indices.begin(), indices.end(), gen);
 
     std::vector<int> selected_notes(indices.begin(), indices.begin() + percentage);
@@ -1570,7 +1569,7 @@ std::vector<std::pair<int, int>> find_streams(const std::deque<Note>& modded_not
         }
 
         if (stream_length >= 2) {
-            streams.push_back({stream_start, stream_length});
+            streams.emplace_back(stream_start, stream_length);
         }
 
         i++;

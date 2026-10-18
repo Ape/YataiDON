@@ -1,6 +1,7 @@
 #include "logging.h"
 
 #include <iostream>
+#include <print>
 #include <spdlog/sinks/basic_file_sink.h>
 #include <spdlog/sinks/dup_filter_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -94,7 +95,7 @@ static spdlog::level::level_enum parse_log_level(const std::string& log_level_st
     if (log_level_str == "critical") {
         return spdlog::level::critical;
     }
-    fprintf(stderr, "Unknown log level '%s'; using info\n", log_level_str.c_str());
+    std::println(stderr, "Unknown log level '{}'; using info", log_level_str);
     return spdlog::level::info;
 }
 

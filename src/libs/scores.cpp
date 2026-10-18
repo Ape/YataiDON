@@ -103,7 +103,7 @@ ScoresManager::ScoresManager(const fs::path& db_path) {
         if (sqlite3_exec(db_fsd, sql, nullptr, nullptr, &mig_errmsg) == SQLITE_OK) {
             return true;
         }
-        bool duplicate_column = mig_errmsg && std::string(mig_errmsg).find("duplicate column") != std::string::npos;
+        bool duplicate_column = mig_errmsg && std::string(mig_errmsg).contains("duplicate column");
         if (!duplicate_column) {
             spdlog::error("ScoresManager migration failed: {} ({})", mig_errmsg ? mig_errmsg : "?", sql);
         }
@@ -301,7 +301,7 @@ ScoresManager::~ScoresManager() {
 }
 
 void ScoresManager::load_score_cache() {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     score_cache.clear();
 
     sqlite3_stmt* stmt;
@@ -322,7 +322,7 @@ void ScoresManager::load_score_cache() {
 
         // Rows are ordered best-first, so the first row seen for a key is the best one.
         auto key = std::make_tuple(hash, difficulty, player_id);
-        if (score_cache.count(key)) {
+        if (score_cache.contains(key)) {
             continue;
         }
 
@@ -352,15 +352,15 @@ void ScoresManager::py_taiko_import(const fs::path& old_db_path) {
 
     std::unordered_map<fs::path, std::array<std::string, 5>> path_to_hashes_snapshot;
     {
-        std::lock_guard<std::mutex> lock(maps_mutex);
+        std::scoped_lock lock(maps_mutex);
         path_to_hashes_snapshot = path_to_hashes;
     }
 
     for (const auto& [path, hashes] : path_to_hashes_snapshot) {
         try {
             SongParser parser(path);
-            std::string en = parser.metadata.title.count("en") ? parser.metadata.title.at("en") : "";
-            std::string ja = parser.metadata.title.count("ja") ? parser.metadata.title.at("ja") : "";
+            std::string en = parser.metadata.title.contains("en") ? parser.metadata.title.at("en") : "";
+            std::string ja = parser.metadata.title.contains("ja") ? parser.metadata.title.at("ja") : "";
             name_to_hashes[{en, ja}] = hashes;
         } catch (const std::exception& e) {
             spdlog::warn("py_taiko_import: failed to parse metadata for {}: {}", path.string(), e.what());
@@ -582,7 +582,7 @@ int ScoresManager::apply_remote_scores(const std::vector<RemoteScore>& scores, c
 }
 
 std::optional<Score> ScoresManager::get_score(const std::string& hash, int difficulty, const std::string& player_id) {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = score_cache.find(std::make_tuple(hash, difficulty, player_id));
     if (it != score_cache.end()) {
         return it->second;
@@ -631,7 +631,7 @@ Score ScoresManager::save_score(const std::string& hash, int difficulty, const s
     spdlog::info("Saved score for hash: {} score: {} crown: {}", hash, score.score, (int)score.crown);
 
     auto key = std::make_tuple(hash, difficulty, player_id);
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = score_cache.find(key);
     bool is_better = it == score_cache.end() || score.crown > it->second.crown ||
                      (score.crown == it->second.crown && score.score > it->second.score);
@@ -643,7 +643,7 @@ Score ScoresManager::save_score(const std::string& hash, int difficulty, const s
 }
 
 void ScoresManager::add_path_binding(const fs::path& path, const std::array<std::string, 5>& hashes) {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     path_to_hashes[path] = hashes;
     std::string single = std::accumulate(hashes.begin(), hashes.end(), std::string{});
     if (!single.empty()) {
@@ -660,7 +660,7 @@ std::optional<fs::path> ScoresManager::get_path_by_hash(const std::string& singl
     if (single_hash.empty()) {
         return std::nullopt;
     }
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = single_hash_to_path.find(single_hash);
     if (it != single_hash_to_path.end()) {
         return it->second;
@@ -669,7 +669,7 @@ std::optional<fs::path> ScoresManager::get_path_by_hash(const std::string& singl
 }
 
 std::optional<fs::path> ScoresManager::get_path_by_diff_hash(const std::string& diff_hash) {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = diff_hash_to_path.find(diff_hash);
     if (it != diff_hash_to_path.end()) {
         return it->second;
@@ -678,13 +678,13 @@ std::optional<fs::path> ScoresManager::get_path_by_diff_hash(const std::string& 
 }
 
 std::array<std::string, 5> ScoresManager::get_hashes(const fs::path& path) {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = path_to_hashes.find(path);
     return it != path_to_hashes.end() ? it->second : std::array<std::string, 5>{};
 }
 
 std::string ScoresManager::get_single_hash(const fs::path& path) {
-    std::lock_guard<std::mutex> lock(maps_mutex);
+    std::scoped_lock lock(maps_mutex);
     auto it = path_to_hashes.find(path);
     if (it == path_to_hashes.end()) {
         return "";
@@ -773,12 +773,12 @@ static std::array<int, 5> decode_levels(const std::string& s) {
 }
 
 void ScoresManager::set_song_meta(const std::string& path, const SongCacheEntry& entry) {
-    std::lock_guard<std::mutex> lock(song_meta_mutex);
+    std::scoped_lock lock(song_meta_mutex);
     song_meta[path] = entry;
 }
 
 std::optional<SongCacheEntry> ScoresManager::get_song_meta(const std::string& path) {
-    std::lock_guard<std::mutex> lock(song_meta_mutex);
+    std::scoped_lock lock(song_meta_mutex);
     auto it = song_meta.find(path);
     if (it == song_meta.end()) {
         return std::nullopt;

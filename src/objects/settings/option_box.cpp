@@ -106,7 +106,7 @@ IntOptionBox::IntOptionBox(const std::string& name, const std::string& descripti
             }
         }
 
-        std::sort(value_list.begin(), value_list.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+        std::ranges::sort(value_list, [](const auto& a, const auto& b) { return a.first < b.first; });
 
         if (!value_list.empty()) {
             bool matched = false;

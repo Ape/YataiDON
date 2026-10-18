@@ -8,7 +8,7 @@ on:
 jobs:
   build-linux:
     name: Build on Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_MAXSIZE: 500M
@@ -238,12 +238,15 @@ jobs:
 
   build-macos:
     name: Build on macOS
-    runs-on: macos-latest
+    runs-on: macos-26
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_MAXSIZE: 500M
 
     steps:
+      - name: Select Xcode 26.6
+        run: sudo xcode-select --switch /Applications/Xcode_26.6.app/Contents/Developer
+
       - name: Configure Git credentials
         run: |
           git config --global credential.helper ""

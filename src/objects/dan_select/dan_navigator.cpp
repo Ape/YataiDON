@@ -1,5 +1,6 @@
 #include "dan_navigator.h"
 
+#include <algorithm>
 #include <climits>
 #include <tuple>
 
@@ -32,14 +33,14 @@ int DanNavigator::total_notes_for(const std::vector<DanSongEntry>& songs) {
 
 std::shared_ptr<const TJAMetadata> DanNavigator::song_metadata(const fs::path& path) {
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         if (auto it = memo_->metadata.find(path); it != memo_->metadata.end()) {
             return it->second;
         }
     }
     auto meta = std::make_shared<const TJAMetadata>(SongParser(path).metadata);
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         memo_->metadata.emplace(path, meta);
     }
     return meta;
@@ -47,7 +48,7 @@ std::shared_ptr<const TJAMetadata> DanNavigator::song_metadata(const fs::path& p
 
 int DanNavigator::song_note_count(const fs::path& path, int difficulty) {
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         if (auto it = memo_->note_counts.find({path, difficulty}); it != memo_->note_counts.end()) {
             return it->second;
         }
@@ -72,7 +73,7 @@ int DanNavigator::song_note_count(const fs::path& path, int difficulty) {
         spdlog::warn("DanNavigator::total_notes_for: failed to parse '{}': {}", path.string(), e.what());
     }
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         memo_->note_counts.emplace(std::make_pair(path, difficulty), total);
     }
     return total;
@@ -80,7 +81,7 @@ int DanNavigator::song_note_count(const fs::path& path, int difficulty) {
 
 int DanNavigator::box_genre(const fs::path& box_def_dir) {
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         if (auto it = memo_->genres.find(box_def_dir); it != memo_->genres.end()) {
             return it->second;
         }
@@ -90,14 +91,14 @@ int DanNavigator::box_genre(const fs::path& box_def_dir) {
         genre = (int)Navigator::parse_box_def_uncached(box_def_dir).genre_index;
     }
     if (memo_) {
-        std::lock_guard<std::mutex> lock(memo_->mutex);
+        std::scoped_lock lock(memo_->mutex);
         memo_->genres.emplace(box_def_dir, genre);
     }
     return genre;
 }
 
 static std::string normalize_exam_type(std::string t) {
-    std::transform(t.begin(), t.end(), t.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+    std::ranges::transform(t, t.begin(), [](unsigned char c) { return (char)std::tolower(c); });
     static const std::map<std::string, std::string> names = {
         {"judgeperfect", "judgeperfect"},
         {"jp", "judgeperfect"},
@@ -131,8 +132,7 @@ Exam DanNavigator::parse_exam(const rapidjson::Value& e) {
         exam.type = normalize_exam_type(e["type"].GetString());
     }
     exam.range = e.HasMember("range") && e["range"].IsString() ? e["range"].GetString() : "";
-    std::transform(exam.range.begin(), exam.range.end(), exam.range.begin(),
-                   [](unsigned char c) { return (char)std::tolower(c); });
+    std::ranges::transform(exam.range, exam.range.begin(), [](unsigned char c) { return (char)std::tolower(c); });
     if (exam.range != "less") {
         exam.range = "more";
     }
@@ -196,7 +196,7 @@ std::optional<DanSongEntry> DanNavigator::load_song_entry(const rapidjson::Value
                 diff = d.GetInt();
             } else if (d.IsString()) {
                 std::string n = d.GetString();
-                std::transform(n.begin(), n.end(), n.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+                std::ranges::transform(n, n.begin(), [](unsigned char c) { return (char)std::tolower(c); });
                 static const std::map<std::string, int> names = {{"easy", 0}, {"normal", 1}, {"hard", 2}, {"oni", 3},
                                                                  {"edit", 4}, {"0", 0},      {"1", 1},    {"2", 2},
                                                                  {"3", 3},    {"4", 4}};
@@ -224,7 +224,7 @@ std::optional<DanSongEntry> DanNavigator::load_song_entry(const rapidjson::Value
         }
 
         auto meta = song_metadata(*path_opt);
-        int level = meta->course_data.count(diff) ? meta->course_data.at(diff).level : 10;
+        int level = meta->course_data.contains(diff) ? meta->course_data.at(diff).level : 10;
 
         if (titles_out && global_data.config) {
             const std::string& lang = global_data.config->general.language;
@@ -475,7 +475,7 @@ std::vector<DanBoxData> DanNavigator::scan_roots(const std::vector<fs::path>& ro
     const std::string language = global_data.config ? global_data.config->general.language : std::string();
 
     {
-        std::lock_guard<std::mutex> lock(cache_mutex);
+        std::scoped_lock lock(cache_mutex);
         if (auto it = cache.find(roots); it != cache.end() && it->second.signature == signature &&
                                          it->second.library_size == library_size && it->second.language == language) {
             return it->second.data;
@@ -486,7 +486,7 @@ std::vector<DanBoxData> DanNavigator::scan_roots(const std::vector<fs::path>& ro
     if (scan_abort.load()) {
         return data;
     }
-    std::lock_guard<std::mutex> lock(cache_mutex);
+    std::scoped_lock lock(cache_mutex);
     cache[roots] = Cached{std::move(signature), library_size, language, data};
     return data;
 }
@@ -522,7 +522,7 @@ std::vector<DanBoxData> DanNavigator::scan_all_data(const std::vector<fs::path>&
     if (data.empty() && global_data.config && !scan_abort.load()) {
         std::vector<fs::path> library;
         for (const fs::path& lib_root : global_data.config->paths.tja_path) {
-            if (std::find(song_paths.begin(), song_paths.end(), lib_root) == song_paths.end()) {
+            if (!std::ranges::contains(song_paths, lib_root)) {
                 library.push_back(lib_root);
             }
         }
@@ -559,8 +559,8 @@ void DanNavigator::publish(std::vector<DanBoxData>&& data) {
         }
         return std::make_tuple(set, num, name);
     };
-    std::stable_sort(data.begin(), data.end(),
-                     [&](const DanBoxData& x, const DanBoxData& y) { return order_key(x) < order_key(y); });
+    std::ranges::stable_sort(data,
+                             [&](const DanBoxData& x, const DanBoxData& y) { return order_key(x) < order_key(y); });
     boxes.reserve(data.size());
     for (const DanBoxData& d : data) {
         boxes.push_back(make_box(d));
@@ -611,7 +611,7 @@ void DanNavigator::begin_init(const std::vector<fs::path>& song_paths) {
     scan_abort.store(false);
     scan_published = false;
     {
-        std::lock_guard<std::mutex> lock(scan_mutex);
+        std::scoped_lock lock(scan_mutex);
         scan_result.clear();
     }
 
@@ -625,7 +625,7 @@ void DanNavigator::begin_init(const std::vector<fs::path>& song_paths) {
             spdlog::error("DanNavigator: course scan threw (unknown)");
         }
         {
-            std::lock_guard<std::mutex> lock(scan_mutex);
+            std::scoped_lock lock(scan_mutex);
             scan_result = std::move(data);
         }
         scan_done.store(true);
@@ -645,7 +645,7 @@ bool DanNavigator::poll_init() {
     scan_thread.join();
     std::vector<DanBoxData> data;
     {
-        std::lock_guard<std::mutex> lock(scan_mutex);
+        std::scoped_lock lock(scan_mutex);
         data = std::move(scan_result);
         scan_result.clear();
     }
@@ -663,7 +663,7 @@ void DanNavigator::abort_init() {
     scan_done.store(false);
     scan_published = false;
     {
-        std::lock_guard<std::mutex> lock(scan_mutex);
+        std::scoped_lock lock(scan_mutex);
         scan_result.clear();
     }
 }

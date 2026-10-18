@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <rlgl.h>
@@ -230,7 +231,7 @@ Screens check_args(int argc, char* argv[]) {
     int selected_difficulty;
     if (difficulty.has_value()) {
         auto& course_data = tja.metadata.course_data;
-        if (course_data.find(difficulty.value()) == course_data.end()) {
+        if (!course_data.contains(difficulty.value())) {
             std::cerr << "Error: Invalid difficulty: " << difficulty.value() << ". Available: ";
             for (const auto& [key, value] : course_data) {
                 std::cerr << key << " ";
@@ -243,9 +244,7 @@ Screens check_args(int argc, char* argv[]) {
         if (tja.metadata.course_data.empty()) {
             selected_difficulty = static_cast<int>(Difficulty::EASY);
         } else {
-            selected_difficulty = std::max_element(tja.metadata.course_data.begin(), tja.metadata.course_data.end(),
-                                                   [](const auto& a, const auto& b) { return a.first < b.first; })
-                                      ->first;
+            selected_difficulty = tja.metadata.course_data.rbegin()->first;
         }
     }
 

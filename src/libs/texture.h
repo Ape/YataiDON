@@ -268,7 +268,7 @@ public:
 
     void unload_textures();
 
-    bool has_animation(const int id) const { return animations.find(id) != animations.end(); }
+    bool has_animation(const int id) const { return animations.contains(id); }
     BaseAnimation* get_animation(const int id, bool is_copy = false);
     BaseAnimation* get_animation(const int id, const std::string& screen_name);
 

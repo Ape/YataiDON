@@ -60,7 +60,7 @@ static void refresh_sdl_joysticks() {
     std::unordered_set<SDL_JoystickID> current(ids, ids + count);
 
     for (auto it = sdl_joysticks.begin(); it != sdl_joysticks.end();) {
-        if (!current.count(it->first)) {
+        if (!current.contains(it->first)) {
             SDL_CloseJoystick(it->second);
             it = sdl_joysticks.erase(it);
         } else {
@@ -72,7 +72,7 @@ static void refresh_sdl_joysticks() {
         if (SDL_IsGamepad(ids[i])) {
             continue; // already handled by raylib
         }
-        if (!sdl_joysticks.count(ids[i])) {
+        if (!sdl_joysticks.contains(ids[i])) {
             SDL_Joystick* joy = SDL_OpenJoystick(ids[i]);
             if (joy) {
                 sdl_joysticks[ids[i]] = joy;
@@ -130,12 +130,8 @@ bool is_input_key_pressed(const std::vector<int>& keys, const std::vector<int>& 
         return false;
     }
 
-    for (int button : gamepad_buttons) {
-        if (check_key_pressed(10000 + button, strength)) {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::any_of(gamepad_buttons,
+                               [strength](int button) { return check_key_pressed(10000 + button, strength); });
 }
 
 static bool keys_held(const std::vector<int>& keys, const std::vector<int>& pad) {
@@ -295,7 +291,7 @@ static bool handle_linux_text_input(SDL_Event* event) {
     }
 
     const bool* key_state = SDL_GetKeyboardState(nullptr);
-    std::lock_guard<std::mutex> lock(input_mutex);
+    std::scoped_lock lock(input_mutex);
     for (const char* p = event->text.text; *p; p++) {
         unsigned char c = (unsigned char)*p;
         int key = char_to_raylib_key(c);
@@ -327,12 +323,12 @@ static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
 #endif
 
     if (event->type == SDL_EVENT_KEY_DOWN && event->key.scancode == SDL_SCANCODE_AC_BACK) {
-        std::lock_guard<std::mutex> lock(input_mutex);
+        std::scoped_lock lock(input_mutex);
         pressed_keys.emplace(ray::KEY_ESCAPE, 1.0f);
         return 0;
     }
     if (event->type == SDL_EVENT_KEY_UP && event->key.scancode == SDL_SCANCODE_AC_BACK) {
-        std::lock_guard<std::mutex> lock(input_mutex);
+        std::scoped_lock lock(input_mutex);
         released_keys.insert(ray::KEY_ESCAPE);
         return 0;
     }
@@ -345,8 +341,8 @@ static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
             return 1;
         }
         SDL_FingerID id = event->tfinger.fingerID;
-        std::lock_guard<std::mutex> lock(input_mutex);
-        if (!touch_id_to_vkey.count(id)) {
+        std::scoped_lock lock(input_mutex);
+        if (!touch_id_to_vkey.contains(id)) {
             int sw = ray::GetScreenWidth();
             int sh = ray::GetScreenHeight();
             ray::Vector2 pos = {event->tfinger.x * sw, event->tfinger.y * sh};
@@ -361,7 +357,7 @@ static bool SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event* event) {
         }
     } else if (event->type == SDL_EVENT_FINGER_UP || event->type == SDL_EVENT_FINGER_CANCELED) {
         SDL_FingerID id = event->tfinger.fingerID;
-        std::lock_guard<std::mutex> lock(input_mutex);
+        std::scoped_lock lock(input_mutex);
         auto it = touch_id_to_vkey.find(id);
         if (it != touch_id_to_vkey.end()) {
             released_keys.insert(it->second);
@@ -531,7 +527,7 @@ void poll_keyboard_once() {
     }
 
     if (!local_pressed.empty() || !local_released.empty()) {
-        std::lock_guard<std::mutex> lock(input_mutex);
+        std::scoped_lock lock(input_mutex);
         for (int key : local_pressed) {
             pressed_keys.emplace(key, 1.0f);
         }
@@ -565,7 +561,7 @@ void submit_gamepad_button_press(int button, float strength) {
     last_gamepad_vkey.store(vkey, std::memory_order_relaxed);
     last_input_ms.store(get_current_ms(), std::memory_order_relaxed);
 
-    std::lock_guard<std::mutex> lock(input_mutex);
+    std::scoped_lock lock(input_mutex);
     pressed_keys.emplace(vkey, std::max(strength, 0.0f));
 }
 
@@ -635,7 +631,7 @@ namespace {
 
     // Device notifications can arrive on background threads; open and close ports on the main thread.
     void queue_midi_port_event(MidiInput& state, const libremidi::input_port& port, bool added) {
-        std::lock_guard<std::mutex> lock(state.events_mutex);
+        std::scoped_lock lock(state.events_mutex);
         state.events.push_back({port, added});
         state.events_pending.store(true, std::memory_order_release);
     }
@@ -739,7 +735,7 @@ void process_midi_events() {
     std::vector<MidiPortEvent> events;
 
     {
-        std::lock_guard<std::mutex> lock(state.events_mutex);
+        std::scoped_lock lock(state.events_mutex);
         events.swap(state.events);
     }
 
@@ -757,8 +753,8 @@ void process_midi_events() {
 
         spdlog::info("MIDI input available: {}", event.port.display_name);
 
-        if (state.port || (event.port.display_name.find(state.device) == std::string::npos &&
-                           event.port.device_name.find(state.device) == std::string::npos)) {
+        if (state.port ||
+            (!event.port.display_name.contains(state.device) && !event.port.device_name.contains(state.device))) {
             continue;
         }
 
@@ -809,7 +805,7 @@ void input_polling_thread() {
 }
 
 bool check_key_pressed(int key, float* strength) {
-    std::lock_guard<std::mutex> lock(input_mutex);
+    std::scoped_lock lock(input_mutex);
     auto it = pressed_keys.find(key);
     if (it != pressed_keys.end()) {
         if (strength) {
@@ -822,7 +818,7 @@ bool check_key_pressed(int key, float* strength) {
 }
 
 bool check_key_released(int key) {
-    std::lock_guard<std::mutex> lock(input_mutex);
+    std::scoped_lock lock(input_mutex);
     auto it = released_keys.find(key);
     if (it != released_keys.end()) {
         released_keys.erase(it);
@@ -832,7 +828,7 @@ bool check_key_released(int key) {
 }
 
 void clear_input_buffers() {
-    std::lock_guard<std::mutex> lock(input_mutex);
+    std::scoped_lock lock(input_mutex);
     pressed_keys.clear();
     released_keys.clear();
 }

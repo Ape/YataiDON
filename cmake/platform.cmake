@@ -28,6 +28,8 @@ if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE SDL3::SDL3)
   endif()
   if(MINGW)
+    target_link_libraries(${PROJECT_NAME} PRIVATE stdc++exp)
+
     target_link_options(${PROJECT_NAME} PRIVATE
           -static
           -static-libgcc

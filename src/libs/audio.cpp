@@ -17,6 +17,7 @@ SDL_AudioStream* g_ios_audio_stream = nullptr;
 #include "optional/nub.h"
 #include "optional/nus3bank.h"
 #endif
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -263,7 +264,7 @@ static void unload_music_stream_from_map(std::unordered_map<std::string, music>&
     }
 }
 
-AudioEngine::AudioEngine() {}
+AudioEngine::AudioEngine() = default;
 
 std::vector<std::string> enumerate_audio_devices(int device_type) {
     std::vector<std::string> names;
@@ -684,11 +685,9 @@ bool AudioEngine::init_rtaudio_device(RtAudio::Api api, const char* label) {
         return false;
     }
 
-    channel_offsets.erase(
-        std::remove_if(channel_offsets.begin(), channel_offsets.end(), [](int off) { return off < 0; }),
-        channel_offsets.end());
-    std::sort(channel_offsets.begin(), channel_offsets.end());
-    channel_offsets.erase(std::unique(channel_offsets.begin(), channel_offsets.end()), channel_offsets.end());
+    std::erase_if(channel_offsets, [](int off) { return off < 0; });
+    std::ranges::sort(channel_offsets);
+    channel_offsets.erase(std::ranges::unique(channel_offsets).begin(), channel_offsets.end());
     if (channel_offsets.empty()) {
         channel_offsets.push_back(0);
     }
@@ -1298,14 +1297,14 @@ void AudioEngine::unload_all_sounds() {
 }
 
 uint64_t AudioEngine::sound_play_count(const std::string& name) {
-    std::lock_guard<std::mutex> g(play_count_lock);
+    std::scoped_lock g(play_count_lock);
     auto it = play_counts.find(name);
     return it == play_counts.end() ? 0 : it->second;
 }
 
 void AudioEngine::play_sound(const std::string& name, VolumePreset volume_preset, float gain) {
     {
-        std::lock_guard<std::mutex> g(play_count_lock);
+        std::scoped_lock g(play_count_lock);
         ++play_counts[name];
     }
     std::shared_lock<std::shared_mutex> guard(rw_lock);
@@ -1338,7 +1337,7 @@ void AudioEngine::play_sound(const std::string& name, VolumePreset volume_preset
 
 bool AudioEngine::has_sound(const std::string& name) {
     std::shared_lock<std::shared_mutex> guard(rw_lock);
-    return sounds.find(name) != sounds.end();
+    return sounds.contains(name);
 }
 
 void AudioEngine::stop_sound(const std::string& name) {
@@ -1760,7 +1759,7 @@ void AudioEngine::set_music_volume(const std::string& name, float volume) {
 
 bool AudioEngine::is_music_stream_valid(const std::string& name) const {
     std::shared_lock<std::shared_mutex> guard(rw_lock);
-    return music_streams.find(name) != music_streams.end();
+    return music_streams.contains(name);
 }
 
 bool AudioEngine::is_music_stream_playing(const std::string& name) const {

@@ -1,5 +1,6 @@
 #include "costume_menu.h"
 
+#include <algorithm>
 #include <random>
 #include <spdlog/spdlog.h>
 
@@ -57,14 +58,14 @@ void CostumeMenu::load_costume_icons(const std::string& subdir, const std::strin
     for (auto& e : fs::directory_iterator(dir)) {
         if (e.path().extension() == ".png") {
             try {
-                entries.push_back({std::stoi(e.path().stem().string()), e.path()});
+                entries.emplace_back(std::stoi(e.path().stem().string()), e.path());
             } catch (const std::exception& ex) {
                 spdlog::warn("CostumeMenu: skipping icon with non-numeric filename {}: {}", e.path().string(),
                              ex.what());
             }
         }
     }
-    std::sort(entries.begin(), entries.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+    std::ranges::sort(entries, [](const auto& a, const auto& b) { return a.first < b.first; });
     for (auto& [id, path] : entries) {
         ray::Texture t = ray::LoadTexture(path.string().c_str());
         if (t.id == 0 || t.width <= 0 || t.height <= 0) {
@@ -118,7 +119,7 @@ void CostumeMenu::load_preset_data() {
             }
         }
     }
-    std::sort(preset_pool.begin(), preset_pool.end());
+    std::ranges::sort(preset_pool);
 
     static const std::pair<const char*, const char*> KEYS[] = {
         {"default", "costume_select/default"},    {"cool", "costume_select/preset_1"},
@@ -148,7 +149,7 @@ void CostumeMenu::load_preset_data() {
             spdlog::warn("CostumeMenu: failed to parse {}: {}", presets_path.string(), ex.what());
         }
     }
-    if (!preset_sets.count("costume_select/default")) {
+    if (!preset_sets.contains("costume_select/default")) {
         preset_sets["costume_select/default"] = {0};
     }
 }
