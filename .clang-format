@@ -13,6 +13,8 @@ IncludeCategories:
     Priority: 2
 IndentWidth: 4
 InsertBraces: true
+InsertNewlineAtEOF: true
+LineEnding: LF
 NamespaceIndentation: All
 PointerAlignment: Left
 SpaceAfterTemplateKeyword: false
