@@ -73,7 +73,7 @@ void InputCaliScreen::draw() {
     if (background.has_value()) {
         background->draw_back();
     }
-    players[0]->draw(ms_from_start, 0, 232 * tex.screen_scale);
+    players[0]->draw(clock.position(), 0, 232 * tex.screen_scale);
     if (average_latency_text.has_value()) {
         average_latency_text->draw(
             {.x = (tex.screen_width / 2) - average_latency_text->width / 2,

@@ -81,17 +81,20 @@ public:
     void on_screen_start() override;
     std::string background_scene_preset() const override { return "PRACTICE"; }
     Screens on_screen_end(Screens next_screen) override;
-    void init_tja(fs::path song) override;
+    void create_players() override;
     std::optional<Screens> update() override;
     void draw() override;
 
     // Check if practice mode is currently paused
-    bool is_paused() const { return paused; }
+    bool is_paused() const { return clock.is_paused(); }
 
     // Handle mouse/touch input for practice mode UI buttons
     std::optional<Screens> handle_mouse_input();
 
 private:
+    void release_chart_resources() override;
+    float song_playback_rate() const override { return song_speed / 10.0f; }
+
     PracticePlayer* practice_player = nullptr; // non-owning, points into players[0]
 
     int scrobble_index = 0;
@@ -167,9 +170,9 @@ private:
     TextureObject* t_bar_label = nullptr;
     TextureObject* t_paused = nullptr;
 
-    void init_tja_practice(const fs::path& song);
+    void initialize_practice_chart();
     void sync_branch_display();
-    void pause_song_practice();
+    void pause_practice();
     void resume_practice();
     void open_practice_menu();
     void change_practice_speed(bool down, bool up);

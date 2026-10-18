@@ -13,17 +13,11 @@
 
 void GameScreen::on_screen_start() {
     Screen::on_screen_start();
-    ms_from_start = 0;
-    start_ms = 0;
+    reset_playback();
     start_delay = 1000.0f;
-    last_resync_ms = 0;
     JudgePos::X = tex.get_skin_config(SC::GAME_JUDGE_POS)->x;
     JudgePos::Y = tex.get_skin_config(SC::GAME_JUDGE_POS)->y;
     TJAParser::jpos_field_width = (tex.screen_width - JudgePos::X) / tex.screen_scale;
-    song_started = false;
-    paused = false;
-    score_saved = false;
-    pause_time = 0;
     SessionData& session_data = global_data.session_data[(int)global_data.player_num];
     if (session_data.selected_song.empty() || !exists(session_data.selected_song)) {
         auto songs = get_song_files(global_data.config->paths.tja_path);
@@ -44,8 +38,8 @@ void GameScreen::on_screen_start() {
         }
         spdlog::info("GameScreen auto-loaded fallback song: {}", session_data.selected_song.string());
     }
-    init_tja(session_data.selected_song);
-    spdlog::info("TJA initialized for song: {}", session_data.selected_song.string());
+    initialize_chart(session_data.selected_song);
+    spdlog::info("Chart initialized for song: {}", session_data.selected_song.string());
     load_hitsounds();
     song_info = SongInfo(session_data.song_title, session_data.song_subtitle, parser->metadata.subtitle_full_display,
                          session_data.genre_index, global_data.songs_played + 1, 0, session_data.genre_label);
@@ -64,7 +58,7 @@ void GameScreen::on_screen_start() {
     }
     transition->start();
 
-    start_ms = get_current_ms() - parser->metadata.offset * 1000 - (double)global_data.config->general.audio_offset;
+    reset_song_clock();
 
     init_skip();
 
@@ -74,31 +68,15 @@ void GameScreen::on_screen_start() {
         double initial_ms = parser->metadata.offset * 1000 + (double)global_data.config->general.audio_offset;
         double extra_delay = initial_ms - start_delay + travel_time;
         if (extra_delay > 0.0) {
-            start_ms += extra_delay;
+            clock.seek(get_current_ms(), clock.position() - extra_delay);
         }
     }
 }
 
 Screens GameScreen::on_screen_end(Screens next_screen) {
-    song_started = false;
-
-    if (movie.has_value()) {
-        movie->stop();
-        spdlog::info("Movie stopped");
-    }
-    movie.reset();
-    if (background.has_value()) {
-        background.reset();
-        spdlog::info("Background unloaded");
-    }
+    unload_song();
+    background.reset();
     transition.reset();
-    if (pending_song_load.valid()) {
-        pending_song_load.wait();
-    }
-    pending_song_load = {};
-    song_music.reset();
-    parser.reset();
-    players.clear();
     global_data.camera = CameraConfig(); // TJA camera commands must not leak out of the song
 
     return Screen::on_screen_end(next_screen);
@@ -126,28 +104,34 @@ void GameScreen::load_hitsounds() {
     spdlog::info("Loaded ogg hit sounds for 1P and 2P");
 }
 
-void GameScreen::init_tja(fs::path song) {
+void GameScreen::initialize_chart(const fs::path& song) {
     start_delay = (song.extension() == ".osu") ? 0 : start_delay;
     parser = SongParser(song, start_delay);
+    initialize_song_movie();
+    set_session_song_info(global_data.player_num);
+
+    load_song_audio(AudioLoadMode::Async);
+
+    create_players();
+}
+
+void GameScreen::initialize_song_movie() {
     if (fs::exists(parser->metadata.bgmovie)) {
         movie.emplace(parser->metadata.bgmovie);
     }
-    auto& titles = parser->metadata.title;
-    auto& subtitles = parser->metadata.subtitle;
+}
+
+void GameScreen::set_session_song_info(PlayerNum player_num) {
+    auto& session = global_data.session_data[static_cast<int>(player_num)];
+    const auto& metadata = parser->metadata;
     const std::string& lang = global_data.config->general.language;
 
-    global_data.session_data[(int)global_data.player_num].song_title =
-        localized_text(titles, lang, LocalizedTextFallback::ENGLISH_OR_FIRST);
-    global_data.session_data[(int)global_data.player_num].song_subtitle =
-        localized_text(subtitles, lang, LocalizedTextFallback::NONE);
-    global_data.session_data[(int)global_data.player_num].song_subtitle_full_display =
-        parser->metadata.subtitle_full_display;
+    session.song_title = localized_text(metadata.title, lang, LocalizedTextFallback::ENGLISH_OR_FIRST);
+    session.song_subtitle = localized_text(metadata.subtitle, lang, LocalizedTextFallback::NONE);
+    session.song_subtitle_full_display = metadata.subtitle_full_display;
+}
 
-    if (fs::exists(parser->metadata.wave) && !song_music.has_value() && !pending_song_load.valid()) {
-        fs::path wave = parser->metadata.wave;
-        pending_song_load = std::async(std::launch::async, [wave] { return audio.load_sound(wave, "song"); });
-    }
-
+void GameScreen::create_players() {
     players.push_back(std::make_unique<Player>(
         parser, global_data.player_num, global_data.session_data[(int)global_data.player_num].selected_difficulty,
         false, get_player_modifiers(global_data.player_num)));
@@ -175,13 +159,24 @@ void GameScreen::init_tja(fs::path song) {
     }
 }
 
-void GameScreen::set_players_audio_end() {
-    if (!song_music.has_value() || song_music->empty()) {
+void GameScreen::load_song_audio(AudioLoadMode mode) {
+    if (!fs::exists(parser->metadata.wave) || song_music || pending_song_load.valid()) {
         return;
     }
-    double audio_end =
-        audio.get_sound_time_length(*song_music) * 1000.0 +
-        (parser->metadata.offset * 1000 + start_delay - (double)global_data.config->general.audio_offset);
+
+    fs::path wave = parser->metadata.wave;
+    if (mode == AudioLoadMode::Async) {
+        pending_song_load = std::async(std::launch::async, [wave] { return audio.load_sound(wave, "song"); });
+    } else {
+        song_music = audio.load_sound(wave, "song");
+    }
+}
+
+void GameScreen::set_players_audio_end() {
+    if (!song_music || song_music->empty()) {
+        return;
+    }
+    double audio_end = audio.get_sound_time_length(*song_music) * 1000.0 + audio_start_ms();
     for (auto& player : players) {
         player->set_audio_end(audio_end);
     }
@@ -203,21 +198,16 @@ void GameScreen::poll_pending_song() {
         set_players_audio_end();
     }
 
-    if (song_started && !paused) {
-        audio.play_sound(*song_music, VolumePreset::MUSIC);
-        double audio_ms = ms_from_start - (parser->metadata.offset * 1000 + start_delay -
-                                           (double)global_data.config->general.audio_offset);
-        audio.seek_sound(*song_music, (float)std::max(0.0, audio_ms / 1000.0));
+    if (song_started && !clock.is_paused()) {
+        play_song_audio((clock.position() - audio_start_ms()) / 1000.0);
     }
 }
 
-void GameScreen::start_song(double ms_from_start) {
-    if (ms_from_start >=
-            parser->metadata.offset * 1000 + start_delay - (double)global_data.config->general.audio_offset &&
-        !song_started) {
-        if (song_music.has_value()) {
-            audio.play_sound(song_music.value(), VolumePreset::MUSIC);
-            spdlog::info("Song started at {}", ms_from_start);
+void GameScreen::start_song(double chart_ms) {
+    if (chart_ms >= audio_start_ms() && !song_started && !clock.is_paused()) {
+        if (song_music) {
+            play_song_audio(0.0);
+            spdlog::info("Song started at {}", chart_ms);
         }
         if (movie.has_value()) {
             movie->start(get_current_ms());
@@ -227,42 +217,119 @@ void GameScreen::start_song(double ms_from_start) {
     }
 }
 
-void GameScreen::pause_song() {
-    paused = !paused;
-    if (paused) {
-        if (song_music.has_value()) {
-            paused_audio_time = audio.get_sound_time_played(song_music.value());
-            audio.stop_sound(song_music.value());
+double GameScreen::audio_start_ms() const {
+    return parser->metadata.offset * 1000.0 + start_delay - global_data.config->general.audio_offset;
+}
+
+void GameScreen::reset_playback() {
+    clock.reset(get_current_ms());
+    song_started = false;
+    score_saved = false;
+    paused_audio_time = 0.0f;
+}
+
+void GameScreen::reset_song_clock(double opening_delay_ms) {
+    clock.reset(get_current_ms(),
+                parser->metadata.offset * 1000.0 + global_data.config->general.audio_offset - opening_delay_ms);
+}
+
+void GameScreen::stop_song_audio() {
+    if (pending_song_load.valid()) {
+        try {
+            song_music = pending_song_load.get();
+        } catch (const std::exception& e) {
+            spdlog::warn("Failed to finish song audio load: {}", e.what());
         }
-        pause_time = get_current_ms() - start_ms;
+    }
+
+    if (song_music) {
+        audio.stop_sound(*song_music);
+    }
+
+    song_music.reset();
+    song_started = false;
+}
+
+void GameScreen::unload_song() {
+    stop_song_audio();
+
+    if (movie.has_value()) {
+        movie->stop();
+    }
+
+    movie.reset();
+    players.clear();
+    release_chart_resources();
+    parser.reset();
+    reset_playback();
+}
+
+void GameScreen::play_song_audio(double position_seconds) {
+    if (!song_music) {
+        return;
+    }
+
+    audio.set_sound_pitch(*song_music, song_playback_rate());
+    audio.play_sound(*song_music, VolumePreset::MUSIC);
+    audio.seek_sound(*song_music, static_cast<float>(std::max(0.0, position_seconds)));
+}
+
+void GameScreen::pause_playback() {
+    if (clock.is_paused()) {
+        return;
+    }
+
+    clock.pause(get_current_ms());
+    paused_audio_time = static_cast<float>(std::max(0.0, (clock.position() - audio_start_ms()) / 1000.0));
+
+    if (song_music && song_started) {
+        paused_audio_time = audio.get_sound_time_played(*song_music);
+        audio.stop_sound(*song_music);
+    }
+}
+
+void GameScreen::resume_playback(std::optional<double> chart_ms) {
+    if (!clock.is_paused()) {
+        return;
+    }
+
+    double current_ms = get_current_ms();
+
+    if (chart_ms) {
+        clock.seek(current_ms, *chart_ms);
+        paused_audio_time = static_cast<float>(std::max(0.0, (*chart_ms - audio_start_ms()) / 1000.0));
+        song_started = true;
+    }
+
+    clock.resume(current_ms);
+
+    if (song_started) {
+        play_song_audio(paused_audio_time);
+    }
+}
+
+void GameScreen::toggle_pause() {
+    if (clock.is_paused()) {
+        resume_playback();
     } else {
-        if (song_music.has_value()) {
-            audio.play_sound(song_music.value(), VolumePreset::MUSIC);
-            audio.seek_sound(song_music.value(), paused_audio_time);
-        }
-        start_ms = get_current_ms() - pause_time;
+        pause_playback();
     }
 }
 
 void GameScreen::restart_song() {
-    if (song_music.has_value()) {
-        audio.stop_sound(song_music.value());
-        song_music.reset();
-    }
-    players.clear();
-    init_tja(global_data.session_data[(int)global_data.player_num].selected_song);
+    unload_song();
+    initialize_chart(global_data.session_data[(int)restart_player_num()].selected_song);
+
     if (background.has_value()) {
-        background->handle_miss_streak(global_data.player_num, false);
+        for (const auto& player : players) {
+            background->handle_miss_streak(player->player_num, false);
+        }
     }
+
+    result_transition = ResultTransition(scene_player_num());
     audio.play_sound("restart", VolumePreset::SOUND);
     init_skip();
-    song_started = false;
-    score_saved = false;
-    paused = false;
-    pause_time = 0;
-    last_resync_ms = 0;
-    start_ms = get_current_ms() - parser->metadata.offset * 1000 - (double)global_data.config->general.audio_offset;
-    ms_from_start = get_current_ms() - start_ms;
+    reset_song_clock();
 }
 
 std::optional<Screens> GameScreen::global_keys() {
@@ -271,14 +338,11 @@ std::optional<Screens> GameScreen::global_keys() {
     }
 
     if (check_key_pressed(global_data.config->keys.back_key)) {
-        if (song_music.has_value()) {
-            audio.stop_sound(song_music.value());
-        }
         return on_screen_end(Screens::SONG_SELECT);
     }
 
     if (check_key_pressed(global_data.config->keys.pause_key)) {
-        pause_song();
+        toggle_pause();
     }
 
     return std::nullopt;
@@ -365,66 +429,21 @@ void GameScreen::save_score(const std::string& player_id, PlayerNum player_num) 
 }
 
 void GameScreen::resync_song(double current_ms) {
-    if (!song_started) {
+    if (!song_started || clock.is_paused()) {
         return;
     }
-    if (!song_music.has_value()) {
+    if (!song_music) {
         return;
     }
-    if (!audio.is_sound_playing(song_music.value())) {
+    if (!audio.is_sound_playing(*song_music)) {
         return;
     }
 
-    double audio_ms = audio.get_sound_time_played(song_music.value()) * 1000.0f;
-    double audio_ms_adjusted =
-        audio_ms + (parser->metadata.offset * 1000 + start_delay - (double)global_data.config->general.audio_offset);
+    double audio_ms = audio.get_sound_time_played(*song_music) * 1000.0f;
+    double audio_ms_adjusted = audio_ms + audio_start_ms();
 
-    // Advance the chart by whole display refreshes when the frame took about that long (a fixed
-    // per-frame step): with vsync the frame-start timestamps jitter by a few tenths
-    // of a ms around the refresh period, and only the notes would carry that jitter. Frames far
-    // from a whole number of refreshes (no vsync, a limiter below the refresh rate) keep the
-    // measured time; the loop below absorbs any rate error against the audio.
-    if (last_resync_ms <= 0.0) {
-        int hz = ray::GetMonitorRefreshRate(ray::GetCurrentMonitor());
-        refresh_period_ms = hz > 0 ? 1000.0 / hz : 0.0;
-    } else if (refresh_period_ms > 0.0) {
-        double advance = ms_from_start - resync_chart_ms;
-        double refreshes = std::round(advance / refresh_period_ms);
-        if (refreshes >= 1.0 && std::abs(advance - refreshes * refresh_period_ms) < 0.25 * refresh_period_ms) {
-            ms_from_start = resync_chart_ms + refreshes * refresh_period_ms;
-        }
-    }
-
-    double drift = audio_ms_adjusted - ms_from_start;
-    if (std::abs(drift) > 100.0) {
-        spdlog::debug("Hard resyncing chart from {} to {}", ms_from_start, audio_ms_adjusted);
-        ms_from_start = audio_ms_adjusted;
-        resync_drift_ema = 0.0;
-        resync_rate_bias = 0.0;
-    } else {
-        // The audio position advances in device-buffer steps, on some devices in irregular bursts
-        // (several ms of noise), and the audio clock runs slightly off the system clock. Jumping
-        // the chart onto it whenever the drift passed 5 ms moved only the notes (everything else
-        // runs on the frame clock), about a 1.5 ms hitch every second or so. Instead the drift is
-        // smoothed and the chart clock's rate is nudged toward it (a PI loop: the integral learns
-        // the audio clock's rate offset, which is not always small -- 0.1-0.8% on a virtual
-        // output device). At most 2%, 20% while it is more than 20 ms off (after a stall).
-        double dt = (last_resync_ms > 0.0) ? std::clamp(current_ms - last_resync_ms, 0.0, 100.0) : 0.0;
-        if (last_resync_ms <= 0.0) {
-            resync_drift_ema = drift;
-            resync_rate_bias = 0.0;
-        } else {
-            resync_drift_ema += (drift - resync_drift_ema) * std::min(1.0, dt / 250.0);
-        }
-        resync_rate_bias = std::clamp(resync_rate_bias + resync_drift_ema * dt / (500.0 * 2000.0), -0.02, 0.02);
-        double max_rate = std::abs(resync_drift_ema) > 20.0 ? 0.2 : 0.02;
-        double step = std::clamp((resync_rate_bias + resync_drift_ema / 500.0) * dt, -max_rate * dt, max_rate * dt);
-        ms_from_start += step;
-        resync_drift_ema -= step;
-    }
-    last_resync_ms = current_ms;
-    resync_chart_ms = ms_from_start;
-    start_ms = current_ms - ms_from_start;
+    clock.synchronize(current_ms, audio_ms_adjusted,
+                      [] { return ray::GetMonitorRefreshRate(ray::GetCurrentMonitor()); });
 }
 
 void GameScreen::init_skip() {
@@ -477,7 +496,7 @@ void GameScreen::update_skip() {
     if (skip_lane == PlayerNum::ALL) {
         return;
     }
-    if (!skipped && !paused) {
+    if (!skipped && !clock.is_paused()) {
         poll_skip();
     }
     push_skip_state();
@@ -560,16 +579,16 @@ void GameScreen::do_skip() {
     } else {
         skip_text.reset();
     }
-    spdlog::info("skipped at {} ms", ms_from_start);
-    if (song_music.has_value()) {
-        audio.stop_sound(song_music.value());
+    spdlog::info("skipped at {} ms", clock.position());
+    if (song_music) {
+        audio.stop_sound(*song_music);
     }
     if (movie.has_value()) {
         movie->stop();
     }
     for (auto& player : players) {
         if (player) {
-            player->cut_to_end(ms_from_start);
+            player->cut_to_end(clock.position());
         }
     }
 }
@@ -588,36 +607,40 @@ void GameScreen::draw_skip() {
     skip_text->draw({.x = pos->x - skip_text->width / 2.0f, .y = pos->y});
 }
 
-void GameScreen::end_song() {
-    if (ms_from_start >= players[0]->end_time + 1000 && !score_saved) {
-        global_data.session_data[(int)players[0]->player_num].result_data = players[0]->get_result_score();
-        save_score(get_player_id(players[0]->player_num), players[0]->player_num);
-        for (auto& player : players) {
-            player->spawn_ending_anim(background.has_value() ? &*background : nullptr);
-            if (background.has_value()) {
+void GameScreen::end_song(double end_time, double transition_delay, BackgroundNotification notification) {
+    if (clock.position() >= end_time + 1000 && !score_saved) {
+        for (const auto& player : players) {
+            global_data.session_data[(int)player->player_num].result_data = player->get_result_score();
+        }
+
+        for (const auto& player : players) {
+            save_score(get_player_id(player->player_num), player->player_num);
+        }
+
+        for (const auto& player : players) {
+            player->spawn_ending_anim(background ? &*background : nullptr);
+
+            if (notification == BackgroundNotification::Enabled && background) {
                 int g = player->get_good(), o = player->get_ok(), b = player->get_bad();
                 background->handle_song_end(player->player_num, g, o, b, g + o + b);
             }
         }
+
         global_data.songs_played += 1;
         score_saved = true;
     }
-    const double transition_delay = global_data.config->general.fast_transitions
-                                        ? kFastResultTransitionDelayMs
-                                        : (players[0]->was_skipped() ? 2800.0 : 8533.34);
-    if (ms_from_start >= players[0]->end_time + transition_delay) {
-        if (!result_transition.is_started) {
-            result_transition.start();
-            audio.play_sound("result_transition", VolumePreset::VOICE);
-            spdlog::info("Result transition started and voice played");
-        }
+
+    if (clock.position() >= end_time + transition_delay && !result_transition.is_started) {
+        result_transition.start();
+        audio.play_sound("result_transition", VolumePreset::VOICE);
+        spdlog::info("Result transition started and voice played");
     }
 }
 
 void GameScreen::update_gameplay(double current_ms) {
     poll_pending_song();
     if (transition->is_finished()) {
-        start_song(ms_from_start);
+        start_song(clock.position());
         reset_input_lock();
     }
 
@@ -625,7 +648,7 @@ void GameScreen::update_gameplay(double current_ms) {
     update_background(current_ms);
 
     for (auto& player : players) {
-        player->update(ms_from_start, current_ms, background);
+        player->update(clock.position(), current_ms, background);
     }
 
     song_info.update(current_ms);
@@ -638,9 +661,7 @@ std::optional<Screens> GameScreen::update() {
 
     double current_ms = get_frame_ms();
     allnet_indicator.update(current_ms);
-    if (!paused) {
-        ms_from_start = current_ms - start_ms;
-    }
+    clock.update(current_ms);
 
     transition->update(current_ms);
     update_gameplay(current_ms);
@@ -649,8 +670,12 @@ std::optional<Screens> GameScreen::update() {
 
     if (result_transition.is_finished && !audio.is_sound_playing("result_transition")) {
         return on_screen_end(Screens::RESULT);
-    } else if (ms_from_start >= players[0]->end_time) {
-        end_song();
+    } else if (clock.position() >= players[0]->end_time) {
+        const double transition_delay = global_data.config->general.fast_transitions
+                                            ? kFastResultTransitionDelayMs
+                                            : (players[0]->was_skipped() ? 2800.0 : 8533.34);
+
+        end_song(players[0]->end_time, transition_delay, BackgroundNotification::Enabled);
     }
     if (global_data.config->limits.song_limit <= 0) {
         return global_keys();
@@ -683,15 +708,15 @@ void GameScreen::draw_overlay(bool with_song_info) {
 
 void GameScreen::draw_players() {
     if (players.size() == 1) {
-        players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale);
+        players[0]->draw(clock.position(), 0, 184 * tex.screen_scale);
     } else if (players.size() == 2) {
-        players[0]->draw(ms_from_start, 0, 184 * tex.screen_scale);
-        players[1]->draw(ms_from_start, 0, tex.get_skin_config(SC::GAME_P2_Y)->y);
+        players[0]->draw(clock.position(), 0, 184 * tex.screen_scale);
+        players[1]->draw(clock.position(), 0, tex.get_skin_config(SC::GAME_P2_Y)->y);
     } else {
         float gap = ((float)tex.screen_height - (players.size() * 176 * tex.screen_scale)) / (players.size() + 1);
         for (int i = 0; i < players.size(); i++) {
             float position = gap + i * ((176 * tex.screen_scale) + gap);
-            players[i]->draw(ms_from_start, 0, position);
+            players[i]->draw(clock.position(), 0, position);
         }
     }
 }

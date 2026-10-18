@@ -72,6 +72,7 @@ private:
 
     void init_dan();
     void change_song();
+    void begin_song_presentation(const DanSongEntry& entry, int song_number);
 
     void update_skip_dan();
     void poll_skip_dan();
