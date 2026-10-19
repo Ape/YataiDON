@@ -708,24 +708,19 @@ void ScriptManager::register_lua_bindings() {
             debug_draw_log.push_back({"rect", {x, y, w, h}});
             log_lua_site(debug_draw_log.back(), state);
         }
-        int sx = virtual_to_screen_x(x);
-        int ex = virtual_to_screen_x(x + w);
-        int sy = virtual_to_screen_y(y);
-        int ey = virtual_to_screen_y(y + h);
-        ray::DrawRectangle(sx, sy, ex - sx, ey - sy, ray::Color{to_u8(r), to_u8(g), to_u8(b), to_u8(a)});
+
+        ray::DrawRectangleRec({x, y, w, h}, ray::Color{to_u8(r), to_u8(g), to_u8(b), to_u8(a)});
     });
 
     // rounded rectangle with an outline; roundness is raylib's 0..1 corner factor, the outline thickness is in pixels
     tex.set_function("draw_rounded_rect", [](float x, float y, float w, float h, float roundness,
                                              std::array<double, 4> fill, double thickness, std::array<double, 4> line) {
         auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
-        int sx = virtual_to_screen_x(x);
-        int ex = virtual_to_screen_x(x + w);
-        int sy = virtual_to_screen_y(y);
-        int ey = virtual_to_screen_y(y + h);
-        ray::Rectangle r{(float)sx, (float)sy, (float)(ex - sx), (float)(ey - sy)};
+        ray::Rectangle r{x, y, w, h};
+
         ray::DrawRectangleRounded(r, roundness, 16,
                                   ray::Color{to_u8(fill[0]), to_u8(fill[1]), to_u8(fill[2]), to_u8(fill[3])});
+
         if (thickness > 0) {
             ray::DrawRectangleRoundedLinesEx(
                 r, roundness, 16, (float)thickness,
