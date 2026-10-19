@@ -6,13 +6,13 @@
 
 class BranchIndicator {
 private:
-    BranchDifficulty diff_2;
+    BranchDifficulty diff_2{BranchDifficulty::NORMAL};
     MoveAnimation* diff_down;
     MoveAnimation* diff_up;
     FadeAnimation* diff_fade;
     FadeAnimation* level_fade;
     TextureResizeAnimation* level_scale;
-    int direction;
+    int direction{1};
     TextureObject* t_expert_bg = nullptr;
     TextureObject* t_master_bg = nullptr;
     TextureObject* t_level_up = nullptr;
@@ -20,7 +20,7 @@ private:
     TextureObject* t_diff[3] = {}; // indexed by BranchDifficulty
 
 public:
-    BranchDifficulty difficulty;
+    BranchDifficulty difficulty{BranchDifficulty::NORMAL};
     BranchIndicator();
 
     void update(double current_ms);

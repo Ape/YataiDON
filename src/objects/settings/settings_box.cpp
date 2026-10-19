@@ -99,8 +99,7 @@ SettingsBox::SettingsBox(const std::string& name, const std::string& label_text,
       x(10.0f * tex.screen_scale), y(wrap_top()), start_position(wrap_top()),
       wrap_bottom(wrap_top()) // corrected by set_box_count() once the manager knows the total
       ,
-      target_position(std::numeric_limits<float>::infinity()), direction(1), move_anim(nullptr),
-      blue_arrow_fade(nullptr), blue_arrow_move(nullptr), is_selected(false), in_box(false), option_index(0) {
+      target_position(std::numeric_limits<float>::infinity()) {
     move_anim = tex.get_animation(0, true);
     blue_arrow_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(1, true));
     blue_arrow_move = dynamic_cast<MoveAnimation*>(tex.get_animation(2, true));

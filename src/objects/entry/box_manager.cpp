@@ -5,7 +5,7 @@
 
 static constexpr int ENTRY_FADE_OUT_ANIM_ID = 9;
 
-BoxManager::BoxManager(bool two_player) : selected_box_index(0), is_2p(two_player), costume_menu_open(false) {
+BoxManager::BoxManager(bool two_player) : is_2p(two_player) {
     if (!global_data.config) {
         throw std::runtime_error("BoxManager: global_data.config not initialized");
     }

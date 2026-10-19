@@ -14,11 +14,9 @@
 
 Player::Player(std::optional<SongParser>& parser_ref, PlayerNum player_num_param, int difficulty_param,
                bool is_2p_param, const Modifiers& modifiers_param)
-    : is_2p(is_2p_param), is_dan(false), player_num(player_num_param), difficulty(difficulty_param),
+    : is_2p(is_2p_param), player_num(player_num_param), difficulty(difficulty_param),
       visual_offset(global_data.config->general.visual_offset), score_method(global_data.config->general.score_method),
-      modifiers(modifiers_param), parser(parser_ref), good_count(0), ok_count(0), bad_count(0), combo(0), score(0),
-      max_combo(0), total_drumroll(0), arc_points(25), judge_x(0), judge_y(0), is_gogo_time(false),
-      autoplay_hit_side(Side::LEFT), last_subdivision(-1), combo_display(combo, 0), score_counter(is_2p, player_num) {
+      modifiers(modifiers_param), parser(parser_ref), combo_display(combo, 0), score_counter(is_2p, player_num) {
     init_player_textures();
     reset_chart();
     don_hitsound = "hitsound_don_" + std::to_string((int)player_num) + "p";

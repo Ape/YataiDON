@@ -29,9 +29,8 @@ void reset_input_lock() {
 }
 
 BaseAnimation::BaseAnimation(double duration, double delay, bool loop, bool lock_input)
-    : duration(duration), delay(delay), delay_saved(delay), start_ms(get_current_ms()), paused_at_ms(0.0),
-      is_finished(false), is_started(false), is_reversing(false), unlocked(true), loop(loop), lock_input(lock_input),
-      attribute(0) {
+    : duration(duration), delay(delay), delay_saved(delay), start_ms(get_current_ms()), loop(loop),
+      lock_input(lock_input) {
     if (loop) {
         is_started = true;
         restart();

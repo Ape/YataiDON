@@ -148,7 +148,7 @@ private:
     bool replay_active = false;
     std::vector<std::pair<double, InputLogType>> replay_log;
     size_t replay_cursor = 0;
-    bool is_dan;
+    bool is_dan{false};
     int difficulty;
     int visual_offset;
     std::string score_method;
@@ -158,25 +158,25 @@ private:
     std::unique_ptr<Chara3D> chara;
 
     // Score management
-    int good_count;
-    int ok_count;
-    int bad_count;
-    int combo;
-    int score;
+    int good_count{0};
+    int ok_count{0};
+    int bad_count{0};
+    int combo{0};
+    int score{0};
     int last_reported_score = -1; // last value sent to Background::handle_score
     int last_reported_gogo = -1;  // background handle_gogo edge detection
-    int max_combo;
-    int total_drumroll;
+    int max_combo{0};
+    int total_drumroll{0};
     double hit_offset_sum_ms = 0.0;
     int hit_offset_count = 0;
     std::unordered_map<int, Judgments> note_judgments;
 
-    int arc_points;
-    float judge_x;
-    float judge_y;
+    int arc_points{25};
+    float judge_x{0};
+    float judge_y{0};
     std::pair<double, int> last_jpos_key{-1e300, -1}; // (start_time, seq) of the newest #JPOSSCROLL applied
 
-    bool is_gogo_time;
+    bool is_gogo_time{false};
     bool was_gauge_full = false;
     bool was_gauge_clear = false;
     bool tinted_miss_streak = false;
@@ -186,8 +186,8 @@ private:
     bool balloon_idle = false;
     AnimIndex rest_anim() const;
     void on_miss();
-    Side autoplay_hit_side;
-    int last_subdivision;
+    Side autoplay_hit_side{Side::LEFT};
+    int last_subdivision{-1};
 
     std::deque<Note> don_notes;
     std::deque<Note> kat_notes;

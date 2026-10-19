@@ -10,7 +10,7 @@ class SettingsBoxManager {
 private:
     std::vector<std::unique_ptr<SettingsBox>> boxes;
     int selected_box_index;
-    bool box_selected;
+    bool box_selected{false};
 
 public:
     explicit SettingsBoxManager(const rapidjson::Document& tmpl);

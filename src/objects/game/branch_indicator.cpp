@@ -20,8 +20,7 @@ namespace {
     }
 } // namespace
 
-BranchIndicator::BranchIndicator()
-    : difficulty(BranchDifficulty::NORMAL), diff_2(BranchDifficulty::NORMAL), direction(1) {
+BranchIndicator::BranchIndicator() {
 
     diff_down = require_anim<MoveAnimation>(BRANCH_ANIM_DIFF_DOWN);
     diff_up = require_anim<MoveAnimation>(BRANCH_ANIM_DIFF_UP);

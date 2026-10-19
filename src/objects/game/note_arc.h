@@ -8,10 +8,10 @@
 class NoteArc : public LuaScript {
 private:
     bool is_balloon;
-    int arc_duration;
-    float current_progress;
-    double elapsed_ms;
-    bool note_finished_handled;
+    int arc_duration{31};
+    float current_progress{0};
+    double elapsed_ms{0};
+    bool note_finished_handled{false};
     double start_ms;
     int firework_frames = 0; // Lua-reported length of the trailing fireworks
 

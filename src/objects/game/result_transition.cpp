@@ -4,7 +4,7 @@
 
 #include "../../libs/texture.h"
 
-ResultTransition::ResultTransition(PlayerNum player_num) : is_finished(false), is_started(false) {
+ResultTransition::ResultTransition(PlayerNum player_num) {
 
     move = dynamic_cast<MoveAnimation*>(global_tex.get_animation(5));
     if (!move) {

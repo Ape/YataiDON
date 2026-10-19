@@ -216,13 +216,13 @@ public:
         return it == m.end() ? std::pair<float, float>{0.0f, 0.0f} : it->second;
     }
     fs::path font_path;
-    int screen_width;
-    int screen_height;
-    float screen_scale;
+    int screen_width{1280};
+    int screen_height{720};
+    float screen_scale{1.0};
     float draw_offset_x = 0.0f;
     float draw_offset_y = 0.0f;
 
-    TextureWrapper() : screen_width(1280), screen_height(720), screen_scale(1.0) {}
+    TextureWrapper() = default;
 
     void init(const fs::path& skin_path);
 

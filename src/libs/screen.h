@@ -88,9 +88,9 @@ struct fmt::formatter<Screens> : fmt::formatter<std::string> {
 class Screen {
 
 public:
-    bool screen_init;
+    bool screen_init{false};
     std::string screen_name;
-    Screen(const std::string& name) : screen_init(false), screen_name(name) {}
+    Screen(const std::string& name) : screen_name(name) {}
 
     virtual ~Screen() = default;
 
