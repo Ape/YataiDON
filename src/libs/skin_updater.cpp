@@ -9,6 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "android_ca.h"
 #include "sha256.h"
 
 #ifndef __EMSCRIPTEN__
@@ -20,10 +21,6 @@
 #endif
 
 #if defined(__ANDROID__)
-// Bundled Mozilla CA bundle for libcurl on Android (which has no system trust
-// store). Defined in libs/network.cpp; reused here so skin updates trust the
-// same roots as the rest of the client.
-cpr::SslOptions android_ca();
 #include <curl/curl.h>
 #endif
 

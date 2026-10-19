@@ -23,28 +23,6 @@
 #include <unordered_map>
 #include <vector>
 
-#ifdef __ANDROID__
-// NDK r27d libc++ omits std::atomic_ref; polyfill with __atomic builtins
-namespace std {
-    template<typename T>
-    struct atomic_ref {
-        T& ref;
-        explicit atomic_ref(T& t) noexcept : ref(t) {}
-        T load(memory_order order = memory_order_seq_cst) const noexcept {
-            T val;
-            __atomic_load(&ref, &val, static_cast<int>(order));
-            return val;
-        }
-        void store(T desired, memory_order order = memory_order_seq_cst) noexcept {
-            __atomic_store(&ref, &desired, static_cast<int>(order));
-        }
-        T fetch_add(T val, memory_order order = memory_order_seq_cst) noexcept {
-            return __atomic_fetch_add(&ref, val, static_cast<int>(order));
-        }
-    };
-} // namespace std
-#endif
-
 namespace fs = std::filesystem;
 
 enum class VolumePreset {
