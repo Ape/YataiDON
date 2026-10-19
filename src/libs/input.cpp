@@ -203,6 +203,18 @@ bool is_r_don_pressed(PlayerNum player_num, float* strength) {
     return is_input_key_pressed(keys, gamepad_buttons, strength) || check_key_pressed(TOUCH_R_DON, strength);
 }
 
+bool menu_left_pressed(PlayerNum p) {
+    return is_l_kat_pressed(p) || (p != PlayerNum::P2 && ray::IsKeyPressed(ray::KEY_LEFT));
+}
+
+bool menu_right_pressed(PlayerNum p) {
+    return is_r_kat_pressed(p) || (p != PlayerNum::P2 && ray::IsKeyPressed(ray::KEY_RIGHT));
+}
+
+bool menu_confirm_pressed(PlayerNum p) {
+    return is_l_don_pressed(p) || is_r_don_pressed(p) || (p != PlayerNum::P2 && ray::IsKeyPressed(ray::KEY_ENTER));
+}
+
 bool is_l_kat_pressed(PlayerNum player_num, float* strength) {
     if (player_num == PlayerNum::P1) {
         return is_input_key_pressed(global_data.config->keys_1p.left_kat, global_data.config->gamepad_1p.left_kat,

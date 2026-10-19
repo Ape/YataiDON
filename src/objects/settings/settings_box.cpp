@@ -205,6 +205,10 @@ void SettingsBox::select_option() {
     options[option_index]->confirm();
 }
 
+bool SettingsBox::editing_text() const {
+    return !options.empty() && options[option_index]->is_highlighted && options[option_index]->needs_text_input();
+}
+
 void SettingsBox::select() {
     in_box = true;
 }

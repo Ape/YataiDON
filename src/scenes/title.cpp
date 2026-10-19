@@ -231,7 +231,7 @@ std::optional<Screens> TitleScreen::update() {
 #endif
 
     scene_manager(current_ms);
-    if (is_l_don_pressed() || is_r_don_pressed()) {
+    if (menu_confirm_pressed()) {
         if (!fade_out->is_started) {
             fade_out->start();
         }

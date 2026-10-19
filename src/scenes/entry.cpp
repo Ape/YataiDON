@@ -442,13 +442,13 @@ std::optional<Screens> EntryScreen::handle_input() {
         return std::nullopt;
     }
     if (state == EntryState::NAME_ENTRY) {
-        if (is_l_kat_pressed()) {
+        if (menu_left_pressed()) {
             audio.play_sound("kat", VolumePreset::SOUND);
             name_entry_->input(NameEntry::LEFT);
-        } else if (is_r_kat_pressed()) {
+        } else if (menu_right_pressed()) {
             audio.play_sound("kat", VolumePreset::SOUND);
             name_entry_->input(NameEntry::RIGHT);
-        } else if (is_l_don_pressed() || is_r_don_pressed()) {
+        } else if (menu_confirm_pressed()) {
             audio.play_sound("don", VolumePreset::SOUND);
             name_entry_->input(NameEntry::DECIDE);
         }
@@ -490,7 +490,7 @@ std::optional<Screens> EntryScreen::handle_input() {
         return std::nullopt;
     }
     if (state == EntryState::SELECT_SIDE) {
-        if (is_l_don_pressed() || is_r_don_pressed()) {
+        if (menu_confirm_pressed()) {
             if (side == 1) {
                 if (players[0]) {
                     audio.play_sound("don", VolumePreset::SOUND);
@@ -501,7 +501,7 @@ std::optional<Screens> EntryScreen::handle_input() {
             }
             join_player((side == 0) ? PlayerNum::P1 : PlayerNum::P2);
         }
-        if (is_l_kat_pressed()) {
+        if (menu_left_pressed()) {
             audio.play_sound("kat", VolumePreset::SOUND);
             if (players[0] && players[0]->player_num == PlayerNum::P1) {
                 side = 1;
@@ -511,7 +511,7 @@ std::optional<Screens> EntryScreen::handle_input() {
                 side = std::max(0, side - 1);
             }
         }
-        if (is_r_kat_pressed()) {
+        if (menu_right_pressed()) {
             audio.play_sound("kat", VolumePreset::SOUND);
             if (players[0] && players[0]->player_num == PlayerNum::P1) {
                 side = 2;

@@ -224,15 +224,15 @@ void CostumeMenu::handle_input() {
     if (costume_select_mode) {
         if (!costume_icons.empty()) {
             int n = (int)costume_icons.size();
-            if (is_l_kat_pressed(player_num)) {
+            if (menu_left_pressed(player_num)) {
                 costume_icon_index = (costume_icon_index - 1 + n) % n;
                 audio.play_sound("kat", VolumePreset::SOUND);
             }
-            if (is_r_kat_pressed(player_num)) {
+            if (menu_right_pressed(player_num)) {
                 costume_icon_index = (costume_icon_index + 1) % n;
                 audio.play_sound("kat", VolumePreset::SOUND);
             }
-            if (is_l_don_pressed(player_num) || is_r_don_pressed(player_num)) {
+            if (menu_confirm_pressed(player_num)) {
                 if (pick_stage == CostumePickStage::HEAD) {
                     picked_head_id = costume_ids[costume_icon_index];
                     pick_stage = CostumePickStage::BODY;
@@ -249,11 +249,11 @@ void CostumeMenu::handle_input() {
         }
     } else {
         int prev_index = selected_index;
-        if (is_l_kat_pressed(player_num)) {
+        if (menu_left_pressed(player_num)) {
             selected_index = (selected_index - 1 + NUM_ITEMS) % NUM_ITEMS;
             audio.play_sound("kat", VolumePreset::SOUND);
         }
-        if (is_r_kat_pressed(player_num)) {
+        if (menu_right_pressed(player_num)) {
             selected_index = (selected_index + 1) % NUM_ITEMS;
             audio.play_sound("kat", VolumePreset::SOUND);
         }
@@ -266,7 +266,7 @@ void CostumeMenu::handle_input() {
             }
         }
 
-        if (is_l_don_pressed(player_num) || is_r_don_pressed(player_num)) {
+        if (menu_confirm_pressed(player_num)) {
             if (std::string(ITEMS[selected_index]) == "costume_select/costume") {
                 pick_stage = CostumePickStage::NONE;
                 load_costume_icons("costume_icon", "costume");
