@@ -1377,7 +1377,7 @@ void Player::draw_note_manager(double current_ms) {
             });
 
             if (tail_it != draw_note_list.end()) {
-                auto tail_note = *tail_it;
+                const auto& tail_note = *tail_it;
 
                 pos = std::ranges::lower_bound(draw_note_buffer, tail_note,
                                                [](const auto& a, const auto& b) { return a.index < b.index; });
@@ -1718,13 +1718,11 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
             on_miss();
             combo = 0;
             branch_note_count++;
-            // Same note as the GOOD/OK branches: curr_note may be lane[1] (stale head).
-            const Note note = curr_note;
-            record_hit_offset(note);
+            record_hit_offset(curr_note);
             lane.erase(lane.begin() + lane_pos);
-            note_judgments[note.index] = Judgments::BAD;
-            auto it = std::ranges::lower_bound(draw_note_buffer, note.index, {}, &Note::index);
-            if (it != draw_note_buffer.end() && *it == note) {
+            note_judgments[curr_note.index] = Judgments::BAD;
+            auto it = std::ranges::lower_bound(draw_note_buffer, curr_note.index, {}, &Note::index);
+            if (it != draw_note_buffer.end() && *it == curr_note) {
                 draw_note_buffer.erase(it);
             }
             if (dan_gauge) {

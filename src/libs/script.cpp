@@ -273,7 +273,7 @@ void ScriptManager::index_scripts(const fs::path& script_path) {
         return;
     }
     for (const auto& script : dir) {
-        fs::path p = script.path();
+        const fs::path& p = script.path();
         if (fs::is_directory(p)) {
             fs::path lua_file = p / (p.stem().string() + ".lua");
             if (fs::exists(lua_file) && !scripts.contains(p.stem().string())) {
@@ -281,7 +281,7 @@ void ScriptManager::index_scripts(const fs::path& script_path) {
             }
             std::error_code sub_ec;
             for (const auto& sub : fs::directory_iterator(p, sub_ec)) {
-                fs::path sub_p = sub.path();
+                const fs::path& sub_p = sub.path();
                 if (!fs::is_directory(sub_p) && sub_p.extension() == ".lua" && sub_p.stem() != p.stem() &&
                     !scripts.contains(sub_p.stem().string())) {
                     scripts[sub_p.stem().string()] = sub_p.string();
