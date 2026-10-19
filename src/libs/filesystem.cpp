@@ -570,7 +570,7 @@ void set_skin_graphics_path(const fs::path& graphics_path) {
     std::scoped_lock lock(g_skin_path_mutex);
     g_skin_graphics_path = graphics_path;
     g_parent_skin_graphics_path = chain.size() > 1 ? chain[1] : graphics_path;
-    g_skin_chain = chain;
+    g_skin_chain = std::move(chain);
 }
 
 std::vector<fs::path> skin_ancestor_roots() {
