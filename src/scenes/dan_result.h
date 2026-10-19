@@ -31,7 +31,6 @@ private:
     std::unique_ptr<Chara3D> chara;
 
     bool is_page2 = false;
-    bool page1_skipped = false;
     double page_start_ms = 0.0;
     double page1_start_ms = 0.0;
 
