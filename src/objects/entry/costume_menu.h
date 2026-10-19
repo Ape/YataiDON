@@ -26,7 +26,7 @@ public:
     bool confirmed = false;
 
     CostumeMenu(PlayerNum player_num);
-    ~CostumeMenu();
+    ~CostumeMenu() override;
     void update(double current_time_ms);
     void handle_input();
     void draw();

@@ -67,7 +67,7 @@ public:
     void draw_score_history() override;
     void expand_box() override;
     void enter_box() override;
-    virtual void close_box() override;
+    void close_box() override;
     std::vector<Difficulty> get_diffs();
 
     void refresh_scores();

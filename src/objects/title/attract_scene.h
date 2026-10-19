@@ -12,7 +12,7 @@ class AttractScene : public LuaScript {
 
 public:
     AttractScene();
-    ~AttractScene();
+    ~AttractScene() override;
     AttractScene(const AttractScene&) = delete;
     AttractScene& operator=(const AttractScene&) = delete;
     void update(double current_ms);
