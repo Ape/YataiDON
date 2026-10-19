@@ -86,7 +86,7 @@ void Player::init_player_textures() {
     // fall back to the three coarse tiers when the skin does not ship them.
     // modifiers/score_method are fixed for this Player's lifetime, so the whole
     // badge set is resolved once here instead of every frame from draw_modifiers().
-    auto speed_badge = [&]() -> std::optional<TextureObject*> {
+    auto speed_badge = [&] -> std::optional<TextureObject*> {
         if (modifiers.speed <= 10) {
             return std::nullopt;
         }

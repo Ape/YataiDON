@@ -55,7 +55,7 @@ void EntryScreen::on_screen_start() {
                               pd ? pd->gold : false, pd ? pd->rainbow : false, pd ? pd->title_bg : 0);
     }
 
-    timer = std::make_unique<Timer>(60, get_current_ms(), [this]() {
+    timer = std::make_unique<Timer>(60, get_current_ms(), [this] {
         if (box_manager->is_costume_box()) {
             box_manager->open_costume_menu(players[0] ? players[0]->player_num : PlayerNum::P1);
         } else {
@@ -128,31 +128,30 @@ bool EntryScreen::login_slot(const std::string& card_hex, std::function<void()> 
     const std::string name = sm_data.username.empty() ? "Player" : sm_data.username;
     pending_login_slot_ = slot;
     after_login_ = std::move(then);
-    pending_login_ =
-        std::async(std::launch::async, [card_hex, code = code, placeholder, name, sync = cfg.sync_scores]() {
-            RemoteLogin r;
-            r.code = code;
-            if (!card_hex.empty()) {
-                std::string new_code = network.register_user("Player " + card_hex.substr(0, 8), card_hex);
-                if (new_code.empty()) {
-                    return r;
-                }
+    pending_login_ = std::async(std::launch::async, [card_hex, code = code, placeholder, name, sync = cfg.sync_scores] {
+        RemoteLogin r;
+        r.code = code;
+        if (!card_hex.empty()) {
+            std::string new_code = network.register_user("Player " + card_hex.substr(0, 8), card_hex);
+            if (new_code.empty()) {
+                return r;
+            }
+            r.code = new_code;
+            r.card = true;
+        } else if (placeholder) {
+            std::string new_code = network.register_user(name);
+            if (!new_code.empty()) {
+                r.replaced_code = code;
                 r.code = new_code;
-                r.card = true;
-            } else if (placeholder) {
-                std::string new_code = network.register_user(name);
-                if (!new_code.empty()) {
-                    r.replaced_code = code;
-                    r.code = new_code;
-                }
             }
-            r.user = network.fetch_user(r.code);
-            if (sync) {
-                r.scores = network.fetch_scores(r.code);
-            }
-            r.ok = true;
-            return r;
-        });
+        }
+        r.user = network.fetch_user(r.code);
+        if (sync) {
+            r.scores = network.fetch_scores(r.code);
+        }
+        r.ok = true;
+        return r;
+    });
     return true;
 }
 
@@ -265,7 +264,7 @@ void EntryScreen::end_name_entry() {
         finish_slot(name_slot_, pd);
         const std::string& code =
             name_slot_ == 0 ? global_data.config->network.access_code_1 : global_data.config->network.access_code_2;
-        std::thread([code, name]() { network.update_username(code, name); }).detach();
+        std::thread([code, name] { network.update_username(code, name); }).detach();
     }
     audio.stop_sound("name_select_bgm");
     audio.stop_sound("name_entry_vo");
@@ -295,7 +294,7 @@ void EntryScreen::join_with_card(const std::string& card_hex) {
     if (login_ready_) {
         return;
     }
-    login_slot(card_hex, [this]() { on_card_login(); });
+    login_slot(card_hex, [this] { on_card_login(); });
 }
 
 void EntryScreen::on_card_login() {
@@ -398,7 +397,7 @@ void EntryScreen::join_player(PlayerNum player_num, bool do_login) {
         if (login_pending()) {
             return;
         }
-        login_slot("", [this, player_num]() {
+        login_slot("", [this, player_num] {
             for (auto& player : players) {
                 if (player && player->player_num == player_num) {
                     player->refresh_from_player_data();
@@ -464,7 +463,7 @@ std::optional<Screens> EntryScreen::handle_input() {
             return std::nullopt;
         }
         local_login_ = !enter; // Enter: register/fetch online; Don: local db only
-        login_slot("", [this]() {
+        login_slot("", [this] {
             login_ready_ = true;
             audio.play_sound("don", VolumePreset::SOUND);
             state = EntryState::SELECT_SIDE;

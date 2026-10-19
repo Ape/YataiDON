@@ -734,13 +734,13 @@ OutlinedText::OutlinedText(std::string text, int font_size, ray::Color color, ra
     }
 #else
     if (is_vertical) {
-        build_future = std::async(std::launch::async, [this, color, outline_color, spacing]() {
+        build_future = std::async(std::launch::async, [this, color, outline_color, spacing] {
             auto data = build_vertical_text(color, outline_color, spacing);
             std::scoped_lock lock(pending_mutex);
             pending_image = data.img;
         });
     } else {
-        build_future = std::async(std::launch::async, [this, color, outline_color, spacing]() {
+        build_future = std::async(std::launch::async, [this, color, outline_color, spacing] {
             auto data = build_horizontal_text(color, outline_color, spacing);
             std::scoped_lock lock(pending_mutex);
             pending_image = data.img;

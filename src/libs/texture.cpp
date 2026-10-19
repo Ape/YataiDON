@@ -474,7 +474,7 @@ void decode_images_parallel(const std::vector<fs::path>& files, std::vector<ray:
     std::vector<std::thread> pool;
     pool.reserve(workers);
     for (size_t w = 0; w < workers; ++w) {
-        pool.emplace_back([&files, &out, &next]() {
+        pool.emplace_back([&files, &out, &next] {
             for (size_t i = next.fetch_add(1); i < files.size(); i = next.fetch_add(1)) {
                 try {
                     out[i] = ray::LoadImage(files[i].string().c_str());
@@ -631,7 +631,7 @@ public:
         unsigned hw = std::thread::hardware_concurrency();
         size_t workers = std::min<size_t>(items.size(), std::clamp<unsigned>(hw ? hw - 1 : 3, 1, 16));
         for (size_t w = 0; w < workers; ++w) {
-            pool.emplace_back([this]() { work(); });
+            pool.emplace_back([this] { work(); });
         }
     }
 
@@ -660,7 +660,7 @@ public:
             return false;
         }
         Item& it = items[found->second];
-        cv.wait(lock, [&]() { return it.state != State::Decoding; });
+        cv.wait(lock, [&] { return it.state != State::Decoding; });
         if (it.state == State::Pending) {
             it.state = State::Taken;
             lock.unlock();
@@ -742,7 +742,7 @@ private:
     void work() {
         std::unique_lock<std::mutex> lock(mutex);
         while (true) {
-            cv.wait(lock, [&]() { return stop || held < budget; });
+            cv.wait(lock, [&] { return stop || held < budget; });
             while (next < items.size() && items[next].state != State::Pending) {
                 ++next;
             }

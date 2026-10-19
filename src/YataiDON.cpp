@@ -220,7 +220,7 @@ Screens check_args(int argc, char* argv[]) {
             path = abs;
         }
     }
-    SongParser tja = [&]() -> SongParser {
+    SongParser tja = [&] -> SongParser {
         try {
             return SongParser(path);
         } catch (const std::exception& e) {

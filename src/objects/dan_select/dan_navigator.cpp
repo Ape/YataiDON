@@ -419,7 +419,7 @@ std::vector<DanBoxData> DanNavigator::load_dan_jsons(const std::vector<fs::path>
     std::vector<std::thread> pool;
     pool.reserve(pool_size);
     for (unsigned t = 0; t < pool_size; t++) {
-        pool.emplace_back([&]() {
+        pool.emplace_back([&] {
             for (;;) {
                 size_t i = cursor.fetch_add(1);
                 if (i >= jsons.size() || scan_abort.load()) {
@@ -616,7 +616,7 @@ void DanNavigator::begin_init(const std::vector<fs::path>& song_paths) {
         scan_result.clear();
     }
 
-    scan_thread = std::thread([this, song_paths]() {
+    scan_thread = std::thread([this, song_paths] {
         std::vector<DanBoxData> data;
         try {
             data = scan_all_data(song_paths);

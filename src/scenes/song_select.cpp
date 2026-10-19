@@ -35,7 +35,7 @@ void SongSelectScreen::on_screen_start() {
 #ifndef __EMSCRIPTEN__
     if (!global_data.config->paths.tja_path.empty()) {
         stats_future = std::async(std::launch::async,
-                                  [this]() { return navigator.get_statistics(global_data.config->paths.tja_path[0]); });
+                                  [this] { return navigator.get_statistics(global_data.config->paths.tja_path[0]); });
     }
 #endif
     navigator.refresh_scores();
@@ -45,7 +45,7 @@ void SongSelectScreen::on_screen_start() {
 
     indicator = std::make_unique<Indicator>(Indicator::State::SELECT);
     song_num = std::make_unique<SongNum>(global_data.songs_played + 1);
-    select_timer = std::make_unique<Timer>(100, get_current_ms(), [this]() { player->select_song(); });
+    select_timer = std::make_unique<Timer>(100, get_current_ms(), [this] { player->select_song(); });
     diff_select_timer = nullptr;
     join_request_ms = -1.0;
 }
@@ -375,7 +375,7 @@ std::optional<Screens> SongSelectScreen::update() {
             set_keyboard_visible(false);
         }
         if (state == SongSelectState::SONG_SELECTED) {
-            diff_select_timer = std::make_unique<Timer>(60, current_time, [this]() {
+            diff_select_timer = std::make_unique<Timer>(60, current_time, [this] {
                 if (auto* item = dynamic_cast<SongBox*>(navigator.get_current_item())) {
                     select_song(item);
                 }

@@ -1238,7 +1238,7 @@ void AudioEngine::load_screen_sounds(const std::string& screen_name) {
         std::vector<std::thread> pool;
         pool.reserve(workers);
         for (size_t w = 0; w < workers; ++w) {
-            pool.emplace_back([this, &queue, &next]() {
+            pool.emplace_back([this, &queue, &next] {
                 for (size_t i = next.fetch_add(1); i < queue.size(); i = next.fetch_add(1)) {
                     load_sound(queue[i].first, queue[i].second);
                 }

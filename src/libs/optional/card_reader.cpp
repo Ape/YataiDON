@@ -791,7 +791,7 @@ namespace card_reader {
         if (pending_.valid()) {
             return;
         }
-        pending_ = std::async(std::launch::async, [port, baudrate]() -> std::unique_ptr<CardReader> {
+        pending_ = std::async(std::launch::async, [port, baudrate] -> std::unique_ptr<CardReader> {
             auto reader = std::make_unique<CardReader>();
             if (!reader->initialize(port, baudrate)) {
                 return nullptr;

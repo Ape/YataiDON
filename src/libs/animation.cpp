@@ -579,7 +579,7 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
 
     auto get_ease_opt = [&](const char* key) -> std::optional<EaseType> { return get_ease_opt_from(anim_obj, key); };
 
-    auto get_waypoints = [&]() -> std::vector<MoveAnimation::Waypoint> {
+    auto get_waypoints = [&] -> std::vector<MoveAnimation::Waypoint> {
         std::vector<MoveAnimation::Waypoint> result;
         if (!anim_obj.HasMember("waypoints") || !anim_obj["waypoints"].IsArray()) {
             return result;

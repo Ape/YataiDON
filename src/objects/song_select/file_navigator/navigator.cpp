@@ -310,7 +310,7 @@ void Navigator::preload(std::vector<fs::path> songs_paths, std::optional<std::ve
 
 #ifndef __EMSCRIPTEN__
     song_files_ready = false;
-    song_files_thread = std::thread([this, songs_paths, listed = std::move(listed)]() {
+    song_files_thread = std::thread([this, songs_paths, listed = std::move(listed)] {
         std::vector<fs::path> files = listed ? *listed : get_song_files(songs_paths);
         std::mutex map_mutex;
         std::atomic<size_t> cursor{0};
@@ -318,7 +318,7 @@ void Navigator::preload(std::vector<fs::path> songs_paths, std::optional<std::ve
         std::vector<std::thread> pool;
         pool.reserve(pool_size);
         for (unsigned t = 0; t < pool_size; t++) {
-            pool.emplace_back([&]() {
+            pool.emplace_back([&] {
                 for (;;) {
                     size_t i = cursor.fetch_add(1);
                     if (i >= files.size() || abort_loading) {
