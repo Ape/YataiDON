@@ -648,12 +648,16 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
                     scroll_type = ScrollType::NMSCROLL;
                 }
                 continue;
-            } else if (line.contains("#BMSCROLL")) {
+            }
+
+            if (line.contains("#BMSCROLL")) {
                 if (!started) {
                     scroll_type = ScrollType::BMSCROLL;
                 }
                 continue;
-            } else if (line.contains("#HBSCROLL")) {
+            }
+
+            if (line.contains("#HBSCROLL")) {
                 if (!started) {
                     scroll_type = ScrollType::HBSCROLL;
                 }
@@ -1374,7 +1378,9 @@ Note TJAParser::add_note(char item, ParserState& state) {
     if (note.type == NoteType::ROLL_HEAD || note.type == NoteType::ROLL_HEAD_L) {
         note.color = 255;
         return note;
-    } else if (note.type == NoteType::BALLOON_HEAD || note.type == NoteType::KUSUDAMA) {
+    }
+
+    if (note.type == NoteType::BALLOON_HEAD || note.type == NoteType::KUSUDAMA) {
         state.balloon_index++;
         note.count = (state.balloon_cursor < state.balloons.size()) ? state.balloons[state.balloon_cursor] : 1;
         state.balloon_cursor++;
@@ -1519,15 +1525,25 @@ Interval get_note_interval_type(double interval_ms, double bpm, double time_sig)
 
     if (std::abs(interval_ms - eighth_note) < tolerance) {
         return Interval::EIGHTH;
-    } else if (std::abs(interval_ms - sixteenth_note) < tolerance) {
+    }
+
+    if (std::abs(interval_ms - sixteenth_note) < tolerance) {
         return Interval::SIXTEENTH;
-    } else if (std::abs(interval_ms - twelfth_note) < tolerance) {
+    }
+
+    if (std::abs(interval_ms - twelfth_note) < tolerance) {
         return Interval::TWELFTH;
-    } else if (std::abs(interval_ms - twentyfourth_note) < tolerance) {
+    }
+
+    if (std::abs(interval_ms - twentyfourth_note) < tolerance) {
         return Interval::TWENTYFOURTH;
-    } else if (std::abs(interval_ms - thirtysecond_note) < tolerance) {
+    }
+
+    if (std::abs(interval_ms - thirtysecond_note) < tolerance) {
         return Interval::THIRTYSECOND;
-    } else if (std::abs(interval_ms - quarter_note) < tolerance) {
+    }
+
+    if (std::abs(interval_ms - quarter_note) < tolerance) {
         return Interval::QUARTER;
     }
     return Interval::UNKNOWN;

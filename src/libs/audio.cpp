@@ -405,10 +405,10 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
                 if (std::atomic_ref<bool>(snd.loop).load(std::memory_order_relaxed) && snd.frame_count > 0) {
                     frame_f = 0.0;
                     continue;
-                } else {
-                    still_playing = false;
-                    break;
                 }
+
+                still_playing = false;
+                break;
             }
 
             unsigned long src_index = src_frame * channels;

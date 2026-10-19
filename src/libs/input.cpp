@@ -168,10 +168,14 @@ bool is_l_don_pressed(PlayerNum player_num, float* strength) {
         return is_input_key_pressed(global_data.config->keys_1p.left_don, global_data.config->gamepad_1p.left_don,
                                     strength) ||
                check_key_pressed(TOUCH_L_DON, strength);
-    } else if (player_num == PlayerNum::P2) {
+    }
+
+    if (player_num == PlayerNum::P2) {
         return is_input_key_pressed(global_data.config->keys_2p.left_don, global_data.config->gamepad_2p.left_don,
                                     strength);
-    } else if (player_num != PlayerNum::ALL) {
+    }
+
+    if (player_num != PlayerNum::ALL) {
         return false;
     }
     std::vector<int> keys = global_data.config->keys_1p.left_don;
@@ -188,10 +192,14 @@ bool is_r_don_pressed(PlayerNum player_num, float* strength) {
         return is_input_key_pressed(global_data.config->keys_1p.right_don, global_data.config->gamepad_1p.right_don,
                                     strength) ||
                check_key_pressed(TOUCH_R_DON, strength);
-    } else if (player_num == PlayerNum::P2) {
+    }
+
+    if (player_num == PlayerNum::P2) {
         return is_input_key_pressed(global_data.config->keys_2p.right_don, global_data.config->gamepad_2p.right_don,
                                     strength);
-    } else if (player_num != PlayerNum::ALL) {
+    }
+
+    if (player_num != PlayerNum::ALL) {
         return false;
     }
     std::vector<int> keys = global_data.config->keys_1p.right_don;
@@ -220,10 +228,14 @@ bool is_l_kat_pressed(PlayerNum player_num, float* strength) {
         return is_input_key_pressed(global_data.config->keys_1p.left_kat, global_data.config->gamepad_1p.left_kat,
                                     strength) ||
                check_key_pressed(TOUCH_L_KAT, strength);
-    } else if (player_num == PlayerNum::P2) {
+    }
+
+    if (player_num == PlayerNum::P2) {
         return is_input_key_pressed(global_data.config->keys_2p.left_kat, global_data.config->gamepad_2p.left_kat,
                                     strength);
-    } else if (player_num != PlayerNum::ALL) {
+    }
+
+    if (player_num != PlayerNum::ALL) {
         return false;
     }
     std::vector<int> keys = global_data.config->keys_1p.left_kat;
@@ -240,10 +252,14 @@ bool is_r_kat_pressed(PlayerNum player_num, float* strength) {
         return is_input_key_pressed(global_data.config->keys_1p.right_kat, global_data.config->gamepad_1p.right_kat,
                                     strength) ||
                check_key_pressed(TOUCH_R_KAT, strength);
-    } else if (player_num == PlayerNum::P2) {
+    }
+
+    if (player_num == PlayerNum::P2) {
         return is_input_key_pressed(global_data.config->keys_2p.right_kat, global_data.config->gamepad_2p.right_kat,
                                     strength);
-    } else if (player_num != PlayerNum::ALL) {
+    }
+
+    if (player_num != PlayerNum::ALL) {
         return false;
     }
     std::vector<int> keys = global_data.config->keys_1p.right_kat;

@@ -43,7 +43,9 @@ std::optional<Screens> InputCaliScreen::update() {
     auto result = GameScreen::update();
     if (result == Screens::SONG_SELECT) {
         return std::nullopt;
-    } else if (result == Screens::RESULT) {
+    }
+
+    if (result == Screens::RESULT) {
         return Screens::SETTINGS;
     }
 

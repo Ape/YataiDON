@@ -515,7 +515,9 @@ public:
                             selected_tex_index = idx;
                         }
                         break;
-                    } else if (in_rect(mouse, b.right) && idx < frame_count - 1) {
+                    }
+
+                    if (in_rect(mouse, b.right) && idx < frame_count - 1) {
                         std::swap(framed->textures[idx], framed->textures[idx + 1]);
                         if (selected_tex_index == idx) {
                             selected_tex_index = idx + 1;

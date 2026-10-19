@@ -72,7 +72,9 @@ double BaseAnimation::applyEasing(double progress, const std::optional<EaseType>
                                   const std::optional<EaseType>& ease_out_opt) {
     if (ease_in_opt.has_value()) {
         return easeIn(progress, ease_in_opt.value());
-    } else if (ease_out_opt.has_value()) {
+    }
+
+    if (ease_out_opt.has_value()) {
         return easeOut(progress, ease_out_opt.value());
     }
     return progress;
@@ -528,7 +530,9 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
         if (anim_obj.HasMember(key)) {
             if (anim_obj[key].IsDouble()) {
                 return anim_obj[key].GetDouble();
-            } else if (anim_obj[key].IsInt()) {
+            }
+
+            if (anim_obj[key].IsInt()) {
                 return static_cast<double>(anim_obj[key].GetInt());
             }
         }
@@ -547,7 +551,9 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
         if (anim_obj.HasMember(key)) {
             if (anim_obj[key].IsDouble()) {
                 return anim_obj[key].GetDouble();
-            } else if (anim_obj[key].IsInt()) {
+            }
+
+            if (anim_obj[key].IsInt()) {
                 return static_cast<double>(anim_obj[key].GetInt());
             }
         }
@@ -598,11 +604,15 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
         return std::make_unique<FadeAnimation>(duration, get_double("initial_opacity", 1.0), loop, lock_input,
                                                get_double("final_opacity", 0.0), delay, get_ease_opt("ease_in"),
                                                get_ease_opt("ease_out"), get_double_opt("reverse_delay"));
-    } else if (type == "move") {
+    }
+
+    if (type == "move") {
         return std::make_unique<MoveAnimation>(duration, get_int("total_distance", 0), loop, lock_input,
                                                get_int("start_position", 0), delay, get_double_opt("reverse_delay"),
                                                get_ease_opt("ease_in"), get_ease_opt("ease_out"), get_waypoints());
-    } else if (type == "texture_change") {
+    }
+
+    if (type == "texture_change") {
         std::vector<std::tuple<double, double, int>> textures;
         if (anim_obj.HasMember("textures") && anim_obj["textures"].IsArray()) {
             const Value& tex_array = anim_obj["textures"];
@@ -617,15 +627,19 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
             }
         }
         return std::make_unique<TextureChangeAnimation>(duration, textures, loop, lock_input, delay);
-    } else if (type == "text_stretch") {
+    }
+
+    if (type == "text_stretch") {
         return std::make_unique<TextStretchAnimation>(duration, delay, loop, lock_input);
-    } else if (type == "texture_resize") {
+    }
+
+    if (type == "texture_resize") {
         return std::make_unique<TextureResizeAnimation>(
             duration, get_double("initial_size", 1.0), loop, lock_input, get_double("final_size", 0.0), delay,
             get_double_opt("reverse_delay"), get_ease_opt("ease_in"), get_ease_opt("ease_out"));
-    } else {
-        throw std::runtime_error("Unknown animation type: " + type);
     }
+
+    throw std::runtime_error("Unknown animation type: " + type);
 }
 
 std::unordered_map<int, std::unique_ptr<BaseAnimation>> AnimationParser::parse_animations(const Value& animation_json) {

@@ -1610,7 +1610,9 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
     if (is_drumroll && !other_notes.empty()) {
         check_drumroll(current_ms, drum_type, background);
         return;
-    } else if (is_balloon && !other_notes.empty()) {
+    }
+
+    if (is_balloon && !other_notes.empty()) {
         curr_note = other_notes.front();
         if (curr_note.type == NoteType::BALLOON_HEAD) {
             check_balloon(current_ms, drum_type, curr_note, background);

@@ -275,7 +275,9 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
                 if (ext == ".mp4" || ext == ".avi" || ext == ".mkv" || ext == ".mov" || ext == ".flv") {
                     metadata.bgmovie = candidate;
                     break;
-                } else if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp") {
+                }
+
+                if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".bmp") {
                     metadata.preimage = candidate;
                     break;
                 }

@@ -15,6 +15,7 @@ Checks: >-
   modernize-use-std-numbers,
   modernize-use-std-print,
   readability-container-contains,
+  readability-else-after-return,
   readability-redundant-casting,
   readability-redundant-member-init,
   readability-static-definition-in-anonymous-namespace,

@@ -1525,7 +1525,9 @@ void Navigator::load_songs_inline_async(const fs::path path, BoxDef box_def) {
         }
         loading_complete = true;
         return;
-    } else if (box_def.collection == "FAVORITE") {
+    }
+
+    if (box_def.collection == "FAVORITE") {
         try {
             load_from_song_list(path, box_def, true);
         } catch (const std::exception& e) {
@@ -1533,7 +1535,9 @@ void Navigator::load_songs_inline_async(const fs::path path, BoxDef box_def) {
         }
         loading_complete = true;
         return;
-    } else if (box_def.collection == "RECENT") {
+    }
+
+    if (box_def.collection == "RECENT") {
         try {
             load_from_song_list(path, box_def, false);
         } catch (const std::exception& e) {
@@ -1541,7 +1545,9 @@ void Navigator::load_songs_inline_async(const fs::path path, BoxDef box_def) {
         }
         loading_complete = true;
         return;
-    } else if (box_def.collection == "DIFFICULTY") {
+    }
+
+    if (box_def.collection == "DIFFICULTY") {
         if (diff_sort_filter) {
             try {
                 load_collection_difficulty(path, box_def, (*diff_sort_filter)[0], (*diff_sort_filter)[1],
@@ -1553,7 +1559,9 @@ void Navigator::load_songs_inline_async(const fs::path path, BoxDef box_def) {
         }
         loading_complete = true;
         return;
-    } else if (box_def.collection == "NEW") {
+    }
+
+    if (box_def.collection == "NEW") {
         try {
             load_collection_new(path, box_def);
         } catch (const std::exception& e) {
@@ -1561,7 +1569,9 @@ void Navigator::load_songs_inline_async(const fs::path path, BoxDef box_def) {
         }
         loading_complete = true;
         return;
-    } else if (box_def.collection == "SEARCH") {
+    }
+
+    if (box_def.collection == "SEARCH") {
         try {
             load_collection_search(path, box_def);
         } catch (const std::exception& e) {
