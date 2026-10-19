@@ -92,13 +92,14 @@ std::optional<Screens> SettingsScreen::handle_input() {
     if (ray::IsKeyPressed(ray::KEY_F3)) {
         return on_screen_end(Screens::INPUT_TEST);
     }
-    if (is_l_kat_pressed()) {
+    const bool typing = box_manager->editing_text();
+    if (is_l_kat_pressed() || (!typing && menu_left_pressed())) {
         audio.play_sound("kat", VolumePreset::SOUND);
         box_manager->move_left();
-    } else if (is_r_kat_pressed()) {
+    } else if (is_r_kat_pressed() || (!typing && menu_right_pressed())) {
         audio.play_sound("kat", VolumePreset::SOUND);
         box_manager->move_right();
-    } else if (is_l_don_pressed() || is_r_don_pressed()) {
+    } else if (is_l_don_pressed() || is_r_don_pressed() || (!typing && menu_confirm_pressed())) {
         audio.play_sound("don", VolumePreset::SOUND);
         bool result = box_manager->select_box();
         if (result) {

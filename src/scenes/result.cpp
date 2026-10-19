@@ -76,9 +76,7 @@ void ResultScreen::handle_input(double current_ms) {
     if (!fade_out) {
         return;
     }
-    bool l = is_l_don_pressed();
-    bool r = is_r_don_pressed();
-    if (!(l || r)) {
+    if (!menu_confirm_pressed()) {
         return;
     }
 

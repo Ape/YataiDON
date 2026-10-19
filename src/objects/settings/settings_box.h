@@ -54,6 +54,7 @@ public:
     void move_option_right();
 
     void select_option();
+    bool editing_text() const;
 
     void select();
 

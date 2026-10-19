@@ -65,6 +65,10 @@ bool is_l_don_pressed(PlayerNum player_num = PlayerNum::ALL, float* strength = n
 bool is_r_don_pressed(PlayerNum player_num = PlayerNum::ALL, float* strength = nullptr);
 bool is_l_kat_pressed(PlayerNum player_num = PlayerNum::ALL, float* strength = nullptr);
 bool is_r_kat_pressed(PlayerNum player_num = PlayerNum::ALL, float* strength = nullptr);
+// Menu navigation: drum input plus arrow keys / Enter (not for P2)
+bool menu_left_pressed(PlayerNum player_num = PlayerNum::ALL);
+bool menu_right_pressed(PlayerNum player_num = PlayerNum::ALL);
+bool menu_confirm_pressed(PlayerNum player_num = PlayerNum::ALL);
 
 bool is_kat_held(bool left, PlayerNum player_num = PlayerNum::ALL);
 
