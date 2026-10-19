@@ -737,13 +737,13 @@ OutlinedText::OutlinedText(std::string text, int font_size, ray::Color color, ra
         build_future = std::async(std::launch::async, [this, color, outline_color, spacing]() {
             auto data = build_vertical_text(color, outline_color, spacing);
             std::scoped_lock lock(pending_mutex);
-            pending_image = std::move(data.img);
+            pending_image = data.img;
         });
     } else {
         build_future = std::async(std::launch::async, [this, color, outline_color, spacing]() {
             auto data = build_horizontal_text(color, outline_color, spacing);
             std::scoped_lock lock(pending_mutex);
-            pending_image = std::move(data.img);
+            pending_image = data.img;
         });
     }
 #endif
@@ -964,7 +964,7 @@ bool OutlinedText::upload_pending() {
         if (!pending_image.has_value()) {
             return false;
         }
-        img = std::move(pending_image);
+        img = pending_image;
         pending_image.reset();
     }
 

@@ -802,7 +802,7 @@ std::optional<int> NetworkClient::take_replay_jump_result() {
     if (!replay_jump_result.has_value()) {
         return std::nullopt;
     }
-    std::optional<int> result = std::move(replay_jump_result);
+    std::optional<int> result = replay_jump_result;
     replay_jump_result.reset();
     return result;
 }

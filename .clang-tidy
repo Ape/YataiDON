@@ -14,6 +14,7 @@ Checks: >-
   modernize-use-starts-ends-with,
   modernize-use-std-numbers,
   modernize-use-std-print,
+  performance-move-const-arg,
   readability-container-contains,
   readability-else-after-return,
   readability-redundant-casting,
