@@ -1087,7 +1087,7 @@ std::string AudioEngine::load_sound(const fs::path& file_path, const std::string
                           snd.channels);
             return name;
 #else
-            spdlog::error("Failed to open sound file: {} - {}", file_path.string(), sf_strerror(NULL));
+            spdlog::error("Failed to open sound file: {} - {}", file_path.string(), sf_strerror(nullptr));
             return "";
 #endif
         }
@@ -1569,7 +1569,7 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
                           ff_ch);
             return name;
 #else
-            spdlog::error("Failed to open music file: {} - {}", file_path.string(), sf_strerror(NULL));
+            spdlog::error("Failed to open music file: {} - {}", file_path.string(), sf_strerror(nullptr));
             return "";
 #endif
         }
