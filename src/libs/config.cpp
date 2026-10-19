@@ -409,7 +409,7 @@ Config get_config() {
 
     // Parse paths
     config.paths.tja_path = parsePathArrayOrDefault(config_file, "paths", "tja_path", {fs::path("Songs")});
-    config.paths.skin = fs::path(config_file["paths"]["skin"].value_or("PyTaikoGreen"));
+    config.paths.skin = fs::path(config_file["paths"]["skin"].value_or(""));
 
     // Parse keys (converting from strings to key codes)
     config.keys.exit_key = getKeyCodeOrDefault(config_file["keys"]["exit_key"].value_or("Q"), "Q");

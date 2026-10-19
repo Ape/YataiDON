@@ -5,6 +5,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <vector>
 
 class SkinUpdater {
 public:
@@ -15,7 +16,16 @@ public:
         std::string current_skin; // skin being processed ("" between skins)
         std::string current_file; // file being downloaded ("" while scanning)
         int files_updated = 0;    // running total of files written this pass
+        std::vector<std::string> failed; // skins the last download() could not fully fetch
     };
+
+    struct Request {
+        std::string name;
+        std::string url;
+        std::string branch = "main";
+    };
+
+    void download(std::vector<Request> requests);
 
     void start();
 
@@ -33,7 +43,7 @@ public:
 
 private:
     void scan_skins();
-    void update_one_skin(const std::filesystem::path& skin_dir, const std::string& repo_url, const std::string& branch);
+    bool update_one_skin(const std::filesystem::path& skin_dir, const std::string& repo_url, const std::string& branch);
     void set_current_skin(const std::string& name);
     void set_current_file(const std::string& file);
     void note_file_updated();
@@ -46,6 +56,7 @@ private:
     std::string current_skin_;
     std::string current_file_;
     int files_updated_ = 0;
+    std::vector<std::string> failed_;
 
     std::thread thread_;
 };

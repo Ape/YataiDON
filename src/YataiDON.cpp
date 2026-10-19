@@ -46,6 +46,7 @@
 #include "scenes/input_cali.h"
 #include "scenes/input_test.h"
 #include "scenes/loading.h"
+#include "scenes/onboarding.h"
 #include "scenes/result.h"
 #include "scenes/result_2p.h"
 #include "scenes/retry_game.h"
@@ -358,6 +359,9 @@ static void populate_screens(std::unordered_map<Screens, std::unique_ptr<Screen>
     if (except != Screens::RETRY_GAME) {
         screens[Screens::RETRY_GAME] = std::make_unique<RetryGameScreen>();
     }
+    if (except != Screens::ONBOARDING) {
+        screens[Screens::ONBOARDING] = std::make_unique<OnboardingScreen>();
+    }
 }
 
 void drop_other_screens_for_skin_reload() {
@@ -417,7 +421,9 @@ static void run_frame() {
     }
 
     L.camera = compute_camera2d(tex.screen_width, tex.screen_height);
-    debug_menu.update(L.camera);
+    if (!global_data.skinless) {
+        debug_menu.update(L.camera);
+    }
 
     ray::BeginDrawing();
 
@@ -497,14 +503,16 @@ static void run_frame() {
 
     draw_touch_drum();
 
-    if (global_data.config->general.fps_counter) {
-        L.fps_counter.update();
-        L.fps_counter.draw();
+    if (!global_data.skinless) {
+        if (global_data.config->general.fps_counter) {
+            L.fps_counter.update();
+            L.fps_counter.draw();
+        }
+
+        draw_skin_update_status();
+
+        debug_menu.draw();
     }
-
-    draw_skin_update_status();
-
-    debug_menu.draw();
 
     draw_outer_border(tex.screen_width, tex.screen_height, L.last_color);
 
@@ -557,8 +565,11 @@ static void run_frame() {
 int main(int argc, char* argv[]) {
     spdlog::info("Starting YataiDON");
     set_working_directory_to_executable();
+    const bool had_config = std::filesystem::exists("config.toml");
     global_data.config = new Config(get_config());
-    // Save config after loading in case migration occurred (old fields -> new fields)
+    const bool gen3 = global_data.config->general.score_method == ScoreMethod::GEN3;
+    global_data.needs_onboarding = !had_config || !std::filesystem::exists(gen3 ? "scores_gen3.db" : "scores.db");
+
     save_config(*global_data.config);
     ensure_config_file(*global_data.config);
     parse_card_reader_args(argc, argv, global_data.config->card_reader);
@@ -577,7 +588,14 @@ int main(int argc, char* argv[]) {
     setup_logging(global_data.config->general.log_level);
 
     ray::InitWindow(1280, 720, "YataiDON");
-    load_skin();
+    try {
+        load_skin();
+    } catch (const std::exception& e) {
+        spdlog::error("Starting without a skin: {}", e.what());
+        global_data.skinless = true;
+        global_data.needs_onboarding = true;
+        initial_screen = Screens::ONBOARDING;
+    }
     apply_queued_window_resize();
 
     // Apply config defaults for empty access codes

@@ -250,6 +250,8 @@ struct GlobalData {
     int live_skip_count = -1;
     bool live_skip_used = false;
     bool force_auto_play = false;
+    bool skinless = false;
+    bool needs_onboarding = false;
     bool returned_from_result = false;
     bool entry_join_pending = false;
     PlayerNum entry_joined_seat = PlayerNum::P1;
