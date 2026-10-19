@@ -5,6 +5,7 @@
 #include <charconv>
 #include <condition_variable>
 #include <cwctype>
+#include <format>
 #include <mutex>
 #include <spdlog/spdlog.h>
 #include <thread>
@@ -844,7 +845,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                     continue;
                 }
 
-                std::string tex_id = subset_key + "/" + tex_name;
+                std::string tex_id = std::format("{}/{}", subset_key, tex_name);
 
                 std::string cache_key = (folder / tex_name).string();
                 auto cit = cache.find(cache_key);
@@ -1102,7 +1103,7 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
                 continue;
             }
             std::string name = entry.path.filename().string();
-            if (seen.insert(name).second && !loaded_subsets.contains(screen_name + "/" + name)) {
+            if (seen.insert(name).second && !loaded_subsets.contains(std::format("{}/{}", screen_name, name))) {
                 subsets.push_back(std::move(name));
             }
         }

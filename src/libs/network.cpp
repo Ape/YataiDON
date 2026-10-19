@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
+#include <format>
 #include <map>
 #include <random>
 #include <rapidjson/document.h>
@@ -140,7 +141,7 @@ namespace {
 
         std::string canonical = method + "\n" + path + "\n";
         for (const auto& [k, v] : params) {
-            canonical += k + "=" + v + "&";
+            canonical += std::format("{}={}&", k, v);
         }
         canonical += "\n" + timestamp + "\n" + nonce;
 

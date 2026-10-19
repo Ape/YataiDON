@@ -1,5 +1,6 @@
 #pragma once
 
+#include <format>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -76,7 +77,7 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
 
     std::string wrapped, current;
     for (const auto& w : words) {
-        std::string candidate = current.empty() ? w : current + " " + w;
+        std::string candidate = current.empty() ? w : std::format("{} {}", current, w);
         float width = ray::MeasureTextEx(font, candidate.c_str(), (float)font_size, spacing).x;
         if (width <= max_width) {
             current = candidate;
