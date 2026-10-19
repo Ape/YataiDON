@@ -3,9 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
-#include <charconv>
 #include <chrono>
-#include <cmath>
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>
@@ -645,17 +643,15 @@ static ReplayData parse_replay_response(const cpr::Response& response) {
             continue;
         }
 
-        const char* begin = m.name.GetString();
-        const char* end = begin + m.name.GetStringLength();
-        double timestamp;
-        auto [ptr, error] = std::from_chars(begin, end, timestamp);
+        rapidjson::Document timestamp;
+        timestamp.Parse<rapidjson::kParseFullPrecisionFlag>(m.name.GetString(), m.name.GetStringLength());
 
-        if (error != std::errc{} || ptr != end || !std::isfinite(timestamp)) {
+        if (timestamp.HasParseError() || !timestamp.IsNumber()) {
             spdlog::warn("Replay contains an invalid timestamp");
             return {};
         }
 
-        result.input_log.emplace(timestamp, m.value.GetInt());
+        result.input_log.emplace(timestamp.GetDouble(), m.value.GetInt());
     }
 
     if (doc.HasMember("username") && doc["username"].IsString()) {
