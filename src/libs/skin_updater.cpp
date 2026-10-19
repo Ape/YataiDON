@@ -249,7 +249,6 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
         jobs.push_back({rel_path, hash, std::move(local_file), key});
     }
 
-
     std::mutex result_mutex;
     std::atomic<size_t> next_job{0};
     auto worker = [&] {
@@ -271,8 +270,9 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
                 }
             }
             if (!got) {
-                spdlog::warn("Skin update ({}): could not download {} matching checksums.sha256; keeping the local file",
-                             skin_dir.filename().string(), job.rel_path);
+                spdlog::warn(
+                    "Skin update ({}): could not download {} matching checksums.sha256; keeping the local file",
+                    skin_dir.filename().string(), job.rel_path);
                 std::scoped_lock lock(result_mutex);
                 complete = false;
                 continue;
