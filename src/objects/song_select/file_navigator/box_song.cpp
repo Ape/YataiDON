@@ -106,6 +106,7 @@ void SongBox::reset() {
 
 std::vector<Difficulty> SongBox::get_diffs() {
     std::vector<Difficulty> diffs;
+    diffs.reserve(parser.metadata.course_data.size());
     for (const auto& [diff, level] : parser.metadata.course_data) {
         diffs.push_back(Difficulty(diff));
     }

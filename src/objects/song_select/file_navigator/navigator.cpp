@@ -21,6 +21,7 @@
 #include <chrono>
 #include <cmath>
 #include <random>
+#include <ranges>
 #include <thread>
 
 // Song Search normalisation: ASCII is lower-cased, full-width ASCII (U+FF01..FF5E) becomes
@@ -315,6 +316,7 @@ void Navigator::preload(std::vector<fs::path> songs_paths, std::optional<std::ve
         std::atomic<size_t> cursor{0};
         unsigned pool_size = std::max(2u, std::thread::hardware_concurrency() / 2);
         std::vector<std::thread> pool;
+        pool.reserve(pool_size);
         for (unsigned t = 0; t < pool_size; t++) {
             pool.emplace_back([&]() {
                 for (;;) {
@@ -2807,6 +2809,7 @@ void Navigator::update(double current_ms) {
             open_index = state.folder_index;
             inline_state.reset();
             std::vector<float> before;
+            before.reserve(items.size());
             for (const auto& box : items) {
                 before.push_back(box->position);
             }
@@ -2816,14 +2819,15 @@ void Navigator::update(double current_ms) {
             // their side instead (not from where they were: the list wraps, so that can be the far side)
             if (!vertical_gallery) {
                 const float center = items[open_index]->position;
-                for (size_t i = 0; i < items.size(); i++) {
-                    const float to = items[i]->position;
-                    const bool was_off = before[i] > tex.screen_width || before[i] < -100.0f;
-                    if (to == before[i] || !was_off || to < -100.0f || to > tex.screen_width) {
+                for (const auto& [box, previous] : std::views::zip(items, before)) {
+                    const float to = box->position;
+                    const bool was_off = previous > tex.screen_width || previous < -100.0f;
+                    if (to == previous || !was_off || to < -100.0f || to > tex.screen_width) {
                         continue;
                     }
-                    items[i]->set_position(to > center ? tex.screen_width + 100.0f : -200.0f);
-                    items[i]->move_box(to, 500);
+
+                    box->set_position(to > center ? tex.screen_width + 100.0f : -200.0f);
+                    box->move_box(to, 500);
                 }
             }
             items[open_index]->exit_box();

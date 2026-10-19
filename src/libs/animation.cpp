@@ -316,6 +316,7 @@ void TextureChangeAnimation::update(double current_time_ms) {
 
 std::unique_ptr<BaseAnimation> TextureChangeAnimation::copy() const {
     std::vector<std::tuple<double, double, int>> tex_tuples;
+    tex_tuples.reserve(textures.size());
     for (const auto& frame : textures) {
         tex_tuples.emplace_back(frame.start, frame.end, frame.index);
     }

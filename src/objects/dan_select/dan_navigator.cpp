@@ -417,6 +417,7 @@ std::vector<DanBoxData> DanNavigator::load_dan_jsons(const std::vector<fs::path>
     std::atomic<size_t> cursor{0};
     unsigned pool_size = std::max(2u, std::thread::hardware_concurrency() / 2);
     std::vector<std::thread> pool;
+    pool.reserve(pool_size);
     for (unsigned t = 0; t < pool_size; t++) {
         pool.emplace_back([&]() {
             for (;;) {
