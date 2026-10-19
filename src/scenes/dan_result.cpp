@@ -19,6 +19,7 @@ namespace {
     constexpr double WAIT_END_TIME_MS = 30.0 * 1000.0;
     constexpr double WAIT_DETAIL_MS = 0.2 * 1000.0;
     constexpr double SONG_LAND_MS[3] = {40 * FRAME_MS, 65 * FRAME_MS, 90 * FRAME_MS};
+    constexpr double SONG_SLIDE_MS = 22 * FRAME_MS;
     constexpr double TOTAL_SLIDE_MS = 94 * FRAME_MS;
     constexpr double ROW_SLIDE_MS = 29 * FRAME_MS;
     constexpr double STAMP_ANM_MS = 89 * FRAME_MS;
@@ -51,7 +52,6 @@ void DanResultScreen::on_screen_start() {
         throw std::runtime_error("DanResultScreen: animation 0/1 is not a FadeAnimation");
     }
     is_page2 = false;
-    page1_skipped = false;
     page_start_ms = get_current_ms();
     page1_start_ms = page_start_ms;
 
@@ -226,6 +226,9 @@ Screens DanResultScreen::on_screen_end(Screens next_screen) {
 
 void DanResultScreen::handle_input(double current_ms) {
     const double on_page = current_ms - page_start_ms;
+    const SessionData& sd = global_data.session_data[static_cast<int>(global_data.player_num)];
+    const int song_count = static_cast<int>(sd.dan_result_data.songs.size());
+    const double page1_end = song_count > 0 ? (40 + (song_count - 1) * 25) * FRAME_MS + SONG_SLIDE_MS : 0.0;
 
     if (on_page < WAIT_TIME_MS) {
         return;
@@ -298,14 +301,10 @@ void DanResultScreen::handle_input(double current_ms) {
         if (!fade_out->is_started) {
             fade_out->start();
         }
-    } else if (don && !page1_skipped) {
-        page1_skipped = true;
+    } else if (don && current_ms - page1_start_ms < page1_end) {
         page1_start_ms = current_ms - WAIT_END_TIME_MS;
         page_start_ms = current_ms;
-
-        const int player_num = static_cast<int>(global_data.player_num);
-        const SessionData& sd = global_data.session_data[player_num];
-        page1_plates_played = static_cast<int>(sd.dan_result_data.songs.size());
+        page1_plates_played = song_count;
     } else {
         page2_fade->start();
         is_page2 = true;
