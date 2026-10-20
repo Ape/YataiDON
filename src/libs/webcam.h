@@ -2,8 +2,10 @@
 #include <cassert>
 #include <optional>
 
+// clang-format off
 #include "sdl_compat.h" // before ray.h: raylib.h must not be the first to pull in <stdarg.h>
 #include "ray.h"       // IWYU pragma: keep
+// clang-format on
 
 class WebCamera {
 public:
