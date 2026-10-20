@@ -59,7 +59,7 @@ namespace av {
     // ---------------------------------------------------------------------------
     class AVDecodedFrame {
     public:
-        explicit AVDecodedFrame(::AVFrame* frame) : frame_(frame), rgb_frame_(nullptr), sws_ctx_(nullptr) {}
+        explicit AVDecodedFrame(::AVFrame* frame) : frame_(frame) {}
 
         ~AVDecodedFrame() {
             if (rgb_frame_) {
@@ -133,8 +133,8 @@ namespace av {
 
     private:
         ::AVFrame* frame_;
-        ::AVFrame* rgb_frame_;
-        SwsContext* sws_ctx_;
+        ::AVFrame* rgb_frame_{nullptr};
+        SwsContext* sws_ctx_{nullptr};
     };
 
     // ---------------------------------------------------------------------------

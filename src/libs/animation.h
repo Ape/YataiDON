@@ -26,8 +26,8 @@ protected:
     double delay;
     double delay_saved;
     double start_ms;
-    double paused_at_ms;
-    bool unlocked;
+    double paused_at_ms{0.0};
+    bool unlocked{true};
     bool loop;
     bool lock_input;
 
@@ -39,11 +39,11 @@ protected:
                        const std::optional<EaseType>& ease_out_opt);
 
 public:
-    double attribute;
+    double attribute{0};
     double duration;
-    bool is_finished;
-    bool is_started;
-    bool is_reversing;
+    bool is_finished{false};
+    bool is_started{false};
+    bool is_reversing{false};
 
     BaseAnimation(double duration, double delay = 0.0, bool loop = false, bool lock_input = false);
 

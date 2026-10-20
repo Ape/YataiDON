@@ -11,7 +11,7 @@ private:
     std::vector<Screens> box_locations;
     std::vector<std::unique_ptr<Box>> boxes;
     int num_boxes = 0;
-    int selected_box_index;
+    int selected_box_index{0};
     FadeAnimation* fade_out;
     bool is_2p;
     bool is_vertical = false;
@@ -23,7 +23,7 @@ private:
     void change_board_list();
 
 public:
-    bool costume_menu_open;
+    bool costume_menu_open{false};
     PlayerNum opening_player = PlayerNum::P1;
 
     explicit BoxManager(bool two_player = false);

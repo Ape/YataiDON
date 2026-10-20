@@ -177,9 +177,13 @@ std::optional<std::pair<int, int>> DiffSortSelect::input_select() {
         if (confirm_index == 0) {
             confirmation = false;
             return std::nullopt;
-        } else if (confirm_index == 1) {
+        }
+
+        if (confirm_index == 1) {
             return {{selected_box, selected_level}};
-        } else if (confirm_index == 2) {
+        }
+
+        if (confirm_index == 2) {
             confirmation = false;
             in_level_select = false;
             return std::nullopt;

@@ -670,7 +670,9 @@ std::optional<Screens> GameScreen::update() {
 
     if (result_transition.is_finished && !audio.is_sound_playing("result_transition")) {
         return on_screen_end(Screens::RESULT);
-    } else if (clock.position() >= players[0]->end_time) {
+    }
+
+    if (clock.position() >= players[0]->end_time) {
         const double transition_delay = global_data.config->general.fast_transitions
                                             ? kFastResultTransitionDelayMs
                                             : (players[0]->was_skipped() ? 2800.0 : 8533.34);

@@ -16,12 +16,12 @@ private:
     float start_position;
     float wrap_bottom;
     float target_position;
-    int direction;
-    BaseAnimation* move_anim;
-    FadeAnimation* blue_arrow_fade;
-    MoveAnimation* blue_arrow_move;
-    bool is_selected;
-    int option_index;
+    int direction{1};
+    BaseAnimation* move_anim{nullptr};
+    FadeAnimation* blue_arrow_fade{nullptr};
+    MoveAnimation* blue_arrow_move{nullptr};
+    bool is_selected{false};
+    int option_index{0};
     std::vector<std::unique_ptr<BaseOptionBox>> options;
 
     TextureObject* t_box = nullptr;
@@ -34,7 +34,7 @@ private:
 
 public:
     std::string box_name;
-    bool in_box;
+    bool in_box{false};
 
     SettingsBox(const std::string& name, const std::string& label_text, const rapidjson::Value& options_json);
     ~SettingsBox();

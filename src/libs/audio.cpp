@@ -405,10 +405,10 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
                 if (std::atomic_ref<bool>(snd.loop).load(std::memory_order_relaxed) && snd.frame_count > 0) {
                     frame_f = 0.0;
                     continue;
-                } else {
-                    still_playing = false;
-                    break;
                 }
+
+                still_playing = false;
+                break;
             }
 
             unsigned long src_index = src_frame * channels;
@@ -1087,7 +1087,7 @@ std::string AudioEngine::load_sound(const fs::path& file_path, const std::string
                           snd.channels);
             return name;
 #else
-            spdlog::error("Failed to open sound file: {} - {}", file_path.string(), sf_strerror(NULL));
+            spdlog::error("Failed to open sound file: {} - {}", file_path.string(), sf_strerror(nullptr));
             return "";
 #endif
         }
@@ -1238,7 +1238,7 @@ void AudioEngine::load_screen_sounds(const std::string& screen_name) {
         std::vector<std::thread> pool;
         pool.reserve(workers);
         for (size_t w = 0; w < workers; ++w) {
-            pool.emplace_back([this, &queue, &next]() {
+            pool.emplace_back([this, &queue, &next] {
                 for (size_t i = next.fetch_add(1); i < queue.size(); i = next.fetch_add(1)) {
                     load_sound(queue[i].first, queue[i].second);
                 }
@@ -1569,7 +1569,7 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
                           ff_ch);
             return name;
 #else
-            spdlog::error("Failed to open music file: {} - {}", file_path.string(), sf_strerror(NULL));
+            spdlog::error("Failed to open music file: {} - {}", file_path.string(), sf_strerror(nullptr));
             return "";
 #endif
         }

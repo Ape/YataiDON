@@ -30,8 +30,7 @@ BaseOptionBox::BaseOptionBox(const std::string& name, const std::string& descrip
       name_text(std::make_unique<OutlinedText>(name, option_font_size(), ray::WHITE, ray::BLACK, false, 4, -4)),
       t_overlay(tex.get_texture("background/overlay")), t_title(tex.get_texture("background/title")),
       t_title_highlight(tex.get_texture("background/title_highlight")),
-      t_button_on(tex.get_texture("option/button_on")), t_button_off(tex.get_texture("option/button_off")),
-      is_highlighted(false) {}
+      t_button_on(tex.get_texture("option/button_on")), t_button_off(tex.get_texture("option/button_off")) {}
 
 void BaseOptionBox::draw_base() const {
     tex.draw_texture(t_overlay, {.scale = 0.70f});
@@ -96,7 +95,7 @@ static std::string int_display(int v) {
 IntOptionBox::IntOptionBox(const std::string& name, const std::string& description, const std::string& path,
                            const std::map<std::string, std::string>& values)
     : BaseOptionBox(name, description, path), value(config_ref.get_int()), value_text(nullptr),
-      flicker_fade(make_flicker()), value_index(0) {
+      flicker_fade(make_flicker()) {
     if (!values.empty()) {
         for (auto& [k, v] : values) {
             try {
@@ -182,7 +181,7 @@ void IntOptionBox::draw() {
 StrOptionBox::StrOptionBox(const std::string& name, const std::string& description, const std::string& path,
                            const std::map<std::string, std::string>& values)
     : BaseOptionBox(name, description, path), value(config_ref.get_str()), input_string(value), value_text(nullptr),
-      flicker_fade(make_flicker()), value_index(0) {
+      flicker_fade(make_flicker()) {
     if (!values.empty()) {
         for (auto& [k, v] : values) {
             value_list.emplace_back(k, v);
@@ -447,9 +446,8 @@ void FloatOptionBox::draw() {
 AudioOffsetOptionBox::AudioOffsetOptionBox(const std::string& name, const std::string& description,
                                            const std::string& path, Screens calibrate_screen)
     : BaseOptionBox(name, description, path), value(config_ref.get_int()), calibrate_screen(calibrate_screen),
-      offset_highlighted(true), value_text(nullptr),
-      calibrate_text(
-          std::make_unique<OutlinedText>("Calibrate", option_font_size(), ray::WHITE, ray::BLACK, false, 4, -4)),
+      value_text(nullptr), calibrate_text(std::make_unique<OutlinedText>("Calibrate", option_font_size(), ray::WHITE,
+                                                                         ray::BLACK, false, 4, -4)),
       flicker_fade(make_flicker()) {
     rebuild_text();
 }

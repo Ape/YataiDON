@@ -5,7 +5,7 @@
 #include "../../libs/audio.h"
 
 ComboAnnounce::ComboAnnounce(int combo, double current_ms, PlayerNum player_num)
-    : combo(combo), wait(current_ms), player_num(player_num), is_finished(false), audio_played(false) {
+    : combo(combo), wait(current_ms), player_num(player_num) {
 
     fade = dynamic_cast<FadeAnimation*>(tex.get_animation(65, true));
     if (fade == nullptr) {

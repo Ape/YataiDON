@@ -2,8 +2,7 @@
 
 NoteArc::NoteArc(NoteType note_type, double current_ms, PlayerNum player_num, bool big, bool is_balloon, float start_x,
                  float start_y)
-    : is_balloon(is_balloon), arc_duration(31), current_progress(0), elapsed_ms(0), note_finished_handled(false),
-      start_ms(current_ms), note_type(note_type), is_big(big) {
+    : is_balloon(is_balloon), start_ms(current_ms), note_type(note_type), is_big(big) {
     NoteType texture_note_type = note_type;
     if (big) {
         if (note_type == NoteType::DON) {

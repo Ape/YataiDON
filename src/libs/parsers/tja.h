@@ -103,19 +103,19 @@ struct TimelineObject {
 
 class Note {
 public:
-    NoteType type;
-    double hit_ms;
-    double load_ms;
-    double unload_ms;
-    double bpm;
-    double scroll_x;
-    double scroll_y;
+    NoteType type{NoteType::BARLINE};
+    double hit_ms{0.0f};
+    double load_ms{0.0f};
+    double unload_ms{0.0f};
+    double bpm{0.0f};
+    double scroll_x{0.0f};
+    double scroll_y{0.0f};
     std::optional<double> sudden_appear_ms;
     std::optional<double> sudden_moving_ms;
-    bool display;
-    int index;
-    int moji;
-    bool is_branch_start;
+    bool display{true};
+    int index{0};
+    int moji{0};
+    bool is_branch_start{false};
     // Drumroll specific
     std::optional<int> color;
     float roll_intensity = 0.0f;
@@ -123,9 +123,7 @@ public:
     std::optional<int> count;
     std::optional<bool> popped;
 
-    Note()
-        : type(NoteType::BARLINE), hit_ms(0.0f), load_ms(0.0f), unload_ms(0.0f), bpm(0.0f), scroll_x(0.0f),
-          scroll_y(0.0f), display(true), index(0), moji(0), is_branch_start(false) {}
+    Note() = default;
 
     virtual ~Note() = default;
 

@@ -5,9 +5,9 @@
 
 class BalloonCounter {
 private:
-    int balloon_count;
+    int balloon_count{0};
     int balloon_total;
-    bool is_popped;
+    bool is_popped{false};
     bool is_2p;
     int stage = 0;
     double now_ms = 0;

@@ -26,7 +26,7 @@ private:
 
 public:
     Transition(const std::string& title, const std::string& subtitle, bool is_second);
-    ~Transition();
+    ~Transition() override;
     void start();
     void add_loading_graphic(const std::string& path);
     void set_dan(int color, const std::string& rank_name);

@@ -50,7 +50,9 @@ std::optional<Screens> Game2PScreen::update() {
 
     if (result_transition.is_finished && !audio.is_sound_playing("result_transition")) {
         return on_screen_end(Screens::RESULT_2P);
-    } else if (clock.position() >= end_time) {
+    }
+
+    if (clock.position() >= end_time) {
         const double transition_delay =
             global_data.config->general.fast_transitions ? kFastResultTransitionDelayMs : 8533.34;
 

@@ -13,8 +13,7 @@ WebCamera::~WebCamera() {
 }
 
 WebCamera::WebCamera(WebCamera&& other) noexcept
-    : m_camera(other.m_camera), m_texture(std::move(other.m_texture)), m_width(other.m_width),
-      m_height(other.m_height) {
+    : m_camera(other.m_camera), m_texture(other.m_texture), m_width(other.m_width), m_height(other.m_height) {
     other.m_camera = nullptr;
     other.m_texture.reset();
     other.m_width = 0;
@@ -25,7 +24,7 @@ WebCamera& WebCamera::operator=(WebCamera&& other) noexcept {
     if (this != &other) {
         close();
         m_camera = other.m_camera;
-        m_texture = std::move(other.m_texture);
+        m_texture = other.m_texture;
         m_width = other.m_width;
         m_height = other.m_height;
         other.m_camera = nullptr;

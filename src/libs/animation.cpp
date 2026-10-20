@@ -29,9 +29,8 @@ void reset_input_lock() {
 }
 
 BaseAnimation::BaseAnimation(double duration, double delay, bool loop, bool lock_input)
-    : duration(duration), delay(delay), delay_saved(delay), start_ms(get_current_ms()), paused_at_ms(0.0),
-      is_finished(false), is_started(false), is_reversing(false), unlocked(true), loop(loop), lock_input(lock_input),
-      attribute(0) {
+    : duration(duration), delay(delay), delay_saved(delay), start_ms(get_current_ms()), loop(loop),
+      lock_input(lock_input) {
     if (loop) {
         is_started = true;
         restart();
@@ -72,7 +71,9 @@ double BaseAnimation::applyEasing(double progress, const std::optional<EaseType>
                                   const std::optional<EaseType>& ease_out_opt) {
     if (ease_in_opt.has_value()) {
         return easeIn(progress, ease_in_opt.value());
-    } else if (ease_out_opt.has_value()) {
+    }
+
+    if (ease_out_opt.has_value()) {
         return easeOut(progress, ease_out_opt.value());
     }
     return progress;
@@ -315,6 +316,7 @@ void TextureChangeAnimation::update(double current_time_ms) {
 
 std::unique_ptr<BaseAnimation> TextureChangeAnimation::copy() const {
     std::vector<std::tuple<double, double, int>> tex_tuples;
+    tex_tuples.reserve(textures.size());
     for (const auto& frame : textures) {
         tex_tuples.emplace_back(frame.start, frame.end, frame.index);
     }
@@ -528,7 +530,9 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
         if (anim_obj.HasMember(key)) {
             if (anim_obj[key].IsDouble()) {
                 return anim_obj[key].GetDouble();
-            } else if (anim_obj[key].IsInt()) {
+            }
+
+            if (anim_obj[key].IsInt()) {
                 return static_cast<double>(anim_obj[key].GetInt());
             }
         }
@@ -547,7 +551,9 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
         if (anim_obj.HasMember(key)) {
             if (anim_obj[key].IsDouble()) {
                 return anim_obj[key].GetDouble();
-            } else if (anim_obj[key].IsInt()) {
+            }
+
+            if (anim_obj[key].IsInt()) {
                 return static_cast<double>(anim_obj[key].GetInt());
             }
         }
@@ -573,7 +579,7 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
 
     auto get_ease_opt = [&](const char* key) -> std::optional<EaseType> { return get_ease_opt_from(anim_obj, key); };
 
-    auto get_waypoints = [&]() -> std::vector<MoveAnimation::Waypoint> {
+    auto get_waypoints = [&] -> std::vector<MoveAnimation::Waypoint> {
         std::vector<MoveAnimation::Waypoint> result;
         if (!anim_obj.HasMember("waypoints") || !anim_obj["waypoints"].IsArray()) {
             return result;
@@ -598,11 +604,15 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
         return std::make_unique<FadeAnimation>(duration, get_double("initial_opacity", 1.0), loop, lock_input,
                                                get_double("final_opacity", 0.0), delay, get_ease_opt("ease_in"),
                                                get_ease_opt("ease_out"), get_double_opt("reverse_delay"));
-    } else if (type == "move") {
+    }
+
+    if (type == "move") {
         return std::make_unique<MoveAnimation>(duration, get_int("total_distance", 0), loop, lock_input,
                                                get_int("start_position", 0), delay, get_double_opt("reverse_delay"),
                                                get_ease_opt("ease_in"), get_ease_opt("ease_out"), get_waypoints());
-    } else if (type == "texture_change") {
+    }
+
+    if (type == "texture_change") {
         std::vector<std::tuple<double, double, int>> textures;
         if (anim_obj.HasMember("textures") && anim_obj["textures"].IsArray()) {
             const Value& tex_array = anim_obj["textures"];
@@ -617,15 +627,19 @@ std::unique_ptr<BaseAnimation> AnimationParser::createAnimation(const Value& ani
             }
         }
         return std::make_unique<TextureChangeAnimation>(duration, textures, loop, lock_input, delay);
-    } else if (type == "text_stretch") {
+    }
+
+    if (type == "text_stretch") {
         return std::make_unique<TextStretchAnimation>(duration, delay, loop, lock_input);
-    } else if (type == "texture_resize") {
+    }
+
+    if (type == "texture_resize") {
         return std::make_unique<TextureResizeAnimation>(
             duration, get_double("initial_size", 1.0), loop, lock_input, get_double("final_size", 0.0), delay,
             get_double_opt("reverse_delay"), get_ease_opt("ease_in"), get_ease_opt("ease_out"));
-    } else {
-        throw std::runtime_error("Unknown animation type: " + type);
     }
+
+    throw std::runtime_error("Unknown animation type: " + type);
 }
 
 std::unordered_map<int, std::unique_ptr<BaseAnimation>> AnimationParser::parse_animations(const Value& animation_json) {

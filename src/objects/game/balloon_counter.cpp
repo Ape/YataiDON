@@ -4,8 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 
-BalloonCounter::BalloonCounter(int count, bool is_2p)
-    : balloon_count(0), balloon_total(count), is_popped(false), is_2p(is_2p) {
+BalloonCounter::BalloonCounter(int count, bool is_2p) : balloon_total(count), is_2p(is_2p) {
     fade = dynamic_cast<FadeAnimation*>(tex.get_animation(7, true));
     stretch = dynamic_cast<TextStretchAnimation*>(tex.get_animation(6, true));
     if (!fade || !stretch) {

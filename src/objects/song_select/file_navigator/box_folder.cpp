@@ -109,7 +109,7 @@ void FolderBox::invalidate_scan_cache() {
 
 FolderBox::FolderBox(const fs::path& path, const BoxDef& box_def,
                      std::map<std::pair<std::string, std::string>, fs::path>& song_files)
-    : BaseBox(path, box_def), tja_count(0) {
+    : BaseBox(path, box_def) {
     this->text_name = box_def.name;
     enter_fade = std::make_unique<FadeAnimation>(166);
     refresh_scores(song_files);

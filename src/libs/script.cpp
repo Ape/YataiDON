@@ -273,7 +273,7 @@ void ScriptManager::index_scripts(const fs::path& script_path) {
         return;
     }
     for (const auto& script : dir) {
-        fs::path p = script.path();
+        const fs::path& p = script.path();
         if (fs::is_directory(p)) {
             fs::path lua_file = p / (p.stem().string() + ".lua");
             if (fs::exists(lua_file) && !scripts.contains(p.stem().string())) {
@@ -281,7 +281,7 @@ void ScriptManager::index_scripts(const fs::path& script_path) {
             }
             std::error_code sub_ec;
             for (const auto& sub : fs::directory_iterator(p, sub_ec)) {
-                fs::path sub_p = sub.path();
+                const fs::path& sub_p = sub.path();
                 if (!fs::is_directory(sub_p) && sub_p.extension() == ".lua" && sub_p.stem() != p.stem() &&
                     !scripts.contains(sub_p.stem().string())) {
                     scripts[sub_p.stem().string()] = sub_p.string();
@@ -687,17 +687,17 @@ void ScriptManager::register_lua_bindings() {
         script_manager.tex.unload_folder(screen_name, subset);
     });
 
-    tex.set_function("current_screen", []() -> std::string { return global_data.current_screen; });
+    tex.set_function("current_screen", [] -> std::string { return global_data.current_screen; });
 
-    tex.set_function("in_transition", []() -> bool { return global_data.in_transition; });
+    tex.set_function("in_transition", [] -> bool { return global_data.in_transition; });
 
-    tex.set_function("get_screen_width", []() -> float { return script_manager.tex.screen_width; });
+    tex.set_function("get_screen_width", [] -> float { return script_manager.tex.screen_width; });
 
-    tex.set_function("get_screen_height", []() -> float { return script_manager.tex.screen_height; });
+    tex.set_function("get_screen_height", [] -> float { return script_manager.tex.screen_height; });
 
-    tex.set_function("get_screen_scale", []() -> float { return script_manager.tex.screen_scale; });
+    tex.set_function("get_screen_scale", [] -> float { return script_manager.tex.screen_scale; });
 
-    tex.set_function("get_draw_offset", []() -> std::pair<float, float> {
+    tex.set_function("get_draw_offset", [] -> std::pair<float, float> {
         return {script_manager.tex.draw_offset_x, script_manager.tex.draw_offset_y};
     });
 
@@ -736,7 +736,7 @@ void ScriptManager::register_lua_bindings() {
         ray::BeginScissorMode(sx, sy, ex - sx, ey - sy);
     });
 
-    tex.set_function("end_scissor", []() { ray::EndScissorMode(); });
+    tex.set_function("end_scissor", [] { ray::EndScissorMode(); });
 
     tex.set_function("get_skin_config", [](const std::string& config_key) -> sol::optional<sol::table> {
         const SkinInfo* skin_ptr = font_manager.get_text_info(config_key);
@@ -851,7 +851,7 @@ void ScriptManager::register_lua_bindings() {
         return found;
     });
 
-    tex.set_function("language", []() { return global_data.config->general.language; });
+    tex.set_function("language", [] { return global_data.config->general.language; });
     tex.set_function("skin_text", [](const std::string& key, sol::optional<std::string> lang_opt) -> std::string {
         const SkinInfo* info = font_manager.get_text_info(key);
         if (!info) {
@@ -868,7 +868,7 @@ void ScriptManager::register_lua_bindings() {
         return m.empty() ? std::string() : m.begin()->second;
     });
 
-    tex.set_function("skip_enabled", []() { return global_data.live_skip_count >= 0; });
+    tex.set_function("skip_enabled", [] { return global_data.live_skip_count >= 0; });
 
     lua["tex"] = tex;
 
@@ -889,7 +889,7 @@ void ScriptManager::register_lua_bindings() {
                           if (cfg) {
                               text = font_manager.get_text_label(skin_config_key);
                           } else { // a position-only skin_config entry draws empty text
-                              cfg = [&]() -> const SkinInfo* {
+                              cfg = [&] -> const SkinInfo* {
                                   auto it = script_manager.tex.skin_config_by_name.find(skin_config_key);
                                   return it == script_manager.tex.skin_config_by_name.end() ? nullptr : &it->second;
                               }();
@@ -938,11 +938,11 @@ void ScriptManager::register_lua_bindings() {
     lua["text"] = text;
 
     tex.set_function("get_current_ms",
-                     []() -> double { return script_manager.current_ms_override.value_or(get_current_ms()); });
+                     [] -> double { return script_manager.current_ms_override.value_or(get_current_ms()); });
 
-    tex.set_function("player_num", []() -> int { return (int)global_data.player_num; });
+    tex.set_function("player_num", [] -> int { return (int)global_data.player_num; });
 
-    tex.set_function("display_bpm", []() -> bool { return global_data.config->general.display_bpm; });
+    tex.set_function("display_bpm", [] -> bool { return global_data.config->general.display_bpm; });
 
     tex.set_function("timing_offset", [](int player_num) -> sol::optional<std::string> {
         if (!global_data.config->general.show_timing_offset) {
@@ -956,19 +956,19 @@ void ScriptManager::register_lua_bindings() {
         return (ms > 0 ? "+" : "") + std::to_string(ms) + " ms";
     });
 
-    tex.set_function("song_title", []() -> std::string { return current_session().song_title; });
+    tex.set_function("song_title", [] -> std::string { return current_session().song_title; });
 
-    tex.set_function("song_subtitle", []() -> std::string { return current_session().song_subtitle; });
+    tex.set_function("song_subtitle", [] -> std::string { return current_session().song_subtitle; });
 
     tex.set_function("genre_frame", [](double genre_index) -> int {
         return genre_to_ref_frame((GenreIndex) static_cast<int>(genre_index));
     });
 
-    tex.set_function("songs_played", []() -> int { return global_data.songs_played; });
+    tex.set_function("songs_played", [] -> int { return global_data.songs_played; });
 
-    tex.set_function("song_limit", []() -> int { return global_data.config->limits.song_limit; });
+    tex.set_function("song_limit", [] -> int { return global_data.config->limits.song_limit; });
 
-    tex.set_function("last_input_ms", []() -> double { return get_last_input_ms(); });
+    tex.set_function("last_input_ms", [] -> double { return get_last_input_ms(); });
 
     tex.set_function("log", [](const std::string& msg) { spdlog::info("[lua] {}", msg); });
 
@@ -1012,11 +1012,11 @@ void ScriptManager::register_lua_bindings() {
 
     sol::table camera_tbl = lua.create_table();
 
-    camera_tbl.set_function("open", []() -> bool { return webcam.open(global_data.config->general.webcam_number); });
+    camera_tbl.set_function("open", [] -> bool { return webcam.open(global_data.config->general.webcam_number); });
 
-    camera_tbl.set_function("close", []() { webcam.close(); });
+    camera_tbl.set_function("close", [] { webcam.close(); });
 
-    camera_tbl.set_function("update", []() { webcam.update(); });
+    camera_tbl.set_function("update", [] { webcam.update(); });
 
     camera_tbl.set_function("draw", [](float x, float y, float w, float h) {
         if (!webcam.is_ready()) {

@@ -307,6 +307,7 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
         constexpr size_t kConnections = 16;
         std::vector<std::thread> pool;
         const size_t n = std::min(kConnections, jobs.size());
+        pool.reserve(n);
         for (size_t i = 0; i < n; i++) {
             pool.emplace_back(worker);
         }

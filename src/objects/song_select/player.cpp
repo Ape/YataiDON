@@ -191,7 +191,9 @@ SongSelectState SongSelectPlayer::select_song() {
             global_data.dan_folder[(int)player_num] = item->path;
         }
         return SongSelectState::DAN_SELECTED;
-    } else if (navigator.is_song(item)) {
+    }
+
+    if (navigator.is_song(item)) {
         SongBox* song_item = (SongBox*)item;
         curr_diffs = song_item->get_diffs();
         if (curr_diffs.empty()) {
@@ -203,7 +205,9 @@ SongSelectState SongSelectPlayer::select_song() {
         selected_diff_bounce->start();
         selected_diff_fadein->start();
         return SongSelectState::SONG_SELECTED;
-    } else if (navigator.is_directory(item)) {
+    }
+
+    if (navigator.is_directory(item)) {
         navigator.load_current_directory(item->path);
     }
     return SongSelectState::BROWSING;

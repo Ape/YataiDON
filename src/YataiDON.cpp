@@ -220,7 +220,7 @@ Screens check_args(int argc, char* argv[]) {
             path = abs;
         }
     }
-    SongParser tja = [&]() -> SongParser {
+    SongParser tja = [&] -> SongParser {
         try {
             return SongParser(path);
         } catch (const std::exception& e) {
@@ -250,7 +250,7 @@ Screens check_args(int argc, char* argv[]) {
     }
 
     Screens current_screen = practice ? Screens::GAME_PRACTICE : Screens::GAME;
-    global_data.session_data[(int)PlayerNum::P1].selected_song = path;
+    global_data.session_data[(int)PlayerNum::P1].selected_song = std::move(path);
     global_data.session_data[(int)PlayerNum::P1].selected_difficulty = selected_difficulty;
     if (auto_play) {
         global_data.force_auto_play = true;

@@ -5,7 +5,7 @@
 
 class FolderBox : public BaseBox {
 public:
-    int tja_count;
+    int tja_count{0};
     bool is_osu_folder = false;
     std::map<int, Crown> crown;
     std::map<int, Crown> crown_p2;
