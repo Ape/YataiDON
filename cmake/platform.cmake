@@ -210,3 +210,8 @@ else()
     target_link_options(${PROJECT_NAME} PRIVATE -flto=auto)
   endif()
 endif()
+
+if(YATAIDON_USE_SDL2)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE YATAIDON_USE_SDL2=1)
+  target_link_libraries(${PROJECT_NAME} PRIVATE SDL2::SDL2)
+endif()

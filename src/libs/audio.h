@@ -1,11 +1,8 @@
 #pragma once
 
-#include <SDL3/SDL_audio.h>
-#include <SDL3/SDL_hints.h>
-#include <SDL3/SDL_init.h>
-
 #include "av.h"
 #include "config.h"
+#include "sdl_compat.h"
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
 #include <RtAudio.h>
 #endif

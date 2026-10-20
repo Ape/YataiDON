@@ -835,7 +835,7 @@ bool AudioEngine::init_sdl3_device() {
     SDL_GetAudioDeviceFormat(SDL_GetAudioStreamDevice(sdl_stream), &actual_spec, &actual_frames);
 
     spdlog::info("Audio Device initialized successfully");
-    spdlog::info("    > Backend:       SDL3 | {}", SDL_GetCurrentAudioDriver());
+    spdlog::info("    > Backend:       SDL | {}", SDL_GetCurrentAudioDriver());
     spdlog::info("    > Format:        Float32");
     spdlog::info("    > Channels:      {} (requested 2)", actual_spec.channels);
     spdlog::info("    > Sample rate:   {} Hz (requested {} Hz)", actual_spec.freq, (int)target_sample_rate);

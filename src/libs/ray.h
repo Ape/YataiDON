@@ -7,7 +7,7 @@ namespace ray {
 } // namespace ray
 
 #if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
-#include <SDL3/SDL.h>
+#include "sdl_compat.h"
 #endif
 #include <string>
 

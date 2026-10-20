@@ -1,6 +1,5 @@
 #include "tja.h"
 
-#include <SDL3/SDL_stdinc.h>
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -18,6 +17,7 @@
 
 #include "../md5.h"
 #include "../profiler.h"
+#include "../sdl_compat.h"
 #include "../text.h"
 
 #ifdef _WIN32

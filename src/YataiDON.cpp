@@ -30,7 +30,7 @@
 #endif
 
 #ifdef PLATFORM_ANDROID
-#include <SDL3/SDL_main.h>
+#include "libs/sdl_main_compat.h"
 #endif
 
 #include "objects/global/debug_menu.h"

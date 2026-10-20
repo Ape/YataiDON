@@ -1,6 +1,5 @@
 #include "platform_linux.h"
 
-#include <SDL3/SDL_video.h>
 #include <algorithm>
 #include <atomic>
 #include <cerrno>
@@ -17,6 +16,7 @@
 #include <unistd.h>
 
 #include "../libs/ray.h"
+#include "../libs/sdl_compat.h"
 
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
 #include <cpptrace/cpptrace.hpp>

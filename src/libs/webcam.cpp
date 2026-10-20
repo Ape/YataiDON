@@ -1,6 +1,9 @@
 #include "webcam.h"
 
+#include "sdl_compat.h"
+#if YATAIDON_SDL_CAMERA
 #include <SDL3/SDL_camera.h>
+#endif
 #include <cstring>
 #include <spdlog/spdlog.h>
 #include <utility>
@@ -35,6 +38,22 @@ WebCamera& WebCamera::operator=(WebCamera&& other) noexcept {
     return *this;
 }
 
+#if !YATAIDON_SDL_CAMERA
+bool WebCamera::open(int) {
+    spdlog::warn("WebCamera: unsupported on SDL2");
+    return false;
+}
+
+void WebCamera::close() {
+    if (m_texture.has_value()) {
+        ray::UnloadTexture(m_texture.value());
+        m_texture.reset();
+    }
+    m_width = m_height = 0;
+}
+
+void WebCamera::update() {}
+#else
 bool WebCamera::open(int device_index) {
     if (m_camera) {
         close();
@@ -184,3 +203,4 @@ void WebCamera::update() {
 
     SDL_DestroySurface(rgba);
 }
+#endif // YATAIDON_SDL_CAMERA

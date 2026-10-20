@@ -23,11 +23,12 @@
 #include "sha256.h"
 
 #if defined(NETWORK_ENABLED) && defined(__ANDROID__)
-#include <SDL3/SDL.h>
 #include <fstream>
 #include <jni.h>
 #include <sstream>
 #include <vector>
+
+#include "sdl_compat.h"
 #endif
 
 #ifdef GetObject

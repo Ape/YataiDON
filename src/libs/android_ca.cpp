@@ -2,10 +2,11 @@
 
 #if defined(__ANDROID__)
 
-#include <SDL3/SDL.h>
 #include <fstream>
 #include <spdlog/spdlog.h>
 #include <string>
+
+#include "sdl_compat.h"
 
 namespace {
 
