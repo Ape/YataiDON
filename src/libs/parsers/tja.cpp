@@ -713,7 +713,10 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
         }
     }
 
-    if (note_start != -1 && note_end == -1) {
+    // The chart ends at the first #END after its #START: a P1/P2 chart can come before the #START
+    // whose #END stopped the search above
+    if (note_start != -1) {
+        note_end = -1;
         for (size_t i = note_start; i < data.size(); i++) {
             if (data[i] == "#END") {
                 note_end = i;
