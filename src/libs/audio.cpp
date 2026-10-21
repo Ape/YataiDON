@@ -1333,6 +1333,24 @@ uint64_t AudioEngine::sound_play_count(const std::string& name) {
     return it == play_counts.end() ? 0 : it->second;
 }
 
+static float get_preset_volume(const VolumeConfig& volumes, VolumePreset preset) {
+    struct PresetVolume {
+        VolumePreset preset;
+        float VolumeConfig::* member;
+    };
+
+    static constexpr PresetVolume presets[] = {
+        {VolumePreset::SOUND, &VolumeConfig::sound},
+        {VolumePreset::MUSIC, &VolumeConfig::music},
+        {VolumePreset::VOICE, &VolumeConfig::voice},
+        {VolumePreset::HITSOUND, &VolumeConfig::hitsound},
+        {VolumePreset::ATTRACT_MODE, &VolumeConfig::attract_mode},
+    };
+
+    const auto match = std::ranges::find(presets, preset, &PresetVolume::preset);
+    return match != std::end(presets) ? volumes.*(match->member) : 1.0f;
+}
+
 void AudioEngine::play_sound(const std::string& name, VolumePreset volume_preset, float gain) {
     {
         std::scoped_lock g(play_count_lock);
@@ -1344,18 +1362,7 @@ void AudioEngine::play_sound(const std::string& name, VolumePreset volume_preset
         sound& snd = it->second;
 
         if (volume_preset != VolumePreset::NONE) {
-            float volume = 1.0f;
-            if (volume_preset == VolumePreset::SOUND) {
-                volume = volume_presets.sound;
-            } else if (volume_preset == VolumePreset::MUSIC) {
-                volume = volume_presets.music;
-            } else if (volume_preset == VolumePreset::VOICE) {
-                volume = volume_presets.voice;
-            } else if (volume_preset == VolumePreset::HITSOUND) {
-                volume = volume_presets.hitsound;
-            } else if (volume_preset == VolumePreset::ATTRACT_MODE) {
-                volume = volume_presets.attract_mode;
-            }
+            const float volume = get_preset_volume(volume_presets, volume_preset);
             std::atomic_ref<float>(snd.volume).store(volume, std::memory_order_relaxed);
         }
 
@@ -1730,18 +1737,7 @@ void AudioEngine::play_music_stream(const std::string& name, VolumePreset volume
         music& mus = it->second;
 
         if (volume_preset != VolumePreset::NONE) {
-            float volume = 1.0f;
-            if (volume_preset == VolumePreset::SOUND) {
-                volume = volume_presets.sound;
-            } else if (volume_preset == VolumePreset::MUSIC) {
-                volume = volume_presets.music;
-            } else if (volume_preset == VolumePreset::VOICE) {
-                volume = volume_presets.voice;
-            } else if (volume_preset == VolumePreset::HITSOUND) {
-                volume = volume_presets.hitsound;
-            } else if (volume_preset == VolumePreset::ATTRACT_MODE) {
-                volume = volume_presets.attract_mode;
-            }
+            const float volume = get_preset_volume(volume_presets, volume_preset);
             std::atomic_ref<float>(mus.volume).store(volume, std::memory_order_relaxed);
         }
 
