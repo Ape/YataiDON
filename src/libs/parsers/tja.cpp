@@ -13,6 +13,7 @@
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 
 #include "../md5.h"
@@ -297,22 +298,20 @@ void TJAParser::get_metadata() {
         } else if (item.starts_with("COURSE")) {
             std::string course = to_lower(trim(split_after_colon(item)));
 
-            if (course == "6" || course == "dan") {
-                current_diff = 6;
-            } else if (course == "5" || course == "tower") {
-                current_diff = 5;
-            } else if (course == "4" || course == "edit" || course == "ura") {
-                current_diff = 4;
-            } else if (course == "3" || course == "oni") {
-                current_diff = 3;
-            } else if (course == "2" || course == "hard") {
-                current_diff = 2;
-            } else if (course == "1" || course == "normal") {
-                current_diff = 1;
-            } else if (course == "0" || course == "easy") {
-                current_diff = 0;
-            } else {
-                current_diff = -1;
+            struct CourseAlias {
+                std::string_view name;
+                int difficulty;
+            };
+
+            static constexpr CourseAlias course_aliases[] = {
+                {"0", 0}, {"easy", 0}, {"1", 1},   {"normal", 1}, {"2", 2},     {"hard", 2}, {"3", 3},   {"oni", 3},
+                {"4", 4}, {"edit", 4}, {"ura", 4}, {"5", 5},      {"tower", 5}, {"6", 6},    {"dan", 6},
+            };
+
+            const auto alias = std::ranges::find(course_aliases, course, &CourseAlias::name);
+            current_diff = alias != std::end(course_aliases) ? alias->difficulty : -1;
+
+            if (current_diff == -1) {
                 spdlog::warn("Unrecognized COURSE value '{}' in {}", course, file_path.string());
             }
 
