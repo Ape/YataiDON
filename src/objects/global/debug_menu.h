@@ -563,7 +563,7 @@ public:
             float tab_x = panel_x + i * tab_width;
             Color tab_color = (i == active_tab) ? fade(Color::WHITE, 0.3f) : fade(Color::WHITE, 0.1f);
             draw_rectangle((int)tab_x, 0, (int)tab_width, (int)TAB_HEIGHT, tab_color);
-            ray::DrawRectangleLines((int)tab_x, 0, (int)tab_width, (int)TAB_HEIGHT, fade(Color::WHITE, 0.4f));
+            draw_rectangle_lines((int)tab_x, 0, (int)tab_width, (int)TAB_HEIGHT, fade(Color::WHITE, 0.4f));
 
             const char* label = tab_labels[i];
             int label_w = measure_text(label, 16);
@@ -650,7 +650,7 @@ private:
 
     void draw_lua_button(const ray::Rectangle& box, const char* label, bool enabled) const {
         draw_rectangle(box, fade(Color::WHITE, enabled ? 0.2f : 0.05f));
-        ray::DrawRectangleLinesEx(box, 1.0f, fade(Color::WHITE, 0.4f));
+        draw_rectangle_lines_ex(box, 1.0f, fade(Color::WHITE, 0.4f));
         int label_w = measure_code_text(label, LUA_TEXT_SIZE);
         draw_code_text(label, (int)(box.x + (box.width - label_w) * 0.5f), (int)box.y + 5, LUA_TEXT_SIZE,
                        enabled ? Color::WHITE : Color::GRAY);
@@ -977,7 +977,7 @@ private:
         ray::Rectangle button = {panel_x + 6, button_top + 3, PANEL_WIDTH - 12, SWITCH_BTN_HEIGHT - 6};
         bool enabled = selected_screen.has_value();
         draw_rectangle(button, fade(Color::WHITE, enabled ? 0.25f : 0.08f));
-        ray::DrawRectangleLinesEx(button, 1.0f, enabled ? Color(Color::YELLOW) : fade(Color::WHITE, 0.3f));
+        draw_rectangle_lines_ex(button, 1.0f, enabled ? Color(Color::YELLOW) : fade(Color::WHITE, 0.3f));
         std::string label = enabled ? ("Switch to " + screens_to_string(*selected_screen)) : "Select a scene above";
         int label_w = measure_text(label.c_str(), 14);
         draw_text(label.c_str(), (int)(button.x + (button.width - label_w) * 0.5f), (int)button.y + 6, 14,
@@ -989,7 +989,7 @@ private:
         const int field_count = (int)fields.size();
         const int data_shown = std::max(0, (int)((data_bottom - data_top) / ROW_HEIGHT));
 
-        ray::DrawLine((int)panel_x, (int)data_top, (int)(panel_x + PANEL_WIDTH), (int)data_top,
+        draw_line((int)panel_x, (int)data_top, (int)(panel_x + PANEL_WIDTH), (int)data_top,
                       fade(Color::WHITE, 0.4f));
         scissor_y0 = virtual_to_screen_y(data_top);
         scissor_y1 = virtual_to_screen_y(data_bottom);
@@ -1008,12 +1008,12 @@ private:
             if (f.kind == DataField::Kind::BOOL) {
                 bool v = *f.b;
                 draw_rectangle(r.value, fade(v ? Color::GREEN : Color::RED, 0.25f));
-                ray::DrawRectangleLinesEx(r.value, 1.0f, fade(Color::WHITE, 0.4f));
+                draw_rectangle_lines_ex(r.value, 1.0f, fade(Color::WHITE, 0.4f));
                 draw_text(v ? "true" : "false", (int)r.value.x + 4, (int)r.value.y + 3, 13, Color::WHITE);
             } else if (f.kind == DataField::Kind::STRING) {
                 bool is_editing = editing_data_ptr == static_cast<void*>(f.s);
                 draw_rectangle(r.value, fade(Color::WHITE, is_editing ? 0.25f : 0.1f));
-                ray::DrawRectangleLinesEx(r.value, 1.0f, is_editing ? Color(Color::SKYBLUE) : fade(Color::WHITE, 0.4f));
+                draw_rectangle_lines_ex(r.value, 1.0f, is_editing ? Color(Color::SKYBLUE) : fade(Color::WHITE, 0.4f));
                 std::string text = is_editing ? edit_data_buffer : *f.s;
                 if (is_editing && std::fmod(ray::GetTime(), 1.0) < 0.5) {
                     text += "|";
@@ -1035,7 +1035,7 @@ private:
                 draw_rectangle(r.plus, fade(Color::WHITE, 0.2f));
                 draw_text("+", (int)r.plus.x + 4, (int)r.plus.y, 14, Color::WHITE);
                 draw_rectangle(r.value, fade(Color::WHITE, is_editing ? 0.25f : 0.1f));
-                ray::DrawRectangleLinesEx(r.value, 1.0f, is_editing ? Color(Color::SKYBLUE) : fade(Color::WHITE, 0.4f));
+                draw_rectangle_lines_ex(r.value, 1.0f, is_editing ? Color(Color::SKYBLUE) : fade(Color::WHITE, 0.4f));
                 std::string text = is_editing ? edit_data_buffer : data_field_display(f);
                 if (is_editing && std::fmod(ray::GetTime(), 1.0) < 0.5) {
                     text += "|";
@@ -1303,7 +1303,7 @@ private:
             box_name = selected_name;
         }
         if (box_rect) {
-            ray::DrawRectangleLinesEx(*box_rect, 2.0f, Color::YELLOW);
+            draw_rectangle_lines_ex(*box_rect, 2.0f, Color::YELLOW);
             float label_y = box_rect->y - 20.0f;
             if (label_y < 0) {
                 label_y = box_rect->y + box_rect->height + 2.0f;
@@ -1319,7 +1319,7 @@ private:
     void draw_edit_panel(float panel_x, float edit_top) {
         draw_rectangle((int)panel_x, (int)edit_top, (int)PANEL_WIDTH, (int)edit_panel_height(),
                        fade(Color::WHITE, 0.05f));
-        ray::DrawLine((int)panel_x, (int)edit_top, (int)(panel_x + PANEL_WIDTH), (int)edit_top,
+        draw_line((int)panel_x, (int)edit_top, (int)(panel_x + PANEL_WIDTH), (int)edit_top,
                       fade(Color::WHITE, 0.4f));
 
         if (!has_selection) {
@@ -1361,7 +1361,7 @@ private:
 
             bool is_editing = (editing_field == i);
             draw_rectangle(b.value, fade(Color::WHITE, is_editing ? 0.25f : 0.1f));
-            ray::DrawRectangleLinesEx(b.value, 1.0f, is_editing ? Color(Color::SKYBLUE) : fade(Color::WHITE, 0.4f));
+            draw_rectangle_lines_ex(b.value, 1.0f, is_editing ? Color(Color::SKYBLUE) : fade(Color::WHITE, 0.4f));
 
             std::string text = is_editing ? edit_buffer : std::to_string(*value);
             if (is_editing && std::fmod(ray::GetTime(), 1.0) < 0.5) {
@@ -1395,7 +1395,7 @@ private:
             const ray::Texture2D& t = *framed->textures[idx];
             ray::Rectangle src = {0, 0, (float)t.width, (float)t.height};
             draw_texture_pro(t, src, thumb_bg, {0, 0}, 0, Color::WHITE);
-            ray::DrawRectangleLinesEx(thumb_bg, 1.0f, fade(Color::WHITE, 0.4f));
+            draw_rectangle_lines_ex(thumb_bg, 1.0f, fade(Color::WHITE, 0.4f));
 
             FrameCellButtons b = frame_cell_buttons(idx, panel_x, frames_top);
             draw_rectangle(b.left, fade(Color::WHITE, idx > 0 ? 0.2f : 0.05f));

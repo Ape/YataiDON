@@ -881,7 +881,7 @@ void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h, float full_h) {
 
         rlSetCullFace(RL_CULL_FACE_FRONT);
         for (auto& part : parts) {
-            ray::DrawModel(part, {x, y, 400.0f}, draw_size, Color::WHITE);
+            draw_model(part, {x, y, 400.0f}, draw_size, Color::WHITE);
         }
         rlSetCullFace(RL_CULL_FACE_BACK);
     }
