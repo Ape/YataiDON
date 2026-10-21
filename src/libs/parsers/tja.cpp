@@ -331,51 +331,40 @@ void TJAParser::get_metadata() {
                         metadata.course_data[current_diff].level = 0;
                     }
                 }
-            } else if (item.starts_with("BALLOONNOR")) {
-                std::string balloon_data = split_after_colon(item);
-                if (!balloon_data.empty()) {
-                    try {
-                        auto balloons = parse_balloon_data(balloon_data);
-                        metadata.course_data[current_diff].balloon.insert(
-                            metadata.course_data[current_diff].balloon.end(), balloons.begin(), balloons.end());
-                    } catch (const std::exception& e) {
-                        spdlog::warn("Invalid BALLOONNOR value '{}' in {}: {}", balloon_data, file_path.string(),
-                                     e.what());
-                    }
-                }
-            } else if (item.starts_with("BALLOONEXP")) {
-                std::string balloon_data = split_after_colon(item);
-                if (!balloon_data.empty()) {
-                    try {
-                        auto balloons = parse_balloon_data(balloon_data);
-                        metadata.course_data[current_diff].balloon.insert(
-                            metadata.course_data[current_diff].balloon.end(), balloons.begin(), balloons.end());
-                    } catch (const std::exception& e) {
-                        spdlog::warn("Invalid BALLOONEXP value '{}' in {}: {}", balloon_data, file_path.string(),
-                                     e.what());
-                    }
-                }
-            } else if (item.starts_with("BALLOONMAS")) {
-                std::string balloon_data = split_after_colon(item);
-                if (!balloon_data.empty()) {
-                    try {
-                        metadata.course_data[current_diff].balloon = parse_balloon_data(balloon_data);
-                    } catch (const std::exception& e) {
-                        spdlog::warn("Invalid BALLOONMAS value '{}' in {}: {}", balloon_data, file_path.string(),
-                                     e.what());
-                    }
-                }
             } else if (item.starts_with("BALLOON")) {
-                if (!item.contains(':')) {
-                    metadata.course_data[current_diff].balloon.clear();
+                struct BalloonRule {
+                    std::string_view keyword;
+                    bool append;
+                    bool clear_without_colon;
+                };
+
+                static constexpr BalloonRule rules[] = {
+                    {.keyword = "BALLOONNOR", .append = true, .clear_without_colon = false},
+                    {.keyword = "BALLOONEXP", .append = true, .clear_without_colon = false},
+                    {.keyword = "BALLOONMAS", .append = false, .clear_without_colon = false},
+                    {.keyword = "BALLOON", .append = false, .clear_without_colon = true},
+                };
+
+                const auto rule = std::ranges::find_if(
+                    rules, [&](const BalloonRule& rule) { return item.starts_with(rule.keyword); });
+
+                auto& balloons = metadata.course_data[current_diff].balloon;
+                if (rule->clear_without_colon && !item.contains(':')) {
+                    balloons.clear();
                     continue;
                 }
+
                 std::string balloon_data = split_after_colon(item);
                 if (!balloon_data.empty()) {
                     try {
-                        metadata.course_data[current_diff].balloon = parse_balloon_data(balloon_data);
+                        auto parsed = parse_balloon_data(balloon_data);
+                        if (rule->append) {
+                            balloons.insert(balloons.end(), parsed.begin(), parsed.end());
+                        } else {
+                            balloons = std::move(parsed);
+                        }
                     } catch (const std::exception& e) {
-                        spdlog::warn("Invalid BALLOON value '{}' in {}: {}", balloon_data, file_path.string(),
+                        spdlog::warn("Invalid {} value '{}' in {}: {}", rule->keyword, balloon_data, file_path.string(),
                                      e.what());
                     }
                 }
