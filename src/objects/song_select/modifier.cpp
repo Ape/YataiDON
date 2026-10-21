@@ -1,36 +1,37 @@
 #include "modifier.h"
 
+#include <algorithm>
+#include <string_view>
+
 #include "../../libs/audio.h"
 
 const std::array<std::string, 5> ModifierSelector::BASE_MOD_NAMES = {"auto", "speed", "display", "inverse", "random"};
 
+static bool PlayerData::* find_bool_modifier(std::string_view name) {
+    struct BoolModifier {
+        std::string_view name;
+        bool PlayerData::* member;
+    };
+
+    static constexpr BoolModifier modifiers[] = {
+        {"auto", &PlayerData::modifier_auto},
+        {"display", &PlayerData::modifier_display},
+        {"inverse", &PlayerData::modifier_inverse},
+        {"skip", &PlayerData::modifier_skip},
+    };
+
+    const auto modifier = std::ranges::find(modifiers, name, &BoolModifier::name);
+    return modifier != std::end(modifiers) ? modifier->member : nullptr;
+}
+
 bool ModifierSelector::get_bool(int mod_index) {
-    const std::string& n = mod_names[mod_index];
-    if (n == "auto") {
-        return player->modifier_auto;
-    }
-    if (n == "display") {
-        return player->modifier_display;
-    }
-    if (n == "inverse") {
-        return player->modifier_inverse;
-    }
-    if (n == "skip") {
-        return player->modifier_skip;
-    }
-    return false;
+    const auto member = find_bool_modifier(mod_names[mod_index]);
+    return member ? player->*member : false;
 }
 
 void ModifierSelector::set_bool(int mod_index, bool value) {
-    const std::string& n = mod_names[mod_index];
-    if (n == "auto") {
-        player->modifier_auto = value;
-    } else if (n == "display") {
-        player->modifier_display = value;
-    } else if (n == "inverse") {
-        player->modifier_inverse = value;
-    } else if (n == "skip") {
-        player->modifier_skip = value;
+    if (const auto member = find_bool_modifier(mod_names[mod_index])) {
+        player->*member = value;
     }
 }
 
