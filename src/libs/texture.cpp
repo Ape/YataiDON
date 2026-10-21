@@ -1179,8 +1179,8 @@ void TextureWrapper::load_screen_textures(const std::string& screen_name) {
     spdlog::info("Screen textures loaded for: {}", screen_name);
 }
 
-void TextureWrapper::clear_screen(const ray::Color& color) {
-    ray::ClearBackground(color);
+void TextureWrapper::clear_screen(const Color& color) {
+    clear_background(color);
 }
 
 std::vector<std::string> TextureWrapper::language_variants(const std::string& name) const {
@@ -1241,7 +1241,7 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
     const float mirror_x = (params.mirror == Mirror::HORIZONTAL) ? -1.0f : 1.0f;
     const float mirror_y = (params.mirror == Mirror::VERTICAL) ? -1.0f : 1.0f;
 
-    const ray::Color final_color = (params.fade != 1.1f) ? Fade(params.color, params.fade) : params.color;
+    const Color final_color = (params.fade != 1.1f) ? fade(params.color, params.fade) : params.color;
 
     ray::Rectangle source_rect;
     if (params.src.has_value()) {
@@ -1311,11 +1311,11 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
     if (frame_tex) {
         if (params.blend.has_value()) {
             ray::BeginBlendMode(params.blend.value());
-            DrawTexturePro(*frame_tex, source_rect, dest_rect, params.origin, params.rotation, final_color);
+            draw_texture_pro(*frame_tex, source_rect, dest_rect, params.origin, params.rotation, final_color);
             ray::EndBlendMode();
             return;
         }
-        DrawTexturePro(*frame_tex, source_rect, dest_rect, params.origin, params.rotation, final_color);
+        draw_texture_pro(*frame_tex, source_rect, dest_rect, params.origin, params.rotation, final_color);
     }
 }
 

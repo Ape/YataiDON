@@ -1,5 +1,6 @@
 #pragma once
 
+#include "color_utils.h"
 namespace ray {
     extern "C" {
 #include <raylib.h>
@@ -11,12 +12,43 @@ namespace ray {
 #endif
 #include <string>
 
-inline void draw_rectangle(int x, int y, int w, int h, ray::Color color) {
-    ray::DrawRectangle(x, y, w, h, color);
+inline Color fade(Color c, float alpha) {
+    return Color(c.r, c.g, c.b, alpha*255);
 }
 
-inline void draw_rectangle(ray::Rectangle rec, ray::Color color) {
-    ray::DrawRectangleRec(rec, color);
+inline void draw_rectangle(int x, int y, int w, int h, Color color) {
+    ray::DrawRectangle(x, y, w, h, {color.r, color.g, color.b, color.a});
+}
+
+inline void draw_rectangle(ray::Rectangle rec, Color color) {
+    ray::DrawRectangleRec(rec, {color.r, color.g, color.b, color.a});
+}
+
+inline void draw_rectangle_rounded(ray::Rectangle rec, float roundness, int segments, Color color) {
+    ray::DrawRectangleRounded(rec, roundness, segments, {color.r, color.g, color.b, color.a});
+}
+
+inline void draw_rectangle_rounded_lines_ex(ray::Rectangle rec, float roundness, int segments, float thickness,
+                                            Color color) {
+    ray::DrawRectangleRoundedLinesEx(rec, roundness, segments, thickness, {color.r, color.g, color.b, color.a});
+}
+
+inline void draw_text_ex(ray::Font font, const char* text, ray::Vector2 pos, float font_size, float spacing,
+                         Color color) {
+    ray::DrawTextEx(font, text, pos, font_size, spacing, {color.r, color.g, color.b, color.a});
+}
+
+inline void draw_texture_pro(ray::Texture2D tex, ray::Rectangle source, ray::Rectangle dest, ray::Vector2 origin,
+                             float rotation, Color tint) {
+    ray::DrawTexturePro(tex, source, dest, origin, rotation, {tint.r, tint.g, tint.b, tint.a});
+}
+
+inline void clear_background(Color color) {
+    ray::ClearBackground({color.r, color.g, color.b, color.a});
+}
+
+inline ray::Image gen_image_color(int w, int h, Color color) {
+    return ray::GenImageColor(w, h, {color.r, color.g, color.b, color.a});
 }
 
 inline ray::Shader load_shader(const char* vs_path, const char* fs_path) {

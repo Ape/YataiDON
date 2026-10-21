@@ -8,6 +8,7 @@
 
 #include "../../libs/ray.h"
 #include "../../libs/texture.h"
+#include "../../libs/color_utils.h"
 
 class BaseAnimation;
 
@@ -162,9 +163,9 @@ public:
     void set_body_texture(fs::path& texture_path);
     void set_face_rim_texture(fs::path& texture_path);
 
-    void set_don_colors(ray::Color body, ray::Color face, ray::Color rim);
+    void set_don_colors(Color body, Color face, Color rim);
 
-    void set_tint(ray::Color color, float amount);
+    void set_tint(Color color, float amount);
     void set_bpm(float bpm);
     void set_anim(AnimIndex idx);
     void set_rotation(float x, float y, float z);

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "../libs/screen.h"
+#include "../libs/color_utils.h"
 
 class OnboardingScreen : public Screen {
 private:
@@ -24,7 +25,7 @@ private:
     void toggle_skin(int skin);
     void begin_download();
     bool apply();
-    void draw_line(const std::string& text, float y, int size, ray::Color color);
+    void draw_line(const std::string& text, float y, int size, Color color);
 
 public:
     OnboardingScreen() : Screen("onboarding") {}

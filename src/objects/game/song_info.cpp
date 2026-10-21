@@ -6,7 +6,7 @@
 #include "../enums.h"
 #include "../song_select/file_navigator/color_utils.h"
 
-static const ray::Color GENRE_PLATE_TEMPLATE_COLOR{60, 103, 0, 255};
+static const Color GENRE_PLATE_TEMPLATE_COLOR{60, 103, 0, 255};
 
 static float skin_outline(const SkinInfo& s) {
     return s.outline >= 0 ? s.outline : 5.0f;
@@ -42,9 +42,9 @@ SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bo
 
     GenreIndex genre_bucket = this->genre < 8 ? static_cast<GenreIndex>(this->genre + 1) : GenreIndex::DEFAULT;
     auto color_it = DEFAULT_COLORS.find(genre_bucket);
-    ray::Color target = (color_it != DEFAULT_COLORS.end() && color_it->second[1].has_value())
+    Color target = (color_it != DEFAULT_COLORS.end() && color_it->second[1].has_value())
                             ? color_it->second[1].value()
-                            : ray::Color{101, 0, 82, 255};
+                            : Color{101, 0, 82, 255};
 
     genre_shader = load_shader("shader/dummy.vs", "shader/colortransform.fs");
     genre_shader_loaded = genre_shader.id != 0;
@@ -183,7 +183,7 @@ SongNum::SongNum(int song_num, float outline_override) {
     if (pos != std::string::npos) {
         song_format.replace(pos, 3, std::to_string(song_num));
     }
-    ray::Color outline_color;
+    Color outline_color;
     if (global_data.config->limits.song_limit > 0 && global_data.config->limits.song_limit == song_num) {
         outline_color = ray::RED;
     } else {

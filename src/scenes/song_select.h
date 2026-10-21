@@ -11,6 +11,7 @@
 #include "../objects/song_select/player.h"
 #include "../objects/song_select/search_box.h"
 #include "../objects/song_select/song_select_script.h"
+#include "../libs/color_utils.h"
 
 struct ReplayData;
 
@@ -33,7 +34,7 @@ protected:
     std::future<Statistics> stats_future;
 
     ray::Shader shader;
-    ray::Color color;
+    Color color;
     std::unique_ptr<SongNum> song_num;
 
     std::unique_ptr<SongSelectPlayer> player;

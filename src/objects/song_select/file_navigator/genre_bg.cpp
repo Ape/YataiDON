@@ -1,6 +1,6 @@
 #include "genre_bg.h"
 
-GenreBG::GenreBG(const std::string& text_name, std::optional<ray::Color> color, TextureIndex texture_index,
+GenreBG::GenreBG(const std::string& text_name, std::optional<Color> color, TextureIndex texture_index,
                  float distance)
     : texture_index(texture_index) {
     float base_font_size = (float)tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;

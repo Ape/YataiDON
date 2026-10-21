@@ -7,6 +7,7 @@
 
 #include "../../libs/global_data.h"
 #include "../../libs/text.h"
+#include "../../libs/color_utils.h"
 
 inline std::string exam_threshold_text(const TextureWrapper& tex, const std::string& type, const std::string& range,
                                        const std::string& num, const std::string& lang) {
@@ -55,8 +56,8 @@ inline std::string exam_border_text(const TextureWrapper& tex, const Exam& exam,
 
 class ExamCaptionCache {
 public:
-    OutlinedText* get(const std::string& s, int size, float outline, ray::Color fill = ray::WHITE,
-                      ray::Color ol = ray::BLACK) {
+    OutlinedText* get(const std::string& s, int size, float outline, Color fill = ray::WHITE,
+                      Color ol = ray::BLACK) {
         if (s.empty() || size <= 0) {
             return nullptr;
         }

@@ -75,7 +75,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
         [](BaseBox& self) { return genre_to_ref_frame(self.genre_index); }, "fore_color",
         [](BaseBox& self) -> sol::object {
             sol::table t = script_manager.lua->create_table(0, 4);
-            const ray::Color& c = self.fore_color;
+            const Color& c = self.fore_color;
             t["r"] = c.r;
             t["g"] = c.g;
             t["b"] = c.b;

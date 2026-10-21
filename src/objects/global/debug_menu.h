@@ -12,6 +12,7 @@
 #include "../../libs/screen.h"
 #include "../../libs/script.h"
 #include "../../libs/texture.h"
+#include "../../libs/color_utils.h"
 
 #ifdef DrawTextEx
 #undef DrawTextEx
@@ -122,16 +123,16 @@ public:
         fonts_loaded = false;
     }
 
-    void draw_text(const char* text, int x, int y, int font_size, ray::Color color) const {
-        ray::DrawTextEx(ui_font, text, {(float)x, (float)y}, (float)font_size, font_size / 10.0f, color);
+    void draw_text(const char* text, int x, int y, int font_size, Color color) const {
+        draw_text_ex(ui_font, text, {(float)x, (float)y}, (float)font_size, font_size / 10.0f, color);
     }
 
     int measure_text(const char* text, int font_size) const {
         return (int)ray::MeasureTextEx(ui_font, text, (float)font_size, font_size / 10.0f).x;
     }
 
-    void draw_code_text(const char* text, int x, int y, int font_size, ray::Color color) const {
-        ray::DrawTextEx(code_font, text, {(float)x, (float)y}, (float)font_size, font_size / 10.0f, color);
+    void draw_code_text(const char* text, int x, int y, int font_size, Color color) const {
+        draw_text_ex(code_font, text, {(float)x, (float)y}, (float)font_size, font_size / 10.0f, color);
     }
 
     int measure_code_text(const char* text, int font_size) const {
@@ -560,7 +561,7 @@ public:
         static const char* tab_labels[TAB_COUNT] = {"Textures", "Scenes", "Lua", ""};
         for (int i = 0; i < TAB_COUNT; i++) {
             float tab_x = panel_x + i * tab_width;
-            ray::Color tab_color = (i == active_tab) ? ray::Fade(ray::WHITE, 0.3f) : ray::Fade(ray::WHITE, 0.1f);
+            Color tab_color = (i == active_tab) ? ray::Fade(ray::WHITE, 0.3f) : ray::Fade(ray::WHITE, 0.1f);
             draw_rectangle((int)tab_x, 0, (int)tab_width, (int)TAB_HEIGHT, tab_color);
             ray::DrawRectangleLines((int)tab_x, 0, (int)tab_width, (int)TAB_HEIGHT, ray::Fade(ray::WHITE, 0.4f));
 
@@ -638,7 +639,7 @@ private:
         return std::max(1, (int)((PANEL_WIDTH - 12.0f) * 10.0f / ten_chars));
     }
 
-    float draw_lua_rows(const std::string& text, float x, float y, int max_rows, ray::Color color) const {
+    float draw_lua_rows(const std::string& text, float x, float y, int max_rows, Color color) const {
         int budget = lua_chars_per_row();
         for (int row = 0; row < max_rows && (size_t)row * budget < text.size(); row++) {
             draw_code_text(text.substr((size_t)row * budget, budget).c_str(), (int)x, (int)y, LUA_TEXT_SIZE, color);
@@ -956,7 +957,7 @@ private:
                 draw_rectangle((int)panel_x, (int)row_y, (int)PANEL_WIDTH, (int)ROW_HEIGHT,
                                ray::Fade(ray::SKYBLUE, 0.35f));
             }
-            ray::Color color = is_selected ? ray::YELLOW : (is_current ? ray::SKYBLUE : ray::WHITE);
+            Color color = is_selected ? ray::YELLOW : (is_current ? ray::SKYBLUE : ray::WHITE);
             draw_text(name.c_str(), (int)panel_x + 4, (int)row_y + 3, 14, color);
         }
         ray::EndScissorMode();
@@ -1103,7 +1104,7 @@ private:
     }
 
     void draw_verdict(const DrawLogEntry& entry, float panel_x, float top) {
-        ray::Color color = ray::GRAY;
+        Color color = ray::GRAY;
         std::string headline, advice;
         switch (position_of(entry)) {
         case Position::Json:
@@ -1128,7 +1129,7 @@ private:
             advice = entry.scale != 1.0f ? ray::TextFormat("x/y move it 1:1; x2/y2 change by x%.2f", entry.scale)
                                          : "x/y move it 1:1 whatever the caller adds";
         }
-        draw_rectangle((int)panel_x, (int)top, (int)PANEL_WIDTH, (int)VERDICT_HEIGHT, ray::Fade(color, 0.3f));
+        draw_rectangle((int)panel_x, (int)top, (int)PANEL_WIDTH, (int)VERDICT_HEIGHT, fade(color, 0.3f));
         draw_text(headline.c_str(), (int)panel_x + 6, (int)top + 3, 12, ray::WHITE);
         draw_text(advice.c_str(), (int)panel_x + 6, (int)top + 18, 12, ray::Fade(ray::WHITE, 0.75f));
     }
@@ -1275,7 +1276,7 @@ private:
                 draw_rectangle((int)panel_x, (int)row_y, (int)PANEL_WIDTH, (int)ROW_HEIGHT,
                                ray::Fade(ray::YELLOW, 0.3f));
             }
-            ray::Color color = is_selected ? ray::SKYBLUE : (is_hovered ? ray::YELLOW : ray::WHITE);
+            Color color = is_selected ? ray::SKYBLUE : (is_hovered ? ray::YELLOW : ray::WHITE);
             draw_text(vr.label.c_str(), (int)panel_x + 20, (int)row_y + 3, 14, color);
         }
         ray::EndScissorMode();

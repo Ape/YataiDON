@@ -7,6 +7,7 @@
 
 #include "global_data.h"
 #include "parsers/tja.h"
+#include "color_utils.h"
 
 inline int64_t unix_now() {
     return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch())
@@ -28,9 +29,9 @@ struct PlayerData {
     int modifier_random = 0;
     bool modifier_skip = false;
     int neiro_index = 0;
-    ray::Color chara_color_1 = ray::Color{0x68, 0xBF, 0xC0, 0xFF};
-    ray::Color chara_color_2 = ray::Color{0xF9, 0x47, 0x28, 0xFF};
-    ray::Color chara_color_3 = ray::Color{0xF9, 0xF0, 0xE1, 0xFF};
+    Color chara_color_1 = Color{0x68, 0xBF, 0xC0, 0xFF};
+    Color chara_color_2 = Color{0xF9, 0x47, 0x28, 0xFF};
+    Color chara_color_3 = Color{0xF9, 0xF0, 0xE1, 0xFF};
     int chara_head_index = 0;
     int chara_body_index = 0;
     int chara_cos_index = 0;
@@ -172,11 +173,11 @@ inline ScoresManager& get_scores_manager() {
 #define scores_manager get_scores_manager()
 void init_scores_manager(bool gen3);
 
-inline ray::Color chara_default_color_1(PlayerNum player_num) {
-    return (player_num == PlayerNum::P1) ? ray::Color{104, 191, 192, 255} : ray::Color{249, 71, 40, 255};
+inline Color chara_default_color_1(PlayerNum player_num) {
+    return (player_num == PlayerNum::P1) ? Color{104, 191, 192, 255} : Color{249, 71, 40, 255};
 }
-inline ray::Color chara_default_color_2(PlayerNum player_num) {
-    return (player_num == PlayerNum::P1) ? ray::Color{249, 71, 40, 255} : ray::Color{104, 191, 192, 255};
+inline Color chara_default_color_2(PlayerNum player_num) {
+    return (player_num == PlayerNum::P1) ? Color{249, 71, 40, 255} : Color{104, 191, 192, 255};
 }
 
 inline Modifiers player_data_to_modifiers(const PlayerData& pd) {

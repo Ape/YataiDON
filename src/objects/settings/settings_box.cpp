@@ -95,7 +95,7 @@ static float box_step() {
 SettingsBox::SettingsBox(const std::string& name, const std::string& label_text, const rapidjson::Value& options_json)
     : box_name(name),
       label(std::make_unique<OutlinedText>(label_text, (int)(LABEL_FONT_SIZE_BASE * tex.screen_scale), ray::WHITE,
-                                           ray::Color{109, 68, 24, 255}, false, LABEL_OUTLINE_BASE)),
+                                           Color{109, 68, 24, 255}, false, LABEL_OUTLINE_BASE)),
       x(10.0f * tex.screen_scale), y(wrap_top()), start_position(wrap_top()),
       wrap_bottom(wrap_top()) // corrected by set_box_count() once the manager knows the total
       ,

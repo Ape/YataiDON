@@ -59,7 +59,7 @@ void GaugeHitEffect::update(double current_ms) {
         }
     } else {
         if (is_2p) {
-            color = ray::Color{84, 250, 238, 255};
+            color = Color{84, 250, 238, 255};
         } else {
             color = ray::RED;
         }
@@ -78,7 +78,7 @@ void GaugeHitEffect::update(double current_ms) {
 
 void GaugeHitEffect::draw(float y) {
     // Main hit effect texture
-    tex.draw_texture(t_hit_effect, {.color = ray::Fade(color, fade_out->attribute),
+    tex.draw_texture(t_hit_effect, {.color = fade(color, fade_out->attribute),
                                     .frame = (int)texture_change->attribute,
                                     .center = true,
                                     .y = y,
@@ -94,7 +94,7 @@ void GaugeHitEffect::draw(float y) {
                      {.x = pos_data.x, .y = y + pos_data.y + (pos_data.height * is_2p), .fade = fade_out->attribute});
 
     // Circle effect texture
-    ray::Color texture_color;
+    Color texture_color;
     if (circle_fadein->is_finished) {
         texture_color = ray::Fade(ray::WHITE, std::min(circle_fadein->attribute, fade_out->attribute));
     } else {

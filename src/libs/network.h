@@ -23,6 +23,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include "color_utils.h"
 
 enum class InputLogType {
     KAT_L = 0,
@@ -42,7 +43,7 @@ struct RemoteUser {
     std::optional<std::string> username;
     std::optional<std::string> title;
     std::optional<int> title_bg;
-    std::optional<std::array<ray::Color, 3>> chara_colors;
+    std::optional<std::array<Color, 3>> chara_colors;
     struct Costume {
         int head_index, body_index, cos_index;
         bool is_costume;
@@ -77,8 +78,8 @@ public:
     bool check_import_requested(const std::string& access_code);
     void clear_import_flag(const std::string& access_code);
 
-    bool fetch_chara_colors(const std::string& access_code, ray::Color& color_1, ray::Color& color_2,
-                            ray::Color& color_3);
+    bool fetch_chara_colors(const std::string& access_code, Color& color_1, Color& color_2,
+                            Color& color_3);
 
     bool fetch_username(const std::string& access_code, std::string& username);
     void update_username(const std::string& access_code, const std::string& username);

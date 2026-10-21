@@ -709,7 +709,7 @@ void ScriptManager::register_lua_bindings() {
             log_lua_site(debug_draw_log.back(), state);
         }
 
-        draw_rectangle({x, y, w, h}, ray::Color{to_u8(r), to_u8(g), to_u8(b), to_u8(a)});
+        draw_rectangle({x, y, w, h}, Color{to_u8(r), to_u8(g), to_u8(b), to_u8(a)});
     });
 
     // rounded rectangle with an outline; roundness is raylib's 0..1 corner factor, the outline thickness is in pixels
@@ -718,13 +718,13 @@ void ScriptManager::register_lua_bindings() {
         auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
         ray::Rectangle r{x, y, w, h};
 
-        ray::DrawRectangleRounded(r, roundness, 16,
-                                  ray::Color{to_u8(fill[0]), to_u8(fill[1]), to_u8(fill[2]), to_u8(fill[3])});
+        draw_rectangle_rounded(r, roundness, 16,
+                                  Color{to_u8(fill[0]), to_u8(fill[1]), to_u8(fill[2]), to_u8(fill[3])});
 
         if (thickness > 0) {
-            ray::DrawRectangleRoundedLinesEx(
+            draw_rectangle_rounded_lines_ex(
                 r, roundness, 16, (float)thickness,
-                ray::Color{to_u8(line[0]), to_u8(line[1]), to_u8(line[2]), to_u8(line[3])});
+                Color{to_u8(line[0]), to_u8(line[1]), to_u8(line[2]), to_u8(line[3])});
         }
     });
 
@@ -902,12 +902,12 @@ void ScriptManager::register_lua_bindings() {
                           auto to_u8 = [](double v) {
                               return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255));
                           };
-                          ray::Color color_val;
+                          Color color_val;
                           color_val.r = to_u8(color[0]);
                           color_val.g = to_u8(color[1]);
                           color_val.b = to_u8(color[2]);
                           color_val.a = to_u8(color[3]);
-                          ray::Color outline_color_val;
+                          Color outline_color_val;
                           outline_color_val.r = to_u8(outline_color[0]);
                           outline_color_val.g = to_u8(outline_color[1]);
                           outline_color_val.b = to_u8(outline_color[2]);
@@ -927,8 +927,8 @@ void ScriptManager::register_lua_bindings() {
            sol::optional<float> spacing, sol::optional<float> v_advance,
            sol::optional<std::string> font) -> std::unique_ptr<OutlinedText> {
             auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
-            ray::Color c = {to_u8(color[0]), to_u8(color[1]), to_u8(color[2]), to_u8(color[3])};
-            ray::Color oc = {to_u8(outline_color[0]), to_u8(outline_color[1]), to_u8(outline_color[2]),
+            Color c = {to_u8(color[0]), to_u8(color[1]), to_u8(color[2]), to_u8(color[3])};
+            Color oc = {to_u8(outline_color[0]), to_u8(outline_color[1]), to_u8(outline_color[2]),
                              to_u8(outline_color[3])};
             return std::make_unique<OutlinedText>(content, static_cast<int>(font_size), c, oc, is_vertical,
                                                   thickness.value_or(5.0f), spacing.value_or(2.0f),

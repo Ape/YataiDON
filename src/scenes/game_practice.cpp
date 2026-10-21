@@ -817,7 +817,7 @@ float PracticeGameScreen::get_scrobble_position_x(const Note& note, double curre
     return JudgePos::X + (float)((note.hit_ms - current_ms) * speedx) - offset_px;
 }
 
-ray::Color PracticeGameScreen::moji_judgment_color(int note_index) const {
+Color PracticeGameScreen::moji_judgment_color(int note_index) const {
     if (!practice_player) {
         return ray::WHITE;
     }
@@ -873,7 +873,7 @@ void PracticeGameScreen::draw_drumroll_scrobble(const Note& head, double current
     float length = end_pos - start_pos;
     bool is_big = (head.type == NoteType::ROLL_HEAD_L);
     int color_val = head.color.value_or(255);
-    ray::Color color = {255, (unsigned char)color_val, (unsigned char)color_val, 255};
+    Color color = {255, (unsigned char)color_val, (unsigned char)color_val, 255};
     float y_pos = tex.get_skin_config(SC::GAME_NOTES)->y + (184 * tex.screen_scale);
     float moji_y = tex.get_skin_config(SC::GAME_MOJI)->y + (184 * tex.screen_scale);
     if (head.display) {

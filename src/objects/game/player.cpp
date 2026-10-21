@@ -1249,7 +1249,7 @@ void Player::handle_camera(double ms_from_start, const TimelineObject& timeline_
         const CameraEvent& ev = timeline_object.cam.value();
         if (ev.prop == CamProp::RESET) {
             camera_eases.clear();
-            ray::Color border = global_data.camera.border_color;
+            Color border = global_data.camera.border_color;
             global_data.camera = CameraConfig();
             global_data.camera.border_color = border;
         } else if (ev.prop == CamProp::BORDER_COLOR) {
@@ -1912,7 +1912,7 @@ void Player::draw_drumroll(double current_ms, float y, const Note& head, int cur
     bool is_big = head.type == NoteType::ROLL_HEAD_L;
     float end_position = get_position_x(tail, current_ms);
     float length = end_position - start_position;
-    ray::Color color = ray::Color{255, (unsigned char)head.color.value(), (unsigned char)head.color.value(), 255};
+    Color color = Color{255, (unsigned char)head.color.value(), (unsigned char)head.color.value(), 255};
     float y_pos = y + tex.get_skin_config(SC::GAME_NOTES)->y + get_position_y(head, current_ms) + judge_y;
     start_position += judge_x;
     end_position += judge_x;
@@ -2087,7 +2087,7 @@ void Player::draw_song_timer(double current_ms, float y) {
     float progress = end_time > 0 ? (float)(current_ms / end_time) : 0.0f;
     float width = tex.get_skin_config(SC::GAME_SONG_TIMER)->width * std::max(std::min(progress, 1.0f), 0.0f);
     draw_rectangle(tex.get_skin_config(SC::GAME_SONG_TIMER)->x, y + tex.get_skin_config(SC::GAME_SONG_TIMER)->y, width,
-                   tex.get_skin_config(SC::GAME_SONG_TIMER)->height, ray::Color(0, 255, 158, 255));
+                   tex.get_skin_config(SC::GAME_SONG_TIMER)->height, Color(0, 255, 158, 255));
     tex.draw_texture(t_timer, {.y = y});
 }
 

@@ -219,16 +219,16 @@ std::optional<Screens> OnboardingScreen::update() {
     return std::nullopt;
 }
 
-void OnboardingScreen::draw_line(const std::string& text, float y, int size, ray::Color color) {
+void OnboardingScreen::draw_line(const std::string& text, float y, int size, Color color) {
     // no skin yet means no skin font; the raylib default covers the ASCII this screen uses
     ray::Font font = skinless_start ? ray::GetFontDefault() : font_manager.get_font(text, size);
     ray::Vector2 dim = ray::MeasureTextEx(font, text.c_str(), static_cast<float>(size), 1.0f);
-    ray::DrawTextEx(font, text.c_str(), ray::Vector2{(tex.screen_width - dim.x) / 2.0f, y}, static_cast<float>(size),
+    draw_text_ex(font, text.c_str(), ray::Vector2{(tex.screen_width - dim.x) / 2.0f, y}, static_cast<float>(size),
                     1.0f, color);
 }
 
 void OnboardingScreen::draw() {
-    draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray::Color(30, 30, 30, 255));
+    draw_rectangle(0, 0, tex.screen_width, tex.screen_height, Color(30, 30, 30, 255));
     const float s = tex.screen_height / 720.0f;
     draw_line("Welcome to YataiDON", 50 * s, static_cast<int>(52 * s), ray::WHITE);
 
@@ -257,7 +257,7 @@ void OnboardingScreen::draw() {
         if (child >= 0) {
             line += "  (needed by " + std::string(kSkins[child].name) + ")";
         }
-        ray::Color c = i == row ? ray::YELLOW : (selected[i] ? ray::WHITE : ray::LIGHTGRAY);
+        Color c = i == row ? ray::YELLOW : (selected[i] ? ray::WHITE : ray::LIGHTGRAY);
         draw_line(line, (165 + i * 42) * s, static_cast<int>(28 * s), c);
     }
     draw_line(std::string("Online mode: ") + (online ? "ON" : "OFF"), 440 * s, static_cast<int>(32 * s),

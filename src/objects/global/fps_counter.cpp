@@ -34,7 +34,7 @@ void FPSCounter::draw() {
     int size = (int)(20.0f * global_tex.screen_scale);
     float pos = (float)size;
 
-    ray::Color color;
+    Color color;
     std::string fps_text = std::to_string(curr_fps) + " FPS";
     ray::Font font = font_manager.get_font(fps_text, size);
 
@@ -46,5 +46,5 @@ void FPSCounter::draw() {
         color = ray::LIME;
     }
 
-    DrawTextEx(font, ray::TextFormat("%d FPS", curr_fps), ray::Vector2{pos, pos}, pos, 1.0f, color);
+    draw_text_ex(font, ray::TextFormat("%d FPS", curr_fps), ray::Vector2{pos, pos}, pos, 1.0f, color);
 }

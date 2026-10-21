@@ -13,6 +13,7 @@
 #include "animation.h"
 #include "ray.h" // IWYU pragma: keep
 #include "skin_config.h"
+#include "color_utils.h"
 
 namespace fs = std::filesystem;
 
@@ -33,7 +34,7 @@ inline Mirror mirror_from_string(const std::string& s) {
 }
 
 struct DrawTextureParams {
-    ray::Color color = ray::WHITE;
+    Color color = ray::WHITE;
     int frame = 0;
     float scale = 1.0f;
     bool center = false;
@@ -284,7 +285,7 @@ public:
 
     void control(TextureObject* tex_obj, int index = 0);
 
-    void clear_screen(const ray::Color& color);
+    void clear_screen(const Color& color);
 
     TextureObject* get_texture(const std::string& name);
 

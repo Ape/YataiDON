@@ -56,15 +56,15 @@
 #include "scenes/song_select_practice.h"
 #include "scenes/title.h"
 
-void draw_outer_border(int screen_width, int screen_height, ray::Color last_color) {
-    DrawRectangle(-screen_width, 0, screen_width, screen_height, last_color);
-    DrawRectangle(screen_width, 0, screen_width, screen_height, last_color);
-    DrawRectangle(0, -screen_height, screen_width, screen_height, last_color);
-    DrawRectangle(0, screen_height, screen_width, screen_height, last_color);
-    DrawRectangle(-screen_width, -screen_height, screen_width, screen_height, last_color);
-    DrawRectangle(screen_width, -screen_height, screen_width, screen_height, last_color);
-    DrawRectangle(-screen_width, screen_height, screen_width, screen_height, last_color);
-    DrawRectangle(screen_width, screen_height, screen_width, screen_height, last_color);
+void draw_outer_border(int screen_width, int screen_height, Color last_color) {
+    draw_rectangle(-screen_width, 0, screen_width, screen_height, last_color);
+    draw_rectangle(screen_width, 0, screen_width, screen_height, last_color);
+    draw_rectangle(0, -screen_height, screen_width, screen_height, last_color);
+    draw_rectangle(0, screen_height, screen_width, screen_height, last_color);
+    draw_rectangle(-screen_width, -screen_height, screen_width, screen_height, last_color);
+    draw_rectangle(screen_width, -screen_height, screen_width, screen_height, last_color);
+    draw_rectangle(-screen_width, screen_height, screen_width, screen_height, last_color);
+    draw_rectangle(screen_width, screen_height, screen_width, screen_height, last_color);
 }
 
 static void draw_skin_update_status() {
@@ -267,7 +267,7 @@ struct LoopState {
         std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / 60.0));
     std::chrono::time_point<std::chrono::steady_clock> next_frame_time = std::chrono::steady_clock::now();
     FPSCounter fps_counter;
-    ray::Color last_color = ray::BLACK;
+    Color last_color = ray::BLACK;
     double screen_fade_start = 0.0;
 };
 
@@ -428,7 +428,7 @@ static void run_frame() {
     ray::BeginDrawing();
 
     if (global_data.camera.border_color != L.last_color) {
-        ray::ClearBackground(global_data.camera.border_color);
+        clear_background(global_data.camera.border_color);
         L.last_color = global_data.camera.border_color;
     }
 

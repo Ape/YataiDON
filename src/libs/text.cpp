@@ -44,7 +44,7 @@ void FontManager::init(const fs::path& font_path) {
     }
 
     if (sentinel_texture.id == 0) {
-        ray::Image px = ray::GenImageColor(1, 1, ray::BLANK);
+        ray::Image px = gen_image_color(1, 1, ray::BLANK);
         sentinel_texture = ray::LoadTextureFromImage(px);
         ray::UnloadImage(px);
     }
@@ -361,8 +361,8 @@ FontManager::SizedFont& FontManager::acquire(const std::string& text, int font_s
     return entry;
 }
 
-static ray::Color clear_of(ray::Color c) {
-    return ray::Color{c.r, c.g, c.b, 0};
+static Color clear_of(Color c) {
+    return Color{c.r, c.g, c.b, 0};
 }
 
 static void blit_over(ray::Image* dst, const ray::Image& src, int x0, int y0) {
@@ -417,7 +417,7 @@ static int text_margin(float font_size) {
 
 static ray::Image text_image(const ray::Font& font, const char* text, float font_size, float spacing, int margin) {
     ray::Vector2 sz = ray::MeasureTextEx(font, text, font_size, spacing);
-    ray::Image im = ray::GenImageColor((int)sz.x, (int)sz.y + margin * 2, ray::BLANK);
+    ray::Image im = gen_image_color((int)sz.x, (int)sz.y + margin * 2, ray::BLANK);
     int x = 0;
     for (const char* p = text; *p;) {
         int n = 0;
@@ -440,7 +440,7 @@ static ray::Image text_image(const ray::Font& font, const char* text, float font
 }
 
 static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* text, ray::Vector2 pos, float font_size,
-                            float spacing, ray::Color tint) {
+                            float spacing, Color tint) {
     const int m = text_margin(font_size);
     ray::Image t = text_image(font, text, font_size, spacing, m);
     if (t.data && t.width > 0 && t.height > 0) {
@@ -461,7 +461,7 @@ static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* 
 }
 
 static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* text, ray::Vector2 pos, float font_size,
-                          float spacing, ray::Color outline_color, float radius) {
+                          float spacing, Color outline_color, float radius) {
     const int m = text_margin(font_size);
     ray::Image cov = text_image(font, text, font_size, spacing, m);
     if (!cov.data || cov.width <= 0 || cov.height <= 0) {
@@ -519,7 +519,7 @@ static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* te
             }
         }
     }
-    ray::Image o = ray::GenImageColor(OW, OH, ray::Color{outline_color.r, outline_color.g, outline_color.b, 0});
+    ray::Image o = gen_image_color(OW, OH, Color{outline_color.r, outline_color.g, outline_color.b, 0});
     unsigned char* op = (unsigned char*)o.data;
     for (int i = 0; i < OW * OH; i++) {
         op[i * 4 + 3] = (unsigned char)((out[i] * (int)outline_color.a) / 255);
@@ -684,7 +684,7 @@ static bool in_rotate_set(const std::string& s) {
     return rotate_set.contains(s);
 }
 
-OutlinedText::OutlinedText(std::string text, int font_size, ray::Color color, ray::Color outline_color,
+OutlinedText::OutlinedText(std::string text, int font_size, Color color, Color outline_color,
                            bool is_vertical, float outline_thickness, float spacing, float v_advance,
                            const std::string& font_name)
     : text(std::move(text)), font_size(static_cast<float>(font_size)),
@@ -769,7 +769,7 @@ OutlinedText::~OutlinedText() {
     }
 }
 
-OutlinedText::BuildData OutlinedText::build_horizontal_text(ray::Color color, ray::Color outline_color, float spacing) {
+OutlinedText::BuildData OutlinedText::build_horizontal_text(Color color, Color outline_color, float spacing) {
     float sp = (spacing < 0) ? 0.0f : spacing;
     auto lines = split_lines(text);
     float line_h = ray::MeasureTextEx(worker_font, "A", font_size, sp).y;
@@ -783,7 +783,7 @@ OutlinedText::BuildData OutlinedText::build_horizontal_text(ray::Color color, ra
     int pad = (int)outline_thickness + 2;
 
     top_extra = std::max(0, text_margin(font_size) - pad);
-    ray::Image img = ray::GenImageColor((int)max_w + pad * 2,
+    ray::Image img = gen_image_color((int)max_w + pad * 2,
                                         (int)(line_advance * (float)(lines.size() - 1) + line_h) + pad * 2 + top_extra,
                                         clear_of(outline_thickness > 0 ? outline_color : color));
 
@@ -799,7 +799,7 @@ OutlinedText::BuildData OutlinedText::build_horizontal_text(ray::Color color, ra
     return {img};
 }
 
-OutlinedText::BuildData OutlinedText::build_vertical_text(ray::Color color, ray::Color outline_color, float spacing) {
+OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color outline_color, float spacing) {
     float char_height = ray::MeasureTextEx(worker_font, "A", font_size, spacing).y;
 
     // Parse the text into items. Consecutive runs of 2+ hgroup chars (!, ?)
@@ -880,8 +880,8 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(ray::Color color, ray:
     }
     int img_h = items.empty() ? pad * 2 : (int)(y_positions.back() + char_height + pad);
 
-    ray::Image img = ray::GenImageColor(img_w, img_h, clear_of(color));
-    ray::Image outline_img = ray::GenImageColor(img_w, img_h, clear_of(outline_color));
+    ray::Image img = gen_image_color(img_w, img_h, clear_of(color));
+    ray::Image outline_img = gen_image_color(img_w, img_h, clear_of(outline_color));
 
     // Two passes: 0 = outlines onto outline_img, 1 = fills onto img.
     for (int pass = 0; pass < 2; pass++) {
@@ -917,7 +917,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(ray::Color color, ray:
                     int tmp_w = (int)char_width + pad * 2;
                     int tmp_h = (int)char_height + pad * 2;
                     ray::Image tmp =
-                        ray::GenImageColor(tmp_w, tmp_h, clear_of(outline_thickness > 0 ? outline_color : color));
+                        gen_image_color(tmp_w, tmp_h, clear_of(outline_thickness > 0 ? outline_color : color));
 
                     if (pass == 0) {
                         if (outline_thickness > 0) {

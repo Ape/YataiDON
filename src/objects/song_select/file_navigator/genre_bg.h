@@ -1,10 +1,11 @@
 #pragma once
 
 #include "box_folder.h"
+#include "../../../libs/color_utils.h"
 
 class GenreBG {
 public:
-    GenreBG(const std::string& text_name, std::optional<ray::Color> color, TextureIndex texture_index, float distance);
+    GenreBG(const std::string& text_name, std::optional<Color> color, TextureIndex texture_index, float distance);
     ~GenreBG() {
         if (shader_loaded) {
             ray::UnloadShader(shader);

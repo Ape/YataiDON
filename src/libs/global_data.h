@@ -12,6 +12,7 @@
 
 #include "config.h"
 #include "ray.h" // IWYU pragma: keep
+#include "color_utils.h"
 
 namespace fs = std::filesystem;
 
@@ -219,9 +220,9 @@ struct SessionData {
     std::string replay_username;
     std::string replay_title;
     int replay_title_bg = 0;
-    ray::Color replay_chara_color_1 = ray::Color{0x68, 0xBF, 0xC0, 0xFF};
-    ray::Color replay_chara_color_2 = ray::Color{0xF9, 0x47, 0x28, 0xFF};
-    ray::Color replay_chara_color_3 = ray::Color{0xF9, 0xF0, 0xE1, 0xFF};
+    Color replay_chara_color_1 = Color{0x68, 0xBF, 0xC0, 0xFF};
+    Color replay_chara_color_2 = Color{0xF9, 0x47, 0x28, 0xFF};
+    Color replay_chara_color_3 = Color{0xF9, 0xF0, 0xE1, 0xFF};
     int replay_chara_head_index = 0;
     int replay_chara_body_index = 0;
     int replay_chara_cos_index = 0;
@@ -234,7 +235,7 @@ struct CameraConfig {
     float h_scale = 1.0f;
     float v_scale = 1.0f;
     float rotation = 0.0f;
-    ray::Color border_color = ray::BLACK;
+    Color border_color = ray::BLACK;
 };
 
 class PracticeTimer;

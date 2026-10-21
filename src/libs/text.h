@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "texture.h"
+#include "color_utils.h"
 
 class FontManager {
 private:
@@ -110,8 +111,8 @@ private:
         ray::Image img;
     };
 
-    BuildData build_horizontal_text(ray::Color color, ray::Color outline_color, float spacing);
-    BuildData build_vertical_text(ray::Color color, ray::Color outline_color, float spacing);
+    BuildData build_horizontal_text(Color color, Color outline_color, float spacing);
+    BuildData build_vertical_text(Color color, Color outline_color, float spacing);
 
 public:
     float width = 0.0f;
@@ -120,7 +121,7 @@ public:
     float y_offset = 0.0f;
     int top_extra = 0;
 
-    OutlinedText(std::string text, int font_size, ray::Color color, ray::Color outline_color, bool is_vertical,
+    OutlinedText(std::string text, int font_size, Color color, Color outline_color, bool is_vertical,
                  float outline_thickness = 5.0f, float spacing = 2.0f, float v_advance = 1.0f,
                  const std::string& font_name = "");
 

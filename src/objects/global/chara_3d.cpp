@@ -594,7 +594,7 @@ void Chara3D::apply_face(int face_index) {
     render_dirty = true;
 }
 
-static ray::Texture2D recolor_texture(ray::Image& source, ray::Color body, ray::Color face, ray::Color rim) {
+static ray::Texture2D recolor_texture(ray::Image& source, Color body, Color face, Color rim) {
     ray::Image img = ray::ImageCopy(source);
     ray::ImageFormat(&img, ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
 
@@ -612,7 +612,7 @@ static ray::Texture2D recolor_texture(ray::Image& source, ray::Color body, ray::
             continue;
         }
 
-        ray::Color out;
+        Color out;
         if (b > r && b >= g) {
             out = rim;
         } else if (g > r && g > b) {
@@ -631,7 +631,7 @@ static ray::Texture2D recolor_texture(ray::Image& source, ray::Color body, ray::
     return result;
 }
 
-static void apply_don_colors(ray::Model& model, int mat_idx, ray::Color body, ray::Color face, ray::Color rim) {
+static void apply_don_colors(ray::Model& model, int mat_idx, Color body, Color face, Color rim) {
     auto& map = model.materials[mat_idx].maps[ray::MATERIAL_MAP_DIFFUSE];
     ray::Image img = ray::LoadImageFromTexture(map.texture);
     if (!img.data) {
@@ -646,7 +646,7 @@ static void apply_don_colors(ray::Model& model, int mat_idx, ray::Color body, ra
     map.texture = new_tex;
 }
 
-void Chara3D::set_don_colors(ray::Color body, ray::Color face, ray::Color rim) {
+void Chara3D::set_don_colors(Color body, Color face, Color rim) {
     for (size_t p = 0; p < parts.size(); p++) {
         for (int idx : part_recolor_indices[p]) {
             apply_don_colors(parts[p], idx, body, face, rim);
@@ -722,7 +722,7 @@ std::string Chara3D::get_anim_name(int idx) {
     return "";
 }
 
-void Chara3D::set_tint(ray::Color color, float amount) {
+void Chara3D::set_tint(Color color, float amount) {
     if (outline_fxaa_shader.id == 0) {
         return;
     }

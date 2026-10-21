@@ -270,7 +270,7 @@ std::optional<Screens> LoadingScreen::update() {
 void LoadingScreen::draw() {
     draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray::BLACK);
 
-    draw_rectangle(progress_bar, ray::Color(101, 0, 0, 255));
+    draw_rectangle(progress_bar, Color(101, 0, 0, 255));
 
     float clamped_progress = std::max(0.0f, std::min(1.0f, progress.load()));
     ray::Rectangle fill = progress_bar;
