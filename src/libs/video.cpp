@@ -248,7 +248,7 @@ void VideoPlayer::update(double current_ms) {
 }
 
 void VideoPlayer::draw() {
-    ray::ClearBackground(ray::BLACK);
+    clear_background(ray::BLACK);
     if (!texture.has_value()) {
         return;
     }
@@ -277,7 +277,7 @@ void VideoPlayer::draw() {
     ray::Rectangle destination{dest_x, dest_y, dest_width, dest_height};
     ray::Vector2 origin{0.f, 0.f};
 
-    ray::DrawTexturePro(texture.value(), source, destination, origin, 0.f, ray::WHITE);
+    draw_texture_pro(texture.value(), source, destination, origin, 0.f, ray::WHITE);
 }
 
 void VideoPlayer::stop() {

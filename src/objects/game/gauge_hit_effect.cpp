@@ -20,7 +20,7 @@ GaugeHitEffect::GaugeHitEffect(NoteType note_type, bool is_big, bool is_2p)
     fade_out->start();
     rotation->start();
 
-    color = ray::Fade(ray::YELLOW, circle_fadein->attribute);
+    color = fade(ray::YELLOW, circle_fadein->attribute);
 
     t_hit_effect = tex.get_texture("gauge/hit_effect");
     t_note = tex.get_texture("notes/" + std::to_string((int)note_type));
@@ -96,9 +96,9 @@ void GaugeHitEffect::draw(float y) {
     // Circle effect texture
     Color texture_color;
     if (circle_fadein->is_finished) {
-        texture_color = ray::Fade(ray::WHITE, std::min(circle_fadein->attribute, fade_out->attribute));
+        texture_color = fade(ray::WHITE, std::min(circle_fadein->attribute, fade_out->attribute));
     } else {
-        texture_color = ray::Fade(ray::YELLOW, std::min(circle_fadein->attribute, fade_out->attribute));
+        texture_color = fade(ray::YELLOW, std::min(circle_fadein->attribute, fade_out->attribute));
     }
     tex.draw_texture(t_circle, {.color = texture_color, .y = y, .index = is_2p});
 }

@@ -71,7 +71,7 @@ std::optional<Screens> InputCaliScreen::update() {
 }
 
 void InputCaliScreen::draw() {
-    ray::ClearBackground(ray::BLACK);
+    clear_background(ray::BLACK);
     if (background.has_value()) {
         background->draw_back();
     }

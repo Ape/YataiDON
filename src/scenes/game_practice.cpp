@@ -980,7 +980,7 @@ void PracticeGameScreen::draw_notes_scrobble(double current_ms) const {
 }
 
 void PracticeGameScreen::draw() {
-    ray::ClearBackground(ray::BLACK);
+    clear_background(ray::BLACK);
     if (movie.has_value()) {
         movie->draw();
     } else if (background.has_value()) {

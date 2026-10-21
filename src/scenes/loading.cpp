@@ -292,7 +292,7 @@ void LoadingScreen::draw() {
         }
     }
 
-    draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::WHITE, fade_in->attribute));
+    draw_rectangle(0, 0, tex.screen_width, tex.screen_height, fade(ray::WHITE, fade_in->attribute));
     if (allnet_indicator) {
         allnet_indicator->draw();
     }

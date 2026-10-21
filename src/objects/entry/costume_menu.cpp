@@ -329,7 +329,7 @@ void CostumeMenu::draw() {
             float dw = icon.width * scale, dh = icon.height * scale;
             float ix = tex.draw_offset_x + base_x + i * ITEM_W + (ITEM_W - dw) / 2.0f;
             float iy = tex.draw_offset_y + base_y + (ITEM_W - dh) / 2.0f;
-            ray::DrawTexturePro(icon, {0, 0, (float)icon.width, (float)icon.height}, {ix, iy, dw, dh}, {0, 0}, 0,
+            draw_texture_pro(icon, {0, 0, (float)icon.width, (float)icon.height}, {ix, iy, dw, dh}, {0, 0}, 0,
                                 ray::WHITE);
         }
     }

@@ -1026,7 +1026,7 @@ void OutlinedText::draw(const DrawTextureParams& params) {
         log_lua_site(debug_draw_log.back(), script_lua_state());
     }
 
-    ray::DrawTexturePro(*texture, src, dst, {0, 0}, 0.0f, ray::Fade(ray::WHITE, params.fade));
+    draw_texture_pro(*texture, src, dst, {0, 0}, 0.0f, fade(ray::WHITE, params.fade));
 }
 
 FontManager font_manager;

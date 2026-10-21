@@ -45,7 +45,7 @@ void BaseOptionBox::draw_base() const {
 
     float desc_font_size = DESC_FONT_SIZE_BASE * tex.screen_scale;
     ray::Font font = font_manager.get_font(description_text, (int)desc_font_size);
-    ray::DrawTextEx(font, description_text.c_str(), {DESC_X_BASE * tex.screen_scale, DESC_Y_BASE * tex.screen_scale},
+    draw_text_ex(font, description_text.c_str(), {DESC_X_BASE * tex.screen_scale, DESC_Y_BASE * tex.screen_scale},
                     desc_font_size, 1, ray::BLACK);
 }
 

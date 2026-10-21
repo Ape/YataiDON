@@ -10,10 +10,11 @@ namespace ray {
 #if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
 #include "sdl_compat.h"
 #endif
+#include <algorithm>
 #include <string>
 
 inline Color fade(Color c, float alpha) {
-    return Color(c.r, c.g, c.b, alpha*255);
+    return Color(c.r, c.g, c.b, static_cast<uint8_t>(std::clamp(alpha, 0.0f, 1.0f) * 255.0f + 0.5f));
 }
 
 inline void draw_rectangle(int x, int y, int w, int h, Color color) {

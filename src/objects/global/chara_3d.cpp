@@ -1033,7 +1033,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         ray::EndBlendMode();
         render_dirty = false;
         ray::BeginTextureMode(scene_target);
-        ray::ClearBackground(ray::BLANK);
+        clear_background(ray::BLANK);
         ray::BeginBlendMode(ray::BLEND_CUSTOM_SEPARATE); // not BLEND_ALPHA: it blends dst alpha as a*a+dst*(1-a),
                                                          // making opaque pixels under a translucent sheet see-through
         ray::BeginMode3D(rc);
@@ -1051,7 +1051,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         const float region_w = scene_target_w / SUPERSAMPLE;
         const float region_h = scene_target_h / SUPERSAMPLE;
         ray::BeginShaderMode(outline_fxaa_shader);
-        ray::DrawTexturePro(scene_target.texture, {0, 0, (float)scene_target_w, -(float)scene_target_h},
+        draw_texture_pro(scene_target.texture, {0, 0, (float)scene_target_w, -(float)scene_target_h},
                             {(float)region_x, (float)region_y, region_w, region_h}, {0, 0}, 0.0f, ray::WHITE);
         ray::EndShaderMode();
     }
@@ -1110,7 +1110,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
         ray::Camera3D cam3d = camera2d_to_3d(cam2d);
 
         ray::BeginTextureMode(scene_target);
-        ray::ClearBackground(ray::BLANK);
+        clear_background(ray::BLANK);
         ray::BeginBlendMode(ray::BLEND_CUSTOM_SEPARATE);
         ray::BeginMode3D(cam3d);
         draw_3d(x, y);
@@ -1122,7 +1122,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
 
     {
         ray::BeginShaderMode(outline_fxaa_shader);
-        ray::DrawTexturePro(scene_target.texture, {0, 0, (float)ssw, -(float)ssh}, {0, 0, (float)rw, (float)rh}, {0, 0},
+        draw_texture_pro(scene_target.texture, {0, 0, (float)ssw, -(float)ssh}, {0, 0, (float)rw, (float)rh}, {0, 0},
                             0.0f, ray::WHITE);
         ray::EndShaderMode();
     }

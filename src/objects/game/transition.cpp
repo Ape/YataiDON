@@ -72,7 +72,7 @@ void Transition::draw_dan(float total_offset) {
         }
     }
     if (black > 0.0f) {
-        draw_rectangle(0, 0, global_tex.screen_width, global_tex.screen_height, ray::Fade(ray::BLACK, black));
+        draw_rectangle(0, 0, global_tex.screen_width, global_tex.screen_height, fade(ray::BLACK, black));
     }
 }
 
@@ -149,7 +149,7 @@ void Transition::draw() {
                                   (global_tex.get_skin_config(SC::TRANSITION_OFFSET)->y - global_tex.screen_height) -
                                   (float)cur_rainbow - total_offset,
                               (float)global_tex.screen_width, (float)global_tex.screen_height};
-        ray::DrawTexturePro(loading_graphic.value(), src, dst, {0, 0}, 0, ray::WHITE);
+        draw_texture_pro(loading_graphic.value(), src, dst, {0, 0}, 0, ray::WHITE);
     }
 
     if (fn_draw_info.valid()) {
