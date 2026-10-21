@@ -483,7 +483,7 @@ static void run_frame() {
             L.screen_fade_start = 0.0;
         } else {
             const float a = static_cast<float>(1.0 - (t < 0.0 ? 0.0 : t));
-            ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::BLACK, a));
+            draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::BLACK, a));
         }
     }
 

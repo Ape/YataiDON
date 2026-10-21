@@ -159,7 +159,7 @@ void ResultScreen::draw_overlay() {
         fade_in->draw();
     }
     if (fade_out) {
-        ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::BLACK, fade_out->attribute));
+        draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::BLACK, fade_out->attribute));
     }
     if (retry_message) {
         retry_message->draw();

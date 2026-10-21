@@ -2086,8 +2086,8 @@ void Player::draw_notes(double current_ms, float y) {
 void Player::draw_song_timer(double current_ms, float y) {
     float progress = end_time > 0 ? (float)(current_ms / end_time) : 0.0f;
     float width = tex.get_skin_config(SC::GAME_SONG_TIMER)->width * std::max(std::min(progress, 1.0f), 0.0f);
-    ray::DrawRectangle(tex.get_skin_config(SC::GAME_SONG_TIMER)->x, y + tex.get_skin_config(SC::GAME_SONG_TIMER)->y,
-                       width, tex.get_skin_config(SC::GAME_SONG_TIMER)->height, ray::Color(0, 255, 158, 255));
+    draw_rectangle(tex.get_skin_config(SC::GAME_SONG_TIMER)->x, y + tex.get_skin_config(SC::GAME_SONG_TIMER)->y, width,
+                   tex.get_skin_config(SC::GAME_SONG_TIMER)->height, ray::Color(0, 255, 158, 255));
     tex.draw_texture(t_timer, {.y = y});
 }
 

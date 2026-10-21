@@ -228,7 +228,7 @@ void OnboardingScreen::draw_line(const std::string& text, float y, int size, ray
 }
 
 void OnboardingScreen::draw() {
-    ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Color(30, 30, 30, 255));
+    draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray::Color(30, 30, 30, 255));
     const float s = tex.screen_height / 720.0f;
     draw_line("Welcome to YataiDON", 50 * s, static_cast<int>(52 * s), ray::WHITE);
 

@@ -709,7 +709,7 @@ void ScriptManager::register_lua_bindings() {
             log_lua_site(debug_draw_log.back(), state);
         }
 
-        ray::DrawRectangleRec({x, y, w, h}, ray::Color{to_u8(r), to_u8(g), to_u8(b), to_u8(a)});
+        draw_rectangle({x, y, w, h}, ray::Color{to_u8(r), to_u8(g), to_u8(b), to_u8(a)});
     });
 
     // rounded rectangle with an outline; roundness is raylib's 0..1 corner factor, the outline thickness is in pixels

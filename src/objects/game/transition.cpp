@@ -72,7 +72,7 @@ void Transition::draw_dan(float total_offset) {
         }
     }
     if (black > 0.0f) {
-        ray::DrawRectangle(0, 0, global_tex.screen_width, global_tex.screen_height, ray::Fade(ray::BLACK, black));
+        draw_rectangle(0, 0, global_tex.screen_width, global_tex.screen_height, ray::Fade(ray::BLACK, black));
     }
 }
 

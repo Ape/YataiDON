@@ -786,7 +786,7 @@ void EntryScreen::draw() {
     }
 
     if (box_manager->is_finished()) {
-        ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::BLACK);
+        draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray::BLACK);
     }
 
     network_msg.draw();

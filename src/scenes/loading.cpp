@@ -268,15 +268,15 @@ std::optional<Screens> LoadingScreen::update() {
 }
 
 void LoadingScreen::draw() {
-    ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::BLACK);
+    draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray::BLACK);
 
-    ray::DrawRectangleRec(progress_bar, ray::Color(101, 0, 0, 255));
+    draw_rectangle(progress_bar, ray::Color(101, 0, 0, 255));
 
     float clamped_progress = std::max(0.0f, std::min(1.0f, progress.load()));
     ray::Rectangle fill = progress_bar;
     fill.width *= clamped_progress;
     if (fill.width > 0) {
-        ray::DrawRectangleRec(fill, ray::RED);
+        draw_rectangle(fill, ray::RED);
     }
     tex.draw_texture(t_warning);
 
@@ -292,7 +292,7 @@ void LoadingScreen::draw() {
         }
     }
 
-    ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::WHITE, fade_in->attribute));
+    draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::WHITE, fade_in->attribute));
     if (allnet_indicator) {
         allnet_indicator->draw();
     }

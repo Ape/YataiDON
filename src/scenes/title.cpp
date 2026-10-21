@@ -252,7 +252,7 @@ void TitleScreen::draw() {
         attract_scene->draw();
     }
 
-    ray::DrawRectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::WHITE, fade_out->attribute));
+    draw_rectangle(0, 0, tex.screen_width, tex.screen_height, ray::Fade(ray::WHITE, fade_out->attribute));
     coin_overlay.draw();
     allnet_indicator.draw();
     entry_overlay.draw(true);

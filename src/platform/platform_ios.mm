@@ -165,7 +165,7 @@ void ios_draw_touch_navigation_labels(float screen_width, float screen_height) {
     const char* labels[] = {"Back", "Pause"};
     for (int i = 0; i < 2; ++i) {
         float x = screen_width * (0.36f + i * 0.15f);
-        ray::DrawRectangleRec({x, screen_height * 0.025f, screen_width * 0.13f, screen_height * 0.10f}, ray::Fade(ray::BLACK, 0.6f));
+        draw_rectangle({x, screen_height * 0.025f, screen_width * 0.13f, screen_height * 0.10f}, ray::Fade(ray::BLACK, 0.6f));
         ray::DrawText(labels[i], static_cast<int>(x + (screen_width * 0.13f - ray::MeasureText(labels[i], font_size)) / 2),
             static_cast<int>(screen_height * 0.075f - font_size / 2), font_size, ray::WHITE);
     }
