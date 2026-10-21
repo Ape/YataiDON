@@ -225,26 +225,8 @@ void ModifierSelector::right() {
 }
 
 std::string ModifierSelector::row_label(const std::string& n) const {
-    if (n == "auto") {
-        return font_manager.get_text_label("modifier_name_auto");
-    }
-    if (n == "speed") {
-        return font_manager.get_text_label("modifier_name_speed");
-    }
-    if (n == "display") {
-        return font_manager.get_text_label("modifier_name_display");
-    }
-    if (n == "inverse") {
-        return font_manager.get_text_label("modifier_name_inverse");
-    }
-    if (n == "random") {
-        return font_manager.get_text_label("modifier_name_random");
-    }
-    if (n == "skip") {
-        return font_manager.get_text_label("modifier_name_skip");
-    }
-    if (n == "neiro") {
-        return font_manager.get_text_label("modifier_name_neiro");
+    if (std::ranges::contains(BASE_MOD_NAMES, n) || n == "skip" || n == "neiro") {
+        return font_manager.get_text_label("modifier_name_" + n);
     }
     return std::string();
 }
