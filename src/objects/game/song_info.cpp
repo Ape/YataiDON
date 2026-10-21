@@ -17,11 +17,11 @@ SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bo
     : song_name(song_name), genre(genre >= 0 && genre < 9 ? genre : 0) {
 
     song_title =
-        std::make_unique<OutlinedText>(song_name, tex.get_skin_config(SC::GAME_SONG_INFO)->font_size, ray::WHITE,
-                                       ray::BLACK, false, skin_outline(*tex.get_skin_config(SC::GAME_SONG_INFO)));
+        std::make_unique<OutlinedText>(song_name, tex.get_skin_config(SC::GAME_SONG_INFO)->font_size, Color::WHITE,
+                                       Color::BLACK, false, skin_outline(*tex.get_skin_config(SC::GAME_SONG_INFO)));
     if (show_subtitle && !subtitle.empty()) {
         song_subtitle = std::make_unique<OutlinedText>(
-            subtitle, tex.get_skin_config(SC::GAME_SONG_INFO_SUBTITLE)->font_size, ray::WHITE, ray::BLACK, false, 5);
+            subtitle, tex.get_skin_config(SC::GAME_SONG_INFO_SUBTITLE)->font_size, Color::WHITE, Color::BLACK, false, 5);
     }
     const SkinInfo* plate_cfg = tex.get_skin_config(SC::SONG_NUM_GAME);
     this->song_num = std::make_unique<SongNum>(song_num, plate_cfg ? plate_cfg->outline : -1.0f);
@@ -38,7 +38,7 @@ SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bo
         tex.has_texture("song_info/song_num_plate") ? tex.get_texture("song_info/song_num_plate") : nullptr;
 
     int font_size = 18 * tex.screen_scale;
-    genre_text = std::make_unique<OutlinedText>(genre_label, font_size, ray::WHITE, ray::BLANK, false, 3, 1);
+    genre_text = std::make_unique<OutlinedText>(genre_label, font_size, Color::WHITE, Color::BLANK, false, 3, 1);
 
     GenreIndex genre_bucket = this->genre < 8 ? static_cast<GenreIndex>(this->genre + 1) : GenreIndex::DEFAULT;
     auto color_it = DEFAULT_COLORS.find(genre_bucket);
@@ -185,11 +185,11 @@ SongNum::SongNum(int song_num, float outline_override) {
     }
     Color outline_color;
     if (global_data.config->limits.song_limit > 0 && global_data.config->limits.song_limit == song_num) {
-        outline_color = ray::RED;
+        outline_color = Color::RED;
     } else {
-        outline_color = ray::BLACK;
+        outline_color = Color::BLACK;
     }
-    text = std::make_unique<OutlinedText>(song_format, cfg.font_size, ray::WHITE, outline_color, false,
+    text = std::make_unique<OutlinedText>(song_format, cfg.font_size, Color::WHITE, outline_color, false,
                                           outline_override >= 0 ? outline_override : skin_outline(cfg));
     width = text->width;
     height = text->height;
@@ -208,7 +208,7 @@ SongNum::SongNum(int value, SC key, const std::string& config_key) {
     if (pos != std::string::npos) {
         fmt.replace(pos, 3, std::to_string(value));
     }
-    text = std::make_unique<OutlinedText>(fmt, cfg->font_size, ray::WHITE, ray::BLACK, false, skin_outline(*cfg));
+    text = std::make_unique<OutlinedText>(fmt, cfg->font_size, Color::WHITE, Color::BLACK, false, skin_outline(*cfg));
     width = text->width;
     height = text->height;
 }

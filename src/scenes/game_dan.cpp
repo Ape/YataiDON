@@ -858,7 +858,7 @@ void DanGameScreen::poll_skip_dan() {
     const SkinInfo* pos = skin_draws ? nullptr : tex.get_skin_config(SC::SKIP_COUNTER);
     if (pos) {
         skip_text = std::make_unique<OutlinedText>(std::to_string(skip_count) + "/" + std::to_string(SKIP_HITS),
-                                                   (pos->font_size > 0 ? pos->font_size : 40), ray::WHITE, ray::BLACK,
+                                                   (pos->font_size > 0 ? pos->font_size : 40), Color::WHITE, Color::BLACK,
                                                    false, 4);
     }
 
@@ -873,7 +873,7 @@ void DanGameScreen::do_skip_dan() {
     const SkinInfo* used = skin_draws ? nullptr : tex.get_skin_config(SC::SKIP_USED_TEXT);
     if (used) {
         skip_text = std::make_unique<OutlinedText>(tex.skin_text("skip_used", global_data.config->general.language, ""),
-                                                   (used->font_size > 0 ? used->font_size : 40), ray::WHITE, ray::BLACK,
+                                                   (used->font_size > 0 ? used->font_size : 40), Color::WHITE, Color::BLACK,
                                                    false, 4);
     } else {
         skip_text.reset();

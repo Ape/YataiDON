@@ -34,7 +34,7 @@ inline Mirror mirror_from_string(const std::string& s) {
 }
 
 struct DrawTextureParams {
-    Color color = ray::WHITE;
+    Color color = Color::WHITE;
     int frame = 0;
     float scale = 1.0f;
     bool center = false;

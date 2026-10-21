@@ -44,7 +44,7 @@ void FontManager::init(const fs::path& font_path) {
     }
 
     if (sentinel_texture.id == 0) {
-        ray::Image px = gen_image_color(1, 1, ray::BLANK);
+        ray::Image px = gen_image_color(1, 1, Color::BLANK);
         sentinel_texture = ray::LoadTextureFromImage(px);
         ray::UnloadImage(px);
     }
@@ -372,7 +372,7 @@ static void blit_over(ray::Image* dst, const ray::Image& src, int x0, int y0) {
     if (dst->format != ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 || src.format != ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) {
         ray::Rectangle sr = {0, 0, (float)src.width, (float)src.height};
         ray::Rectangle dr = {(float)x0, (float)y0, (float)src.width, (float)src.height};
-        ray::ImageDrawImagePro(dst, src, sr, dr, {0, 0}, 0.0f, ray::WHITE);
+        ray::ImageDrawImagePro(dst, src, sr, dr, {0, 0}, 0.0f, Color::WHITE);
         return;
     }
     unsigned char* d = (unsigned char*)dst->data;
@@ -417,7 +417,7 @@ static int text_margin(float font_size) {
 
 static ray::Image text_image(const ray::Font& font, const char* text, float font_size, float spacing, int margin) {
     ray::Vector2 sz = ray::MeasureTextEx(font, text, font_size, spacing);
-    ray::Image im = gen_image_color((int)sz.x, (int)sz.y + margin * 2, ray::BLANK);
+    ray::Image im = gen_image_color((int)sz.x, (int)sz.y + margin * 2, Color::BLANK);
     int x = 0;
     for (const char* p = text; *p;) {
         int n = 0;
@@ -432,7 +432,7 @@ static ray::Image text_image(const ray::Font& font, const char* text, float font
             ray::Rectangle sr = {0, 0, (float)g.image.width, (float)g.image.height};
             ray::Rectangle dr = {(float)(x + g.offsetX), (float)(margin + g.offsetY), font.recs[gi].width,
                                  font.recs[gi].height};
-            ray::ImageDrawImagePro(&im, g.image, sr, dr, {0, 0}, 0.0f, ray::WHITE);
+            ray::ImageDrawImagePro(&im, g.image, sr, dr, {0, 0}, 0.0f, Color::WHITE);
         }
         x += (g.advanceX == 0 ? (int)(font.recs[gi].width + spacing) : g.advanceX + (int)spacing);
     }
@@ -1026,7 +1026,7 @@ void OutlinedText::draw(const DrawTextureParams& params) {
         log_lua_site(debug_draw_log.back(), script_lua_state());
     }
 
-    draw_texture_pro(*texture, src, dst, {0, 0}, 0.0f, fade(ray::WHITE, params.fade));
+    draw_texture_pro(*texture, src, dst, {0, 0}, 0.0f, fade(Color::WHITE, params.fade));
 }
 
 FontManager font_manager;

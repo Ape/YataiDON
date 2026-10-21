@@ -63,15 +63,15 @@ std::optional<Screens> InputCaliScreen::update() {
             average_latency = latencies[n / 2];
         }
         average_latency_text.reset();
-        average_latency_text.emplace(ray::TextFormat("Average Latency: %.2f ms", average_latency * -1), 40, ray::WHITE,
-                                     ray::BLUE, false, 4.0);
+        average_latency_text.emplace(ray::TextFormat("Average Latency: %.2f ms", average_latency * -1), 40, Color::WHITE,
+                                     Color::BLUE, false, 4.0);
     }
 
     return result;
 }
 
 void InputCaliScreen::draw() {
-    clear_background(ray::BLACK);
+    clear_background(Color::BLACK);
     if (background.has_value()) {
         background->draw_back();
     }

@@ -10,7 +10,7 @@ GenreBG::GenreBG(const std::string& text_name, std::optional<Color> color, Textu
         font_size = base_font_size - 10.0f * tex.screen_scale;
         name_outline = 5.0f * (font_size / base_font_size);
     }
-    name = make_unique<OutlinedText>(text_name, (int)font_size, ray::WHITE, ray::BLACK, false, name_outline);
+    name = make_unique<OutlinedText>(text_name, (int)font_size, Color::WHITE, Color::BLACK, false, name_outline);
 
     if (color.has_value()) {
         shader = load_shader("shader/dummy.vs", "shader/colortransform.fs");

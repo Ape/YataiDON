@@ -1030,7 +1030,7 @@ void ScriptManager::register_lua_bindings() {
         }
         ray::Rectangle src{0, 0, (float)webcam.width(), (float)webcam.height()};
         ray::Rectangle dst{x, y, w, h};
-        draw_texture_pro(webcam.get_texture(), src, dst, ray::Vector2{0, 0}, 0, ray::WHITE);
+        draw_texture_pro(webcam.get_texture(), src, dst, ray::Vector2{0, 0}, 0, Color::WHITE);
     });
 
     lua["camera"] = camera_tbl;

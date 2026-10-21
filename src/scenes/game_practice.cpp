@@ -819,21 +819,21 @@ float PracticeGameScreen::get_scrobble_position_x(const Note& note, double curre
 
 Color PracticeGameScreen::moji_judgment_color(int note_index) const {
     if (!practice_player) {
-        return ray::WHITE;
+        return Color::WHITE;
     }
     auto judgment = practice_player->get_note_judgment(note_index);
     if (!judgment.has_value()) {
-        return ray::WHITE;
+        return Color::WHITE;
     }
     switch (judgment.value()) {
     case Judgments::GOOD:
-        return ray::YELLOW;
+        return Color::YELLOW;
     case Judgments::OK:
-        return ray::WHITE;
+        return Color::WHITE;
     case Judgments::BAD:
-        return ray::SKYBLUE;
+        return Color::SKYBLUE;
     }
-    return ray::WHITE;
+    return Color::WHITE;
 }
 
 void PracticeGameScreen::draw_bar_scrobble(const Note& bar, double current_ms) const {
@@ -980,7 +980,7 @@ void PracticeGameScreen::draw_notes_scrobble(double current_ms) const {
 }
 
 void PracticeGameScreen::draw() {
-    clear_background(ray::BLACK);
+    clear_background(Color::BLACK);
     if (movie.has_value()) {
         movie->draw();
     } else if (background.has_value()) {

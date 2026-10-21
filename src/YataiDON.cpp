@@ -80,13 +80,13 @@ static void draw_skin_update_status() {
     const std::string skin_line =
         st.current_skin.empty() ? "Checking for skin updates..." : "Updating skin: " + st.current_skin;
     ray::Font skin_font = font_manager.get_font(skin_line, size);
-    draw_text_ex(skin_font, skin_line.c_str(), ray::Vector2{x, y}, static_cast<float>(size), 1.0f, ray::YELLOW);
+    draw_text_ex(skin_font, skin_line.c_str(), ray::Vector2{x, y}, static_cast<float>(size), 1.0f, Color::YELLOW);
 
     if (!st.current_file.empty()) {
         y += static_cast<float>(size);
         ray::Font file_font = font_manager.get_font(st.current_file, size);
         draw_text_ex(file_font, st.current_file.c_str(), ray::Vector2{x, y}, static_cast<float>(size), 1.0f,
-                        ray::WHITE);
+                        Color::WHITE);
     }
 }
 
@@ -267,7 +267,7 @@ struct LoopState {
         std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / 60.0));
     std::chrono::time_point<std::chrono::steady_clock> next_frame_time = std::chrono::steady_clock::now();
     FPSCounter fps_counter;
-    Color last_color = ray::BLACK;
+    Color last_color = Color::BLACK;
     double screen_fade_start = 0.0;
 };
 
@@ -483,7 +483,7 @@ static void run_frame() {
             L.screen_fade_start = 0.0;
         } else {
             const float a = static_cast<float>(1.0 - (t < 0.0 ? 0.0 : t));
-            draw_rectangle(0, 0, tex.screen_width, tex.screen_height, fade(ray::BLACK, a));
+            draw_rectangle(0, 0, tex.screen_width, tex.screen_height, fade(Color::BLACK, a));
         }
     }
 

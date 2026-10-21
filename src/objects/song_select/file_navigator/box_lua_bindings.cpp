@@ -131,7 +131,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
             }
             ray::Rectangle src{0, 0, (float)self.preimage->width, (float)self.preimage->height};
             ray::Rectangle dest{x, y, width, height};
-            draw_texture_pro(self.preimage.value(), src, dest, ray::Vector2{0, 0}, 0, ::fade(ray::WHITE, fade));
+            draw_texture_pro(self.preimage.value(), src, dest, ray::Vector2{0, 0}, 0, ::fade(Color::WHITE, fade));
         });
 
     lua.new_usertype<FolderBox>(
@@ -215,7 +215,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
             ray::Rectangle src{0, 0, w, h};
             ray::Rectangle dest{x, y, dw, dh};
             draw_texture_pro(self.box_texture.value(), src, dest, ray::Vector2{0, 0}, 0,
-                                ::fade(ray::WHITE, fade));
+                                ::fade(Color::WHITE, fade));
         });
 
     lua.new_usertype<BackBox>("BackBox", sol::base_classes, sol::bases<BaseBox>());

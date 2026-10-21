@@ -36,10 +36,10 @@ void DanBox::load_text() {
         base_font = shrunk;
     }
     const bool chip_black = tex.options[SCO::DAN_CHIP_NAME_BLACK];
-    name = std::make_unique<OutlinedText>(text_name, (int)base_font, chip_black ? ray::BLACK : ray::WHITE, ray::BLACK,
+    name = std::make_unique<OutlinedText>(text_name, (int)base_font, chip_black ? Color::BLACK : Color::WHITE, Color::BLACK,
                                           true, chip_black ? 0.0f : name_outline);
     int font_size = tex.get_skin_config(SC::DAN_SELECT_TITLE)->font_size;
-    hori_name = std::make_unique<OutlinedText>(dan_title, font_size, ray::WHITE, ray::BLACK, false);
+    hori_name = std::make_unique<OutlinedText>(dan_title, font_size, Color::WHITE, Color::BLACK, false);
 
     int revealed = 0;
     {
@@ -90,8 +90,8 @@ void DanBox::load_text() {
 
         const bool vertical = !tex.options[SCO::DAN_TITLE_HORIZONTAL];
         song_texts.emplace_back(
-            std::make_unique<OutlinedText>(title_str, font_size, ray::WHITE, ray::BLACK, vertical),
-            std::make_unique<OutlinedText>(sub_str, sub_font, ray::WHITE, ray::BLACK, vertical, sub_outline));
+            std::make_unique<OutlinedText>(title_str, font_size, Color::WHITE, Color::BLACK, vertical),
+            std::make_unique<OutlinedText>(sub_str, sub_font, Color::WHITE, Color::BLACK, vertical, sub_outline));
     }
     text_loaded = true;
 }

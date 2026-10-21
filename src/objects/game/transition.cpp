@@ -5,9 +5,9 @@
 Transition::Transition(const std::string& title, const std::string& subtitle, bool is_second) : is_second(is_second) {
 
     this->title = std::make_unique<OutlinedText>(title, global_tex.get_skin_config(SC::TRANSITION_TITLE)->font_size,
-                                                 ray::WHITE, ray::BLACK, false, 5);
+                                                 Color::WHITE, Color::BLACK, false, 5);
     this->subtitle = std::make_unique<OutlinedText>(
-        subtitle, global_tex.get_skin_config(SC::TRANSITION_SUBTITLE)->font_size, ray::WHITE, ray::BLACK, false, 5);
+        subtitle, global_tex.get_skin_config(SC::TRANSITION_SUBTITLE)->font_size, Color::WHITE, Color::BLACK, false, 5);
 
     t_rainbow_text_bg = global_tex.get_texture("rainbow_transition/text_bg");
 
@@ -49,7 +49,7 @@ void Transition::set_dan(int color, const std::string& rank_name) {
     t_loading_dan_plaque = global_tex.get_texture("loading_dan/plaque");
     if (!rank_name.empty()) {
         dan_rank_text = std::make_unique<OutlinedText>(
-            rank_name, global_tex.get_skin_config(SC::DAN_SELECT_TITLE)->font_size, ray::WHITE, ray::BLACK, true);
+            rank_name, global_tex.get_skin_config(SC::DAN_SELECT_TITLE)->font_size, Color::WHITE, Color::BLACK, true);
     }
 }
 
@@ -72,7 +72,7 @@ void Transition::draw_dan(float total_offset) {
         }
     }
     if (black > 0.0f) {
-        draw_rectangle(0, 0, global_tex.screen_width, global_tex.screen_height, fade(ray::BLACK, black));
+        draw_rectangle(0, 0, global_tex.screen_width, global_tex.screen_height, fade(Color::BLACK, black));
     }
 }
 
@@ -149,7 +149,7 @@ void Transition::draw() {
                                   (global_tex.get_skin_config(SC::TRANSITION_OFFSET)->y - global_tex.screen_height) -
                                   (float)cur_rainbow - total_offset,
                               (float)global_tex.screen_width, (float)global_tex.screen_height};
-        draw_texture_pro(loading_graphic.value(), src, dst, {0, 0}, 0, ray::WHITE);
+        draw_texture_pro(loading_graphic.value(), src, dst, {0, 0}, 0, Color::WHITE);
     }
 
     if (fn_draw_info.valid()) {

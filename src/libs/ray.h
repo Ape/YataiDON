@@ -4,6 +4,19 @@
 namespace ray {
     extern "C" {
 #include <raylib.h>
+// raylib color macros clash with Color::WHITE etc.
+#undef WHITE
+#undef BLACK
+#undef BLANK
+#undef BLUE
+#undef GRAY
+#undef GREEN
+#undef LIGHTGRAY
+#undef LIME
+#undef ORANGE
+#undef RED
+#undef SKYBLUE
+#undef YELLOW
     }
 } // namespace ray
 

@@ -41,7 +41,7 @@ public:
     TextureIndex texture_index;
     std::optional<Color> back_color;
     Color fore_color;
-    Color text_color = ray::WHITE;
+    Color text_color = Color::WHITE;
 
     std::unique_ptr<FadeAnimation> fade;
     std::unique_ptr<MoveAnimation> open_anim;

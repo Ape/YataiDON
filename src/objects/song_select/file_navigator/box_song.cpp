@@ -128,8 +128,8 @@ void SongBox::preregister_text() {
 void SongBox::load_text() {
     BaseBox::load_text();
     bpm_text = make_unique<OutlinedText>("BPM\n" + std::to_string(static_cast<int>(parser.metadata.bpm)),
-                                         tex.get_skin_config(SC::SONG_SELECT_BOX_BPM)->font_size, ray::WHITE,
-                                         ray::BLACK, false);
+                                         tex.get_skin_config(SC::SONG_SELECT_BOX_BPM)->font_size, Color::WHITE,
+                                         Color::BLACK, false);
     if (exists(parser.metadata.preimage)) {
         if (preimage.has_value()) {
             ray::UnloadTexture(preimage.value());

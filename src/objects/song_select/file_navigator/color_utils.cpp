@@ -62,10 +62,10 @@ BoxColors resolve_box_colors(const std::optional<Color>& box_color, const std::o
         result.box.has_value() ? darken_color(result.box.value()) : Color(101, 0, 82, 255);
     if (box_color.has_value()) {
         result.outline = fore_color.value_or(default_outline);
-        result.text = fore_color.value_or(ray::WHITE);
+        result.text = fore_color.value_or(Color::WHITE);
     } else {
         result.outline = fore_color.value_or(default_outline);
-        result.text = ray::WHITE;
+        result.text = Color::WHITE;
     }
     return result;
 }

@@ -235,7 +235,7 @@ struct CameraConfig {
     float h_scale = 1.0f;
     float v_scale = 1.0f;
     float rotation = 0.0f;
-    Color border_color = ray::BLACK;
+    Color border_color = Color::BLACK;
 };
 
 class PracticeTimer;

@@ -21,7 +21,7 @@ void TitleScreen::on_screen_start() {
     state = TitleState::OP_VIDEO;
     hit_taiko_text = std::make_unique<OutlinedText>(font_manager.get_text_label("hit_taiko_to_start"),
                                                     font_manager.get_text_info("hit_taiko_to_start")->font_size,
-                                                    ray::WHITE, ray::BLACK, false, 4);
+                                                    Color::WHITE, Color::BLACK, false, 4);
     fade_out = dynamic_cast<FadeAnimation*>(tex.get_animation(13));
     text_overlay_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(14));
     if (text_overlay_fade) {
@@ -252,7 +252,7 @@ void TitleScreen::draw() {
         attract_scene->draw();
     }
 
-    draw_rectangle(0, 0, tex.screen_width, tex.screen_height, fade(ray::WHITE, fade_out->attribute));
+    draw_rectangle(0, 0, tex.screen_width, tex.screen_height, fade(Color::WHITE, fade_out->attribute));
     coin_overlay.draw();
     allnet_indicator.draw();
     entry_overlay.draw(true);

@@ -159,7 +159,7 @@ void ResultScreen::draw_overlay() {
         fade_in->draw();
     }
     if (fade_out) {
-        draw_rectangle(0, 0, tex.screen_width, tex.screen_height, fade(ray::BLACK, fade_out->attribute));
+        draw_rectangle(0, 0, tex.screen_width, tex.screen_height, fade(Color::BLACK, fade_out->attribute));
     }
     if (retry_message) {
         retry_message->draw();
@@ -181,7 +181,7 @@ void ResultScreen::draw() {
     if (loading_graphic.has_value()) {
         ray::Rectangle src = {0, 0, (float)loading_graphic.value().width, (float)loading_graphic.value().height};
         ray::Rectangle dst = {0, 0, (float)tex.screen_width, (float)tex.screen_height};
-        draw_texture_pro(loading_graphic.value(), src, dst, {0, 0}, 0, ray::WHITE);
+        draw_texture_pro(loading_graphic.value(), src, dst, {0, 0}, 0, Color::WHITE);
     }
     draw_song_info();
     if (player_1.has_value()) {

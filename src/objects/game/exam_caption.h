@@ -56,8 +56,8 @@ inline std::string exam_border_text(const TextureWrapper& tex, const Exam& exam,
 
 class ExamCaptionCache {
 public:
-    OutlinedText* get(const std::string& s, int size, float outline, Color fill = ray::WHITE,
-                      Color ol = ray::BLACK) {
+    OutlinedText* get(const std::string& s, int size, float outline, Color fill = Color::WHITE,
+                      Color ol = Color::BLACK) {
         if (s.empty() || size <= 0) {
             return nullptr;
         }
