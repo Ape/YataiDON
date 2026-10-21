@@ -191,6 +191,18 @@ TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int pla
 }
 
 void TJAParser::get_metadata() {
+    struct NumericField {
+        std::string_view keyword;
+        double TJAMetadata::* member;
+    };
+
+    static constexpr NumericField numeric_fields[] = {
+        {"BPM", &TJAMetadata::bpm},
+        {"OFFSET", &TJAMetadata::offset},
+        {"DEMOSTART", &TJAMetadata::demostart},
+        {"MOVIEOFFSET", &TJAMetadata::movieoffset},
+    };
+
     int current_diff = -1;
 
     for (const auto& item : data) {
@@ -225,16 +237,19 @@ void TJAParser::get_metadata() {
                 region_code = to_lower(item.substr(5, 2));
             }
             metadata.title[region_code] = join_after_colon(item);
-        } else if (item.starts_with("BPM")) {
+        } else if (const auto field = std::ranges::find_if(
+                       numeric_fields, [&](const NumericField& field) { return item.starts_with(field.keyword); });
+                   field != std::end(numeric_fields)) {
             std::string data_str = split_after_colon(item);
+            auto& value = metadata.*(field->member);
             if (data_str.empty()) {
-                metadata.bpm = 0.0f;
+                value = 0.0f;
             } else {
                 try {
-                    metadata.bpm = std::stof(data_str);
+                    value = std::stof(data_str);
                 } catch (const std::exception&) {
-                    spdlog::warn("Invalid BPM value '{}' in {}", data_str, file_path.string());
-                    metadata.bpm = 0.0f;
+                    spdlog::warn("Invalid {} value '{}' in {}", field->keyword, data_str, file_path.string());
+                    value = 0.0f;
                 }
             }
         } else if (item.starts_with("WAVE")) {
@@ -242,30 +257,6 @@ void TJAParser::get_metadata() {
 
             fs::path wave_path = get_proper_path(data_str, encoding, file_path.parent_path());
             metadata.wave = wave_path;
-        } else if (item.starts_with("OFFSET")) {
-            std::string data_str = split_after_colon(item);
-            if (data_str.empty()) {
-                metadata.offset = 0.0f;
-            } else {
-                try {
-                    metadata.offset = std::stof(data_str);
-                } catch (const std::exception&) {
-                    spdlog::warn("Invalid OFFSET value '{}' in {}", data_str, file_path.string());
-                    metadata.offset = 0.0f;
-                }
-            }
-        } else if (item.starts_with("DEMOSTART")) {
-            std::string data_str = split_after_colon(item);
-            if (data_str.empty()) {
-                metadata.demostart = 0.0f;
-            } else {
-                try {
-                    metadata.demostart = std::stof(data_str);
-                } catch (const std::exception&) {
-                    spdlog::warn("Invalid DEMOSTART value '{}' in {}", data_str, file_path.string());
-                    metadata.demostart = 0.0f;
-                }
-            }
         } else if (item.starts_with("BGMOVIE")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
@@ -273,18 +264,6 @@ void TJAParser::get_metadata() {
                 metadata.bgmovie = std::filesystem::path();
             } else {
                 metadata.bgmovie = get_proper_path(trim(data_str), encoding, file_path.parent_path());
-            }
-        } else if (item.starts_with("MOVIEOFFSET")) {
-            std::string data_str = split_after_colon(item);
-            if (data_str.empty()) {
-                metadata.movieoffset = 0.0f;
-            } else {
-                try {
-                    metadata.movieoffset = std::stof(data_str);
-                } catch (const std::exception&) {
-                    spdlog::warn("Invalid MOVIEOFFSET value '{}' in {}", data_str, file_path.string());
-                    metadata.movieoffset = 0.0f;
-                }
             }
         } else if (item.starts_with("PREIMAGE")) {
             std::string data_str = split_after_colon(item);
