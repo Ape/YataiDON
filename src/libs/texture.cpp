@@ -8,6 +8,7 @@
 #include <format>
 #include <mutex>
 #include <spdlog/spdlog.h>
+#include <string_view>
 #include <thread>
 
 #include "filesystem.h"
@@ -137,15 +138,21 @@ void TextureWrapper::init(const fs::path& skin_path) {
         for (auto& m : cfg["chara_3d"].GetObject()) {
             std::string name = m.name.GetString();
             if (m.value.IsNumber()) {
-                float v = m.value.GetFloat();
-                if (name == "scale") {
-                    chara_3d_config.scale = v;
-                } else if (name == "rot_x") {
-                    chara_3d_config.rot_x = v;
-                } else if (name == "rot_y") {
-                    chara_3d_config.rot_y = v;
-                } else if (name == "rot_z") {
-                    chara_3d_config.rot_z = v;
+                struct CharaField {
+                    std::string_view name;
+                    float Chara3DConfig::* member;
+                };
+
+                static constexpr CharaField fields[] = {
+                    {"scale", &Chara3DConfig::scale},
+                    {"rot_x", &Chara3DConfig::rot_x},
+                    {"rot_y", &Chara3DConfig::rot_y},
+                    {"rot_z", &Chara3DConfig::rot_z},
+                };
+
+                const auto field = std::ranges::find(fields, name, &CharaField::name);
+                if (field != std::end(fields)) {
+                    chara_3d_config.*(field->member) = m.value.GetFloat();
                 }
             } else if (m.value.IsArray() && m.value.Size() >= 2 && m.value[0].IsNumber() && m.value[1].IsNumber()) {
                 chara_positions[name] = {m.value[0].GetFloat() * scale, m.value[1].GetFloat() * scale};
