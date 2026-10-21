@@ -13,6 +13,7 @@
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 
 #include "../md5.h"
@@ -190,6 +191,18 @@ TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int pla
 }
 
 void TJAParser::get_metadata() {
+    struct NumericField {
+        std::string_view keyword;
+        double TJAMetadata::* member;
+    };
+
+    static constexpr NumericField numeric_fields[] = {
+        {"BPM", &TJAMetadata::bpm},
+        {"OFFSET", &TJAMetadata::offset},
+        {"DEMOSTART", &TJAMetadata::demostart},
+        {"MOVIEOFFSET", &TJAMetadata::movieoffset},
+    };
+
     int current_diff = -1;
 
     for (const auto& item : data) {
@@ -224,16 +237,19 @@ void TJAParser::get_metadata() {
                 region_code = to_lower(item.substr(5, 2));
             }
             metadata.title[region_code] = join_after_colon(item);
-        } else if (item.starts_with("BPM")) {
+        } else if (const auto field = std::ranges::find_if(
+                       numeric_fields, [&](const NumericField& field) { return item.starts_with(field.keyword); });
+                   field != std::end(numeric_fields)) {
             std::string data_str = split_after_colon(item);
+            auto& value = metadata.*(field->member);
             if (data_str.empty()) {
-                metadata.bpm = 0.0f;
+                value = 0.0f;
             } else {
                 try {
-                    metadata.bpm = std::stof(data_str);
+                    value = std::stof(data_str);
                 } catch (const std::exception&) {
-                    spdlog::warn("Invalid BPM value '{}' in {}", data_str, file_path.string());
-                    metadata.bpm = 0.0f;
+                    spdlog::warn("Invalid {} value '{}' in {}", field->keyword, data_str, file_path.string());
+                    value = 0.0f;
                 }
             }
         } else if (item.starts_with("WAVE")) {
@@ -241,30 +257,6 @@ void TJAParser::get_metadata() {
 
             fs::path wave_path = get_proper_path(data_str, encoding, file_path.parent_path());
             metadata.wave = wave_path;
-        } else if (item.starts_with("OFFSET")) {
-            std::string data_str = split_after_colon(item);
-            if (data_str.empty()) {
-                metadata.offset = 0.0f;
-            } else {
-                try {
-                    metadata.offset = std::stof(data_str);
-                } catch (const std::exception&) {
-                    spdlog::warn("Invalid OFFSET value '{}' in {}", data_str, file_path.string());
-                    metadata.offset = 0.0f;
-                }
-            }
-        } else if (item.starts_with("DEMOSTART")) {
-            std::string data_str = split_after_colon(item);
-            if (data_str.empty()) {
-                metadata.demostart = 0.0f;
-            } else {
-                try {
-                    metadata.demostart = std::stof(data_str);
-                } catch (const std::exception&) {
-                    spdlog::warn("Invalid DEMOSTART value '{}' in {}", data_str, file_path.string());
-                    metadata.demostart = 0.0f;
-                }
-            }
         } else if (item.starts_with("BGMOVIE")) {
             std::string data_str = split_after_colon(item);
             if (data_str.empty()) {
@@ -272,18 +264,6 @@ void TJAParser::get_metadata() {
                 metadata.bgmovie = std::filesystem::path();
             } else {
                 metadata.bgmovie = get_proper_path(trim(data_str), encoding, file_path.parent_path());
-            }
-        } else if (item.starts_with("MOVIEOFFSET")) {
-            std::string data_str = split_after_colon(item);
-            if (data_str.empty()) {
-                metadata.movieoffset = 0.0f;
-            } else {
-                try {
-                    metadata.movieoffset = std::stof(data_str);
-                } catch (const std::exception&) {
-                    spdlog::warn("Invalid MOVIEOFFSET value '{}' in {}", data_str, file_path.string());
-                    metadata.movieoffset = 0.0f;
-                }
             }
         } else if (item.starts_with("PREIMAGE")) {
             std::string data_str = split_after_colon(item);
@@ -297,22 +277,20 @@ void TJAParser::get_metadata() {
         } else if (item.starts_with("COURSE")) {
             std::string course = to_lower(trim(split_after_colon(item)));
 
-            if (course == "6" || course == "dan") {
-                current_diff = 6;
-            } else if (course == "5" || course == "tower") {
-                current_diff = 5;
-            } else if (course == "4" || course == "edit" || course == "ura") {
-                current_diff = 4;
-            } else if (course == "3" || course == "oni") {
-                current_diff = 3;
-            } else if (course == "2" || course == "hard") {
-                current_diff = 2;
-            } else if (course == "1" || course == "normal") {
-                current_diff = 1;
-            } else if (course == "0" || course == "easy") {
-                current_diff = 0;
-            } else {
-                current_diff = -1;
+            struct CourseAlias {
+                std::string_view name;
+                int difficulty;
+            };
+
+            static constexpr CourseAlias course_aliases[] = {
+                {"0", 0}, {"easy", 0}, {"1", 1},   {"normal", 1}, {"2", 2},     {"hard", 2}, {"3", 3},   {"oni", 3},
+                {"4", 4}, {"edit", 4}, {"ura", 4}, {"5", 5},      {"tower", 5}, {"6", 6},    {"dan", 6},
+            };
+
+            const auto alias = std::ranges::find(course_aliases, course, &CourseAlias::name);
+            current_diff = alias != std::end(course_aliases) ? alias->difficulty : -1;
+
+            if (current_diff == -1) {
                 spdlog::warn("Unrecognized COURSE value '{}' in {}", course, file_path.string());
             }
 
@@ -332,51 +310,40 @@ void TJAParser::get_metadata() {
                         metadata.course_data[current_diff].level = 0;
                     }
                 }
-            } else if (item.starts_with("BALLOONNOR")) {
-                std::string balloon_data = split_after_colon(item);
-                if (!balloon_data.empty()) {
-                    try {
-                        auto balloons = parse_balloon_data(balloon_data);
-                        metadata.course_data[current_diff].balloon.insert(
-                            metadata.course_data[current_diff].balloon.end(), balloons.begin(), balloons.end());
-                    } catch (const std::exception& e) {
-                        spdlog::warn("Invalid BALLOONNOR value '{}' in {}: {}", balloon_data, file_path.string(),
-                                     e.what());
-                    }
-                }
-            } else if (item.starts_with("BALLOONEXP")) {
-                std::string balloon_data = split_after_colon(item);
-                if (!balloon_data.empty()) {
-                    try {
-                        auto balloons = parse_balloon_data(balloon_data);
-                        metadata.course_data[current_diff].balloon.insert(
-                            metadata.course_data[current_diff].balloon.end(), balloons.begin(), balloons.end());
-                    } catch (const std::exception& e) {
-                        spdlog::warn("Invalid BALLOONEXP value '{}' in {}: {}", balloon_data, file_path.string(),
-                                     e.what());
-                    }
-                }
-            } else if (item.starts_with("BALLOONMAS")) {
-                std::string balloon_data = split_after_colon(item);
-                if (!balloon_data.empty()) {
-                    try {
-                        metadata.course_data[current_diff].balloon = parse_balloon_data(balloon_data);
-                    } catch (const std::exception& e) {
-                        spdlog::warn("Invalid BALLOONMAS value '{}' in {}: {}", balloon_data, file_path.string(),
-                                     e.what());
-                    }
-                }
             } else if (item.starts_with("BALLOON")) {
-                if (!item.contains(':')) {
-                    metadata.course_data[current_diff].balloon.clear();
+                struct BalloonRule {
+                    std::string_view keyword;
+                    bool append;
+                    bool clear_without_colon;
+                };
+
+                static constexpr BalloonRule rules[] = {
+                    {.keyword = "BALLOONNOR", .append = true, .clear_without_colon = false},
+                    {.keyword = "BALLOONEXP", .append = true, .clear_without_colon = false},
+                    {.keyword = "BALLOONMAS", .append = false, .clear_without_colon = false},
+                    {.keyword = "BALLOON", .append = false, .clear_without_colon = true},
+                };
+
+                const auto rule = std::ranges::find_if(
+                    rules, [&](const BalloonRule& rule) { return item.starts_with(rule.keyword); });
+
+                auto& balloons = metadata.course_data[current_diff].balloon;
+                if (rule->clear_without_colon && !item.contains(':')) {
+                    balloons.clear();
                     continue;
                 }
+
                 std::string balloon_data = split_after_colon(item);
                 if (!balloon_data.empty()) {
                     try {
-                        metadata.course_data[current_diff].balloon = parse_balloon_data(balloon_data);
+                        auto parsed = parse_balloon_data(balloon_data);
+                        if (rule->append) {
+                            balloons.insert(balloons.end(), parsed.begin(), parsed.end());
+                        } else {
+                            balloons = std::move(parsed);
+                        }
                     } catch (const std::exception& e) {
-                        spdlog::warn("Invalid BALLOON value '{}' in {}: {}", balloon_data, file_path.string(),
+                        spdlog::warn("Invalid {} value '{}' in {}: {}", rule->keyword, balloon_data, file_path.string(),
                                      e.what());
                     }
                 }

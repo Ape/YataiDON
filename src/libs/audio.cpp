@@ -267,42 +267,33 @@ static void unload_music_stream_from_map(std::unordered_map<std::string, music>&
 
 AudioEngine::AudioEngine() = default;
 
+#if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
+struct RtAudioBackend {
+    int device_type;
+    RtAudio::Api api;
+    const char* name;
+};
+
+static const RtAudioBackend* find_rtaudio_backend(int device_type) {
+    static constexpr RtAudioBackend backends[] = {
+        {1, RtAudio::LINUX_ALSA, "ALSA"},       {2, RtAudio::LINUX_PULSE, "PulseAudio"},
+        {3, RtAudio::UNIX_JACK, "JACK"},        {4, RtAudio::LINUX_OSS, "OSS"},
+        {5, RtAudio::MACOSX_CORE, "CoreAudio"}, {6, RtAudio::WINDOWS_DS, "DirectSound"},
+        {7, RtAudio::WINDOWS_WASAPI, "WASAPI"}, {8, RtAudio::WINDOWS_ASIO, "ASIO"},
+    };
+
+    const auto backend = std::ranges::find(backends, device_type, &RtAudioBackend::device_type);
+    return backend != std::end(backends) ? backend : nullptr;
+}
+#endif
+
 std::vector<std::string> enumerate_audio_devices(int device_type) {
     std::vector<std::string> names;
 
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
-    RtAudio::Api api = RtAudio::UNSPECIFIED;
-    switch (device_type) {
-    case 1:
-        api = RtAudio::LINUX_ALSA;
-        break;
-    case 2:
-        api = RtAudio::LINUX_PULSE;
-        break;
-    case 3:
-        api = RtAudio::UNIX_JACK;
-        break;
-    case 4:
-        api = RtAudio::LINUX_OSS;
-        break;
-    case 5:
-        api = RtAudio::MACOSX_CORE;
-        break;
-    case 6:
-        api = RtAudio::WINDOWS_DS;
-        break;
-    case 7:
-        api = RtAudio::WINDOWS_WASAPI;
-        break;
-    case 8:
-        api = RtAudio::WINDOWS_ASIO;
-        break;
-    default:
-        break;
-    }
-    if (api != RtAudio::UNSPECIFIED) {
+    if (const auto* backend = find_rtaudio_backend(device_type)) {
         try {
-            RtAudio rt(api, [](RtAudioErrorType type, const std::string& errorText) {
+            RtAudio rt(backend->api, [](RtAudioErrorType type, const std::string& errorText) {
                 if (type == RTAUDIO_WARNING) {
                     spdlog::warn("RtAudio: {}", errorText);
                 } else {
@@ -865,25 +856,8 @@ bool AudioEngine::init_audio_device(const fs::path& sounds_path, const AudioConf
     this->master_volume = 1.0f;
     try {
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
-        switch (audio_config.device_type) {
-        case 1:
-            return init_rtaudio_device(RtAudio::LINUX_ALSA, "ALSA");
-        case 2:
-            return init_rtaudio_device(RtAudio::LINUX_PULSE, "PulseAudio");
-        case 3:
-            return init_rtaudio_device(RtAudio::UNIX_JACK, "JACK");
-        case 4:
-            return init_rtaudio_device(RtAudio::LINUX_OSS, "OSS");
-        case 5:
-            return init_rtaudio_device(RtAudio::MACOSX_CORE, "CoreAudio");
-        case 6:
-            return init_rtaudio_device(RtAudio::WINDOWS_DS, "DirectSound");
-        case 7:
-            return init_rtaudio_device(RtAudio::WINDOWS_WASAPI, "WASAPI");
-        case 8:
-            return init_rtaudio_device(RtAudio::WINDOWS_ASIO, "ASIO");
-        default:
-            break;
+        if (const auto* backend = find_rtaudio_backend(audio_config.device_type)) {
+            return init_rtaudio_device(backend->api, backend->name);
         }
 #endif
 #ifdef _WIN32
@@ -1333,6 +1307,24 @@ uint64_t AudioEngine::sound_play_count(const std::string& name) {
     return it == play_counts.end() ? 0 : it->second;
 }
 
+static float get_preset_volume(const VolumeConfig& volumes, VolumePreset preset) {
+    struct PresetVolume {
+        VolumePreset preset;
+        float VolumeConfig::* member;
+    };
+
+    static constexpr PresetVolume presets[] = {
+        {VolumePreset::SOUND, &VolumeConfig::sound},
+        {VolumePreset::MUSIC, &VolumeConfig::music},
+        {VolumePreset::VOICE, &VolumeConfig::voice},
+        {VolumePreset::HITSOUND, &VolumeConfig::hitsound},
+        {VolumePreset::ATTRACT_MODE, &VolumeConfig::attract_mode},
+    };
+
+    const auto match = std::ranges::find(presets, preset, &PresetVolume::preset);
+    return match != std::end(presets) ? volumes.*(match->member) : 1.0f;
+}
+
 void AudioEngine::play_sound(const std::string& name, VolumePreset volume_preset, float gain) {
     {
         std::scoped_lock g(play_count_lock);
@@ -1344,18 +1336,7 @@ void AudioEngine::play_sound(const std::string& name, VolumePreset volume_preset
         sound& snd = it->second;
 
         if (volume_preset != VolumePreset::NONE) {
-            float volume = 1.0f;
-            if (volume_preset == VolumePreset::SOUND) {
-                volume = volume_presets.sound;
-            } else if (volume_preset == VolumePreset::MUSIC) {
-                volume = volume_presets.music;
-            } else if (volume_preset == VolumePreset::VOICE) {
-                volume = volume_presets.voice;
-            } else if (volume_preset == VolumePreset::HITSOUND) {
-                volume = volume_presets.hitsound;
-            } else if (volume_preset == VolumePreset::ATTRACT_MODE) {
-                volume = volume_presets.attract_mode;
-            }
+            const float volume = get_preset_volume(volume_presets, volume_preset);
             std::atomic_ref<float>(snd.volume).store(volume, std::memory_order_relaxed);
         }
 
@@ -1730,18 +1711,7 @@ void AudioEngine::play_music_stream(const std::string& name, VolumePreset volume
         music& mus = it->second;
 
         if (volume_preset != VolumePreset::NONE) {
-            float volume = 1.0f;
-            if (volume_preset == VolumePreset::SOUND) {
-                volume = volume_presets.sound;
-            } else if (volume_preset == VolumePreset::MUSIC) {
-                volume = volume_presets.music;
-            } else if (volume_preset == VolumePreset::VOICE) {
-                volume = volume_presets.voice;
-            } else if (volume_preset == VolumePreset::HITSOUND) {
-                volume = volume_presets.hitsound;
-            } else if (volume_preset == VolumePreset::ATTRACT_MODE) {
-                volume = volume_presets.attract_mode;
-            }
+            const float volume = get_preset_volume(volume_presets, volume_preset);
             std::atomic_ref<float>(mus.volume).store(volume, std::memory_order_relaxed);
         }
 

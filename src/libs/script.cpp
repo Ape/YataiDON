@@ -976,21 +976,27 @@ void ScriptManager::register_lua_bindings() {
 
     audio_tbl.set_function(
         "play_sound", [](const std::string& name, sol::optional<std::string> preset_str, sol::optional<bool> loop) {
+            struct NamedPreset {
+                std::string_view name;
+                VolumePreset preset;
+            };
+
+            static constexpr NamedPreset presets[] = {
+                {"sound", VolumePreset::SOUND},
+                {"music", VolumePreset::MUSIC},
+                {"voice", VolumePreset::VOICE},
+                {"hitsound", VolumePreset::HITSOUND},
+                {"attract_mode", VolumePreset::ATTRACT_MODE},
+            };
+
             VolumePreset preset = VolumePreset::NONE;
             if (preset_str) {
-                const std::string& p = preset_str.value();
-                if (p == "sound") {
-                    preset = VolumePreset::SOUND;
-                } else if (p == "music") {
-                    preset = VolumePreset::MUSIC;
-                } else if (p == "voice") {
-                    preset = VolumePreset::VOICE;
-                } else if (p == "hitsound") {
-                    preset = VolumePreset::HITSOUND;
-                } else if (p == "attract_mode") {
-                    preset = VolumePreset::ATTRACT_MODE;
+                const auto match = std::ranges::find(presets, preset_str.value(), &NamedPreset::name);
+                if (match != std::end(presets)) {
+                    preset = match->preset;
                 }
             }
+
             audio.set_sound_loop(name, loop.value_or(false));
             audio.play_sound(name, preset);
         });
