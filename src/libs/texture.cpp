@@ -387,10 +387,10 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
         }
     }
 
-    ray::TextureFilter filter = ray::TEXTURE_FILTER_BILINEAR;
+    ray::TextureFilter filter = texture_filter::BILINEAR;
     for (int i = 0; i < tex_obj->frame_count(); i++) {
         if (const ray::Texture2D* t = tex_obj->frame_texture(i)) {
-            SetTextureFilter(*const_cast<ray::Texture2D*>(t), filter);
+            set_texture_filter(*const_cast<ray::Texture2D*>(t), filter);
         }
     }
 }
@@ -457,7 +457,7 @@ std::unordered_map<std::string, std::weak_ptr<TextureObject>>& tex_object_cache(
 std::shared_ptr<ray::Texture2D> shared_texture(ray::Texture2D tex) {
     return std::shared_ptr<ray::Texture2D>(new ray::Texture2D(tex), [](ray::Texture2D* p) {
         if (p->id != 0) {
-            ray::UnloadTexture(*p);
+            unload_texture(*p);
         }
         delete p;
     });
@@ -934,7 +934,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                                 spdlog::error("Failed to decode image for texture {}: Frame {}", p.name, i);
                                 ok = false;
                             } else {
-                                ray::Texture2D t = ray::LoadTextureFromImage(img);
+                                ray::Texture2D t = load_texture_from_image(img);
                                 if (!ray::IsTextureValid(t)) {
                                     spdlog::error("Failed to load texture {}: Frame {}", p.name, i);
                                     ok = false;

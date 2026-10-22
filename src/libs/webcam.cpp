@@ -46,7 +46,7 @@ bool WebCamera::open(int) {
 
 void WebCamera::close() {
     if (m_texture.has_value()) {
-        ray::UnloadTexture(m_texture.value());
+        unload_texture(m_texture.value());
         m_texture.reset();
     }
     m_width = m_height = 0;
@@ -96,7 +96,7 @@ bool WebCamera::open(int device_index) {
 
 void WebCamera::close() {
     if (m_texture.has_value()) {
-        ray::UnloadTexture(m_texture.value());
+        unload_texture(m_texture.value());
         m_texture.reset();
     }
     if (m_camera) {
@@ -121,7 +121,7 @@ void WebCamera::update() {
             spdlog::warn("WebCamera: permission denied");
             m_permission_denied_logged = true;
             if (m_texture.has_value()) {
-                ray::UnloadTexture(m_texture.value());
+                unload_texture(m_texture.value());
                 m_texture.reset();
                 m_width = m_height = 0;
             }
@@ -167,18 +167,18 @@ void WebCamera::update() {
         img.mipmaps = 1;
         img.format = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
 
-        ray::Texture2D tex = ray::LoadTextureFromImage(img);
+        ray::Texture2D tex = load_texture_from_image(img);
         if (tex.id == 0) {
             spdlog::error("WebCamera: failed to create texture {}x{}", m_width, m_height);
             m_width = m_height = 0;
             SDL_DestroySurface(rgba);
             return;
         }
-        ray::SetTextureFilter(tex, ray::TEXTURE_FILTER_BILINEAR);
+        set_texture_filter(tex, texture_filter::BILINEAR);
         m_texture = tex;
     } else if (rgba->w != m_width || rgba->h != m_height) {
         // frame geometry changed - recreate the texture
-        ray::UnloadTexture(m_texture.value());
+        unload_texture(m_texture.value());
         m_texture.reset();
         m_width = rgba->w;
         m_height = rgba->h;
@@ -188,14 +188,14 @@ void WebCamera::update() {
         img.height = m_height;
         img.mipmaps = 1;
         img.format = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-        ray::Texture2D tex = ray::LoadTextureFromImage(img);
+        ray::Texture2D tex = load_texture_from_image(img);
         if (tex.id == 0) {
             spdlog::error("WebCamera: failed to create texture {}x{}", m_width, m_height);
             m_width = m_height = 0;
             SDL_DestroySurface(rgba);
             return;
         }
-        ray::SetTextureFilter(tex, ray::TEXTURE_FILTER_BILINEAR);
+        set_texture_filter(tex, texture_filter::BILINEAR);
         m_texture = tex;
     } else {
         ray::UpdateTexture(m_texture.value(), pixels);

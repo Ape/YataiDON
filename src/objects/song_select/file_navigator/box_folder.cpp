@@ -188,7 +188,7 @@ void FolderBox::run_deferred_scans(std::atomic<bool>& abort_flag) {
 
 FolderBox::~FolderBox() {
     if (box_texture.has_value()) {
-        ray::UnloadTexture(box_texture.value());
+        unload_texture(box_texture.value());
     }
 }
 
@@ -202,14 +202,10 @@ void FolderBox::load_text() {
             it++;
         }
         if (!dir_ec && it != end) {
-            box_texture = ray::LoadTexture((it->path()).string().c_str());
-            ray::GenTextureMipmaps(&box_texture.value());
-            ray::SetTextureFilter(box_texture.value(), ray::TEXTURE_FILTER_TRILINEAR);
+            box_texture = load_texture_mipmapped((it->path()).string().c_str());
         }
     } else if (fs::exists(fs::path(path / "box.png")) && !box_texture.has_value()) {
-        box_texture = ray::LoadTexture((path / "box.png").string().c_str());
-        ray::GenTextureMipmaps(&box_texture.value());
-        ray::SetTextureFilter(box_texture.value(), ray::TEXTURE_FILTER_TRILINEAR);
+        box_texture = load_texture_mipmapped((path / "box.png").string().c_str());
     }
     text_loaded = true;
 }

@@ -51,7 +51,7 @@ public:
         }
         release_preview_slot();
         if (preimage.has_value()) {
-            ray::UnloadTexture(preimage.value());
+            unload_texture(preimage.value());
         }
     }
 

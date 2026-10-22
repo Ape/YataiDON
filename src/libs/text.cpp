@@ -45,7 +45,7 @@ void FontManager::init(const fs::path& font_path) {
 
     if (sentinel_texture.id == 0) {
         ray::Image px = gen_image_color(1, 1, Color::BLANK);
-        sentinel_texture = ray::LoadTextureFromImage(px);
+        sentinel_texture = load_texture_from_image(px);
         ray::UnloadImage(px);
     }
 }
@@ -131,7 +131,7 @@ void FontManager::unload() {
     }
     fonts.clear();
     if (sentinel_texture.id != 0) {
-        ray::UnloadTexture(sentinel_texture);
+        unload_texture(sentinel_texture);
         sentinel_texture = {};
     }
 }
@@ -261,7 +261,7 @@ void FontManager::rebuild_atlas(SizedFont& entry, int font_size) {
         RL_FREE(f.glyphs);
         return;
     }
-    f.texture = ray::LoadTextureFromImage(atlas);
+    f.texture = load_texture_from_image(atlas);
     // Like LoadFontEx: the Font's own glyph images are GRAY_ALPHA crops of the atlas
     // (ImageDrawTextEx / OutlinedText composite from them). The cache keeps the raw
     // GRAYSCALE bitmaps GenImageFontAtlas needs for the next repack.
@@ -269,7 +269,7 @@ void FontManager::rebuild_atlas(SizedFont& entry, int font_size) {
         f.glyphs[i].image = ray::ImageFromImage(atlas, f.recs[i]);
     }
     ray::UnloadImage(atlas);
-    ray::SetTextureFilter(f.texture, ray::TEXTURE_FILTER_BILINEAR);
+    set_texture_filter(f.texture, texture_filter::BILINEAR);
     entry.font = f;
     entry.loaded = true;
     entry.atlas_dirty = false;
@@ -282,7 +282,7 @@ void FontManager::release_font(SizedFont& entry) {
         return;
     }
     if (entry.font.texture.id != 0) {
-        ray::UnloadTexture(entry.font.texture);
+        unload_texture(entry.font.texture);
     }
     if (entry.font.glyphs) {
         for (int i = 0; i < entry.font.glyphCount; i++) {
@@ -765,7 +765,7 @@ OutlinedText::~OutlinedText() {
         ray::UnloadFont(worker_font);
     }
     if (texture.has_value()) {
-        ray::UnloadTexture(texture.value());
+        unload_texture(texture.value());
     }
 }
 
@@ -976,8 +976,8 @@ bool OutlinedText::upload_pending() {
     ray::UnloadFont(worker_font);
     worker_font = {};
 
-    ray::Texture tex = ray::LoadTextureFromImage(*img);
-    ray::SetTextureFilter(tex, ray::TEXTURE_FILTER_BILINEAR);
+    ray::Texture tex = load_texture_from_image(*img);
+    set_texture_filter(tex, texture_filter::BILINEAR);
     ray::UnloadImage(*img);
 
     texture = tex;

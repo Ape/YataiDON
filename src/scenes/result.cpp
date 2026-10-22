@@ -21,7 +21,7 @@ void ResultScreen::on_screen_start() {
         global_data.session_data[(int)global_data.player_num].selected_song.parent_path() / "Loading.png";
     background.reset();
     if (exists(loading_graphic_path)) {
-        ray::Texture2D loaded = ray::LoadTexture(loading_graphic_path.string().c_str());
+        ray::Texture2D loaded = load_texture(loading_graphic_path.string().c_str());
         if (loaded.id != 0) {
             loading_graphic.emplace(loaded);
         } else {
@@ -36,7 +36,7 @@ void ResultScreen::on_screen_start() {
 
 Screens ResultScreen::on_screen_end(Screens next_screen) {
     if (loading_graphic.has_value()) {
-        ray::UnloadTexture(loading_graphic.value());
+        unload_texture(loading_graphic.value());
         loading_graphic.reset();
     }
     // the retry mini-game restarts the song from this session

@@ -132,11 +132,9 @@ void SongBox::load_text() {
                                          Color::BLACK, false);
     if (exists(parser.metadata.preimage)) {
         if (preimage.has_value()) {
-            ray::UnloadTexture(preimage.value());
+            unload_texture(preimage.value());
         }
-        preimage = ray::LoadTexture(parser.metadata.preimage.string().c_str());
-        ray::GenTextureMipmaps(&preimage.value());
-        ray::SetTextureFilter(preimage.value(), ray::TEXTURE_FILTER_TRILINEAR);
+        preimage = load_texture_mipmapped(parser.metadata.preimage.string().c_str());
     }
     text_loaded = true;
 }

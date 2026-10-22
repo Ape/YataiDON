@@ -110,8 +110,8 @@ public:
     void load_fonts() {
         ui_font = ray::LoadFontEx(resolve_skin_path("Fonts/debug_ui.ttf").string().c_str(), 32, nullptr, 0);
         code_font = ray::LoadFontEx(resolve_skin_path("Fonts/debug_code.ttf").string().c_str(), 32, nullptr, 0);
-        ray::SetTextureFilter(ui_font.texture, ray::TEXTURE_FILTER_BILINEAR);
-        ray::SetTextureFilter(code_font.texture, ray::TEXTURE_FILTER_BILINEAR);
+        set_texture_filter(ui_font.texture, texture_filter::BILINEAR);
+        set_texture_filter(code_font.texture, texture_filter::BILINEAR);
         fonts_loaded = true;
     }
 

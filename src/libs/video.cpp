@@ -9,11 +9,11 @@
 
 VideoPlayer::VideoPlayer(fs::path path) : is_finished_arr{false, false} {
     if (path.extension() == ".png" || path.extension() == ".jpg") {
-        texture = ray::LoadTexture(path.string().c_str());
+        texture = load_texture(path.string().c_str());
         is_static = true;
         if (!ray::IsTextureValid(texture.value())) {
             spdlog::error("Failed to load static texture for video: {}", path.stem().string());
-            ray::UnloadTexture(texture.value());
+            unload_texture(texture.value());
             texture.reset();
             return;
         }
@@ -144,7 +144,7 @@ void VideoPlayer::upload_frame(const DecodedFrame& frame) {
     const void* pixels_ptr = static_cast<const void*>(frame.bytes.data());
 
     if (texture.has_value() && (texture->width != frame.width || texture->height != frame.height)) {
-        ray::UnloadTexture(texture.value());
+        unload_texture(texture.value());
         texture.reset();
     }
 
@@ -156,8 +156,8 @@ void VideoPlayer::upload_frame(const DecodedFrame& frame) {
         image.mipmaps = 1;
         image.format = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8;
 
-        ray::Texture2D tex = ray::LoadTextureFromImage(image);
-        ray::SetTextureFilter(tex, ray::TEXTURE_FILTER_TRILINEAR);
+        ray::Texture2D tex = load_texture_from_image(image);
+        set_texture_filter(tex, texture_filter::TRILINEAR);
         texture = tex;
     } else {
         ray::UpdateTexture(texture.value(), pixels_ptr);
@@ -286,7 +286,7 @@ void VideoPlayer::stop() {
 
     if (is_static) {
         if (texture.has_value()) {
-            ray::UnloadTexture(texture.value());
+            unload_texture(texture.value());
             texture.reset();
         }
         return;
@@ -298,7 +298,7 @@ void VideoPlayer::stop() {
     }
 
     if (texture.has_value()) {
-        ray::UnloadTexture(texture.value());
+        unload_texture(texture.value());
         texture.reset();
     }
 

@@ -23,23 +23,21 @@ Transition::Transition(const std::string& title, const std::string& subtitle, bo
 
 Transition::~Transition() {
     if (loading_graphic.has_value()) {
-        ray::UnloadTexture(loading_graphic.value());
+        unload_texture(loading_graphic.value());
     }
 }
 
 void Transition::add_loading_graphic(const std::string& path) {
-    ray::Texture2D tex = ray::LoadTexture(path.c_str());
+    ray::Texture2D tex = load_texture_mipmapped(path.c_str());
     if (tex.id == 0) {
         spdlog::error("Failed to load transition loading graphic: {}", path);
         return;
     }
     if (loading_graphic.has_value()) {
-        ray::UnloadTexture(loading_graphic.value());
+        unload_texture(loading_graphic.value());
         loading_graphic.reset();
     }
     loading_graphic.emplace(tex);
-    ray::GenTextureMipmaps(&loading_graphic.value());
-    ray::SetTextureFilter(loading_graphic.value(), ray::TEXTURE_FILTER_TRILINEAR);
 }
 
 void Transition::set_dan(int color, const std::string& rank_name) {

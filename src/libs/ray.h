@@ -160,6 +160,39 @@ inline void swap_screen_buffer() {
     ray::SwapScreenBuffer();
 }
 
+namespace texture_filter {
+    inline constexpr ray::TextureFilter BILINEAR = ray::TEXTURE_FILTER_BILINEAR;
+    inline constexpr ray::TextureFilter TRILINEAR = ray::TEXTURE_FILTER_TRILINEAR;
+}
+
+inline ray::Texture2D load_texture(const char* path) {
+    return ray::LoadTexture(path);
+}
+
+inline ray::Texture2D load_texture_from_image(ray::Image image) {
+    return ray::LoadTextureFromImage(image);
+}
+
+inline void unload_texture(ray::Texture2D tex) {
+    ray::UnloadTexture(tex);
+}
+
+inline void set_texture_filter(ray::Texture2D tex, ray::TextureFilter filter) {
+    ray::SetTextureFilter(tex, filter);
+}
+
+inline void gen_texture_mipmaps(ray::Texture2D& tex) {
+    ray::GenTextureMipmaps(&tex);
+}
+
+inline ray::Texture2D load_texture_mipmapped(const char* path,
+                                             ray::TextureFilter filter = texture_filter::TRILINEAR) {
+    ray::Texture2D tex = ray::LoadTexture(path);
+    gen_texture_mipmaps(tex);
+    set_texture_filter(tex, filter);
+    return tex;
+}
+
 inline void clear_background(Color color) {
     ray::ClearBackground({color.r, color.g, color.b, color.a});
 }

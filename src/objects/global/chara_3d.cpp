@@ -495,7 +495,7 @@ Chara3D::~Chara3D() {
     }
     ray::UnloadShader(outline_shader);
     for (auto& tex : face_textures) {
-        ray::UnloadTexture(tex);
+        unload_texture(tex);
     }
 }
 
@@ -506,11 +506,9 @@ void Chara3D::set_texture(fs::path& texture_path, int part_index, int material_i
     bool is_face_material =
         part_face_material_index[part_index] != -1 && material_index == part_face_material_index[part_index];
     if (old.id != 0 && !is_face_material) {
-        ray::UnloadTexture(old);
+        unload_texture(old);
     }
-    ray::Texture tex = ray::LoadTexture(texture_path.string().c_str());
-    ray::GenTextureMipmaps(&tex);
-    ray::SetTextureFilter(tex, ray::TEXTURE_FILTER_BILINEAR);
+    ray::Texture tex = load_texture_mipmapped(texture_path.string().c_str(), texture_filter::BILINEAR);
     int map_type = ray::MATERIAL_MAP_DIFFUSE;
     ray::SetMaterialTexture(&parts[part_index].materials[material_index], map_type, tex);
     render_dirty = true;
@@ -559,7 +557,7 @@ void Chara3D::load_face_textures(fs::path& face_dir) {
     for (int f = 0; f < frame_count; f++) {
         ray::Rectangle rect = {0, (float)(f * frame_size), (float)frame_size, (float)frame_size};
         ray::Image frame_img = ray::ImageFromImage(sheet, rect);
-        face_textures.push_back(ray::LoadTextureFromImage(frame_img));
+        face_textures.push_back(load_texture_from_image(frame_img));
         ray::UnloadImage(frame_img);
     }
     ray::UnloadImage(sheet);
@@ -626,7 +624,7 @@ static ray::Texture2D recolor_texture(ray::Image& source, Color body, Color face
         pixels[i * 4 + 2] = out.b;
     }
 
-    ray::Texture2D result = ray::LoadTextureFromImage(img);
+    ray::Texture2D result = load_texture_from_image(img);
     ray::UnloadImage(img);
     return result;
 }
@@ -642,7 +640,7 @@ static void apply_don_colors(ray::Model& model, int mat_idx, Color body, Color f
     if (new_tex.id == 0) {
         return;
     }
-    ray::UnloadTexture(map.texture);
+    unload_texture(map.texture);
     map.texture = new_tex;
 }
 
@@ -1008,7 +1006,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
                 draw_full_target(x, y, rw, rh, cam2d);
                 return;
             }
-            ray::SetTextureFilter(scene_target.texture, ray::TEXTURE_FILTER_BILINEAR);
+            set_texture_filter(scene_target.texture, texture_filter::BILINEAR);
             scene_target_w = nw;
             scene_target_h = nh;
             float ts[2] = {(float)nw, (float)nh};
@@ -1074,7 +1072,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
             spdlog::warn("Chara3D: render texture unavailable, using direct render");
             use_render_textures = false;
         } else {
-            ray::SetTextureFilter(scene_target.texture, ray::TEXTURE_FILTER_BILINEAR);
+            set_texture_filter(scene_target.texture, texture_filter::BILINEAR);
         }
         scene_target_w = ssw;
         scene_target_h = ssh;

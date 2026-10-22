@@ -34,7 +34,7 @@ CostumeMenu::CostumeMenu(PlayerNum player_num) : player_num(player_num), is_2p(p
 
 CostumeMenu::~CostumeMenu() {
     for (auto& icon : costume_icons) {
-        ray::UnloadTexture(icon);
+        unload_texture(icon);
     }
 }
 
@@ -42,7 +42,7 @@ void CostumeMenu::load_costume_icons(const std::string& subdir, const std::strin
     icon_prev_index = -1;
     icon_scroll_dir = 0;
     for (auto& icon : costume_icons) {
-        ray::UnloadTexture(icon);
+        unload_texture(icon);
     }
     costume_icons.clear();
     costume_ids.clear();
@@ -67,7 +67,7 @@ void CostumeMenu::load_costume_icons(const std::string& subdir, const std::strin
     }
     std::ranges::sort(entries, [](const auto& a, const auto& b) { return a.first < b.first; });
     for (auto& [id, path] : entries) {
-        ray::Texture t = ray::LoadTexture(path.string().c_str());
+        ray::Texture t = load_texture(path.string().c_str());
         if (t.id == 0 || t.width <= 0 || t.height <= 0) {
             spdlog::warn("CostumeMenu: failed to load icon {}", path.string());
             continue;
