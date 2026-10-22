@@ -297,6 +297,80 @@ inline void end_shader_mode() {
     ray::EndShaderMode();
 }
 
+namespace pixel_format {
+    inline constexpr int RGB8 = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+    inline constexpr int RGBA8 = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+} // namespace pixel_format
+
+inline ray::Image load_image(const char* path) {
+    return ray::LoadImage(path);
+}
+
+inline ray::Image load_image_from_texture(ray::Texture2D tex) {
+    return ray::LoadImageFromTexture(tex);
+}
+
+inline ray::Image load_image_from_screen() {
+    return ray::LoadImageFromScreen();
+}
+
+inline void unload_image(ray::Image image) {
+    ray::UnloadImage(image);
+}
+
+inline bool export_image(ray::Image image, const char* path) {
+    return ray::ExportImage(image, path);
+}
+
+inline ray::Image image_copy(ray::Image image) {
+    return ray::ImageCopy(image);
+}
+
+inline ray::Image image_from_image(ray::Image image, ray::Rectangle rec) {
+    return ray::ImageFromImage(image, rec);
+}
+
+inline void image_format(ray::Image* image, int new_format) {
+    ray::ImageFormat(image, new_format);
+}
+
+inline void image_crop(ray::Image* image, ray::Rectangle crop) {
+    ray::ImageCrop(image, crop);
+}
+
+inline void image_rotate_cw(ray::Image* image) {
+    ray::ImageRotateCW(image);
+}
+
+inline void image_draw_image_pro(ray::Image* dst, ray::Image src, ray::Rectangle src_rec, ray::Rectangle dst_rec,
+                                 ray::Vector2 origin, float rotation, Color tint) {
+    ray::ImageDrawImagePro(dst, src, src_rec, dst_rec, origin, rotation, {tint.r, tint.g, tint.b, tint.a});
+}
+
+inline ray::Rectangle get_image_alpha_border(ray::Image image, float threshold) {
+    return ray::GetImageAlphaBorder(image, threshold);
+}
+
+inline int get_pixel_data_size(int width, int height, int format) {
+    return ray::GetPixelDataSize(width, height, format);
+}
+
+inline void update_texture(ray::Texture2D tex, const void* pixels) {
+    ray::UpdateTexture(tex, pixels);
+}
+
+inline bool is_texture_valid(ray::Texture2D tex) {
+    return ray::IsTextureValid(tex);
+}
+
+inline unsigned char* load_file_data(const char* path, int* size) {
+    return ray::LoadFileData(path, size);
+}
+
+inline void unload_file_data(unsigned char* data) {
+    ray::UnloadFileData(data);
+}
+
 inline void clear_background(Color color) {
     ray::ClearBackground({color.r, color.g, color.b, color.a});
 }

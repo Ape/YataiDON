@@ -11,7 +11,7 @@ VideoPlayer::VideoPlayer(fs::path path) : is_finished_arr{false, false} {
     if (path.extension() == ".png" || path.extension() == ".jpg") {
         texture = load_texture(path.string().c_str());
         is_static = true;
-        if (!ray::IsTextureValid(texture.value())) {
+        if (!is_texture_valid(texture.value())) {
             spdlog::error("Failed to load static texture for video: {}", path.stem().string());
             unload_texture(texture.value());
             texture.reset();
@@ -154,13 +154,13 @@ void VideoPlayer::upload_frame(const DecodedFrame& frame) {
         image.width = frame.width;
         image.height = frame.height;
         image.mipmaps = 1;
-        image.format = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8;
+        image.format = pixel_format::RGB8;
 
         ray::Texture2D tex = load_texture_from_image(image);
         set_texture_filter(tex, texture_filter::TRILINEAR);
         texture = tex;
     } else {
-        ray::UpdateTexture(texture.value(), pixels_ptr);
+        update_texture(texture.value(), pixels_ptr);
     }
 }
 

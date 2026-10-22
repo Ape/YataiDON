@@ -32,21 +32,21 @@ void FontManager::init(const fs::path& font_path) {
     fonts.clear();
     {
         int size = 0;
-        unsigned char* data = ray::LoadFileData(font_path.string().c_str(), &size);
+        unsigned char* data = load_file_data(font_path.string().c_str(), &size);
         if (!data || size <= 0) {
             if (data) {
-                ray::UnloadFileData(data);
+                unload_file_data(data);
             }
             throw std::runtime_error("Failed to read font data: " + font_path.string());
         }
         font_data.assign(data, data + size);
-        ray::UnloadFileData(data);
+        unload_file_data(data);
     }
 
     if (sentinel_texture.id == 0) {
         ray::Image px = gen_image_color(1, 1, Color::BLANK);
         sentinel_texture = load_texture_from_image(px);
-        ray::UnloadImage(px);
+        unload_image(px);
     }
 }
 
@@ -210,14 +210,14 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
             ray::GlyphInfo gi = ag[i];
             gi.value = missing[k];
             if (used) {
-                gi.image = ray::ImageCopy(ag[i].image); // two originals folding to one form
+                gi.image = image_copy(ag[i].image); // two originals folding to one form
             }
             entry.cache.push_back(gi);
             used = true;
             assigned[k] = true;
         }
         if (!used) {
-            ray::UnloadImage(ag[i].image);
+            unload_image(ag[i].image);
         }
     }
     RL_FREE(ag);
@@ -253,7 +253,7 @@ void FontManager::rebuild_atlas(SizedFont& entry, int font_size) {
     ray::Image atlas = ray::GenImageFontAtlas(f.glyphs, &f.recs, n, font_size, f.glyphPadding, 0);
     if (!atlas.data || !f.recs) {
         if (atlas.data) {
-            ray::UnloadImage(atlas);
+            unload_image(atlas);
         }
         if (f.recs) {
             RL_FREE(f.recs);
@@ -266,9 +266,9 @@ void FontManager::rebuild_atlas(SizedFont& entry, int font_size) {
     // (ImageDrawTextEx / OutlinedText composite from them). The cache keeps the raw
     // GRAYSCALE bitmaps GenImageFontAtlas needs for the next repack.
     for (int i = 0; i < n; i++) {
-        f.glyphs[i].image = ray::ImageFromImage(atlas, f.recs[i]);
+        f.glyphs[i].image = image_from_image(atlas, f.recs[i]);
     }
-    ray::UnloadImage(atlas);
+    unload_image(atlas);
     set_texture_filter(f.texture, texture_filter::BILINEAR);
     entry.font = f;
     entry.loaded = true;
@@ -286,7 +286,7 @@ void FontManager::release_font(SizedFont& entry) {
     }
     if (entry.font.glyphs) {
         for (int i = 0; i < entry.font.glyphCount; i++) {
-            ray::UnloadImage(entry.font.glyphs[i].image);
+            unload_image(entry.font.glyphs[i].image);
         }
     }
     if (entry.font.recs) {
@@ -301,7 +301,7 @@ void FontManager::release_font(SizedFont& entry) {
 
 void FontManager::release_cache(SizedFont& entry) {
     for (auto& g : entry.cache) {
-        ray::UnloadImage(g.image);
+        unload_image(g.image);
     }
     entry.cache.clear();
     entry.codepoints.clear();
@@ -369,10 +369,10 @@ static void blit_over(ray::Image* dst, const ray::Image& src, int x0, int y0) {
     if (!dst->data || !src.data) {
         return;
     }
-    if (dst->format != ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8 || src.format != ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) {
+    if (dst->format != pixel_format::RGBA8 || src.format != pixel_format::RGBA8) {
         ray::Rectangle sr = {0, 0, (float)src.width, (float)src.height};
         ray::Rectangle dr = {(float)x0, (float)y0, (float)src.width, (float)src.height};
-        ray::ImageDrawImagePro(dst, src, sr, dr, {0, 0}, 0.0f, Color::WHITE);
+        image_draw_image_pro(dst, src, sr, dr, {0, 0}, 0.0f, Color::WHITE);
         return;
     }
     unsigned char* d = (unsigned char*)dst->data;
@@ -432,7 +432,7 @@ static ray::Image text_image(const ray::Font& font, const char* text, float font
             ray::Rectangle sr = {0, 0, (float)g.image.width, (float)g.image.height};
             ray::Rectangle dr = {(float)(x + g.offsetX), (float)(margin + g.offsetY), font.recs[gi].width,
                                  font.recs[gi].height};
-            ray::ImageDrawImagePro(&im, g.image, sr, dr, {0, 0}, 0.0f, Color::WHITE);
+            image_draw_image_pro(&im, g.image, sr, dr, {0, 0}, 0.0f, Color::WHITE);
         }
         x += (g.advanceX == 0 ? (int)(font.recs[gi].width + spacing) : g.advanceX + (int)spacing);
     }
@@ -444,8 +444,8 @@ static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* 
     const int m = text_margin(font_size);
     ray::Image t = text_image(font, text, font_size, spacing, m);
     if (t.data && t.width > 0 && t.height > 0) {
-        if (t.format != ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) {
-            ray::ImageFormat(&t, ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+        if (t.format != pixel_format::RGBA8) {
+            image_format(&t, pixel_format::RGBA8);
         }
         unsigned char* px = (unsigned char*)t.data;
         const int n = t.width * t.height;
@@ -457,7 +457,7 @@ static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* 
         }
         blit_over(dst, t, (int)pos.x, (int)pos.y - m);
     }
-    ray::UnloadImage(t);
+    unload_image(t);
 }
 
 static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* text, ray::Vector2 pos, float font_size,
@@ -465,11 +465,11 @@ static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* te
     const int m = text_margin(font_size);
     ray::Image cov = text_image(font, text, font_size, spacing, m);
     if (!cov.data || cov.width <= 0 || cov.height <= 0) {
-        ray::UnloadImage(cov);
+        unload_image(cov);
         return;
     }
-    if (cov.format != ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8) {
-        ray::ImageFormat(&cov, ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    if (cov.format != pixel_format::RGBA8) {
+        image_format(&cov, pixel_format::RGBA8);
     }
     const int r = (int)std::ceil(radius + 0.5f);
     const int W = cov.width, H = cov.height;
@@ -525,8 +525,8 @@ static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* te
         op[i * 4 + 3] = (unsigned char)((out[i] * (int)outline_color.a) / 255);
     }
     blit_over(dst, o, (int)pos.x - r, (int)pos.y - m - r);
-    ray::UnloadImage(o);
-    ray::UnloadImage(cov);
+    unload_image(o);
+    unload_image(cov);
 }
 
 static ray::Font deep_copy_font(const ray::Font& src) {
@@ -542,7 +542,7 @@ static ray::Font deep_copy_font(const ray::Font& src) {
             const ray::Image& si = src.glyphs[i].image;
             ray::Image& di = dst.glyphs[i].image;
             if (si.data && si.width > 0 && si.height > 0) {
-                int dataSize = ray::GetPixelDataSize(si.width, si.height, si.format);
+                int dataSize = get_pixel_data_size(si.width, si.height, si.format);
                 di.data = RL_MALLOC(dataSize);
                 memcpy(di.data, si.data, dataSize);
             } else {
@@ -756,7 +756,7 @@ OutlinedText::~OutlinedText() {
     {
         std::scoped_lock lock(pending_mutex);
         if (pending_image.has_value()) {
-            ray::UnloadImage(pending_image.value());
+            unload_image(pending_image.value());
             pending_image.reset();
         }
     }
@@ -928,13 +928,13 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
                         draw_text_clean(&tmp, worker_font, s.c_str(), {(float)pad, (float)pad}, font_size, spacing,
                                         color);
                     }
-                    ray::ImageRotateCW(&tmp);
+                    image_rotate_cw(&tmp);
 
                     float dx = x + (char_width - (float)tmp.width) / 2.0f;
                     float dy = draw_y + (char_height - (float)tmp.height) / 2.0f;
                     ray::Rectangle dst = {dx, dy, (float)tmp.width, (float)tmp.height};
                     blit_over(target, tmp, (int)dst.x, (int)dst.y);
-                    ray::UnloadImage(tmp);
+                    unload_image(tmp);
                 } else {
                     if (pass == 0) {
                         if (outline_thickness > 0) {
@@ -950,7 +950,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
 
         if (pass == 0) {
             blit_over(&img, outline_img, 0, 0);
-            ray::UnloadImage(outline_img);
+            unload_image(outline_img);
         }
     }
 
@@ -978,7 +978,7 @@ bool OutlinedText::upload_pending() {
 
     ray::Texture tex = load_texture_from_image(*img);
     set_texture_filter(tex, texture_filter::BILINEAR);
-    ray::UnloadImage(*img);
+    unload_image(*img);
 
     texture = tex;
     width = (float)tex.width;

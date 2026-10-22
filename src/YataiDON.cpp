@@ -529,12 +529,12 @@ static void run_frame() {
 
     if (key_pressed(SDL_SCANCODE_F12)) {
         static int screenshot_counter = 0;
-        ray::Image image = ray::LoadImageFromScreen();
+        ray::Image image = load_image_from_screen();
         if (L.current_screen == Screens::RESULT && tex.options[SCO::CROP_RESULT_SCREENSHOT]) {
-            ray::ImageCrop(&image, {0, 0, (float)image.width, (float)image.height / 2.0f});
+            image_crop(&image, {0, 0, (float)image.width, (float)image.height / 2.0f});
         }
-        ray::ExportImage(image, text_format("screenshot%03i.png", screenshot_counter));
-        ray::UnloadImage(image);
+        export_image(image, text_format("screenshot%03i.png", screenshot_counter));
+        unload_image(image);
         screenshot_counter++;
         spdlog::info("Screenshot saved");
     }

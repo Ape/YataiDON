@@ -473,7 +473,7 @@ void decode_images_parallel(const std::vector<fs::path>& files, std::vector<ray:
     size_t workers = std::min<size_t>(files.size(), hw ? hw : 4);
     if (workers <= 1) {
         for (size_t i = 0; i < files.size(); ++i) {
-            out[i] = ray::LoadImage(files[i].string().c_str());
+            out[i] = load_image(files[i].string().c_str());
         }
         return;
     }
@@ -485,7 +485,7 @@ void decode_images_parallel(const std::vector<fs::path>& files, std::vector<ray:
         pool.emplace_back([&files, &out, &next] {
             for (size_t i = next.fetch_add(1); i < files.size(); i = next.fetch_add(1)) {
                 try {
-                    out[i] = ray::LoadImage(files[i].string().c_str());
+                    out[i] = load_image(files[i].string().c_str());
                 } catch (const std::exception& e) {
                     spdlog::error("Failed to decode image {}: {}", files[i].string(), e.what());
                     out[i] = ray::Image{};
@@ -654,7 +654,7 @@ public:
         }
         for (Item& it : items) {
             if (it.state == State::Done && it.image.data) {
-                ray::UnloadImage(it.image);
+                unload_image(it.image);
             }
         }
     }
@@ -700,7 +700,7 @@ public:
                 it.state = State::Dropped;
             } else if (it.state == State::Done) {
                 if (it.image.data) {
-                    ray::UnloadImage(it.image);
+                    unload_image(it.image);
                 }
                 it.image = ray::Image{};
                 held -= it.bytes;
@@ -734,7 +734,7 @@ private:
     // true when border was computed
     static bool decode(const fs::path& path, bool want_border, ray::Image& image, ray::Rectangle& border) {
         try {
-            image = ray::LoadImage(path.string().c_str());
+            image = load_image(path.string().c_str());
         } catch (const std::exception& e) {
             spdlog::error("Failed to decode image {}: {}", path.string(), e.what());
             image = ray::Image{};
@@ -743,7 +743,7 @@ private:
         if (!want_border || !image.data) {
             return false;
         }
-        border = ray::GetImageAlphaBorder(image, 0.0f);
+        border = get_image_alpha_border(image, 0.0f);
         return true;
     }
 
@@ -766,7 +766,7 @@ private:
             lock.lock();
             if (finished_groups > it.group) { // its folder was loaded while this one decoded
                 if (image.data) {
-                    ray::UnloadImage(image);
+                    unload_image(image);
                 }
                 it.state = State::Dropped;
                 continue;
@@ -775,7 +775,7 @@ private:
             it.border = border;
             it.has_border = has_border;
             it.bytes =
-                image.data ? static_cast<size_t>(ray::GetPixelDataSize(image.width, image.height, image.format)) : 0;
+                image.data ? static_cast<size_t>(get_pixel_data_size(image.width, image.height, image.format)) : 0;
             it.state = State::Done;
             held += it.bytes;
             cv.notify_all();
@@ -935,7 +935,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                                 ok = false;
                             } else {
                                 ray::Texture2D t = load_texture_from_image(img);
-                                if (!ray::IsTextureValid(t)) {
+                                if (!is_texture_valid(t)) {
                                     spdlog::error("Failed to load texture {}: Frame {}", p.name, i);
                                     ok = false;
                                 } else {
@@ -964,7 +964,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                         const ray::Image& img = images[p.first_file];
                         if (img.data) {
                             const ray::Rectangle border =
-                                has_border[p.first_file] ? borders[p.first_file] : ray::GetImageAlphaBorder(img, 0.0f);
+                                has_border[p.first_file] ? borders[p.first_file] : get_image_alpha_border(img, 0.0f);
                             if (border.width > 0.0f) {
                                 obj->opaque_right = (border.x + border.width) * tex_scale;
                             }
@@ -979,7 +979,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
             } catch (...) {
                 for (auto& img : images) {
                     if (img.data) {
-                        ray::UnloadImage(img);
+                        unload_image(img);
                     }
                 }
                 throw;
@@ -987,7 +987,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
 
             for (auto& img : images) {
                 if (img.data) {
-                    ray::UnloadImage(img);
+                    unload_image(img);
                 }
             }
 

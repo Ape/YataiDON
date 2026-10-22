@@ -548,7 +548,7 @@ void Chara3D::load_face_textures(fs::path& face_dir) {
         return;
     }
     std::ranges::sort(paths);
-    ray::Image sheet = ray::LoadImage(paths[0].string().c_str());
+    ray::Image sheet = load_image(paths[0].string().c_str());
     // Frames are square and stacked vertically; derive the size from the
     // sheet width instead of assuming 128px, so higher-resolution skins
     // slice on the right boundaries (the UVs are normalized anyway).
@@ -556,11 +556,11 @@ void Chara3D::load_face_textures(fs::path& face_dir) {
     int frame_count = frame_size > 0 ? sheet.height / frame_size : 0;
     for (int f = 0; f < frame_count; f++) {
         ray::Rectangle rect = {0, (float)(f * frame_size), (float)frame_size, (float)frame_size};
-        ray::Image frame_img = ray::ImageFromImage(sheet, rect);
+        ray::Image frame_img = image_from_image(sheet, rect);
         face_textures.push_back(load_texture_from_image(frame_img));
-        ray::UnloadImage(frame_img);
+        unload_image(frame_img);
     }
-    ray::UnloadImage(sheet);
+    unload_image(sheet);
     apply_face(0);
 }
 
@@ -593,8 +593,8 @@ void Chara3D::apply_face(int face_index) {
 }
 
 static ray::Texture2D recolor_texture(ray::Image& source, Color body, Color face, Color rim) {
-    ray::Image img = ray::ImageCopy(source);
-    ray::ImageFormat(&img, ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+    ray::Image img = image_copy(source);
+    image_format(&img, pixel_format::RGBA8);
 
     unsigned char* pixels = (unsigned char*)img.data;
     int total = img.width * img.height;
@@ -625,18 +625,18 @@ static ray::Texture2D recolor_texture(ray::Image& source, Color body, Color face
     }
 
     ray::Texture2D result = load_texture_from_image(img);
-    ray::UnloadImage(img);
+    unload_image(img);
     return result;
 }
 
 static void apply_don_colors(ray::Model& model, int mat_idx, Color body, Color face, Color rim) {
     auto& map = model.materials[mat_idx].maps[ray::MATERIAL_MAP_DIFFUSE];
-    ray::Image img = ray::LoadImageFromTexture(map.texture);
+    ray::Image img = load_image_from_texture(map.texture);
     if (!img.data) {
         return;
     }
     ray::Texture2D new_tex = recolor_texture(img, body, face, rim);
-    ray::UnloadImage(img);
+    unload_image(img);
     if (new_tex.id == 0) {
         return;
     }
