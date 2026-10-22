@@ -124,12 +124,12 @@ public:
     bool has_recolor() const { return shader_loaded && texture_index == TextureIndex::NONE; }
     void begin_recolor() {
         if (shader_loaded) {
-            ray::BeginShaderMode(shader);
+            begin_shader_mode(shader);
         }
     }
     void end_recolor() {
         if (shader_loaded) {
-            ray::EndShaderMode();
+            end_shader_mode();
         }
     }
 

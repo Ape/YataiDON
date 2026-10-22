@@ -30,7 +30,7 @@ BaseBox::BaseBox(const fs::path& path, const BoxDef& box_def)
 
 BaseBox::~BaseBox() {
     if (shader_loaded) {
-        ray::UnloadShader(shader);
+        unload_shader(shader);
     }
 }
 
@@ -55,10 +55,10 @@ void BaseBox::load_text() {
         const auto& target_rgb = back_color.value();
         float src[3] = {142 / 255.0f, 212 / 255.0f, 30 / 255.0f};
         float tgt[3] = {target_rgb.r / 255.0f, target_rgb.g / 255.0f, target_rgb.b / 255.0f};
-        int source_loc = ray::GetShaderLocation(shader, "sourceColor");
-        int target_loc = ray::GetShaderLocation(shader, "targetColor");
-        ray::SetShaderValue(shader, source_loc, src, ray::SHADER_UNIFORM_VEC3);
-        ray::SetShaderValue(shader, target_loc, tgt, ray::SHADER_UNIFORM_VEC3);
+        int source_loc = get_shader_location(shader, "sourceColor");
+        int target_loc = get_shader_location(shader, "targetColor");
+        set_shader_value(shader, source_loc, src, shader_uniform::VEC3);
+        set_shader_value(shader, target_loc, tgt, shader_uniform::VEC3);
     }
 
     text_loaded = true;

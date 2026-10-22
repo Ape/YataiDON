@@ -401,7 +401,7 @@ Screens SongSelectScreen::on_screen_end(Screens next_screen) {
         stats_future.wait();
     }
     navigator.join_loader();
-    ray::UnloadShader(shader);
+    unload_shader(shader);
     return Screen::on_screen_end(next_screen);
 }
 

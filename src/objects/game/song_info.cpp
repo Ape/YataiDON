@@ -52,10 +52,10 @@ SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bo
         float src[3] = {GENRE_PLATE_TEMPLATE_COLOR.r / 255.0f, GENRE_PLATE_TEMPLATE_COLOR.g / 255.0f,
                         GENRE_PLATE_TEMPLATE_COLOR.b / 255.0f};
         float tgt[3] = {target.r / 255.0f, target.g / 255.0f, target.b / 255.0f};
-        ray::SetShaderValue(genre_shader, ray::GetShaderLocation(genre_shader, "sourceColor"), src,
-                            ray::SHADER_UNIFORM_VEC3);
-        ray::SetShaderValue(genre_shader, ray::GetShaderLocation(genre_shader, "targetColor"), tgt,
-                            ray::SHADER_UNIFORM_VEC3);
+        set_shader_value(genre_shader, get_shader_location(genre_shader, "sourceColor"), src,
+                            shader_uniform::VEC3);
+        set_shader_value(genre_shader, get_shader_location(genre_shader, "targetColor"), tgt,
+                            shader_uniform::VEC3);
     }
 }
 
@@ -71,7 +71,7 @@ SongInfo::SongInfo(SongInfo&& other) noexcept
 SongInfo& SongInfo::operator=(SongInfo&& other) noexcept {
     if (this != &other) {
         if (genre_shader_loaded) {
-            ray::UnloadShader(genre_shader);
+            unload_shader(genre_shader);
         }
         song_name = std::move(other.song_name);
         genre = other.genre;
@@ -92,7 +92,7 @@ SongInfo& SongInfo::operator=(SongInfo&& other) noexcept {
 
 SongInfo::~SongInfo() {
     if (genre_shader_loaded) {
-        ray::UnloadShader(genre_shader);
+        unload_shader(genre_shader);
     }
 }
 
@@ -129,11 +129,11 @@ void SongInfo::draw() {
         song_title->draw({.x = title_x, .y = text_y, .x2 = title_x2, .fade = 1 - fade->attribute});
         if (genre_text && t_genre) {
             if (genre_shader_loaded) {
-                ray::BeginShaderMode(genre_shader);
+                begin_shader_mode(genre_shader);
             }
             tex.draw_texture(t_genre, {.fade = 1 - fade->attribute});
             if (genre_shader_loaded) {
-                ray::EndShaderMode();
+                end_shader_mode();
             }
             genre_text->draw({.x = t_genre->x[0] + t_genre->width / 2.0f - genre_text->width / 2.0f,
                               .y = t_genre->y[0] + t_genre->height / 2.0f - genre_text->height / 2.0f,
@@ -161,11 +161,11 @@ void SongInfo::draw() {
     if (genre_text && t_genre) {
         float genre_y_offset = song_subtitle ? song_subtitle->height : 0;
         if (genre_shader_loaded) {
-            ray::BeginShaderMode(genre_shader);
+            begin_shader_mode(genre_shader);
         }
         tex.draw_texture(t_genre, {.y = genre_y_offset, .fade = 1 - fade->attribute});
         if (genre_shader_loaded) {
-            ray::EndShaderMode();
+            end_shader_mode();
         }
         genre_text->draw({.x = t_genre->x[0] + t_genre->width / 2.0f - genre_text->width / 2.0f,
                           .y = t_genre->y[0] + genre_y_offset + t_genre->height / 2.0f - genre_text->height / 2.0f,

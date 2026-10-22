@@ -8,7 +8,7 @@ public:
     GenreBG(const std::string& text_name, std::optional<Color> color, TextureIndex texture_index, float distance);
     ~GenreBG() {
         if (shader_loaded) {
-            ray::UnloadShader(shader);
+            unload_shader(shader);
         }
     }
 
@@ -24,12 +24,12 @@ public:
     bool has_recolor() const { return shader_loaded; }
     void begin_recolor() {
         if (shader_loaded) {
-            ray::BeginShaderMode(shader);
+            begin_shader_mode(shader);
         }
     }
     void end_recolor() {
         if (shader_loaded) {
-            ray::EndShaderMode();
+            end_shader_mode();
         }
     }
 

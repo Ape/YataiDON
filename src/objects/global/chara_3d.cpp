@@ -413,10 +413,10 @@ static void init_shaders(ray::Shader& outline_fxaa_shader, int& outline_fxaa_siz
                          ray::Shader& null_shader, ray::Shader& face_shader, ray::Shader& cutout_shader,
                          ray::Shader& outline_shader, bool& use_render_textures) {
     outline_fxaa_shader = load_shader("shader/pass.vs", "shader/outline_fxaa.fs");
-    outline_fxaa_size_loc = ray::GetShaderLocation(outline_fxaa_shader, "texSize");
-    outline_fxaa_thickness_loc = ray::GetShaderLocation(outline_fxaa_shader, "outlineThickness");
+    outline_fxaa_size_loc = get_shader_location(outline_fxaa_shader, "texSize");
+    outline_fxaa_thickness_loc = get_shader_location(outline_fxaa_shader, "outlineThickness");
     float outline_thickness = 3.0f;
-    ray::SetShaderValue(outline_fxaa_shader, outline_fxaa_thickness_loc, &outline_thickness, ray::SHADER_UNIFORM_FLOAT);
+    set_shader_value(outline_fxaa_shader, outline_fxaa_thickness_loc, &outline_thickness, shader_uniform::FLOAT);
 
     null_shader = load_shader(nullptr, "shader/null.fs");
     face_shader = load_shader(nullptr, "shader/face.fs");
@@ -486,14 +486,14 @@ Chara3D::~Chara3D() {
         ray::UnloadModelAnimations(part_anims[p], part_anim_count[p]);
         ray::UnloadModel(parts[p]);
     }
-    ray::UnloadShader(null_shader);
-    ray::UnloadShader(face_shader);
-    ray::UnloadShader(cutout_shader);
-    ray::UnloadShader(outline_fxaa_shader);
+    unload_shader(null_shader);
+    unload_shader(face_shader);
+    unload_shader(cutout_shader);
+    unload_shader(outline_fxaa_shader);
     if (scene_target.id != 0) {
         ray::UnloadRenderTexture(scene_target);
     }
-    ray::UnloadShader(outline_shader);
+    unload_shader(outline_shader);
     for (auto& tex : face_textures) {
         unload_texture(tex);
     }
@@ -725,12 +725,12 @@ void Chara3D::set_tint(Color color, float amount) {
         return;
     }
     if (outline_fxaa_tint_color_loc < 0) {
-        outline_fxaa_tint_color_loc = ray::GetShaderLocation(outline_fxaa_shader, "tintColor");
-        outline_fxaa_tint_amount_loc = ray::GetShaderLocation(outline_fxaa_shader, "tintAmount");
+        outline_fxaa_tint_color_loc = get_shader_location(outline_fxaa_shader, "tintColor");
+        outline_fxaa_tint_amount_loc = get_shader_location(outline_fxaa_shader, "tintAmount");
     }
     float rgb[3] = {color.r / 255.0f, color.g / 255.0f, color.b / 255.0f};
-    ray::SetShaderValue(outline_fxaa_shader, outline_fxaa_tint_color_loc, rgb, ray::SHADER_UNIFORM_VEC3);
-    ray::SetShaderValue(outline_fxaa_shader, outline_fxaa_tint_amount_loc, &amount, ray::SHADER_UNIFORM_FLOAT);
+    set_shader_value(outline_fxaa_shader, outline_fxaa_tint_color_loc, rgb, shader_uniform::VEC3);
+    set_shader_value(outline_fxaa_shader, outline_fxaa_tint_amount_loc, &amount, shader_uniform::FLOAT);
 }
 
 void Chara3D::apply_pose() {
@@ -868,13 +868,13 @@ void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h, float full_h) {
         float param[2] = {thickness_px, 0.3f};
         float size[2] = {(float)rt_w, (float)rt_h};
         if (outline_param_loc < 0) {
-            outline_param_loc = ray::GetShaderLocation(outline_shader, "outlineParam");
+            outline_param_loc = get_shader_location(outline_shader, "outlineParam");
         }
         if (outline_size_loc < 0) {
-            outline_size_loc = ray::GetShaderLocation(outline_shader, "screenSize");
+            outline_size_loc = get_shader_location(outline_shader, "screenSize");
         }
-        ray::SetShaderValue(outline_shader, outline_param_loc, param, ray::SHADER_UNIFORM_VEC2);
-        ray::SetShaderValue(outline_shader, outline_size_loc, size, ray::SHADER_UNIFORM_VEC2);
+        set_shader_value(outline_shader, outline_param_loc, param, shader_uniform::VEC2);
+        set_shader_value(outline_shader, outline_size_loc, size, shader_uniform::VEC2);
         const float draw_size = scale * draw_scale * tex.screen_scale;
 
         rlSetCullFace(RL_CULL_FACE_FRONT);
@@ -1010,7 +1010,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
             scene_target_w = nw;
             scene_target_h = nh;
             float ts[2] = {(float)nw, (float)nh};
-            ray::SetShaderValue(outline_fxaa_shader, outline_fxaa_size_loc, ts, ray::SHADER_UNIFORM_VEC2);
+            set_shader_value(outline_fxaa_shader, outline_fxaa_size_loc, ts, shader_uniform::VEC2);
         }
         // the target's area, centred on the model, on whole render pixels (the supersampled
         // grid then lines up with the full-screen one)
@@ -1048,10 +1048,10 @@ void Chara3D::draw(float x, float y, float scale_mul) {
     {
         const float region_w = scene_target_w / SUPERSAMPLE;
         const float region_h = scene_target_h / SUPERSAMPLE;
-        ray::BeginShaderMode(outline_fxaa_shader);
+        begin_shader_mode(outline_fxaa_shader);
         draw_texture_pro(scene_target.texture, {0, 0, (float)scene_target_w, -(float)scene_target_h},
                             {(float)region_x, (float)region_y, region_w, region_h}, {0, 0}, 0.0f, Color::WHITE);
-        ray::EndShaderMode();
+        end_shader_mode();
     }
 
     begin_blend_mode(blend_mode::CUSTOM_SEPARATE);
@@ -1078,7 +1078,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
         scene_target_h = ssh;
         full_target = true;
         float ts[2] = {(float)ssw, (float)ssh};
-        ray::SetShaderValue(outline_fxaa_shader, outline_fxaa_size_loc, ts, ray::SHADER_UNIFORM_VEC2);
+        set_shader_value(outline_fxaa_shader, outline_fxaa_size_loc, ts, shader_uniform::VEC2);
         render_dirty = true;
     }
 
@@ -1119,10 +1119,10 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
     }
 
     {
-        ray::BeginShaderMode(outline_fxaa_shader);
+        begin_shader_mode(outline_fxaa_shader);
         draw_texture_pro(scene_target.texture, {0, 0, (float)ssw, -(float)ssh}, {0, 0, (float)rw, (float)rh}, {0, 0},
                             0.0f, Color::WHITE);
-        ray::EndShaderMode();
+        end_shader_mode();
     }
 
     begin_blend_mode(blend_mode::CUSTOM_SEPARATE);

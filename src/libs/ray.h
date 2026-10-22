@@ -267,6 +267,36 @@ inline ray::Vector2 get_screen_to_world_2d(ray::Vector2 position, ray::Camera2D 
     return ray::GetScreenToWorld2D(position, camera);
 }
 
+namespace shader_uniform {
+    inline constexpr int FLOAT = ray::SHADER_UNIFORM_FLOAT;
+    inline constexpr int VEC2 = ray::SHADER_UNIFORM_VEC2;
+    inline constexpr int VEC3 = ray::SHADER_UNIFORM_VEC3;
+} // namespace shader_uniform
+
+inline void unload_shader(ray::Shader shader) {
+    ray::UnloadShader(shader);
+}
+
+inline bool is_shader_valid(ray::Shader shader) {
+    return ray::IsShaderValid(shader);
+}
+
+inline int get_shader_location(ray::Shader shader, const char* name) {
+    return ray::GetShaderLocation(shader, name);
+}
+
+inline void set_shader_value(ray::Shader shader, int loc, const void* value, int uniform_type) {
+    ray::SetShaderValue(shader, loc, value, uniform_type);
+}
+
+inline void begin_shader_mode(ray::Shader shader) {
+    ray::BeginShaderMode(shader);
+}
+
+inline void end_shader_mode() {
+    ray::EndShaderMode();
+}
+
 inline void clear_background(Color color) {
     ray::ClearBackground({color.r, color.g, color.b, color.a});
 }
