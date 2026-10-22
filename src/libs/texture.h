@@ -40,11 +40,11 @@ struct DrawTextureParams {
     bool center = false;
     Mirror mirror = Mirror::NONE;
     float x = 0, y = 0, x2 = 0, y2 = 0;
-    ray::Vector2 origin = {0, 0};
+    Vec2 origin = {0, 0};
     float rotation = 0;
     double fade = 1.1f;
     int index = 0;
-    std::optional<ray::Rectangle> src = std::nullopt;
+    std::optional<Rect> src = std::nullopt;
     std::optional<int> blend = std::nullopt;
 };
 
@@ -77,7 +77,7 @@ struct TextureObject {
     std::vector<int> y;
     std::vector<int> x2;
     std::vector<int> y2;
-    std::optional<std::vector<ray::Rectangle>> crop_data;
+    std::optional<std::vector<Rect>> crop_data;
 
     float opaque_right = 0.0f;
     TextureObject(const std::string& name, int width, int height)
@@ -130,14 +130,14 @@ struct FramedTexture : public TextureObject {
 
 struct DrawLogEntry {
     std::string name;
-    ray::Rectangle rect;
+    Rect rect;
     TextureObject* tex_obj = nullptr;
     int index = 0;
     float offset_x = 0.0f;
     float offset_y = 0.0f;
     float scale = 1.0f;
     bool center = false;
-    ray::Vector2 origin = {0, 0};
+    Vec2 origin = {0, 0};
     float rotation = 0.0f;
     bool from_lua = false;
     std::string lua_source;

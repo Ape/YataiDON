@@ -293,7 +293,7 @@ bool is_r_kat_pressed(PlayerNum player_num, float* strength) {
     return is_input_key_pressed(keys, gamepad_buttons, strength) || check_key_pressed(TOUCH_R_KAT, strength);
 }
 
-static int touch_quadrant_vkey(ray::Vector2 pos, int sw, int sh) {
+static int touch_quadrant_vkey(Vec2 pos, int sw, int sh) {
     bool left = pos.x < sw / 2.0f;
     bool top = pos.y < sh / 2.0f;
     if (top) {
@@ -395,7 +395,7 @@ static YD_EventFilterRet SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event
         if (!touch_id_to_vkey.contains(id)) {
             int sw = get_screen_width();
             int sh = get_screen_height();
-            ray::Vector2 pos = {event->tfinger.x * sw, event->tfinger.y * sh};
+            Vec2 pos = {event->tfinger.x * sw, event->tfinger.y * sh};
             int vkey = touch_quadrant_vkey(pos, sw, sh);
 #ifdef YATAIDON_PLATFORM_IOS
             vkey = ios_handle_touch_navigation(vkey, event->tfinger.x, event->tfinger.y);
@@ -1149,7 +1149,7 @@ float mouse_wheel() {
     return frame.wheel;
 }
 
-ray::Vector2 mouse_position() {
+Vec2 mouse_position() {
     float x = 0.0f, y = 0.0f;
 #ifndef YATAIDON_USE_SDL2
     SDL_GetMouseState(&x, &y);

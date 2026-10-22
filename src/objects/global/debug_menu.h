@@ -209,7 +209,7 @@ public:
     // `id` owns the mouse, so callers can swallow the press and keep it from
     // also hitting the list drawn underneath the scrollbar. The caller must
     // clear scroll_drag whenever the mouse button is up.
-    bool scrollbar_drag(ScrollDrag id, const ray::Vector2& mouse, bool pressed, float track_x, float track_top,
+    bool scrollbar_drag(ScrollDrag id, const Vec2& mouse, bool pressed, float track_x, float track_top,
                         float track_h, int count, int shown, int& scroll) {
         if (count <= shown) {
             if (scroll_drag == id) {
@@ -265,7 +265,7 @@ public:
 
         const float panel_x = tex.screen_width - PANEL_WIDTH + slide_offset();
         const float tab_width = PANEL_WIDTH / TAB_COUNT;
-        const ray::Vector2 mouse = get_screen_to_world_2d(mouse_position(), camera);
+        const Vec2 mouse = get_screen_to_world_2d(mouse_position(), camera);
         const bool clicked = mouse_pressed(SDL_BUTTON_LEFT);
         const bool mouse_over_panel = mouse.x >= panel_x;
 
@@ -455,7 +455,7 @@ public:
         hovered_log_index = -1;
         if (!mouse_over_panel && scroll_drag == ScrollDrag::None) {
             for (int i = (int)debug_draw_log_prev.size() - 1; i >= 0; i--) {
-                const ray::Rectangle& r = debug_draw_log_prev[i].rect;
+                const Rect& r = debug_draw_log_prev[i].rect;
                 if (mouse.x >= r.x && mouse.x <= r.x + r.width && mouse.y >= r.y && mouse.y <= r.y + r.height) {
                     hovered_log_index = i;
                     break;
@@ -584,14 +584,14 @@ public:
 
 private:
     struct LuaButtons {
-        ray::Rectangle copy_path, copy_path_line;
+        Rect copy_path, copy_path_line;
     };
 
     static LuaButtons lua_buttons(float panel_x, float screen_h) {
         float width = (PANEL_WIDTH - LUA_BTN_GAP * 3) / 2;
         float row_y = screen_h - LUA_BTN_HEIGHT - LUA_BTN_GAP;
-        ray::Rectangle left = {panel_x + LUA_BTN_GAP, row_y, width, LUA_BTN_HEIGHT};
-        ray::Rectangle right = {left.x + width + LUA_BTN_GAP, row_y, width, LUA_BTN_HEIGHT};
+        Rect left = {panel_x + LUA_BTN_GAP, row_y, width, LUA_BTN_HEIGHT};
+        Rect right = {left.x + width + LUA_BTN_GAP, row_y, width, LUA_BTN_HEIGHT};
         return {left, right};
     }
 
@@ -649,7 +649,7 @@ private:
         return y;
     }
 
-    void draw_lua_button(const ray::Rectangle& box, const char* label, bool enabled) const {
+    void draw_lua_button(const Rect& box, const char* label, bool enabled) const {
         draw_rectangle(box, fade(Color::WHITE, enabled ? 0.2f : 0.05f));
         draw_rectangle_lines_ex(box, 1.0f, fade(Color::WHITE, 0.4f));
         int label_w = measure_code_text(label, LUA_TEXT_SIZE);
@@ -915,18 +915,18 @@ private:
     }
 
     struct DataFieldRects {
-        ray::Rectangle minus, plus, value;
+        Rect minus, plus, value;
     };
 
     static DataFieldRects data_field_rects(const DataField& f, float panel_x, float row_y) {
         float btn_size = ROW_HEIGHT - 4.0f;
         if (f.kind == DataField::Kind::BOOL || f.kind == DataField::Kind::STRING) {
-            ray::Rectangle value = {panel_x + 148, row_y + 1, PANEL_WIDTH - 148 - 6, ROW_HEIGHT - 2};
+            Rect value = {panel_x + 148, row_y + 1, PANEL_WIDTH - 148 - 6, ROW_HEIGHT - 2};
             return {{}, {}, value};
         }
-        ray::Rectangle minus = {panel_x + 148, row_y + 1, btn_size, btn_size};
-        ray::Rectangle value = {minus.x + btn_size + 4, row_y + 1, 88.0f, btn_size};
-        ray::Rectangle plus = {value.x + value.width + 4, row_y + 1, btn_size, btn_size};
+        Rect minus = {panel_x + 148, row_y + 1, btn_size, btn_size};
+        Rect value = {minus.x + btn_size + 4, row_y + 1, 88.0f, btn_size};
+        Rect plus = {value.x + value.width + 4, row_y + 1, btn_size, btn_size};
         return {minus, plus, value};
     }
 
@@ -975,7 +975,7 @@ private:
         }
 
         const float button_top = list_bottom;
-        ray::Rectangle button = {panel_x + 6, button_top + 3, PANEL_WIDTH - 12, SWITCH_BTN_HEIGHT - 6};
+        Rect button = {panel_x + 6, button_top + 3, PANEL_WIDTH - 12, SWITCH_BTN_HEIGHT - 6};
         bool enabled = selected_screen.has_value();
         draw_rectangle(button, fade(Color::WHITE, enabled ? 0.25f : 0.08f));
         draw_rectangle_lines_ex(button, 1.0f, enabled ? Color(Color::YELLOW) : fade(Color::WHITE, 0.3f));
@@ -1136,7 +1136,7 @@ private:
     }
 
     struct FieldButtons {
-        ray::Rectangle minus, plus, value;
+        Rect minus, plus, value;
     };
 
     struct VisualRow {
@@ -1180,7 +1180,7 @@ private:
         }
     }
 
-    static bool in_rect(ray::Vector2 p, const ray::Rectangle& r) {
+    static bool in_rect(Vec2 p, const Rect& r) {
         return p.x >= r.x && p.x <= r.x + r.width && p.y >= r.y && p.y <= r.y + r.height;
     }
 
@@ -1211,14 +1211,14 @@ private:
     static FieldButtons field_buttons(int field_idx, float panel_x, float edit_top) {
         float row_y = edit_top + EDIT_FIELDS_TOP + field_idx * EDIT_ROW_HEIGHT;
         float btn_size = EDIT_ROW_HEIGHT - 6.0f;
-        ray::Rectangle minus = {panel_x + 40, row_y + 3, btn_size, btn_size};
-        ray::Rectangle value = {minus.x + btn_size + 6, row_y + 2, 60.0f, btn_size + 2};
-        ray::Rectangle plus = {value.x + value.width + 6, row_y + 3, btn_size, btn_size};
+        Rect minus = {panel_x + 40, row_y + 3, btn_size, btn_size};
+        Rect value = {minus.x + btn_size + 6, row_y + 2, 60.0f, btn_size + 2};
+        Rect plus = {value.x + value.width + 6, row_y + 3, btn_size, btn_size};
         return {minus, plus, value};
     }
 
     struct FrameCellButtons {
-        ray::Rectangle left, right;
+        Rect left, right;
     };
 
     static FrameCellButtons frame_cell_buttons(int idx, float panel_x, float frames_top) {
@@ -1227,12 +1227,12 @@ private:
         float row_y = frames_top + FRAMES_HEADER_HEIGHT + (idx / cols) * FRAME_ROW_HEIGHT;
         float btn_row_y = row_y + FRAME_THUMB_SIZE + 4.0f;
         float btn_size = FRAME_BTN_ROW_HEIGHT - 4.0f;
-        ray::Rectangle left = {cell_x + 2, btn_row_y, btn_size, btn_size};
-        ray::Rectangle right = {cell_x + FRAME_CELL_WIDTH - btn_size - 2, btn_row_y, btn_size, btn_size};
+        Rect left = {cell_x + 2, btn_row_y, btn_size, btn_size};
+        Rect right = {cell_x + FRAME_CELL_WIDTH - btn_size - 2, btn_row_y, btn_size, btn_size};
         return {left, right};
     }
 
-    const ray::Rectangle* find_selected_rect() const {
+    const Rect* find_selected_rect() const {
         const DrawLogEntry* entry = find_selected_entry();
         return entry ? &entry->rect : nullptr;
     }
@@ -1294,12 +1294,12 @@ private:
             draw_rectangle((int)track_x, (int)thumb_y, (int)SCROLLBAR_WIDTH, (int)thumb_h, fade(Color::WHITE, 0.5f));
         }
 
-        const ray::Rectangle* box_rect = nullptr;
+        const Rect* box_rect = nullptr;
         std::string box_name;
         if (hovered_log_index >= 0) {
             box_rect = &debug_draw_log_prev[hovered_log_index].rect;
             box_name = debug_draw_log_prev[hovered_log_index].name;
-        } else if (const ray::Rectangle* r = find_selected_rect()) {
+        } else if (const Rect* r = find_selected_rect()) {
             box_rect = r;
             box_name = selected_name;
         }
@@ -1390,11 +1390,11 @@ private:
             float cell_x = panel_x + (idx % cols) * FRAME_CELL_WIDTH;
             float row_y = frames_top + FRAMES_HEADER_HEIGHT + (idx / cols) * FRAME_ROW_HEIGHT;
 
-            ray::Rectangle thumb_bg = {cell_x + (FRAME_CELL_WIDTH - FRAME_THUMB_SIZE) * 0.5f, row_y, FRAME_THUMB_SIZE,
+            Rect thumb_bg = {cell_x + (FRAME_CELL_WIDTH - FRAME_THUMB_SIZE) * 0.5f, row_y, FRAME_THUMB_SIZE,
                                        FRAME_THUMB_SIZE};
             draw_rectangle(thumb_bg, fade(Color::BLACK, 0.5f));
             const ray::Texture2D& t = *framed->textures[idx];
-            ray::Rectangle src = {0, 0, (float)t.width, (float)t.height};
+            Rect src = {0, 0, (float)t.width, (float)t.height};
             draw_texture_pro(t, src, thumb_bg, {0, 0}, 0, Color::WHITE);
             draw_rectangle_lines_ex(thumb_bg, 1.0f, fade(Color::WHITE, 0.4f));
 

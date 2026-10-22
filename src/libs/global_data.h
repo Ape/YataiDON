@@ -230,7 +230,7 @@ struct SessionData {
 };
 
 struct CameraConfig {
-    ray::Vector2 offset = {0.0f, 0.0f};
+    Vec2 offset = {0.0f, 0.0f};
     float zoom = 1.0f;
     float h_scale = 1.0f;
     float v_scale = 1.0f;

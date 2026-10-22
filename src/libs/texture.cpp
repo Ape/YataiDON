@@ -283,7 +283,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
                                  tex_mapping[0].HasMember("crop") && tex_mapping[0]["crop"].IsArray() &&
                                  !tex_mapping[0]["crop"].Empty();
 
-        std::vector<ray::Rectangle> crops;
+        std::vector<Rect> crops;
         if (has_crop_in_first) {
             const Value& first_mapping = tex_mapping[0];
             for (SizeType j = 0; j < first_mapping["crop"].Size(); j++) {
@@ -293,7 +293,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
                     continue;
                 }
                 crops.push_back(
-                    ray::Rectangle{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
+                    Rect{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
             }
             if (crops.empty()) {
                 has_crop_in_first = false;
@@ -347,7 +347,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
         }
     } else if (tex_mapping.IsObject()) {
         if (tex_mapping.HasMember("crop") && tex_mapping["crop"].IsArray() && !tex_mapping["crop"].Empty()) {
-            std::vector<ray::Rectangle> crops;
+            std::vector<Rect> crops;
             for (SizeType j = 0; j < tex_mapping["crop"].Size(); j++) {
                 const Value& crop = tex_mapping["crop"][j];
                 if (!crop.IsArray() || crop.Size() < 4) {
@@ -355,7 +355,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
                     continue;
                 }
                 crops.push_back(
-                    ray::Rectangle{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
+                    Rect{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
             }
             if (!crops.empty()) {
                 tex_obj->crop_data = crops;
@@ -661,7 +661,7 @@ public:
 
     // The decoded image for path when it's part of this prefetch (waiting for a worker that
     // has started it, decoding it here if none has); false when it isn't.
-    bool take(const fs::path& path, ray::Image& image, ray::Rectangle& border, bool& has_border) {
+    bool take(const fs::path& path, ray::Image& image, Rect& border, bool& has_border) {
         std::unique_lock<std::mutex> lock(mutex);
         auto found = index.find(image_key(path));
         if (found == index.end()) {
@@ -725,21 +725,21 @@ private:
         size_t group;
         State state = State::Pending;
         ray::Image image{};
-        ray::Rectangle border{};
+        Rect border{};
         bool want_border = false;
         bool has_border = false;
         size_t bytes = 0;
     };
 
     // true when border was computed
-    static bool decode(const fs::path& path, bool want_border, ray::Image& image, ray::Rectangle& border) {
+    static bool decode(const fs::path& path, bool want_border, ray::Image& image, Rect& border) {
         try {
             image = load_image(path.string().c_str());
         } catch (const std::exception& e) {
             spdlog::error("Failed to decode image {}: {}", path.string(), e.what());
             image = ray::Image{};
         }
-        border = ray::Rectangle{};
+        border = Rect{};
         if (!want_border || !image.data) {
             return false;
         }
@@ -761,7 +761,7 @@ private:
             it.state = State::Decoding;
             lock.unlock();
             ray::Image image;
-            ray::Rectangle border;
+            Rect border;
             const bool has_border = decode(it.path, it.want_border, image, border);
             lock.lock();
             if (finished_groups > it.group) { // its folder was loaded while this one decoded
@@ -898,7 +898,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
 
             // images load_screen_textures already decoded, the rest here
             std::vector<ray::Image> images(files.size());
-            std::vector<ray::Rectangle> borders(files.size());
+            std::vector<Rect> borders(files.size());
             std::vector<char> has_border(files.size(), 0);
             std::vector<fs::path> rest;
             std::vector<size_t> rest_index;
@@ -963,7 +963,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                         !p.mapping->HasMember("x2")) {
                         const ray::Image& img = images[p.first_file];
                         if (img.data) {
-                            const ray::Rectangle border =
+                            const Rect border =
                                 has_border[p.first_file] ? borders[p.first_file] : get_image_alpha_border(img, 0.0f);
                             if (border.width > 0.0f) {
                                 obj->opaque_right = (border.x + border.width) * tex_scale;
@@ -1243,7 +1243,7 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
 
     const Color final_color = (params.fade != 1.1f) ? fade(params.color, params.fade) : params.color;
 
-    ray::Rectangle source_rect;
+    Rect source_rect;
     if (params.src.has_value()) {
         source_rect = params.src.value();
     } else if (tex_obj->crop_data.has_value()) {
@@ -1263,7 +1263,7 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
     } else {
         const float width = static_cast<float>(tex_obj->width);
         const float height = static_cast<float>(tex_obj->height);
-        source_rect = ray::Rectangle{0, 0, width * mirror_x, height * mirror_y};
+        source_rect = Rect{0, 0, width * mirror_x, height * mirror_y};
     }
 
     if (params.index < 0 || static_cast<size_t>(params.index) >= tex_obj->x.size()) {
@@ -1275,7 +1275,7 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
     const float base_x = tex_obj->x[params.index];
     const float base_y = tex_obj->y[params.index];
 
-    ray::Rectangle dest_rect;
+    Rect dest_rect;
     if (params.center) {
         const float x2v = tex_obj->x2[params.index];
         const float y2v = tex_obj->y2[params.index];
@@ -1284,11 +1284,11 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
         const float scaled_half_width = (x2v * params.scale) * 0.5f;
         const float scaled_half_height = (y2v * params.scale) * 0.5f;
 
-        dest_rect = ray::Rectangle{base_x + draw_offset_x + half_width - scaled_half_width + params.x,
+        dest_rect = Rect{base_x + draw_offset_x + half_width - scaled_half_width + params.x,
                                    base_y + draw_offset_y + half_height - scaled_half_height + params.y,
                                    x2v * params.scale + params.x2, y2v * params.scale + params.y2};
     } else {
-        dest_rect = ray::Rectangle{base_x + draw_offset_x + params.x, base_y + draw_offset_y + params.y,
+        dest_rect = Rect{base_x + draw_offset_x + params.x, base_y + draw_offset_y + params.y,
                                    tex_obj->x2[params.index] * params.scale + params.x2,
                                    tex_obj->y2[params.index] * params.scale + params.y2};
     }

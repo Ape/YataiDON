@@ -27,7 +27,7 @@ private:
     float dest_height;
     float x2_pos;
     float y2_pos;
-    ray::Vector2 origin;
+    Vec2 origin;
     float rotation_angle;
 
 public:

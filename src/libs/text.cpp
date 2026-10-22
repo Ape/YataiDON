@@ -370,8 +370,8 @@ static void blit_over(ray::Image* dst, const ray::Image& src, int x0, int y0) {
         return;
     }
     if (dst->format != pixel_format::RGBA8 || src.format != pixel_format::RGBA8) {
-        ray::Rectangle sr = {0, 0, (float)src.width, (float)src.height};
-        ray::Rectangle dr = {(float)x0, (float)y0, (float)src.width, (float)src.height};
+        Rect sr = {0, 0, (float)src.width, (float)src.height};
+        Rect dr = {(float)x0, (float)y0, (float)src.width, (float)src.height};
         image_draw_image_pro(dst, src, sr, dr, {0, 0}, 0.0f, Color::WHITE);
         return;
     }
@@ -416,7 +416,7 @@ static int text_margin(float font_size) {
 }
 
 static ray::Image text_image(const ray::Font& font, const char* text, float font_size, float spacing, int margin) {
-    ray::Vector2 sz = measure_text_ex(font, text, font_size, spacing);
+    Vec2 sz = measure_text_ex(font, text, font_size, spacing);
     ray::Image im = gen_image_color((int)sz.x, (int)sz.y + margin * 2, Color::BLANK);
     int x = 0;
     for (const char* p = text; *p;) {
@@ -429,8 +429,8 @@ static ray::Image text_image(const ray::Font& font, const char* text, float font
         int gi = get_glyph_index(font, cp);
         const ray::GlyphInfo& g = font.glyphs[gi];
         if (cp != ' ' && cp != '\t') {
-            ray::Rectangle sr = {0, 0, (float)g.image.width, (float)g.image.height};
-            ray::Rectangle dr = {(float)(x + g.offsetX), (float)(margin + g.offsetY), font.recs[gi].width,
+            Rect sr = {0, 0, (float)g.image.width, (float)g.image.height};
+            Rect dr = {(float)(x + g.offsetX), (float)(margin + g.offsetY), font.recs[gi].width,
                                  font.recs[gi].height};
             image_draw_image_pro(&im, g.image, sr, dr, {0, 0}, 0.0f, Color::WHITE);
         }
@@ -439,7 +439,7 @@ static ray::Image text_image(const ray::Font& font, const char* text, float font
     return im;
 }
 
-static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* text, ray::Vector2 pos, float font_size,
+static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* text, Vec2 pos, float font_size,
                             float spacing, Color tint) {
     const int m = text_margin(font_size);
     ray::Image t = text_image(font, text, font_size, spacing, m);
@@ -460,7 +460,7 @@ static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* 
     unload_image(t);
 }
 
-static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* text, ray::Vector2 pos, float font_size,
+static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* text, Vec2 pos, float font_size,
                           float spacing, Color outline_color, float radius) {
     const int m = text_margin(font_size);
     ray::Image cov = text_image(font, text, font_size, spacing, m);
@@ -550,7 +550,7 @@ static ray::Font deep_copy_font(const ray::Font& src) {
             }
         }
         dst.recs = (ray::Rectangle*)RL_MALLOC(src.glyphCount * sizeof(ray::Rectangle));
-        memcpy(dst.recs, src.recs, src.glyphCount * sizeof(ray::Rectangle));
+        memcpy(dst.recs, src.recs, src.glyphCount * sizeof(Rect));
     }
     return dst;
 }
@@ -932,7 +932,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
 
                     float dx = x + (char_width - (float)tmp.width) / 2.0f;
                     float dy = draw_y + (char_height - (float)tmp.height) / 2.0f;
-                    ray::Rectangle dst = {dx, dy, (float)tmp.width, (float)tmp.height};
+                    Rect dst = {dx, dy, (float)tmp.width, (float)tmp.height};
                     blit_over(target, tmp, (int)dst.x, (int)dst.y);
                     unload_image(tmp);
                 } else {
@@ -1000,7 +1000,7 @@ void OutlinedText::draw(const DrawTextureParams& params) {
         return;
     }
 
-    ray::Rectangle src = params.src.value_or(ray::Rectangle{0, 0, (float)texture->width, (float)texture->height});
+    Rect src = params.src.value_or(Rect{0, 0, (float)texture->width, (float)texture->height});
     float dx = params.x + x_offset;
     float dy = params.y + y_offset - top_extra;
 
@@ -1013,7 +1013,7 @@ void OutlinedText::draw(const DrawTextureParams& params) {
     // shorter/narrower src to hard-crop the text instead of stretching it.
     float dst_w = src.width * params.scale + params.x2;
     float dst_h = src.height * params.scale + params.y2;
-    ray::Rectangle dst;
+    Rect dst;
     if (params.center) {
         dst = {dx + (src.width - src.width * params.scale) * 0.5f, dy + (src.height - src.height * params.scale) * 0.5f,
                dst_w, dst_h};

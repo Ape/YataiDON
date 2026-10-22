@@ -24,7 +24,7 @@ inline ray::Camera2D compute_camera2d(int virtual_width, int virtual_height) {
     float offset_x = base_ox - zoom_ox - hscale_ox + (global_data.camera.offset.x * scale);
     float offset_y = base_oy - zoom_oy - vscale_oy + (global_data.camera.offset.y * scale);
 
-    ray::Vector2 target = {vw * 0.5f, vh * 0.5f};
+    Vec2 target = {vw * 0.5f, vh * 0.5f};
     offset_x += eff_zoom * target.x;
     offset_y += eff_zoom * target.y;
 

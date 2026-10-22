@@ -400,7 +400,7 @@ static bool point_in_rect(float x, float y, float rect_x, float rect_y, float re
 }
 
 // Get the screen-space rectangle for a practice mode UI element
-static ray::Rectangle get_practice_button_rect(TextureObject* tex_obj, int index, float scale = 1.0f) {
+static Rect get_practice_button_rect(TextureObject* tex_obj, int index, float scale = 1.0f) {
     if (!tex_obj || index < 0 || static_cast<size_t>(index) >= tex_obj->x.size()) {
         return {0, 0, 0, 0};
     }
@@ -429,7 +429,7 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
     }
 
     // Get mouse/touch position
-    ray::Vector2 mouse_pos = mouse_position();
+    Vec2 mouse_pos = mouse_position();
     bool clicked = mouse_pressed(SDL_BUTTON_LEFT);
     ray::Camera2D camera = {0, 0, 0, 1.0f};
 

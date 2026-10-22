@@ -30,7 +30,7 @@ int key_pressed_next();
 // Next typed codepoint this frame, 0 when none left; consumes it.
 int char_pressed();
 float mouse_wheel();
-ray::Vector2 mouse_position();
+Vec2 mouse_position();
 bool mouse_down(int button); // SDL_BUTTON_LEFT etc.
 bool mouse_pressed(int button);
 void show_cursor();

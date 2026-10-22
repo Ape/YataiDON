@@ -273,7 +273,7 @@ void LoadingScreen::draw() {
     draw_rectangle(progress_bar, Color(101, 0, 0, 255));
 
     float clamped_progress = std::max(0.0f, std::min(1.0f, progress.load()));
-    ray::Rectangle fill = progress_bar;
+    Rect fill = progress_bar;
     fill.width *= clamped_progress;
     if (fill.width > 0) {
         draw_rectangle(fill, Color::RED);

@@ -80,12 +80,12 @@ static void draw_skin_update_status() {
     const std::string skin_line =
         st.current_skin.empty() ? "Checking for skin updates..." : "Updating skin: " + st.current_skin;
     ray::Font skin_font = font_manager.get_font(skin_line, size);
-    draw_text_ex(skin_font, skin_line.c_str(), ray::Vector2{x, y}, static_cast<float>(size), 1.0f, Color::YELLOW);
+    draw_text_ex(skin_font, skin_line.c_str(), Vec2{x, y}, static_cast<float>(size), 1.0f, Color::YELLOW);
 
     if (!st.current_file.empty()) {
         y += static_cast<float>(size);
         ray::Font file_font = font_manager.get_font(st.current_file, size);
-        draw_text_ex(file_font, st.current_file.c_str(), ray::Vector2{x, y}, static_cast<float>(size), 1.0f,
+        draw_text_ex(file_font, st.current_file.c_str(), Vec2{x, y}, static_cast<float>(size), 1.0f,
                         Color::WHITE);
     }
 }

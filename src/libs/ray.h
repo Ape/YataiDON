@@ -1,6 +1,7 @@
 #pragma once
 
 #include "color_utils.h"
+#include "math_types.h"
 namespace ray {
     extern "C" {
 #include <raylib.h>
@@ -34,15 +35,15 @@ inline void draw_rectangle(int x, int y, int w, int h, Color color) {
     ray::DrawRectangle(x, y, w, h, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_rectangle(ray::Rectangle rec, Color color) {
+inline void draw_rectangle(Rect rec, Color color) {
     ray::DrawRectangleRec(rec, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_rectangle_rounded(ray::Rectangle rec, float roundness, int segments, Color color) {
+inline void draw_rectangle_rounded(Rect rec, float roundness, int segments, Color color) {
     ray::DrawRectangleRounded(rec, roundness, segments, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_rectangle_rounded_lines_ex(ray::Rectangle rec, float roundness, int segments, float thickness,
+inline void draw_rectangle_rounded_lines_ex(Rect rec, float roundness, int segments, float thickness,
                                             Color color) {
     ray::DrawRectangleRoundedLinesEx(rec, roundness, segments, thickness, {color.r, color.g, color.b, color.a});
 }
@@ -51,7 +52,7 @@ inline void draw_rectangle_lines(int x, int y, int w, int h, Color color) {
     ray::DrawRectangleLines(x, y, w, h, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_rectangle_lines_ex(ray::Rectangle rec, float thickness, Color color) {
+inline void draw_rectangle_lines_ex(Rect rec, float thickness, Color color) {
     ray::DrawRectangleLinesEx(rec, thickness, {color.r, color.g, color.b, color.a});
 }
 
@@ -59,16 +60,16 @@ inline void draw_line(int x0, int y0, int x1, int y1, Color color) {
     ray::DrawLine(x0, y0, x1, y1, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_model(ray::Model model, ray::Vector3 pos, float scale, Color tint) {
+inline void draw_model(ray::Model model, Vec3 pos, float scale, Color tint) {
     ray::DrawModel(model, pos, scale, {tint.r, tint.g, tint.b, tint.a});
 }
 
-inline void draw_text_ex(ray::Font font, const char* text, ray::Vector2 pos, float font_size, float spacing,
+inline void draw_text_ex(ray::Font font, const char* text, Vec2 pos, float font_size, float spacing,
                          Color color) {
     ray::DrawTextEx(font, text, pos, font_size, spacing, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_texture_pro(ray::Texture2D tex, ray::Rectangle source, ray::Rectangle dest, ray::Vector2 origin,
+inline void draw_texture_pro(ray::Texture2D tex, Rect source, Rect dest, Vec2 origin,
                              float rotation, Color tint) {
     ray::DrawTexturePro(tex, source, dest, origin, rotation, {tint.r, tint.g, tint.b, tint.a});
 }
@@ -193,7 +194,7 @@ inline ray::Texture2D load_texture_mipmapped(const char* path,
     return tex;
 }
 
-inline ray::Vector2 measure_text_ex(const ray::Font& font, const char* text, float font_size, float spacing) {
+inline Vec2 measure_text_ex(const ray::Font& font, const char* text, float font_size, float spacing) {
     return ray::MeasureTextEx(font, text, font_size, spacing);
 }
 
@@ -263,7 +264,7 @@ inline void end_mode_3d() {
     ray::EndMode3D();
 }
 
-inline ray::Vector2 get_screen_to_world_2d(ray::Vector2 position, ray::Camera2D camera) {
+inline Vec2 get_screen_to_world_2d(Vec2 position, ray::Camera2D camera) {
     return ray::GetScreenToWorld2D(position, camera);
 }
 
@@ -326,7 +327,7 @@ inline ray::Image image_copy(ray::Image image) {
     return ray::ImageCopy(image);
 }
 
-inline ray::Image image_from_image(ray::Image image, ray::Rectangle rec) {
+inline ray::Image image_from_image(ray::Image image, Rect rec) {
     return ray::ImageFromImage(image, rec);
 }
 
@@ -334,7 +335,7 @@ inline void image_format(ray::Image* image, int new_format) {
     ray::ImageFormat(image, new_format);
 }
 
-inline void image_crop(ray::Image* image, ray::Rectangle crop) {
+inline void image_crop(ray::Image* image, Rect crop) {
     ray::ImageCrop(image, crop);
 }
 
@@ -342,12 +343,12 @@ inline void image_rotate_cw(ray::Image* image) {
     ray::ImageRotateCW(image);
 }
 
-inline void image_draw_image_pro(ray::Image* dst, ray::Image src, ray::Rectangle src_rec, ray::Rectangle dst_rec,
-                                 ray::Vector2 origin, float rotation, Color tint) {
+inline void image_draw_image_pro(ray::Image* dst, ray::Image src, Rect src_rec, Rect dst_rec,
+                                 Vec2 origin, float rotation, Color tint) {
     ray::ImageDrawImagePro(dst, src, src_rec, dst_rec, origin, rotation, {tint.r, tint.g, tint.b, tint.a});
 }
 
-inline ray::Rectangle get_image_alpha_border(ray::Image image, float threshold) {
+inline Rect get_image_alpha_border(ray::Image image, float threshold) {
     return ray::GetImageAlphaBorder(image, threshold);
 }
 
@@ -411,7 +412,7 @@ inline void update_model_animation(ray::Model model, ray::ModelAnimation anim, f
     ray::UpdateModelAnimation(model, anim, frame);
 }
 
-inline void draw_mesh(ray::Mesh mesh, ray::Material material, ray::Matrix transform) {
+inline void draw_mesh(ray::Mesh mesh, ray::Material material, Mat4 transform) {
     ray::DrawMesh(mesh, material, transform);
 }
 

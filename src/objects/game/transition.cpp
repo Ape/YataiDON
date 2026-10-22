@@ -141,8 +141,8 @@ void Transition::draw() {
         return;
     }
     if (loading_graphic.has_value()) {
-        ray::Rectangle src = {0, 0, (float)loading_graphic.value().width, (float)loading_graphic.value().height};
-        ray::Rectangle dst = {0,
+        Rect src = {0, 0, (float)loading_graphic.value().width, (float)loading_graphic.value().height};
+        Rect dst = {0,
                               global_tex.screen_height +
                                   (global_tex.get_skin_config(SC::TRANSITION_OFFSET)->y - global_tex.screen_height) -
                                   (float)cur_rainbow - total_offset,

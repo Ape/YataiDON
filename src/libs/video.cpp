@@ -253,7 +253,7 @@ void VideoPlayer::draw() {
         return;
     }
 
-    ray::Rectangle source{0.f, 0.f, static_cast<float>(texture->width), static_cast<float>(texture->height)};
+    Rect source{0.f, 0.f, static_cast<float>(texture->width), static_cast<float>(texture->height)};
 
     float texture_aspect = static_cast<float>(texture->width) / static_cast<float>(texture->height);
     float screen_aspect = static_cast<float>(tex.screen_width) / static_cast<float>(tex.screen_height);
@@ -274,8 +274,8 @@ void VideoPlayer::draw() {
         dest_y = 0.f;
     }
 
-    ray::Rectangle destination{dest_x, dest_y, dest_width, dest_height};
-    ray::Vector2 origin{0.f, 0.f};
+    Rect destination{dest_x, dest_y, dest_width, dest_height};
+    Vec2 origin{0.f, 0.f};
 
     draw_texture_pro(texture.value(), source, destination, origin, 0.f, Color::WHITE);
 }

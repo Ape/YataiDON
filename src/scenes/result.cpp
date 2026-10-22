@@ -179,8 +179,8 @@ void ResultScreen::draw() {
         background->draw();
     }
     if (loading_graphic.has_value()) {
-        ray::Rectangle src = {0, 0, (float)loading_graphic.value().width, (float)loading_graphic.value().height};
-        ray::Rectangle dst = {0, 0, (float)tex.screen_width, (float)tex.screen_height};
+        Rect src = {0, 0, (float)loading_graphic.value().width, (float)loading_graphic.value().height};
+        Rect dst = {0, 0, (float)tex.screen_width, (float)tex.screen_height};
         draw_texture_pro(loading_graphic.value(), src, dst, {0, 0}, 0, Color::WHITE);
     }
     draw_song_info();

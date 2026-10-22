@@ -122,7 +122,7 @@ static DrawTextureParams parse_draw_params_legacy(const sol::optional<sol::table
 
     sol::optional<sol::table> src = t["src"];
     if (src) {
-        ray::Rectangle rect;
+        Rect rect;
         rect.x = src.value()["x"].get_or(0.0f);
         rect.y = src.value()["y"].get_or(0.0f);
         rect.width = src.value()["width"].get_or(0.0f);
@@ -227,7 +227,7 @@ static DrawTextureParams parse_draw_params(const sol::optional<sol::table>& para
                 }
             } else if (key == "src") {
                 if (lua_is_table_like(L, v)) {
-                    ray::Rectangle rect;
+                    Rect rect;
                     rect.x = lua_field_or(L, v, "x", 0.0f);
                     rect.y = lua_field_or(L, v, "y", 0.0f);
                     rect.width = lua_field_or(L, v, "width", 0.0f);
@@ -705,7 +705,7 @@ void ScriptManager::register_lua_bindings() {
     tex.set_function("draw_rounded_rect", [](float x, float y, float w, float h, float roundness,
                                              std::array<double, 4> fill, double thickness, std::array<double, 4> line) {
         auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
-        ray::Rectangle r{x, y, w, h};
+        Rect r{x, y, w, h};
 
         draw_rectangle_rounded(r, roundness, 16,
                                   Color{to_u8(fill[0]), to_u8(fill[1]), to_u8(fill[2]), to_u8(fill[3])});
@@ -1017,9 +1017,9 @@ void ScriptManager::register_lua_bindings() {
         if (!webcam.is_ready()) {
             return;
         }
-        ray::Rectangle src{0, 0, (float)webcam.width(), (float)webcam.height()};
-        ray::Rectangle dst{x, y, w, h};
-        draw_texture_pro(webcam.get_texture(), src, dst, ray::Vector2{0, 0}, 0, Color::WHITE);
+        Rect src{0, 0, (float)webcam.width(), (float)webcam.height()};
+        Rect dst{x, y, w, h};
+        draw_texture_pro(webcam.get_texture(), src, dst, Vec2{0, 0}, 0, Color::WHITE);
     });
 
     lua["camera"] = camera_tbl;

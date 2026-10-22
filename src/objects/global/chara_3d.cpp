@@ -18,19 +18,19 @@ namespace ray {
 }
 
 // raymath lives outside raylib.h, so these stay local to the only file that includes it.
-inline ray::Matrix matrix_multiply(ray::Matrix left, ray::Matrix right) {
+inline Mat4 matrix_multiply(Mat4 left, Mat4 right) {
     return ray::MatrixMultiply(left, right);
 }
 
-inline ray::Matrix matrix_translate(float x, float y, float z) {
+inline Mat4 matrix_translate(float x, float y, float z) {
     return ray::MatrixTranslate(x, y, z);
 }
 
-inline ray::Matrix matrix_scale(float x, float y, float z) {
+inline Mat4 matrix_scale(float x, float y, float z) {
     return ray::MatrixScale(x, y, z);
 }
 
-inline ray::Vector3 vector3_transform(ray::Vector3 v, ray::Matrix mat) {
+inline Vec3 vector3_transform(Vec3 v, Mat4 mat) {
     return ray::Vector3Transform(v, mat);
 }
 extern "C" {
@@ -42,10 +42,10 @@ static constexpr int RL_CULL_FACE_FRONT = 0;
 static constexpr int RL_CULL_FACE_BACK = 1;
 
 static void draw_model_face_last(ray::Model& model, int face_material_index, const std::vector<int>& blend_materials,
-                                 const std::vector<int>& twosided_materials, ray::Vector3 position, float scale) {
-    ray::Matrix matTransform = matrix_multiply(matrix_scale(scale, scale, scale),
+                                 const std::vector<int>& twosided_materials, Vec3 position, float scale) {
+    Mat4 matTransform = matrix_multiply(matrix_scale(scale, scale, scale),
                                                    matrix_translate(position.x, position.y, position.z));
-    ray::Matrix transform = matrix_multiply(model.transform, matTransform);
+    Mat4 transform = matrix_multiply(model.transform, matTransform);
     auto is_blend = [&](int mat) { return std::ranges::contains(blend_materials, mat); };
     // _CULLNONE materials are drawn two-sided, as the name asks.
     auto draw = [&](int i) {
@@ -88,11 +88,11 @@ static void draw_model_face_last(ray::Model& model, int face_material_index, con
     }
 }
 
-static ray::Matrix rotation_xyz(float ax, float ay, float az) {
+static Mat4 rotation_xyz(float ax, float ay, float az) {
     float cx = cosf(-ax), sx = sinf(-ax);
     float cy = cosf(-ay), sy = sinf(-ay);
     float cz = cosf(-az), sz = sinf(-az);
-    ray::Matrix r = {};
+    Mat4 r = {};
     r.m0 = cz * cy;
     r.m1 = (cz * sy * sx) - (sz * cx);
     r.m2 = (cz * sy * cx) + (sz * sx);
@@ -572,7 +572,7 @@ void Chara3D::load_face_textures(fs::path& face_dir) {
     int frame_size = sheet.width;
     int frame_count = frame_size > 0 ? sheet.height / frame_size : 0;
     for (int f = 0; f < frame_count; f++) {
-        ray::Rectangle rect = {0, (float)(f * frame_size), (float)frame_size, (float)frame_size};
+        Rect rect = {0, (float)(f * frame_size), (float)frame_size, (float)frame_size};
         ray::Image frame_img = image_from_image(sheet, rect);
         face_textures.push_back(load_texture_from_image(frame_img));
         unload_image(frame_img);
@@ -872,9 +872,9 @@ void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h, float full_h) {
         }
     }
 
-    std::vector<ray::Matrix> saved_transform(parts.size());
+    std::vector<Mat4> saved_transform(parts.size());
     float y_angle = mirror ? -rot_y : rot_y;
-    ray::Matrix rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
+    Mat4 rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
     for (size_t p = 0; p < parts.size(); p++) {
         saved_transform[p] = parts[p].transform;
         parts[p].transform = rot;
@@ -910,9 +910,9 @@ void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h, float full_h) {
 }
 
 void Chara3D::draw_3d(float x, float y) {
-    std::vector<ray::Matrix> saved(parts.size());
+    std::vector<Mat4> saved(parts.size());
     float y_angle = mirror ? -rot_y : rot_y;
-    ray::Matrix rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
+    Mat4 rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
     for (size_t p = 0; p < parts.size(); p++) {
         saved[p] = parts[p].transform;
         parts[p].transform = rot;
@@ -936,9 +936,9 @@ static constexpr float SUPERSAMPLE = 2.0f;
 bool Chara3D::screen_bounds(float x, float y, const ray::Camera3D& cam3d, float zoom, int rw, int rh, float& x0,
                             float& y0, float& x1, float& y1) {
     float y_angle = mirror ? -rot_y : rot_y;
-    ray::Matrix rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
+    Mat4 rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
     const float s = scale * draw_scale * tex.screen_scale;
-    ray::Matrix transform =
+    Mat4 transform =
         matrix_multiply(rot, matrix_multiply(matrix_scale(s, s, s), matrix_translate(x, y, 400.0f)));
     x0 = y0 = std::numeric_limits<float>::max();
     x1 = y1 = std::numeric_limits<float>::lowest();
@@ -951,7 +951,7 @@ bool Chara3D::screen_bounds(float x, float y, const ray::Camera3D& cam3d, float 
                 continue;
             }
             for (int i = 0; i < mesh.vertexCount; i++) {
-                ray::Vector3 w = vector3_transform({v[3 * i], v[3 * i + 1], v[3 * i + 2]}, transform);
+                Vec3 w = vector3_transform({v[3 * i], v[3 * i + 1], v[3 * i + 2]}, transform);
                 const float px = (w.x - cam3d.position.x) * zoom + rw * 0.5f;
                 const float py = (w.y - cam3d.position.y) * zoom + rh * 0.5f;
                 x0 = std::min(x0, px);
