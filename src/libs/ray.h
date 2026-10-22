@@ -226,6 +226,47 @@ inline const char* codepoint_to_utf8(int codepoint, int* utf8_size) {
     return ray::CodepointToUTF8(codepoint, utf8_size);
 }
 
+namespace blend_mode {
+    inline constexpr int ADDITIVE = ray::BLEND_ADDITIVE;
+    inline constexpr int CUSTOM_SEPARATE = ray::BLEND_CUSTOM_SEPARATE;
+} // namespace blend_mode
+
+inline void begin_scissor_mode(int x, int y, int width, int height) {
+    ray::BeginScissorMode(x, y, width, height);
+}
+
+inline void end_scissor_mode() {
+    ray::EndScissorMode();
+}
+
+inline void begin_blend_mode(int mode) {
+    ray::BeginBlendMode(mode);
+}
+
+inline void end_blend_mode() {
+    ray::EndBlendMode();
+}
+
+inline void begin_mode_2d(ray::Camera2D camera) {
+    ray::BeginMode2D(camera);
+}
+
+inline void end_mode_2d() {
+    ray::EndMode2D();
+}
+
+inline void begin_mode_3d(ray::Camera3D camera) {
+    ray::BeginMode3D(camera);
+}
+
+inline void end_mode_3d() {
+    ray::EndMode3D();
+}
+
+inline ray::Vector2 get_screen_to_world_2d(ray::Vector2 position, ray::Camera2D camera) {
+    return ray::GetScreenToWorld2D(position, camera);
+}
+
 inline void clear_background(Color color) {
     ray::ClearBackground({color.r, color.g, color.b, color.a});
 }

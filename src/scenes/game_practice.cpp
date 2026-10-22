@@ -932,7 +932,7 @@ void PracticeGameScreen::draw_balloon_scrobble(const Note& head, double current_
 void PracticeGameScreen::draw_notes_scrobble(double current_ms) const {
     int scissor_x = players[0]->get_scissor_x();
     int win_w = get_render_width();
-    ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, get_render_height());
+    begin_scissor_mode(scissor_x, 0, win_w - scissor_x, get_render_height());
 
     // Draw bars
     for (const auto& bar : std::views::reverse(bars)) {
@@ -965,7 +965,7 @@ void PracticeGameScreen::draw_notes_scrobble(double current_ms) const {
         }
     }
 
-    ray::EndScissorMode();
+    end_scissor_mode();
 
     if (!bars.empty() && scrobble_index < (int)bars.size()) {
         std::string bar_str = std::to_string(scrobble_index + 1);

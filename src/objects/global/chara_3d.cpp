@@ -1027,22 +1027,22 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         rc.position.y = rc.target.y = wcy;
         rc.fovy = region_h / zoom;
 
-        ray::EndMode2D();
-        ray::EndBlendMode();
+        end_mode_2d();
+        end_blend_mode();
         render_dirty = false;
         ray::BeginTextureMode(scene_target);
         clear_background(Color::BLANK);
-        ray::BeginBlendMode(ray::BLEND_CUSTOM_SEPARATE); // not BLEND_ALPHA: it blends dst alpha as a*a+dst*(1-a),
+        begin_blend_mode(blend_mode::CUSTOM_SEPARATE); // not BLEND_ALPHA: it blends dst alpha as a*a+dst*(1-a),
                                                          // making opaque pixels under a translucent sheet see-through
-        ray::BeginMode3D(rc);
+        begin_mode_3d(rc);
         draw_3d(x, y);
         draw_outline(x, y, scene_target_w, scene_target_h, rh * SUPERSAMPLE);
-        ray::EndMode3D();
-        ray::EndBlendMode();
+        end_mode_3d();
+        end_blend_mode();
         ray::EndTextureMode();
     } else {
-        ray::EndMode2D();
-        ray::EndBlendMode();
+        end_mode_2d();
+        end_blend_mode();
     }
 
     {
@@ -1054,8 +1054,8 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         ray::EndShaderMode();
     }
 
-    ray::BeginBlendMode(ray::BLEND_CUSTOM_SEPARATE);
-    ray::BeginMode2D(cam2d);
+    begin_blend_mode(blend_mode::CUSTOM_SEPARATE);
+    begin_mode_2d(cam2d);
 }
 
 // The whole screen at 2x: kept for a rotated camera and as the fallback.
@@ -1084,13 +1084,13 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
 
     if (!use_render_textures) {
         ray::Camera3D cam3d = camera2d_to_3d(cam2d);
-        ray::EndMode2D();
-        ray::EndBlendMode();
-        ray::BeginMode3D(cam3d);
+        end_mode_2d();
+        end_blend_mode();
+        begin_mode_3d(cam3d);
         draw_3d(x, y);
-        ray::EndMode3D();
-        ray::BeginBlendMode(ray::BLEND_CUSTOM_SEPARATE);
-        ray::BeginMode2D(cam2d);
+        end_mode_3d();
+        begin_blend_mode(blend_mode::CUSTOM_SEPARATE);
+        begin_mode_2d(cam2d);
         return;
     }
 
@@ -1100,8 +1100,8 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
         render_dirty = true;
     }
 
-    ray::EndMode2D();
-    ray::EndBlendMode();
+    end_mode_2d();
+    end_blend_mode();
 
     if (render_dirty) {
         render_dirty = false;
@@ -1109,12 +1109,12 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
 
         ray::BeginTextureMode(scene_target);
         clear_background(Color::BLANK);
-        ray::BeginBlendMode(ray::BLEND_CUSTOM_SEPARATE);
-        ray::BeginMode3D(cam3d);
+        begin_blend_mode(blend_mode::CUSTOM_SEPARATE);
+        begin_mode_3d(cam3d);
         draw_3d(x, y);
         draw_outline(x, y, ssw, ssh, (float)ssh);
-        ray::EndMode3D();
-        ray::EndBlendMode();
+        end_mode_3d();
+        end_blend_mode();
         ray::EndTextureMode();
     }
 
@@ -1125,8 +1125,8 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
         ray::EndShaderMode();
     }
 
-    ray::BeginBlendMode(ray::BLEND_CUSTOM_SEPARATE);
-    ray::BeginMode2D(cam2d);
+    begin_blend_mode(blend_mode::CUSTOM_SEPARATE);
+    begin_mode_2d(cam2d);
 }
 
 std::unique_ptr<Chara3D> make_chara_from_player_data(const PlayerData* pd, bool mirror, bool use_skin_config) {

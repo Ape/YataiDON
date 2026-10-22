@@ -1310,9 +1310,9 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
     const ray::Texture2D* frame_tex = tex_obj->frame_texture(params.frame);
     if (frame_tex) {
         if (params.blend.has_value()) {
-            ray::BeginBlendMode(params.blend.value());
+            begin_blend_mode(params.blend.value());
             draw_texture_pro(*frame_tex, source_rect, dest_rect, params.origin, params.rotation, final_color);
-            ray::EndBlendMode();
+            end_blend_mode();
             return;
         }
         draw_texture_pro(*frame_tex, source_rect, dest_rect, params.origin, params.rotation, final_color);

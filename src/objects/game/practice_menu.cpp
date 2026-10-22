@@ -139,7 +139,7 @@ PracticeMenu::Action PracticeMenu::handle_mouse_input(const ray::Camera2D& camer
     }
 
     // Convert mouse position from screen coordinates to virtual coordinates
-    ray::Vector2 virtual_mouse = ray::GetScreenToWorld2D(mouse_pos, camera);
+    ray::Vector2 virtual_mouse = get_screen_to_world_2d(mouse_pos, camera);
 
     const char* name = dialog_name();
     sol::optional<std::string> dlg = name ? sol::optional<std::string>(name) : sol::nullopt;

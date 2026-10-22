@@ -432,8 +432,8 @@ static void run_frame() {
         L.last_color = global_data.camera.border_color;
     }
 
-    ray::BeginMode2D(L.camera);
-    ray::BeginBlendMode(ray::BLEND_CUSTOM_SEPARATE);
+    begin_mode_2d(L.camera);
+    begin_blend_mode(blend_mode::CUSTOM_SEPARATE);
 
     auto screen_it = L.screens.find(L.current_screen);
     Screen* screen = (screen_it != L.screens.end()) ? screen_it->second.get() : nullptr;
@@ -450,8 +450,8 @@ static void run_frame() {
         screen = (screen_it != L.screens.end()) ? screen_it->second.get() : nullptr;
     }
     if (!screen) {
-        ray::EndBlendMode();
-        ray::EndMode2D();
+        end_blend_mode();
+        end_mode_2d();
         end_drawing();
         return;
     }
@@ -516,8 +516,8 @@ static void run_frame() {
 
     draw_outer_border(tex.screen_width, tex.screen_height, L.last_color);
 
-    ray::EndBlendMode();
-    ray::EndMode2D();
+    end_blend_mode();
+    end_mode_2d();
     {
         PROFILE_SCOPE_N("present");
         end_drawing();

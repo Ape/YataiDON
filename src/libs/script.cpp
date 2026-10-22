@@ -722,10 +722,10 @@ void ScriptManager::register_lua_bindings() {
         int ex = virtual_to_screen_x(x + w);
         int sy = virtual_to_screen_y(y);
         int ey = virtual_to_screen_y(y + h);
-        ray::BeginScissorMode(sx, sy, ex - sx, ey - sy);
+        begin_scissor_mode(sx, sy, ex - sx, ey - sy);
     });
 
-    tex.set_function("end_scissor", [] { ray::EndScissorMode(); });
+    tex.set_function("end_scissor", [] { end_scissor_mode(); });
 
     tex.set_function("get_skin_config", [](const std::string& config_key) -> sol::optional<sol::table> {
         const SkinInfo* skin_ptr = font_manager.get_text_info(config_key);

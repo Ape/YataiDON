@@ -265,7 +265,7 @@ public:
 
         const float panel_x = tex.screen_width - PANEL_WIDTH + slide_offset();
         const float tab_width = PANEL_WIDTH / TAB_COUNT;
-        const ray::Vector2 mouse = ray::GetScreenToWorld2D(mouse_position(), camera);
+        const ray::Vector2 mouse = get_screen_to_world_2d(mouse_position(), camera);
         const bool clicked = mouse_pressed(SDL_BUTTON_LEFT);
         const bool mouse_over_panel = mouse.x >= panel_x;
 
@@ -940,7 +940,7 @@ private:
         const int scissor_x1 = virtual_to_screen_x(panel_x + PANEL_WIDTH);
         int scissor_y0 = virtual_to_screen_y(list_top);
         int scissor_y1 = virtual_to_screen_y(list_bottom);
-        ray::BeginScissorMode(scissor_x0, scissor_y0, scissor_x1 - scissor_x0, scissor_y1 - scissor_y0);
+        begin_scissor_mode(scissor_x0, scissor_y0, scissor_x1 - scissor_x0, scissor_y1 - scissor_y0);
         for (int row = 0; row < scene_shown; row++) {
             int idx = row + scene_scroll;
             if (idx >= scene_count) {
@@ -961,7 +961,7 @@ private:
             Color color = is_selected ? Color::YELLOW : (is_current ? Color::SKYBLUE : Color::WHITE);
             draw_text(name.c_str(), (int)panel_x + 4, (int)row_y + 3, 14, color);
         }
-        ray::EndScissorMode();
+        end_scissor_mode();
 
         if (scene_count > scene_shown) {
             float track_x = panel_x + PANEL_WIDTH - SCROLLBAR_WIDTH;
@@ -994,7 +994,7 @@ private:
                       fade(Color::WHITE, 0.4f));
         scissor_y0 = virtual_to_screen_y(data_top);
         scissor_y1 = virtual_to_screen_y(data_bottom);
-        ray::BeginScissorMode(scissor_x0, scissor_y0, scissor_x1 - scissor_x0, scissor_y1 - scissor_y0);
+        begin_scissor_mode(scissor_x0, scissor_y0, scissor_x1 - scissor_x0, scissor_y1 - scissor_y0);
         for (int row = 0; row < data_shown; row++) {
             int idx = row + data_scroll;
             if (idx >= field_count) {
@@ -1044,7 +1044,7 @@ private:
                 draw_text(text.c_str(), (int)r.value.x + 4, (int)r.value.y + 3, 12, Color::WHITE);
             }
         }
-        ray::EndScissorMode();
+        end_scissor_mode();
 
         if (field_count > data_shown) {
             float track_x = panel_x + PANEL_WIDTH - SCROLLBAR_WIDTH;
@@ -1249,7 +1249,7 @@ private:
         int scissor_x1 = virtual_to_screen_x(panel_x + PANEL_WIDTH);
         int scissor_y0 = virtual_to_screen_y(list_top);
         int scissor_y1 = virtual_to_screen_y(list_bottom);
-        ray::BeginScissorMode(scissor_x0, scissor_y0, scissor_x1 - scissor_x0, scissor_y1 - scissor_y0);
+        begin_scissor_mode(scissor_x0, scissor_y0, scissor_x1 - scissor_x0, scissor_y1 - scissor_y0);
         for (int row = 0; row < rows_shown; row++) {
             int ridx = row + scroll_offset;
             if (ridx >= row_count) {
@@ -1280,7 +1280,7 @@ private:
             Color color = is_selected ? Color::SKYBLUE : (is_hovered ? Color::YELLOW : Color::WHITE);
             draw_text(vr.label.c_str(), (int)panel_x + 20, (int)row_y + 3, 14, color);
         }
-        ray::EndScissorMode();
+        end_scissor_mode();
 
         if (row_count > rows_shown) {
             float track_x = panel_x + PANEL_WIDTH - SCROLLBAR_WIDTH;
