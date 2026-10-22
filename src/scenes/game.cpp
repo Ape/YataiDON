@@ -442,8 +442,7 @@ void GameScreen::resync_song(double current_ms) {
     double audio_ms = audio.get_sound_time_played(*song_music) * 1000.0f;
     double audio_ms_adjusted = audio_ms + audio_start_ms();
 
-    clock.synchronize(current_ms, audio_ms_adjusted,
-                      [] { return get_monitor_refresh_rate(); });
+    clock.synchronize(current_ms, audio_ms_adjusted, [] { return get_monitor_refresh_rate(); });
 }
 
 void GameScreen::init_skip() {
@@ -559,8 +558,8 @@ void GameScreen::poll_skip() {
     const SkinInfo* pos = skin_draws ? nullptr : tex.get_skin_config(SC::SKIP_COUNTER);
     if (pos) {
         skip_text = std::make_unique<OutlinedText>(std::to_string(skip_count) + "/" + std::to_string(SKIP_HITS),
-                                                   (pos->font_size > 0 ? pos->font_size : 40), Color::WHITE, Color::BLACK,
-                                                   false, 4);
+                                                   (pos->font_size > 0 ? pos->font_size : 40), Color::WHITE,
+                                                   Color::BLACK, false, 4);
     }
 
     if (skip_count >= SKIP_HITS) {
@@ -574,8 +573,8 @@ void GameScreen::do_skip() {
     const SkinInfo* used = skin_draws ? nullptr : tex.get_skin_config(SC::SKIP_USED_TEXT);
     if (used) {
         skip_text = std::make_unique<OutlinedText>(tex.skin_text("skip_used", global_data.config->general.language, ""),
-                                                   (used->font_size > 0 ? used->font_size : 40), Color::WHITE, Color::BLACK,
-                                                   false, 4);
+                                                   (used->font_size > 0 ? used->font_size : 40), Color::WHITE,
+                                                   Color::BLACK, false, 4);
     } else {
         skip_text.reset();
     }

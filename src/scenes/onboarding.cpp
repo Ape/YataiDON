@@ -223,8 +223,7 @@ void OnboardingScreen::draw_line(const std::string& text, float y, int size, Col
     // no skin yet means no skin font; the raylib default covers the ASCII this screen uses
     ray::Font font = skinless_start ? get_font_default() : font_manager.get_font(text, size);
     Vec2 dim = measure_text_ex(font, text.c_str(), static_cast<float>(size), 1.0f);
-    draw_text_ex(font, text.c_str(), Vec2{(tex.screen_width - dim.x) / 2.0f, y}, static_cast<float>(size),
-                    1.0f, color);
+    draw_text_ex(font, text.c_str(), Vec2{(tex.screen_width - dim.x) / 2.0f, y}, static_cast<float>(size), 1.0f, color);
 }
 
 void OnboardingScreen::draw() {

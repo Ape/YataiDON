@@ -46,14 +46,15 @@ void BaseOptionBox::draw_base() const {
     float desc_font_size = DESC_FONT_SIZE_BASE * tex.screen_scale;
     ray::Font font = font_manager.get_font(description_text, (int)desc_font_size);
     draw_text_ex(font, description_text.c_str(), {DESC_X_BASE * tex.screen_scale, DESC_Y_BASE * tex.screen_scale},
-                    desc_font_size, 1, Color::BLACK);
+                 desc_font_size, 1, Color::BLACK);
 }
 
 BoolOptionBox::BoolOptionBox(const std::string& name, const std::string& description, const std::string& path,
                              const std::string& true_label, const std::string& false_label)
     : BaseOptionBox(name, description, path), value(config_ref.get_bool()),
       on_text(std::make_unique<OutlinedText>(true_label, option_font_size(), Color::WHITE, Color::BLACK, false, 4, -4)),
-      off_text(std::make_unique<OutlinedText>(false_label, option_font_size(), Color::WHITE, Color::BLACK, false, 4, -4)) {}
+      off_text(
+          std::make_unique<OutlinedText>(false_label, option_font_size(), Color::WHITE, Color::BLACK, false, 4, -4)) {}
 
 void BoolOptionBox::confirm() {
     config_ref.set_bool(value);
@@ -121,11 +122,11 @@ IntOptionBox::IntOptionBox(const std::string& name, const std::string& descripti
                 value_index = 0;
                 value = value_list[0].first;
             }
-            value_text = std::make_unique<OutlinedText>(value_list[value_index].second, option_font_size(), Color::WHITE,
-                                                        Color::BLACK, false, 4, -4);
+            value_text = std::make_unique<OutlinedText>(value_list[value_index].second, option_font_size(),
+                                                        Color::WHITE, Color::BLACK, false, 4, -4);
         } else {
-            value_text = std::make_unique<OutlinedText>(int_display(value), option_font_size(), Color::WHITE, Color::BLACK,
-                                                        false, 4, -4);
+            value_text = std::make_unique<OutlinedText>(int_display(value), option_font_size(), Color::WHITE,
+                                                        Color::BLACK, false, 4, -4);
         }
     } else {
         value_text = std::make_unique<OutlinedText>(int_display(value), option_font_size(), Color::WHITE, Color::BLACK,
@@ -201,7 +202,8 @@ StrOptionBox::StrOptionBox(const std::string& name, const std::string& descripti
         value_text = std::make_unique<OutlinedText>(value_list[value_index].second, option_font_size(), Color::WHITE,
                                                     Color::BLACK, false, 4, -4);
     } else {
-        value_text = std::make_unique<OutlinedText>(value, option_font_size(), Color::WHITE, Color::BLACK, false, 4, -4);
+        value_text =
+            std::make_unique<OutlinedText>(value, option_font_size(), Color::WHITE, Color::BLACK, false, 4, -4);
     }
 }
 

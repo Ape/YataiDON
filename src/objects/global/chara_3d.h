@@ -6,9 +6,9 @@
 #include <unordered_map>
 #include <vector>
 
+#include "../../libs/color_utils.h"
 #include "../../libs/ray.h"
 #include "../../libs/texture.h"
-#include "../../libs/color_utils.h"
 
 class BaseAnimation;
 
@@ -84,7 +84,7 @@ private:
 
     void load_part(const fs::path& model_path, const fs::path& anim_path, bool normalize_face_scale = false);
 
-    std::vector<ray::Texture2D> face_textures;
+    std::vector<Texture> face_textures;
     std::unordered_map<int, std::unique_ptr<BaseAnimation>> face_anims;
     BaseAnimation* current_face_anim = nullptr;
     int current_face_index = -1;

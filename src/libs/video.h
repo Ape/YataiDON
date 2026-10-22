@@ -23,7 +23,7 @@ private:
         int index = 0;
     };
 
-    std::optional<ray::Texture2D> texture;
+    std::optional<Texture> texture;
     std::array<bool, 2> is_finished_arr = {false, false};
     bool audio_started = false;
     std::string audio_s;

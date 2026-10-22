@@ -28,7 +28,7 @@ Transition::~Transition() {
 }
 
 void Transition::add_loading_graphic(const std::string& path) {
-    ray::Texture2D tex = load_texture_mipmapped(path.c_str());
+    Texture tex = load_texture_mipmapped(path.c_str());
     if (tex.id == 0) {
         spdlog::error("Failed to load transition loading graphic: {}", path);
         return;
@@ -143,10 +143,10 @@ void Transition::draw() {
     if (loading_graphic.has_value()) {
         Rect src = {0, 0, (float)loading_graphic.value().width, (float)loading_graphic.value().height};
         Rect dst = {0,
-                              global_tex.screen_height +
-                                  (global_tex.get_skin_config(SC::TRANSITION_OFFSET)->y - global_tex.screen_height) -
-                                  (float)cur_rainbow - total_offset,
-                              (float)global_tex.screen_width, (float)global_tex.screen_height};
+                    global_tex.screen_height +
+                        (global_tex.get_skin_config(SC::TRANSITION_OFFSET)->y - global_tex.screen_height) -
+                        (float)cur_rainbow - total_offset,
+                    (float)global_tex.screen_width, (float)global_tex.screen_height};
         draw_texture_pro(loading_graphic.value(), src, dst, {0, 0}, 0, Color::WHITE);
     }
 

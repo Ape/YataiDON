@@ -167,7 +167,7 @@ void WebCamera::update() {
         img.mipmaps = 1;
         img.format = pixel_format::RGBA8;
 
-        ray::Texture2D tex = load_texture_from_image(img);
+        Texture tex = load_texture_from_image(img);
         if (tex.id == 0) {
             spdlog::error("WebCamera: failed to create texture {}x{}", m_width, m_height);
             m_width = m_height = 0;
@@ -188,7 +188,7 @@ void WebCamera::update() {
         img.height = m_height;
         img.mipmaps = 1;
         img.format = pixel_format::RGBA8;
-        ray::Texture2D tex = load_texture_from_image(img);
+        Texture tex = load_texture_from_image(img);
         if (tex.id == 0) {
             spdlog::error("WebCamera: failed to create texture {}x{}", m_width, m_height);
             m_width = m_height = 0;

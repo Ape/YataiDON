@@ -23,6 +23,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+
 #include "color_utils.h"
 
 enum class InputLogType {
@@ -78,8 +79,7 @@ public:
     bool check_import_requested(const std::string& access_code);
     void clear_import_flag(const std::string& access_code);
 
-    bool fetch_chara_colors(const std::string& access_code, Color& color_1, Color& color_2,
-                            Color& color_3);
+    bool fetch_chara_colors(const std::string& access_code, Color& color_1, Color& color_2, Color& color_3);
 
     bool fetch_username(const std::string& access_code, std::string& username);
     void update_username(const std::string& access_code, const std::string& username);

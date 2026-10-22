@@ -11,9 +11,9 @@
 #include <vector>
 
 #include "animation.h"
+#include "color_utils.h"
 #include "ray.h" // IWYU pragma: keep
 #include "skin_config.h"
-#include "color_utils.h"
 
 namespace fs = std::filesystem;
 
@@ -91,26 +91,26 @@ struct TextureObject {
         return x2.empty() ? 0.0f : static_cast<float>(x2[0]);
     }
 
-    virtual const ray::Texture2D* frame_texture(int frame) const { return nullptr; }
+    virtual const Texture* frame_texture(int frame) const { return nullptr; }
 
     virtual int frame_count() const { return 1; }
 };
 
 struct SingleTexture : public TextureObject {
-    std::shared_ptr<ray::Texture2D> texture;
+    std::shared_ptr<Texture> texture;
 
-    SingleTexture(const std::string& name, std::shared_ptr<ray::Texture2D> tex)
+    SingleTexture(const std::string& name, std::shared_ptr<Texture> tex)
         : TextureObject(name, tex->width, tex->height), texture(std::move(tex)) {
         SetTextureWrap(*texture, ray::TEXTURE_WRAP_CLAMP);
     }
 
-    const ray::Texture2D* frame_texture(int) const override { return texture.get(); }
+    const Texture* frame_texture(int) const override { return texture.get(); }
 };
 
 struct FramedTexture : public TextureObject {
-    std::vector<std::shared_ptr<ray::Texture2D>> textures;
+    std::vector<std::shared_ptr<Texture>> textures;
 
-    FramedTexture(const std::string& name, std::vector<std::shared_ptr<ray::Texture2D>> texs)
+    FramedTexture(const std::string& name, std::vector<std::shared_ptr<Texture>> texs)
         : TextureObject(name, texs.empty() ? 0 : texs[0]->width, texs.empty() ? 0 : texs[0]->height),
           textures(std::move(texs)) {
         for (auto& tex : textures) {
@@ -120,7 +120,7 @@ struct FramedTexture : public TextureObject {
 
     int frame_count() const override { return static_cast<int>(textures.size()); }
 
-    const ray::Texture2D* frame_texture(int frame) const override {
+    const Texture* frame_texture(int frame) const override {
         if (frame < 0 || frame >= static_cast<int>(textures.size())) {
             throw std::runtime_error("Frame " + std::to_string(frame) + " not available in framed texture " + name);
         }

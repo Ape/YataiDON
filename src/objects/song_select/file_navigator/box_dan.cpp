@@ -36,8 +36,8 @@ void DanBox::load_text() {
         base_font = shrunk;
     }
     const bool chip_black = tex.options[SCO::DAN_CHIP_NAME_BLACK];
-    name = std::make_unique<OutlinedText>(text_name, (int)base_font, chip_black ? Color::BLACK : Color::WHITE, Color::BLACK,
-                                          true, chip_black ? 0.0f : name_outline);
+    name = std::make_unique<OutlinedText>(text_name, (int)base_font, chip_black ? Color::BLACK : Color::WHITE,
+                                          Color::BLACK, true, chip_black ? 0.0f : name_outline);
     int font_size = tex.get_skin_config(SC::DAN_SELECT_TITLE)->font_size;
     hori_name = std::make_unique<OutlinedText>(dan_title, font_size, Color::WHITE, Color::BLACK, false);
 

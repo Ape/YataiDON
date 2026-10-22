@@ -707,13 +707,11 @@ void ScriptManager::register_lua_bindings() {
         auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
         Rect r{x, y, w, h};
 
-        draw_rectangle_rounded(r, roundness, 16,
-                                  Color{to_u8(fill[0]), to_u8(fill[1]), to_u8(fill[2]), to_u8(fill[3])});
+        draw_rectangle_rounded(r, roundness, 16, Color{to_u8(fill[0]), to_u8(fill[1]), to_u8(fill[2]), to_u8(fill[3])});
 
         if (thickness > 0) {
-            draw_rectangle_rounded_lines_ex(
-                r, roundness, 16, (float)thickness,
-                Color{to_u8(line[0]), to_u8(line[1]), to_u8(line[2]), to_u8(line[3])});
+            draw_rectangle_rounded_lines_ex(r, roundness, 16, (float)thickness,
+                                            Color{to_u8(line[0]), to_u8(line[1]), to_u8(line[2]), to_u8(line[3])});
         }
     });
 
@@ -918,7 +916,7 @@ void ScriptManager::register_lua_bindings() {
             auto to_u8 = [](double v) { return static_cast<uint8_t>(std::clamp(static_cast<int>(v), 0, 255)); };
             Color c = {to_u8(color[0]), to_u8(color[1]), to_u8(color[2]), to_u8(color[3])};
             Color oc = {to_u8(outline_color[0]), to_u8(outline_color[1]), to_u8(outline_color[2]),
-                             to_u8(outline_color[3])};
+                        to_u8(outline_color[3])};
             return std::make_unique<OutlinedText>(content, static_cast<int>(font_size), c, oc, is_vertical,
                                                   thickness.value_or(5.0f), spacing.value_or(2.0f),
                                                   v_advance.value_or(1.0f), font.value_or(""));

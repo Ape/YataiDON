@@ -292,8 +292,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
                     spdlog::error("Invalid crop entry {} for texture {}", j, tex_obj->name);
                     continue;
                 }
-                crops.push_back(
-                    Rect{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
+                crops.push_back(Rect{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
             }
             if (crops.empty()) {
                 has_crop_in_first = false;
@@ -326,7 +325,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
             if (mapping.HasMember("frame_order") && mapping["frame_order"].IsArray()) {
                 auto* framed = dynamic_cast<FramedTexture*>(tex_obj);
                 if (framed) {
-                    std::vector<std::shared_ptr<ray::Texture2D>> reordered;
+                    std::vector<std::shared_ptr<Texture>> reordered;
                     for (SizeType j = 0; j < mapping["frame_order"].Size(); j++) {
                         int idx = static_cast<int>(json_number(mapping["frame_order"][j]));
                         if (idx < 0 || idx >= static_cast<int>(framed->textures.size())) {
@@ -354,8 +353,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
                     spdlog::error("Invalid crop entry {} for texture {}", j, tex_obj->name);
                     continue;
                 }
-                crops.push_back(
-                    Rect{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
+                crops.push_back(Rect{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
             }
             if (!crops.empty()) {
                 tex_obj->crop_data = crops;
@@ -373,7 +371,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
         if (tex_mapping.HasMember("frame_order") && tex_mapping["frame_order"].IsArray()) {
             auto* framed = dynamic_cast<FramedTexture*>(tex_obj);
             if (framed) {
-                std::vector<std::shared_ptr<ray::Texture2D>> reordered;
+                std::vector<std::shared_ptr<Texture>> reordered;
                 for (SizeType j = 0; j < tex_mapping["frame_order"].Size(); j++) {
                     int idx = static_cast<int>(json_number(tex_mapping["frame_order"][j]));
                     if (idx < 0 || idx >= static_cast<int>(framed->textures.size())) {
@@ -389,8 +387,8 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
 
     ray::TextureFilter filter = texture_filter::BILINEAR;
     for (int i = 0; i < tex_obj->frame_count(); i++) {
-        if (const ray::Texture2D* t = tex_obj->frame_texture(i)) {
-            set_texture_filter(*const_cast<ray::Texture2D*>(t), filter);
+        if (const Texture* t = tex_obj->frame_texture(i)) {
+            set_texture_filter(*const_cast<Texture*>(t), filter);
         }
     }
 }
@@ -454,8 +452,8 @@ std::unordered_map<std::string, std::weak_ptr<TextureObject>>& tex_object_cache(
     return cache;
 }
 
-std::shared_ptr<ray::Texture2D> shared_texture(ray::Texture2D tex) {
-    return std::shared_ptr<ray::Texture2D>(new ray::Texture2D(tex), [](ray::Texture2D* p) {
+std::shared_ptr<Texture> shared_texture(Texture tex) {
+    return std::shared_ptr<Texture>(new Texture(tex), [](Texture* p) {
         if (p->id != 0) {
             unload_texture(*p);
         }
@@ -920,21 +918,21 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
             try {
                 // GPU textures indexed by file, so keys that share one atlas PNG
                 // (via "file" + "crop") upload it once and share the texture.
-                std::vector<std::shared_ptr<ray::Texture2D>> gpu(files.size());
+                std::vector<std::shared_ptr<Texture>> gpu(files.size());
                 for (const auto& p : pending) {
                     bool ok = true;
-                    std::vector<std::shared_ptr<ray::Texture2D>> texs;
+                    std::vector<std::shared_ptr<Texture>> texs;
                     texs.reserve(p.file_count);
                     for (size_t i = 0; i < p.file_count; ++i) {
                         size_t fi = p.first_file + i;
-                        std::shared_ptr<ray::Texture2D> tex = gpu[fi];
+                        std::shared_ptr<Texture> tex = gpu[fi];
                         if (!tex) {
                             const ray::Image& img = images[fi];
                             if (!img.data) {
                                 spdlog::error("Failed to decode image for texture {}: Frame {}", p.name, i);
                                 ok = false;
                             } else {
-                                ray::Texture2D t = load_texture_from_image(img);
+                                Texture t = load_texture_from_image(img);
                                 if (!is_texture_valid(t)) {
                                     spdlog::error("Failed to load texture {}: Frame {}", p.name, i);
                                     ok = false;
@@ -1285,12 +1283,12 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
         const float scaled_half_height = (y2v * params.scale) * 0.5f;
 
         dest_rect = Rect{base_x + draw_offset_x + half_width - scaled_half_width + params.x,
-                                   base_y + draw_offset_y + half_height - scaled_half_height + params.y,
-                                   x2v * params.scale + params.x2, y2v * params.scale + params.y2};
+                         base_y + draw_offset_y + half_height - scaled_half_height + params.y,
+                         x2v * params.scale + params.x2, y2v * params.scale + params.y2};
     } else {
         dest_rect = Rect{base_x + draw_offset_x + params.x, base_y + draw_offset_y + params.y,
-                                   tex_obj->x2[params.index] * params.scale + params.x2,
-                                   tex_obj->y2[params.index] * params.scale + params.y2};
+                         tex_obj->x2[params.index] * params.scale + params.x2,
+                         tex_obj->y2[params.index] * params.scale + params.y2};
     }
 
     if (debug_log_draws) {
@@ -1307,7 +1305,7 @@ void TextureWrapper::draw_texture(TextureObject* tex_obj, const DrawTextureParam
         log_lua_site(debug_draw_log.back(), script_lua_state());
     }
 
-    const ray::Texture2D* frame_tex = tex_obj->frame_texture(params.frame);
+    const Texture* frame_tex = tex_obj->frame_texture(params.frame);
     if (frame_tex) {
         if (params.blend.has_value()) {
             begin_blend_mode(params.blend.value());

@@ -20,8 +20,9 @@ SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bo
         std::make_unique<OutlinedText>(song_name, tex.get_skin_config(SC::GAME_SONG_INFO)->font_size, Color::WHITE,
                                        Color::BLACK, false, skin_outline(*tex.get_skin_config(SC::GAME_SONG_INFO)));
     if (show_subtitle && !subtitle.empty()) {
-        song_subtitle = std::make_unique<OutlinedText>(
-            subtitle, tex.get_skin_config(SC::GAME_SONG_INFO_SUBTITLE)->font_size, Color::WHITE, Color::BLACK, false, 5);
+        song_subtitle =
+            std::make_unique<OutlinedText>(subtitle, tex.get_skin_config(SC::GAME_SONG_INFO_SUBTITLE)->font_size,
+                                           Color::WHITE, Color::BLACK, false, 5);
     }
     const SkinInfo* plate_cfg = tex.get_skin_config(SC::SONG_NUM_GAME);
     this->song_num = std::make_unique<SongNum>(song_num, plate_cfg ? plate_cfg->outline : -1.0f);
@@ -42,9 +43,8 @@ SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bo
 
     GenreIndex genre_bucket = this->genre < 8 ? static_cast<GenreIndex>(this->genre + 1) : GenreIndex::DEFAULT;
     auto color_it = DEFAULT_COLORS.find(genre_bucket);
-    Color target = (color_it != DEFAULT_COLORS.end() && color_it->second[1].has_value())
-                            ? color_it->second[1].value()
-                            : Color{101, 0, 82, 255};
+    Color target = (color_it != DEFAULT_COLORS.end() && color_it->second[1].has_value()) ? color_it->second[1].value()
+                                                                                         : Color{101, 0, 82, 255};
 
     genre_shader = load_shader("shader/dummy.vs", "shader/colortransform.fs");
     genre_shader_loaded = genre_shader.id != 0;
@@ -52,10 +52,8 @@ SongInfo::SongInfo(const std::string& song_name, const std::string& subtitle, bo
         float src[3] = {GENRE_PLATE_TEMPLATE_COLOR.r / 255.0f, GENRE_PLATE_TEMPLATE_COLOR.g / 255.0f,
                         GENRE_PLATE_TEMPLATE_COLOR.b / 255.0f};
         float tgt[3] = {target.r / 255.0f, target.g / 255.0f, target.b / 255.0f};
-        set_shader_value(genre_shader, get_shader_location(genre_shader, "sourceColor"), src,
-                            shader_uniform::VEC3);
-        set_shader_value(genre_shader, get_shader_location(genre_shader, "targetColor"), tgt,
-                            shader_uniform::VEC3);
+        set_shader_value(genre_shader, get_shader_location(genre_shader, "sourceColor"), src, shader_uniform::VEC3);
+        set_shader_value(genre_shader, get_shader_location(genre_shader, "targetColor"), tgt, shader_uniform::VEC3);
     }
 }
 

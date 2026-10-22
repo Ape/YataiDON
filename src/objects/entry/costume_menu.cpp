@@ -67,7 +67,7 @@ void CostumeMenu::load_costume_icons(const std::string& subdir, const std::strin
     }
     std::ranges::sort(entries, [](const auto& a, const auto& b) { return a.first < b.first; });
     for (auto& [id, path] : entries) {
-        ray::Texture t = load_texture(path.string().c_str());
+        Texture t = load_texture(path.string().c_str());
         if (t.id == 0 || t.width <= 0 || t.height <= 0) {
             spdlog::warn("CostumeMenu: failed to load icon {}", path.string());
             continue;
@@ -330,7 +330,7 @@ void CostumeMenu::draw() {
             float ix = tex.draw_offset_x + base_x + i * ITEM_W + (ITEM_W - dw) / 2.0f;
             float iy = tex.draw_offset_y + base_y + (ITEM_W - dh) / 2.0f;
             draw_texture_pro(icon, {0, 0, (float)icon.width, (float)icon.height}, {ix, iy, dw, dh}, {0, 0}, 0,
-                                Color::WHITE);
+                             Color::WHITE);
         }
     }
 

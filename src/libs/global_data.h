@@ -10,9 +10,9 @@
 #include <string>
 #include <vector>
 
+#include "color_utils.h"
 #include "config.h"
 #include "ray.h" // IWYU pragma: keep
-#include "color_utils.h"
 
 namespace fs = std::filesystem;
 

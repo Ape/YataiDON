@@ -24,7 +24,7 @@ protected:
     CoinOverlay coin_overlay;
 
     std::optional<ResultBackground> background;
-    std::optional<ray::Texture2D> loading_graphic;
+    std::optional<Texture> loading_graphic;
     double skipped_time = 0;
     static constexpr double kFrameMs = 1000.0 / 120.0;
     static constexpr double kEnableSkipMs = 100 * kFrameMs;

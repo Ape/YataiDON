@@ -3,9 +3,9 @@
 #include <cmath>
 #include <numbers>
 
+#include "../../../libs/color_utils.h"
 #include "../../../libs/text.h"
 #include "../../enums.h"
-#include "../../../libs/color_utils.h"
 
 struct BoxDef {
     std::string name;

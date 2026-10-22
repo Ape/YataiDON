@@ -48,7 +48,7 @@ private:
     float pos_y = 0.0f;
     sol::protected_function fn_is_ready;
 
-    std::vector<ray::Texture2D> costume_icons;
+    std::vector<Texture> costume_icons;
     std::vector<int> costume_ids;
     std::unordered_map<int, std::string> costume_names;
 

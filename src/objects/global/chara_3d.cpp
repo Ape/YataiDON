@@ -43,8 +43,8 @@ static constexpr int RL_CULL_FACE_BACK = 1;
 
 static void draw_model_face_last(ray::Model& model, int face_material_index, const std::vector<int>& blend_materials,
                                  const std::vector<int>& twosided_materials, Vec3 position, float scale) {
-    Mat4 matTransform = matrix_multiply(matrix_scale(scale, scale, scale),
-                                                   matrix_translate(position.x, position.y, position.z));
+    Mat4 matTransform =
+        matrix_multiply(matrix_scale(scale, scale, scale), matrix_translate(position.x, position.y, position.z));
     Mat4 transform = matrix_multiply(model.transform, matTransform);
     auto is_blend = [&](int mat) { return std::ranges::contains(blend_materials, mat); };
     // _CULLNONE materials are drawn two-sided, as the name asks.
@@ -517,7 +517,7 @@ Chara3D::~Chara3D() {
 }
 
 void Chara3D::set_texture(fs::path& texture_path, int part_index, int material_index) {
-    ray::Texture2D old = parts[part_index].materials[material_index].maps[material_map::DIFFUSE].texture;
+    Texture old = parts[part_index].materials[material_index].maps[material_map::DIFFUSE].texture;
     // Face material textures are owned by face_textures (shared across parts and unloaded
     // in the destructor); unloading here would double-free / use-after-free.
     bool is_face_material =
@@ -525,7 +525,7 @@ void Chara3D::set_texture(fs::path& texture_path, int part_index, int material_i
     if (old.id != 0 && !is_face_material) {
         unload_texture(old);
     }
-    ray::Texture tex = load_texture_mipmapped(texture_path.string().c_str(), texture_filter::BILINEAR);
+    Texture tex = load_texture_mipmapped(texture_path.string().c_str(), texture_filter::BILINEAR);
     int map_type = material_map::DIFFUSE;
     set_material_texture(&parts[part_index].materials[material_index], map_type, tex);
     render_dirty = true;
@@ -602,14 +602,13 @@ void Chara3D::apply_face(int face_index) {
         if (part_face_material_index[p] == -1) {
             continue;
         }
-        parts[p].materials[part_face_material_index[p]].maps[material_map::DIFFUSE].texture =
-            face_textures[face_index];
+        parts[p].materials[part_face_material_index[p]].maps[material_map::DIFFUSE].texture = face_textures[face_index];
     }
     current_face_index = face_index;
     render_dirty = true;
 }
 
-static ray::Texture2D recolor_texture(ray::Image& source, Color body, Color face, Color rim) {
+static Texture recolor_texture(ray::Image& source, Color body, Color face, Color rim) {
     ray::Image img = image_copy(source);
     image_format(&img, pixel_format::RGBA8);
 
@@ -641,7 +640,7 @@ static ray::Texture2D recolor_texture(ray::Image& source, Color body, Color face
         pixels[i * 4 + 2] = out.b;
     }
 
-    ray::Texture2D result = load_texture_from_image(img);
+    Texture result = load_texture_from_image(img);
     unload_image(img);
     return result;
 }
@@ -652,7 +651,7 @@ static void apply_don_colors(ray::Model& model, int mat_idx, Color body, Color f
     if (!img.data) {
         return;
     }
-    ray::Texture2D new_tex = recolor_texture(img, body, face, rim);
+    Texture new_tex = recolor_texture(img, body, face, rim);
     unload_image(img);
     if (new_tex.id == 0) {
         return;
@@ -938,8 +937,7 @@ bool Chara3D::screen_bounds(float x, float y, const ray::Camera3D& cam3d, float 
     float y_angle = mirror ? -rot_y : rot_y;
     Mat4 rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
     const float s = scale * draw_scale * tex.screen_scale;
-    Mat4 transform =
-        matrix_multiply(rot, matrix_multiply(matrix_scale(s, s, s), matrix_translate(x, y, 400.0f)));
+    Mat4 transform = matrix_multiply(rot, matrix_multiply(matrix_scale(s, s, s), matrix_translate(x, y, 400.0f)));
     x0 = y0 = std::numeric_limits<float>::max();
     x1 = y1 = std::numeric_limits<float>::lowest();
     bool any = false;
@@ -1050,7 +1048,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         begin_texture_mode(scene_target);
         clear_background(Color::BLANK);
         begin_blend_mode(blend_mode::CUSTOM_SEPARATE); // not BLEND_ALPHA: it blends dst alpha as a*a+dst*(1-a),
-                                                         // making opaque pixels under a translucent sheet see-through
+                                                       // making opaque pixels under a translucent sheet see-through
         begin_mode_3d(rc);
         draw_3d(x, y);
         draw_outline(x, y, scene_target_w, scene_target_h, rh * SUPERSAMPLE);
@@ -1067,7 +1065,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         const float region_h = scene_target_h / SUPERSAMPLE;
         begin_shader_mode(outline_fxaa_shader);
         draw_texture_pro(scene_target.texture, {0, 0, (float)scene_target_w, -(float)scene_target_h},
-                            {(float)region_x, (float)region_y, region_w, region_h}, {0, 0}, 0.0f, Color::WHITE);
+                         {(float)region_x, (float)region_y, region_w, region_h}, {0, 0}, 0.0f, Color::WHITE);
         end_shader_mode();
     }
 
@@ -1138,7 +1136,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
     {
         begin_shader_mode(outline_fxaa_shader);
         draw_texture_pro(scene_target.texture, {0, 0, (float)ssw, -(float)ssh}, {0, 0, (float)rw, (float)rh}, {0, 0},
-                            0.0f, Color::WHITE);
+                         0.0f, Color::WHITE);
         end_shader_mode();
     }
 

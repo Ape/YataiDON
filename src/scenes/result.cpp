@@ -21,7 +21,7 @@ void ResultScreen::on_screen_start() {
         global_data.session_data[(int)global_data.player_num].selected_song.parent_path() / "Loading.png";
     background.reset();
     if (exists(loading_graphic_path)) {
-        ray::Texture2D loaded = load_texture(loading_graphic_path.string().c_str());
+        Texture loaded = load_texture(loading_graphic_path.string().c_str());
         if (loaded.id != 0) {
             loading_graphic.emplace(loaded);
         } else {

@@ -214,8 +214,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
 
             Rect src{0, 0, w, h};
             Rect dest{x, y, dw, dh};
-            draw_texture_pro(self.box_texture.value(), src, dest, Vec2{0, 0}, 0,
-                                ::fade(Color::WHITE, fade));
+            draw_texture_pro(self.box_texture.value(), src, dest, Vec2{0, 0}, 0, ::fade(Color::WHITE, fade));
         });
 
     lua.new_usertype<BackBox>("BackBox", sol::base_classes, sol::bases<BaseBox>());

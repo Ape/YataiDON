@@ -430,8 +430,7 @@ static ray::Image text_image(const ray::Font& font, const char* text, float font
         const ray::GlyphInfo& g = font.glyphs[gi];
         if (cp != ' ' && cp != '\t') {
             Rect sr = {0, 0, (float)g.image.width, (float)g.image.height};
-            Rect dr = {(float)(x + g.offsetX), (float)(margin + g.offsetY), font.recs[gi].width,
-                                 font.recs[gi].height};
+            Rect dr = {(float)(x + g.offsetX), (float)(margin + g.offsetY), font.recs[gi].width, font.recs[gi].height};
             image_draw_image_pro(&im, g.image, sr, dr, {0, 0}, 0.0f, Color::WHITE);
         }
         x += (g.advanceX == 0 ? (int)(font.recs[gi].width + spacing) : g.advanceX + (int)spacing);
@@ -684,9 +683,8 @@ static bool in_rotate_set(const std::string& s) {
     return rotate_set.contains(s);
 }
 
-OutlinedText::OutlinedText(std::string text, int font_size, Color color, Color outline_color,
-                           bool is_vertical, float outline_thickness, float spacing, float v_advance,
-                           const std::string& font_name)
+OutlinedText::OutlinedText(std::string text, int font_size, Color color, Color outline_color, bool is_vertical,
+                           float outline_thickness, float spacing, float v_advance, const std::string& font_name)
     : text(std::move(text)), font_size(static_cast<float>(font_size)),
       outline_thickness(outline_thickness * global_tex.screen_scale), v_advance(v_advance) {
     worker_font = named_font_manager(font_name).copy_font(this->text, font_size);
@@ -784,8 +782,8 @@ OutlinedText::BuildData OutlinedText::build_horizontal_text(Color color, Color o
 
     top_extra = std::max(0, text_margin(font_size) - pad);
     ray::Image img = gen_image_color((int)max_w + pad * 2,
-                                        (int)(line_advance * (float)(lines.size() - 1) + line_h) + pad * 2 + top_extra,
-                                        clear_of(outline_thickness > 0 ? outline_color : color));
+                                     (int)(line_advance * (float)(lines.size() - 1) + line_h) + pad * 2 + top_extra,
+                                     clear_of(outline_thickness > 0 ? outline_color : color));
 
     for (int li = 0; li < (int)lines.size(); li++) {
         float y = pad + top_extra + li * line_advance;
@@ -976,7 +974,7 @@ bool OutlinedText::upload_pending() {
     unload_font(worker_font);
     worker_font = {};
 
-    ray::Texture tex = load_texture_from_image(*img);
+    Texture tex = load_texture_from_image(*img);
     set_texture_filter(tex, texture_filter::BILINEAR);
     unload_image(*img);
 

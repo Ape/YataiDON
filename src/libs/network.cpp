@@ -248,8 +248,7 @@ bool NetworkClient::check_import_requested(const std::string& access_code) {
     return doc.HasMember("import_requested") && doc["import_requested"].IsBool() && doc["import_requested"].GetBool();
 }
 
-bool NetworkClient::fetch_chara_colors(const std::string& access_code, Color& color_1, Color& color_2,
-                                       Color& color_3) {
+bool NetworkClient::fetch_chara_colors(const std::string& access_code, Color& color_1, Color& color_2, Color& color_3) {
     if (!network_enabled()) {
         return false;
     }
@@ -433,8 +432,8 @@ std::optional<RemoteUser> NetworkClient::fetch_user(const std::string& access_co
         doc["chara_color_2"].IsString() && doc.HasMember("chara_color_3") && doc["chara_color_3"].IsString()) {
         try {
             user.chara_colors = std::array<Color, 3>{parse_hex_color(doc["chara_color_1"].GetString()),
-                                                          parse_hex_color(doc["chara_color_2"].GetString()),
-                                                          parse_hex_color(doc["chara_color_3"].GetString())};
+                                                     parse_hex_color(doc["chara_color_2"].GetString()),
+                                                     parse_hex_color(doc["chara_color_3"].GetString())};
         } catch (const std::invalid_argument&) {
         }
     }

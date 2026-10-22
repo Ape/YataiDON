@@ -23,7 +23,7 @@ public:
 
     bool is_open() const { return m_camera != nullptr; }
     bool is_ready() const { return m_texture.has_value(); }
-    const ray::Texture2D& get_texture() const {
+    const Texture& get_texture() const {
         assert(m_texture.has_value() && "WebCamera::get_texture() called before is_ready()");
         return m_texture.value();
     }
@@ -32,7 +32,7 @@ public:
 
 private:
     SDL_Camera* m_camera = nullptr;
-    std::optional<ray::Texture2D> m_texture;
+    std::optional<Texture> m_texture;
     int m_width = 0;
     int m_height = 0;
     bool m_permission_denied_logged = false;

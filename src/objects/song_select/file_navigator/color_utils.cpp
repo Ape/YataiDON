@@ -1,9 +1,10 @@
 #include "color_utils.h"
-#include "../../../libs/ray.h"
 
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
+
+#include "../../../libs/ray.h"
 
 float rgb_to_hue(int r, int g, int b) {
     float rf = r / 255.0f;
@@ -50,16 +51,15 @@ float calculate_hue_shift(const Color& source_rgb, const Color& target_rgb) {
 Color darken_color(const Color& rgb) {
     constexpr float darkening_factor = 0.63f;
     return Color((unsigned char)std::round(rgb.r * darkening_factor),
-                      (unsigned char)std::round(rgb.g * darkening_factor),
-                      (unsigned char)std::round(rgb.b * darkening_factor), rgb.a);
+                 (unsigned char)std::round(rgb.g * darkening_factor),
+                 (unsigned char)std::round(rgb.b * darkening_factor), rgb.a);
 }
 
 BoxColors resolve_box_colors(const std::optional<Color>& box_color, const std::optional<Color>& back_color,
                              const std::optional<Color>& fore_color) {
     BoxColors result;
     result.box = box_color.has_value() ? box_color : back_color;
-    Color default_outline =
-        result.box.has_value() ? darken_color(result.box.value()) : Color(101, 0, 82, 255);
+    Color default_outline = result.box.has_value() ? darken_color(result.box.value()) : Color(101, 0, 82, 255);
     if (box_color.has_value()) {
         result.outline = fore_color.value_or(default_outline);
         result.text = fore_color.value_or(Color::WHITE);

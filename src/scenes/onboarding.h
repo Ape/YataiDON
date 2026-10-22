@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "../libs/screen.h"
 #include "../libs/color_utils.h"
+#include "../libs/screen.h"
 
 class OnboardingScreen : public Screen {
 private:

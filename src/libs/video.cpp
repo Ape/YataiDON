@@ -156,7 +156,7 @@ void VideoPlayer::upload_frame(const DecodedFrame& frame) {
         image.mipmaps = 1;
         image.format = pixel_format::RGB8;
 
-        ray::Texture2D tex = load_texture_from_image(image);
+        Texture tex = load_texture_from_image(image);
         set_texture_filter(tex, texture_filter::TRILINEAR);
         texture = tex;
     } else {

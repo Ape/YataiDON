@@ -17,7 +17,7 @@ private:
     bool is_second;
     std::unique_ptr<OutlinedText> title;
     std::unique_ptr<OutlinedText> subtitle;
-    std::optional<ray::Texture2D> loading_graphic;
+    std::optional<Texture> loading_graphic;
     void draw_song_info();
 
     TextureObject* t_rainbow_text_bg = nullptr;

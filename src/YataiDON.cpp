@@ -85,8 +85,7 @@ static void draw_skin_update_status() {
     if (!st.current_file.empty()) {
         y += static_cast<float>(size);
         ray::Font file_font = font_manager.get_font(st.current_file, size);
-        draw_text_ex(file_font, st.current_file.c_str(), Vec2{x, y}, static_cast<float>(size), 1.0f,
-                        Color::WHITE);
+        draw_text_ex(file_font, st.current_file.c_str(), Vec2{x, y}, static_cast<float>(size), 1.0f, Color::WHITE);
     }
 }
 

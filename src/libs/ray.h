@@ -1,6 +1,7 @@
 #pragma once
 
 #include "color_utils.h"
+#include "gfx_types.h"
 #include "math_types.h"
 namespace ray {
     extern "C" {
@@ -43,8 +44,7 @@ inline void draw_rectangle_rounded(Rect rec, float roundness, int segments, Colo
     ray::DrawRectangleRounded(rec, roundness, segments, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_rectangle_rounded_lines_ex(Rect rec, float roundness, int segments, float thickness,
-                                            Color color) {
+inline void draw_rectangle_rounded_lines_ex(Rect rec, float roundness, int segments, float thickness, Color color) {
     ray::DrawRectangleRoundedLinesEx(rec, roundness, segments, thickness, {color.r, color.g, color.b, color.a});
 }
 
@@ -64,13 +64,11 @@ inline void draw_model(ray::Model model, Vec3 pos, float scale, Color tint) {
     ray::DrawModel(model, pos, scale, {tint.r, tint.g, tint.b, tint.a});
 }
 
-inline void draw_text_ex(ray::Font font, const char* text, Vec2 pos, float font_size, float spacing,
-                         Color color) {
+inline void draw_text_ex(ray::Font font, const char* text, Vec2 pos, float font_size, float spacing, Color color) {
     ray::DrawTextEx(font, text, pos, font_size, spacing, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_texture_pro(ray::Texture2D tex, Rect source, Rect dest, Vec2 origin,
-                             float rotation, Color tint) {
+inline void draw_texture_pro(Texture tex, Rect source, Rect dest, Vec2 origin, float rotation, Color tint) {
     ray::DrawTexturePro(tex, source, dest, origin, rotation, {tint.r, tint.g, tint.b, tint.a});
 }
 
@@ -164,31 +162,32 @@ inline void swap_screen_buffer() {
 namespace texture_filter {
     inline constexpr ray::TextureFilter BILINEAR = ray::TEXTURE_FILTER_BILINEAR;
     inline constexpr ray::TextureFilter TRILINEAR = ray::TEXTURE_FILTER_TRILINEAR;
-}
+} // namespace texture_filter
 
-inline ray::Texture2D load_texture(const char* path) {
+inline Texture load_texture(const char* path) {
     return ray::LoadTexture(path);
 }
 
-inline ray::Texture2D load_texture_from_image(ray::Image image) {
+inline Texture load_texture_from_image(ray::Image image) {
     return ray::LoadTextureFromImage(image);
 }
 
-inline void unload_texture(ray::Texture2D tex) {
+inline void unload_texture(Texture tex) {
     ray::UnloadTexture(tex);
 }
 
-inline void set_texture_filter(ray::Texture2D tex, ray::TextureFilter filter) {
+inline void set_texture_filter(Texture tex, ray::TextureFilter filter) {
     ray::SetTextureFilter(tex, filter);
 }
 
-inline void gen_texture_mipmaps(ray::Texture2D& tex) {
-    ray::GenTextureMipmaps(&tex);
+inline void gen_texture_mipmaps(Texture& tex) {
+    ray::Texture2D native = tex;
+    ray::GenTextureMipmaps(&native);
+    tex = native;
 }
 
-inline ray::Texture2D load_texture_mipmapped(const char* path,
-                                             ray::TextureFilter filter = texture_filter::TRILINEAR) {
-    ray::Texture2D tex = ray::LoadTexture(path);
+inline Texture load_texture_mipmapped(const char* path, ray::TextureFilter filter = texture_filter::TRILINEAR) {
+    Texture tex = ray::LoadTexture(path);
     gen_texture_mipmaps(tex);
     set_texture_filter(tex, filter);
     return tex;
@@ -198,7 +197,7 @@ inline Vec2 measure_text_ex(const ray::Font& font, const char* text, float font_
     return ray::MeasureTextEx(font, text, font_size, spacing);
 }
 
-template <typename... Args>
+template<typename... Args>
 inline const char* text_format(const char* fmt, Args... args) {
     return ray::TextFormat(fmt, args...);
 }
@@ -307,7 +306,7 @@ inline ray::Image load_image(const char* path) {
     return ray::LoadImage(path);
 }
 
-inline ray::Image load_image_from_texture(ray::Texture2D tex) {
+inline ray::Image load_image_from_texture(Texture tex) {
     return ray::LoadImageFromTexture(tex);
 }
 
@@ -343,8 +342,8 @@ inline void image_rotate_cw(ray::Image* image) {
     ray::ImageRotateCW(image);
 }
 
-inline void image_draw_image_pro(ray::Image* dst, ray::Image src, Rect src_rec, Rect dst_rec,
-                                 Vec2 origin, float rotation, Color tint) {
+inline void image_draw_image_pro(ray::Image* dst, ray::Image src, Rect src_rec, Rect dst_rec, Vec2 origin,
+                                 float rotation, Color tint) {
     ray::ImageDrawImagePro(dst, src, src_rec, dst_rec, origin, rotation, {tint.r, tint.g, tint.b, tint.a});
 }
 
@@ -356,11 +355,11 @@ inline int get_pixel_data_size(int width, int height, int format) {
     return ray::GetPixelDataSize(width, height, format);
 }
 
-inline void update_texture(ray::Texture2D tex, const void* pixels) {
+inline void update_texture(Texture tex, const void* pixels) {
     ray::UpdateTexture(tex, pixels);
 }
 
-inline bool is_texture_valid(ray::Texture2D tex) {
+inline bool is_texture_valid(Texture tex) {
     return ray::IsTextureValid(tex);
 }
 
@@ -420,7 +419,7 @@ inline void update_mesh_buffer(ray::Mesh mesh, int index, const void* data, int 
     ray::UpdateMeshBuffer(mesh, index, data, data_size, offset);
 }
 
-inline void set_material_texture(ray::Material* material, int map_type, ray::Texture2D texture) {
+inline void set_material_texture(ray::Material* material, int map_type, Texture texture) {
     ray::SetMaterialTexture(material, map_type, texture);
 }
 

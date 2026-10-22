@@ -60,8 +60,7 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
                 char_len++;
             }
             std::string candidate = piece + word.substr(i, char_len);
-            if (!piece.empty() &&
-                measure_text_ex(font, candidate.c_str(), (float)font_size, spacing).x > max_width) {
+            if (!piece.empty() && measure_text_ex(font, candidate.c_str(), (float)font_size, spacing).x > max_width) {
                 pieces.push_back(piece);
                 piece = word.substr(i, char_len);
             } else {

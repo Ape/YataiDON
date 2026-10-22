@@ -9,8 +9,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "texture.h"
 #include "color_utils.h"
+#include "texture.h"
 
 class FontManager {
 private:
@@ -36,7 +36,7 @@ private:
     std::unordered_map<int, SizedFont> fonts;
     uint64_t use_clock = 0;
 
-    ray::Texture sentinel_texture{};
+    Texture sentinel_texture{};
 
     mutable std::mutex font_mutex;
 
@@ -103,7 +103,7 @@ private:
     std::optional<ray::Image> pending_image;
     mutable std::mutex pending_mutex;
 
-    std::optional<ray::Texture> texture;
+    std::optional<Texture> texture;
 
     std::future<void> build_future;
 

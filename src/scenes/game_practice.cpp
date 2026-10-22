@@ -70,7 +70,7 @@ void PracticeGameScreen::on_screen_start() {
     mark_action_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
     mark_finish_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
     PracticeTimer::begin_session(get_frame_ms());
-    hide_cursor();            // Hide cursor when entering practice mode
+    hide_cursor();                // Hide cursor when entering practice mode
     set_touch_drum_enabled(true); // Enable touch drum (input + drawing) when entering practice mode
     initialize_practice_chart();
 }
@@ -87,7 +87,7 @@ Screens PracticeGameScreen::on_screen_end(Screens next_screen) {
     bars.clear();
     scrobble_note_list.clear();
     markers.clear();
-    hide_cursor();            // Hide cursor when leaving practice mode
+    hide_cursor();                // Hide cursor when leaving practice mode
     set_touch_drum_enabled(true); // Re-enable touch drum (input + drawing) when leaving practice mode
     return GameScreen::on_screen_end(next_screen);
 }
@@ -312,7 +312,7 @@ void PracticeGameScreen::change_practice_speed(bool down, bool up) {
 void PracticeGameScreen::restart_practice() {
     restart_song();
     initialize_practice_chart();
-    hide_cursor();            // Hide cursor on restart
+    hide_cursor();                // Hide cursor on restart
     set_touch_drum_enabled(true); // Re-enable touch drum (input + drawing) on restart
     menu.close();
 }
@@ -413,10 +413,10 @@ static Rect get_practice_button_rect(TextureObject* tex_obj, int index, float sc
     // Convert from virtual coordinates to screen coordinates
     int screen_x = virtual_to_screen_x(x);
     int screen_y = virtual_to_screen_y(y);
-    int screen_w = static_cast<int>(w * std::min((float)get_screen_width() / tex.screen_width,
-                                                 (float)get_screen_height() / tex.screen_height));
-    int screen_h = static_cast<int>(h * std::min((float)get_screen_width() / tex.screen_width,
-                                                 (float)get_screen_height() / tex.screen_height));
+    int screen_w = static_cast<int>(
+        w * std::min((float)get_screen_width() / tex.screen_width, (float)get_screen_height() / tex.screen_height));
+    int screen_h = static_cast<int>(
+        h * std::min((float)get_screen_width() / tex.screen_width, (float)get_screen_height() / tex.screen_height));
 
     return {static_cast<float>(screen_x), static_cast<float>(screen_y), static_cast<float>(screen_w),
             static_cast<float>(screen_h)};
@@ -438,8 +438,8 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
 
     // If menu is open, let the menu handle mouse input
     if (menu.open) {
-        auto action = menu.handle_mouse_input(camera, mouse_pos, clicked,
-                                              practice_player && practice_player->is_auto_play());
+        auto action =
+            menu.handle_mouse_input(camera, mouse_pos, clicked, practice_player && practice_player->is_auto_play());
         auto next = handle_menu_action(action);
         if (next.has_value()) {
             return next;

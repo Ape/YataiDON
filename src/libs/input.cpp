@@ -2,12 +2,12 @@
 
 #include <algorithm>
 #include <array>
-#include <map>
 #include <bitset>
-#include <deque>
-#include <mutex>
 #include <cstdint>
+#include <deque>
+#include <map>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <unordered_map>
 #include <unordered_set>
@@ -447,8 +447,7 @@ bool draw_touch_drum() {
     global_tex.draw_texture(global_tex.get_texture("overlay/touch_drum"),
                             {.scale = scale, .center = true, .y = y_fix, .fade = 0.5f});
 #ifdef YATAIDON_PLATFORM_IOS
-    ios_draw_touch_navigation_labels(static_cast<float>(get_screen_width()),
-                                     static_cast<float>(get_screen_height()));
+    ios_draw_touch_navigation_labels(static_cast<float>(get_screen_width()), static_cast<float>(get_screen_height()));
 #endif
     return true;
 }
@@ -931,7 +930,8 @@ bool is_text_input_key(int key) {
         return false;
     }
 
-    return (key >= SDL_SCANCODE_A && key <= SDL_SCANCODE_SLASH) || // letters, digits, enter/esc/bksp/tab/space, punctuation
+    return (key >= SDL_SCANCODE_A &&
+            key <= SDL_SCANCODE_SLASH) || // letters, digits, enter/esc/bksp/tab/space, punctuation
            (key >= SDL_SCANCODE_INSERT && key <= SDL_SCANCODE_UP) ||
            (key >= SDL_SCANCODE_KP_DIVIDE && key <= SDL_SCANCODE_KP_PERIOD) || key == SDL_SCANCODE_KP_EQUALS ||
            (key >= SDL_SCANCODE_LCTRL && key <= SDL_SCANCODE_RGUI);

@@ -7,13 +7,13 @@
 #include <unordered_set>
 
 #include "../../libs/animation.h"
+#include "../../libs/color_utils.h"
 #include "../../libs/filesystem.h"
 #include "../../libs/input.h"
 #include "../../libs/screen.h"
 #include "../../libs/script.h"
 #include "../../libs/texture.h"
 #include "../../libs/time.h"
-#include "../../libs/color_utils.h"
 
 #ifdef DrawTextEx
 #undef DrawTextEx
@@ -209,8 +209,8 @@ public:
     // `id` owns the mouse, so callers can swallow the press and keep it from
     // also hitting the list drawn underneath the scrollbar. The caller must
     // clear scroll_drag whenever the mouse button is up.
-    bool scrollbar_drag(ScrollDrag id, const Vec2& mouse, bool pressed, float track_x, float track_top,
-                        float track_h, int count, int shown, int& scroll) {
+    bool scrollbar_drag(ScrollDrag id, const Vec2& mouse, bool pressed, float track_x, float track_top, float track_h,
+                        int count, int shown, int& scroll) {
         if (count <= shown) {
             if (scroll_drag == id) {
                 scroll_drag = ScrollDrag::None;
@@ -750,7 +750,7 @@ private:
         y = draw_lua_rows(
             entry->lua_function.empty()
                 ? text_format("%s:%d, in the function defined at line %d", file.c_str(), entry->lua_line,
-                                  entry->lua_defined_line)
+                              entry->lua_defined_line)
                 : text_format("%s:%d, in %s()", file.c_str(), entry->lua_line, entry->lua_function.c_str()),
             x, y, 2, Color::ORANGE);
         y = draw_lua_rows(shown, x, y, 4, fade(Color::ORANGE, 0.6f)) + 6.0f;
@@ -952,8 +952,7 @@ private:
             bool is_selected = selected_screen.has_value() && *selected_screen == ALL_SCREENS[idx];
 
             if (is_selected) {
-                draw_rectangle((int)panel_x, (int)row_y, (int)PANEL_WIDTH, (int)ROW_HEIGHT,
-                               fade(Color::YELLOW, 0.3f));
+                draw_rectangle((int)panel_x, (int)row_y, (int)PANEL_WIDTH, (int)ROW_HEIGHT, fade(Color::YELLOW, 0.3f));
             } else if (is_current) {
                 draw_rectangle((int)panel_x, (int)row_y, (int)PANEL_WIDTH, (int)ROW_HEIGHT,
                                fade(Color::SKYBLUE, 0.35f));
@@ -990,8 +989,7 @@ private:
         const int field_count = (int)fields.size();
         const int data_shown = std::max(0, (int)((data_bottom - data_top) / ROW_HEIGHT));
 
-        draw_line((int)panel_x, (int)data_top, (int)(panel_x + PANEL_WIDTH), (int)data_top,
-                      fade(Color::WHITE, 0.4f));
+        draw_line((int)panel_x, (int)data_top, (int)(panel_x + PANEL_WIDTH), (int)data_top, fade(Color::WHITE, 0.4f));
         scissor_y0 = virtual_to_screen_y(data_top);
         scissor_y1 = virtual_to_screen_y(data_bottom);
         begin_scissor_mode(scissor_x0, scissor_y0, scissor_x1 - scissor_x0, scissor_y1 - scissor_y0);
@@ -1027,7 +1025,8 @@ private:
                 draw_text("+", (int)r.plus.x + 4, (int)r.plus.y, 14, Color::WHITE);
                 const char* name = player_num_name(*f.pn);
                 int name_w = measure_text(name, 13);
-                draw_text(name, (int)(r.value.x + (r.value.width - name_w) * 0.5f), (int)r.value.y + 3, 13, Color::WHITE);
+                draw_text(name, (int)(r.value.x + (r.value.width - name_w) * 0.5f), (int)r.value.y + 3, 13,
+                          Color::WHITE);
             } else { // INT
                 bool is_editing = editing_data_ptr == (f.kind == DataField::Kind::FLOAT ? static_cast<void*>(f.fl)
                                                                                         : static_cast<void*>(f.i));
@@ -1260,8 +1259,7 @@ private:
 
             if (vr.is_header) {
                 bool expanded = expanded_subsets.contains(vr.subset);
-                draw_rectangle((int)panel_x, (int)row_y, (int)PANEL_WIDTH, (int)ROW_HEIGHT,
-                               fade(Color::WHITE, 0.12f));
+                draw_rectangle((int)panel_x, (int)row_y, (int)PANEL_WIDTH, (int)ROW_HEIGHT, fade(Color::WHITE, 0.12f));
                 draw_text(expanded ? "v" : ">", (int)panel_x + 4, (int)row_y + 3, 14, Color::WHITE);
                 draw_text(vr.label.c_str(), (int)panel_x + 18, (int)row_y + 3, 14, Color::WHITE);
                 continue;
@@ -1274,8 +1272,7 @@ private:
                 draw_rectangle((int)panel_x, (int)row_y, (int)PANEL_WIDTH, (int)ROW_HEIGHT,
                                fade(Color::SKYBLUE, 0.35f));
             } else if (is_hovered) {
-                draw_rectangle((int)panel_x, (int)row_y, (int)PANEL_WIDTH, (int)ROW_HEIGHT,
-                               fade(Color::YELLOW, 0.3f));
+                draw_rectangle((int)panel_x, (int)row_y, (int)PANEL_WIDTH, (int)ROW_HEIGHT, fade(Color::YELLOW, 0.3f));
             }
             Color color = is_selected ? Color::SKYBLUE : (is_hovered ? Color::YELLOW : Color::WHITE);
             draw_text(vr.label.c_str(), (int)panel_x + 20, (int)row_y + 3, 14, color);
@@ -1320,8 +1317,7 @@ private:
     void draw_edit_panel(float panel_x, float edit_top) {
         draw_rectangle((int)panel_x, (int)edit_top, (int)PANEL_WIDTH, (int)edit_panel_height(),
                        fade(Color::WHITE, 0.05f));
-        draw_line((int)panel_x, (int)edit_top, (int)(panel_x + PANEL_WIDTH), (int)edit_top,
-                      fade(Color::WHITE, 0.4f));
+        draw_line((int)panel_x, (int)edit_top, (int)(panel_x + PANEL_WIDTH), (int)edit_top, fade(Color::WHITE, 0.4f));
 
         if (!has_selection) {
             draw_text("Click a texture to select it", (int)panel_x + 8, (int)edit_top + 8, 14, Color::GRAY);
@@ -1391,9 +1387,9 @@ private:
             float row_y = frames_top + FRAMES_HEADER_HEIGHT + (idx / cols) * FRAME_ROW_HEIGHT;
 
             Rect thumb_bg = {cell_x + (FRAME_CELL_WIDTH - FRAME_THUMB_SIZE) * 0.5f, row_y, FRAME_THUMB_SIZE,
-                                       FRAME_THUMB_SIZE};
+                             FRAME_THUMB_SIZE};
             draw_rectangle(thumb_bg, fade(Color::BLACK, 0.5f));
-            const ray::Texture2D& t = *framed->textures[idx];
+            const Texture& t = *framed->textures[idx];
             Rect src = {0, 0, (float)t.width, (float)t.height};
             draw_texture_pro(t, src, thumb_bg, {0, 0}, 0, Color::WHITE);
             draw_rectangle_lines_ex(thumb_bg, 1.0f, fade(Color::WHITE, 0.4f));
