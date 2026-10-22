@@ -83,7 +83,7 @@ static SessionData& current_session() {
     return global_data.session_data[idx];
 }
 
-static DrawTextureParams parse_draw_params_legacy(const sol::optional<sol::table>& params_table, bool allow_blend) {
+static DrawTextureParams parse_draw_params_legacy(const sol::optional<sol::table>& params_table) {
     DrawTextureParams params;
     if (!params_table) {
         return params;
@@ -112,13 +112,6 @@ static DrawTextureParams parse_draw_params_legacy(const sol::optional<sol::table
     sol::optional<std::string> mirror = t["mirror"];
     if (mirror) {
         params.mirror = mirror_from_string(mirror.value());
-    }
-
-    if (allow_blend) {
-        sol::optional<std::string> blend = t["blend"];
-        if (blend) {
-            params.blend = blend_from_string(blend.value());
-        }
     }
 
     sol::optional<sol::table> origin = t["origin"];
@@ -182,7 +175,7 @@ static bool lua_is_table_like(lua_State* L, int idx) {
 // instead of looking up all ~17 names through sol proxies: draw_texture is called a few hundred
 // times per frame by Lua skins and the lookups were most of its cost. A table with a metatable
 // (fields could come from __index) or a userdata goes through the legacy path.
-static DrawTextureParams parse_draw_params(const sol::optional<sol::table>& params_table, bool allow_blend = true) {
+static DrawTextureParams parse_draw_params(const sol::optional<sol::table>& params_table) {
     if (!params_table) {
         return DrawTextureParams{};
     }
@@ -191,7 +184,7 @@ static DrawTextureParams parse_draw_params(const sol::optional<sol::table>& para
     const int t = lua_gettop(L);
     if (lua_type(L, t) != LUA_TTABLE || lua_getmetatable(L, t)) {
         lua_settop(L, t - 1);
-        return parse_draw_params_legacy(params_table, allow_blend);
+        return parse_draw_params_legacy(params_table);
     }
 
     DrawTextureParams params;
@@ -249,10 +242,6 @@ static DrawTextureParams parse_draw_params(const sol::optional<sol::table>& para
             } else if (key == "mirror") {
                 if (lua_type(L, v) == LUA_TSTRING) {
                     params.mirror = mirror_from_string(lua_tostring(L, v));
-                }
-            } else if (key == "blend") {
-                if (allow_blend && lua_type(L, v) == LUA_TSTRING) {
-                    params.blend = blend_from_string(lua_tostring(L, v));
                 }
             }
         }
@@ -875,7 +864,7 @@ void ScriptManager::register_lua_bindings() {
     lua.new_usertype<OutlinedText>("OutlinedText", "width", &OutlinedText::width, "height", &OutlinedText::height,
                                    "text", sol::property([](OutlinedText& self) { return self.get_text(); }), "draw",
                                    [](OutlinedText& self, sol::optional<sol::table> params_table) {
-                                       DrawTextureParams params = parse_draw_params(params_table, false);
+                                       DrawTextureParams params = parse_draw_params(params_table);
                                        self.draw(params);
                                    });
 

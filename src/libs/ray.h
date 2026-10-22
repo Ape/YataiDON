@@ -48,19 +48,19 @@ inline void draw_rectangle_rounded_lines_ex(ray::Rectangle rec, float roundness,
 }
 
 inline void draw_rectangle_lines(int x, int y, int w, int h, Color color) {
-    draw_rectangle_lines(x, y, w, h, {color.r, color.g, color.b, color.a});
+    ray::DrawRectangleLines(x, y, w, h, {color.r, color.g, color.b, color.a});
 }
 
 inline void draw_rectangle_lines_ex(ray::Rectangle rec, float thickness, Color color) {
-    draw_rectangle_lines_ex(rec, thickness, {color.r, color.g, color.b, color.a});
+    ray::DrawRectangleLinesEx(rec, thickness, {color.r, color.g, color.b, color.a});
 }
 
 inline void draw_line(int x0, int y0, int x1, int y1, Color color) {
-    draw_line(x0, y0, x1, y1, {color.r, color.g, color.b, color.a});
+    ray::DrawLine(x0, y0, x1, y1, {color.r, color.g, color.b, color.a});
 }
 
 inline void draw_model(ray::Model model, ray::Vector3 pos, float scale, Color tint) {
-    draw_model(model, pos, scale, {tint.r, tint.g, tint.b, tint.a});
+    ray::DrawModel(model, pos, scale, {tint.r, tint.g, tint.b, tint.a});
 }
 
 inline void draw_text_ex(ray::Font font, const char* text, ray::Vector2 pos, float font_size, float spacing,

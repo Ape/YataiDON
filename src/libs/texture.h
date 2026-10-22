@@ -48,25 +48,6 @@ struct DrawTextureParams {
     std::optional<int> blend = std::nullopt;
 };
 
-inline int blend_from_string(const std::string& s) {
-    if (s == "additive") {
-        return ray::BLEND_ADDITIVE;
-    }
-    if (s == "multiplied") {
-        return ray::BLEND_MULTIPLIED;
-    }
-    if (s == "add_colors") {
-        return ray::BLEND_ADD_COLORS;
-    }
-    if (s == "subtract_colors") {
-        return ray::BLEND_SUBTRACT_COLORS;
-    }
-    if (s == "alpha_premultiply") {
-        return ray::BLEND_ALPHA_PREMULTIPLY;
-    }
-    return ray::BLEND_ALPHA;
-}
-
 struct SkinInfo {
     float x;
     float y;

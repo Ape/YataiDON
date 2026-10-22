@@ -37,8 +37,7 @@ void Fireworks::draw() {
                                                .mirror = i >= 4 ? Mirror::HORIZONTAL : Mirror::NONE,
                                                .origin = {w / 2, h / 2},
                                                .rotation = ANGLE[i] * t->x,
-                                               .index = i,
-                                               .blend = ray::BLEND_ADDITIVE});
+                                               .index = i});
             }
             return;
         }
