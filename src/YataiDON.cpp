@@ -391,7 +391,7 @@ static void run_frame() {
 
     g_frame_ms = get_current_ms();
 
-    ray::PollInputEvents();
+    poll_input_events();
 #if defined(YATAIDON_PLATFORM_IOS)
     if (ios_is_suspended_state()) {
         return;
@@ -527,7 +527,7 @@ static void run_frame() {
         }
     }
 
-    if (ray::IsKeyPressed(ray::KEY_F12)) {
+    if (key_pressed(SDL_SCANCODE_F12)) {
         static int screenshot_counter = 0;
         ray::Image image = ray::LoadImageFromScreen();
         if (L.current_screen == Screens::RESULT && tex.options[SCO::CROP_RESULT_SCREENSHOT]) {

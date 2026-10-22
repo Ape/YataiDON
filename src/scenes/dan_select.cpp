@@ -214,8 +214,8 @@ void DanSelectScreen::handle_input_browsing(double current_ms) {
         }
     }
 
-    bool skip_left = check_key_pressed(ray::KEY_LEFT_CONTROL);
-    bool skip_right = check_key_pressed(ray::KEY_RIGHT_CONTROL);
+    bool skip_left = check_key_pressed(SDL_SCANCODE_LCTRL);
+    bool skip_right = check_key_pressed(SDL_SCANCODE_RCTRL);
     bool nav_left = is_l_kat_pressed(global_data.player_num);
     bool nav_right = is_r_kat_pressed(global_data.player_num);
     bool confirm = is_l_don_pressed(global_data.player_num) || is_r_don_pressed(global_data.player_num);

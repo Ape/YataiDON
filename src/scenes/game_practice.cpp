@@ -429,8 +429,8 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
     }
 
     // Get mouse/touch position
-    ray::Vector2 mouse_pos = ray::GetMousePosition();
-    bool mouse_pressed = ray::IsMouseButtonPressed(ray::MOUSE_BUTTON_LEFT);
+    ray::Vector2 mouse_pos = mouse_position();
+    bool clicked = mouse_pressed(SDL_BUTTON_LEFT);
     ray::Camera2D camera = {0, 0, 0, 1.0f};
 
     int player_idx = (global_data.player_num == PlayerNum::P1) ? 0 : 1;
@@ -438,7 +438,7 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
 
     // If menu is open, let the menu handle mouse input
     if (menu.open) {
-        auto action = menu.handle_mouse_input(camera, mouse_pos, mouse_pressed,
+        auto action = menu.handle_mouse_input(camera, mouse_pos, clicked,
                                               practice_player && practice_player->is_auto_play());
         auto next = handle_menu_action(action);
         if (next.has_value()) {
@@ -455,7 +455,7 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
     auto resume_rect =
         get_practice_button_rect(t_resume_don, player_idx, resume_don_anim ? (float)resume_don_anim->attribute : 1.0f);
     if (point_in_rect(mouse_pos.x, mouse_pos.y, resume_rect.x, resume_rect.y, resume_rect.width, resume_rect.height)) {
-        if (mouse_pressed) {
+        if (clicked) {
             resume_practice();
             audio.play_sound("don", VolumePreset::SOUND);
         }
@@ -466,7 +466,7 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
     auto skip_l_rect = get_practice_button_rect(t_skip_l_kat, player_idx * 2,
                                                 skip_l_kat_anim ? (float)skip_l_kat_anim->attribute : 1.0f);
     if (point_in_rect(mouse_pos.x, mouse_pos.y, skip_l_rect.x, skip_l_rect.y, skip_l_rect.width, skip_l_rect.height)) {
-        if (mouse_pressed && !bars.empty()) {
+        if (clicked && !bars.empty()) {
             scrobble_step_bar(false);
         }
         return std::nullopt;
@@ -476,7 +476,7 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
     auto skip_r_rect = get_practice_button_rect(t_skip_r_kat, player_idx * 2 + 1,
                                                 skip_r_kat_anim ? (float)skip_r_kat_anim->attribute : 1.0f);
     if (point_in_rect(mouse_pos.x, mouse_pos.y, skip_r_rect.x, skip_r_rect.y, skip_r_rect.width, skip_r_rect.height)) {
-        if (mouse_pressed && !bars.empty()) {
+        if (clicked && !bars.empty()) {
             scrobble_step_bar(true);
         }
         return std::nullopt;
@@ -486,7 +486,7 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
     auto menu_rect =
         get_practice_button_rect(t_menu_don, other_idx, menu_don_anim ? (float)menu_don_anim->attribute : 1.0f);
     if (point_in_rect(mouse_pos.x, mouse_pos.y, menu_rect.x, menu_rect.y, menu_rect.width, menu_rect.height)) {
-        if (mouse_pressed) {
+        if (clicked) {
             open_practice_menu();
             audio.play_sound("don", VolumePreset::SOUND);
         }
@@ -498,7 +498,7 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
                                                  speed_l_kat_anim ? (float)speed_l_kat_anim->attribute : 1.0f);
     if (point_in_rect(mouse_pos.x, mouse_pos.y, speed_l_rect.x, speed_l_rect.y, speed_l_rect.width,
                       speed_l_rect.height)) {
-        if (mouse_pressed) {
+        if (clicked) {
             change_practice_speed(true, false);
             audio.play_sound("kat", VolumePreset::SOUND);
         }
@@ -510,7 +510,7 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
                                                  speed_r_kat_anim ? (float)speed_r_kat_anim->attribute : 1.0f);
     if (point_in_rect(mouse_pos.x, mouse_pos.y, speed_r_rect.x, speed_r_rect.y, speed_r_rect.width,
                       speed_r_rect.height)) {
-        if (mouse_pressed) {
+        if (clicked) {
             change_practice_speed(false, true);
             audio.play_sound("kat", VolumePreset::SOUND);
         }
@@ -521,7 +521,7 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
     // Left drum (index = player_idx * 2) - DON
     auto drum_l_rect = get_practice_button_rect(t_large_drum, player_idx * 2);
     if (point_in_rect(mouse_pos.x, mouse_pos.y, drum_l_rect.x, drum_l_rect.y, drum_l_rect.width, drum_l_rect.height)) {
-        if (mouse_pressed && practice_player) {
+        if (clicked && practice_player) {
             practice_player->spawn_hit_effects(DrumType::DON, Side::LEFT);
             practice_player->spawn_scrobble_effect(DrumType::DON, Side::LEFT, player_idx);
             audio.play_sound("don", VolumePreset::SOUND);
@@ -532,7 +532,7 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
     // Right drum (index = player_idx * 2 + 1) - DON
     auto drum_r_rect = get_practice_button_rect(t_large_drum, player_idx * 2 + 1);
     if (point_in_rect(mouse_pos.x, mouse_pos.y, drum_r_rect.x, drum_r_rect.y, drum_r_rect.width, drum_r_rect.height)) {
-        if (mouse_pressed && practice_player) {
+        if (clicked && practice_player) {
             practice_player->spawn_hit_effects(DrumType::DON, Side::RIGHT);
             practice_player->spawn_scrobble_effect(DrumType::DON, Side::RIGHT, player_idx);
             audio.play_sound("don", VolumePreset::SOUND);

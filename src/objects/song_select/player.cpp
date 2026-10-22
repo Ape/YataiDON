@@ -215,18 +215,18 @@ SongSelectState SongSelectPlayer::select_song() {
 
 SongSelectState SongSelectPlayer::handle_input_browsing(double current_ms) {
 
-    bool l_kat = is_l_kat_pressed(player_num) || ray::IsKeyPressed(ray::KEY_LEFT);
-    bool r_kat = is_r_kat_pressed(player_num) || ray::IsKeyPressed(ray::KEY_RIGHT);
-    bool l_don = is_l_don_pressed(player_num) || ray::IsKeyPressed(ray::KEY_ENTER);
-    bool r_don = is_r_don_pressed(player_num) || ray::IsKeyPressed(ray::KEY_ENTER);
-    float wheel = ray::GetMouseWheelMove();
+    bool l_kat = is_l_kat_pressed(player_num) || key_pressed(SDL_SCANCODE_LEFT);
+    bool r_kat = is_r_kat_pressed(player_num) || key_pressed(SDL_SCANCODE_RIGHT);
+    bool l_don = is_l_don_pressed(player_num) || key_pressed(SDL_SCANCODE_RETURN);
+    bool r_don = is_r_don_pressed(player_num) || key_pressed(SDL_SCANCODE_RETURN);
+    float wheel = mouse_wheel();
 
-    if (ray::IsKeyPressed(ray::KEY_F5)) {
+    if (key_pressed(SDL_SCANCODE_F5)) {
         navigator.load_current_directory(navigator.current_path);
     }
 
     bool navigated = false;
-    if (ray::IsKeyPressed(ray::KEY_LEFT_CONTROL) || (l_kat && current_ms <= last_moved + 50)) {
+    if (key_pressed(SDL_SCANCODE_LCTRL) || (l_kat && current_ms <= last_moved + 50)) {
         audio.play_sound("skip", VolumePreset::SOUND);
         navigator.skip_left();
         last_moved = current_ms;
@@ -238,7 +238,7 @@ SongSelectState SongSelectPlayer::handle_input_browsing(double current_ms) {
         navigated = true;
     }
 
-    if (ray::IsKeyPressed(ray::KEY_RIGHT_CONTROL) || (r_kat && current_ms <= last_moved + 50)) {
+    if (key_pressed(SDL_SCANCODE_RCTRL) || (r_kat && current_ms <= last_moved + 50)) {
         audio.play_sound("skip", VolumePreset::SOUND);
         navigator.skip_right();
         last_moved = current_ms;
@@ -269,7 +269,7 @@ SongSelectState SongSelectPlayer::handle_input_browsing(double current_ms) {
         next_repeat = current_ms + 70;
     }
 
-    if (ray::IsKeyPressed(ray::KEY_SPACE)) {
+    if (key_pressed(SDL_SCANCODE_SPACE)) {
         BaseBox* item = navigator.get_current_item();
         if (navigator.is_song(item)) {
             navigator.toggle_favorite(static_cast<SongBox*>(item));
@@ -349,7 +349,7 @@ static std::string trim_search(std::string s) {
 static bool any_don_key_down(PlayerNum player_num) {
     const auto& c = *global_data.config;
     auto down = [](const std::vector<int>& keys) {
-        return std::ranges::any_of(keys, [](int k) { return ray::IsKeyDown(k); });
+        return std::ranges::any_of(keys, [](int k) { return key_down(k); });
     };
     if (player_num != PlayerNum::P2 && (down(c.keys_1p.left_don) || down(c.keys_1p.right_don))) {
         return true;
@@ -365,7 +365,7 @@ std::optional<std::string> SongSelectPlayer::handle_input_search() {
         // The don press is seen by the input thread a few ms before raylib's own key state
         // and the typed character catch up, so the opening keystroke (F/J) would land in the
         // query. Swallow typed input for a short grace period and until every don key is up.
-        while (ray::GetCharPressed() > 0) {
+        while (char_pressed() > 0) {
         }
         if (ray::GetTime() * 1000.0 >= search_guard_until_ms && !any_don_key_down(player_num)) {
             search_guard = false;

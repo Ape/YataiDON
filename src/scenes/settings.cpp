@@ -86,10 +86,10 @@ Screens SettingsScreen::on_screen_end(Screens next_screen) {
 }
 
 std::optional<Screens> SettingsScreen::handle_input() {
-    if (ray::IsKeyPressed(ray::KEY_F1)) {
+    if (key_pressed(SDL_SCANCODE_F1)) {
         return on_screen_end(Screens::INPUT_CALI);
     }
-    if (ray::IsKeyPressed(ray::KEY_F3)) {
+    if (key_pressed(SDL_SCANCODE_F3)) {
         return on_screen_end(Screens::INPUT_TEST);
     }
     const bool typing = box_manager->editing_text();

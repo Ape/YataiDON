@@ -2,93 +2,99 @@
 
 #include <algorithm>
 #include <spdlog/spdlog.h>
+#include <string_view>
 
 #include "global_data.h"
 #include "ray.h"
+#include "sdl_compat.h"
+
+// Key codes are SDL_Scancode values. Letters and digits are handled separately in both directions.
+static const std::vector<std::pair<std::string_view, int>> key_names = {
+    {"space", SDL_SCANCODE_SPACE},
+    {"escape", SDL_SCANCODE_ESCAPE},
+    {"enter", SDL_SCANCODE_RETURN},
+    {"tab", SDL_SCANCODE_TAB},
+    {"backspace", SDL_SCANCODE_BACKSPACE},
+    {"insert", SDL_SCANCODE_INSERT},
+    {"delete", SDL_SCANCODE_DELETE},
+    {"right", SDL_SCANCODE_RIGHT},
+    {"left", SDL_SCANCODE_LEFT},
+    {"down", SDL_SCANCODE_DOWN},
+    {"up", SDL_SCANCODE_UP},
+    {"page_up", SDL_SCANCODE_PAGEUP},
+    {"page_down", SDL_SCANCODE_PAGEDOWN},
+    {"home", SDL_SCANCODE_HOME},
+    {"end", SDL_SCANCODE_END},
+    {"caps_lock", SDL_SCANCODE_CAPSLOCK},
+    {"scroll_lock", SDL_SCANCODE_SCROLLLOCK},
+    {"num_lock", SDL_SCANCODE_NUMLOCKCLEAR},
+    {"print_screen", SDL_SCANCODE_PRINTSCREEN},
+    {"pause", SDL_SCANCODE_PAUSE},
+    {"f1", SDL_SCANCODE_F1},
+    {"f2", SDL_SCANCODE_F2},
+    {"f3", SDL_SCANCODE_F3},
+    {"f4", SDL_SCANCODE_F4},
+    {"f5", SDL_SCANCODE_F5},
+    {"f6", SDL_SCANCODE_F6},
+    {"f7", SDL_SCANCODE_F7},
+    {"f8", SDL_SCANCODE_F8},
+    {"f9", SDL_SCANCODE_F9},
+    {"f10", SDL_SCANCODE_F10},
+    {"f11", SDL_SCANCODE_F11},
+    {"f12", SDL_SCANCODE_F12},
+    {"left_shift", SDL_SCANCODE_LSHIFT},
+    {"left_control", SDL_SCANCODE_LCTRL},
+    {"left_alt", SDL_SCANCODE_LALT},
+    {"left_super", SDL_SCANCODE_LGUI},
+    {"right_shift", SDL_SCANCODE_RSHIFT},
+    {"right_control", SDL_SCANCODE_RCTRL},
+    {"right_alt", SDL_SCANCODE_RALT},
+    {"right_super", SDL_SCANCODE_RGUI},
+    {"kb_menu", SDL_SCANCODE_APPLICATION},
+    {"kp_0", SDL_SCANCODE_KP_0},
+    {"kp_1", SDL_SCANCODE_KP_1},
+    {"kp_2", SDL_SCANCODE_KP_2},
+    {"kp_3", SDL_SCANCODE_KP_3},
+    {"kp_4", SDL_SCANCODE_KP_4},
+    {"kp_5", SDL_SCANCODE_KP_5},
+    {"kp_6", SDL_SCANCODE_KP_6},
+    {"kp_7", SDL_SCANCODE_KP_7},
+    {"kp_8", SDL_SCANCODE_KP_8},
+    {"kp_9", SDL_SCANCODE_KP_9},
+    {"kp_decimal", SDL_SCANCODE_KP_PERIOD},
+    {"kp_divide", SDL_SCANCODE_KP_DIVIDE},
+    {"kp_multiply", SDL_SCANCODE_KP_MULTIPLY},
+    {"kp_subtract", SDL_SCANCODE_KP_MINUS},
+    {"kp_add", SDL_SCANCODE_KP_PLUS},
+    {"kp_enter", SDL_SCANCODE_KP_ENTER},
+    {"kp_equal", SDL_SCANCODE_KP_EQUALS},
+    {"apostrophe", SDL_SCANCODE_APOSTROPHE},
+    {"comma", SDL_SCANCODE_COMMA},
+    {"minus", SDL_SCANCODE_MINUS},
+    {"period", SDL_SCANCODE_PERIOD},
+    {"slash", SDL_SCANCODE_SLASH},
+    {"semicolon", SDL_SCANCODE_SEMICOLON},
+    {"equal", SDL_SCANCODE_EQUALS},
+    {"left_bracket", SDL_SCANCODE_LEFTBRACKET},
+    {"backslash", SDL_SCANCODE_BACKSLASH},
+    {"right_bracket", SDL_SCANCODE_RIGHTBRACKET},
+    {"grave", SDL_SCANCODE_GRAVE}};
 
 std::string getKeyString(int key_code) {
-    // Handle alphanumeric keys
-    if (key_code >= 65 && key_code <= 90) {
-        return std::string(1, static_cast<char>(key_code));
+    if (key_code >= SDL_SCANCODE_A && key_code <= SDL_SCANCODE_Z) {
+        return std::string(1, static_cast<char>('A' + key_code - SDL_SCANCODE_A));
     }
-    if (key_code >= 48 && key_code <= 57) {
-        return std::string(1, static_cast<char>(key_code));
+    if (key_code >= SDL_SCANCODE_1 && key_code <= SDL_SCANCODE_9) {
+        return std::string(1, static_cast<char>('1' + key_code - SDL_SCANCODE_1));
+    }
+    if (key_code == SDL_SCANCODE_0) {
+        return "0";
     }
 
-    // Map raylib key codes to strings
-    static const std::map<int, std::string> key_map = {{ray::KEY_SPACE, "space"},
-                                                       {ray::KEY_ESCAPE, "escape"},
-                                                       {ray::KEY_ENTER, "enter"},
-                                                       {ray::KEY_TAB, "tab"},
-                                                       {ray::KEY_BACKSPACE, "backspace"},
-                                                       {ray::KEY_INSERT, "insert"},
-                                                       {ray::KEY_DELETE, "delete"},
-                                                       {ray::KEY_RIGHT, "right"},
-                                                       {ray::KEY_LEFT, "left"},
-                                                       {ray::KEY_DOWN, "down"},
-                                                       {ray::KEY_UP, "up"},
-                                                       {ray::KEY_PAGE_UP, "page_up"},
-                                                       {ray::KEY_PAGE_DOWN, "page_down"},
-                                                       {ray::KEY_HOME, "home"},
-                                                       {ray::KEY_END, "end"},
-                                                       {ray::KEY_CAPS_LOCK, "caps_lock"},
-                                                       {ray::KEY_SCROLL_LOCK, "scroll_lock"},
-                                                       {ray::KEY_NUM_LOCK, "num_lock"},
-                                                       {ray::KEY_PRINT_SCREEN, "print_screen"},
-                                                       {ray::KEY_PAUSE, "pause"},
-                                                       {ray::KEY_F1, "f1"},
-                                                       {ray::KEY_F2, "f2"},
-                                                       {ray::KEY_F3, "f3"},
-                                                       {ray::KEY_F4, "f4"},
-                                                       {ray::KEY_F5, "f5"},
-                                                       {ray::KEY_F6, "f6"},
-                                                       {ray::KEY_F7, "f7"},
-                                                       {ray::KEY_F8, "f8"},
-                                                       {ray::KEY_F9, "f9"},
-                                                       {ray::KEY_F10, "f10"},
-                                                       {ray::KEY_F11, "f11"},
-                                                       {ray::KEY_F12, "f12"},
-                                                       {ray::KEY_LEFT_SHIFT, "left_shift"},
-                                                       {ray::KEY_LEFT_CONTROL, "left_control"},
-                                                       {ray::KEY_LEFT_ALT, "left_alt"},
-                                                       {ray::KEY_LEFT_SUPER, "left_super"},
-                                                       {ray::KEY_RIGHT_SHIFT, "right_shift"},
-                                                       {ray::KEY_RIGHT_CONTROL, "right_control"},
-                                                       {ray::KEY_RIGHT_ALT, "right_alt"},
-                                                       {ray::KEY_RIGHT_SUPER, "right_super"},
-                                                       {ray::KEY_KB_MENU, "kb_menu"},
-                                                       {ray::KEY_KP_0, "kp_0"},
-                                                       {ray::KEY_KP_1, "kp_1"},
-                                                       {ray::KEY_KP_2, "kp_2"},
-                                                       {ray::KEY_KP_3, "kp_3"},
-                                                       {ray::KEY_KP_4, "kp_4"},
-                                                       {ray::KEY_KP_5, "kp_5"},
-                                                       {ray::KEY_KP_6, "kp_6"},
-                                                       {ray::KEY_KP_7, "kp_7"},
-                                                       {ray::KEY_KP_8, "kp_8"},
-                                                       {ray::KEY_KP_9, "kp_9"},
-                                                       {ray::KEY_KP_DECIMAL, "kp_decimal"},
-                                                       {ray::KEY_KP_DIVIDE, "kp_divide"},
-                                                       {ray::KEY_KP_MULTIPLY, "kp_multiply"},
-                                                       {ray::KEY_KP_SUBTRACT, "kp_subtract"},
-                                                       {ray::KEY_KP_ADD, "kp_add"},
-                                                       {ray::KEY_KP_ENTER, "kp_enter"},
-                                                       {ray::KEY_KP_EQUAL, "kp_equal"},
-                                                       {ray::KEY_APOSTROPHE, "apostrophe"},
-                                                       {ray::KEY_COMMA, "comma"},
-                                                       {ray::KEY_MINUS, "minus"},
-                                                       {ray::KEY_PERIOD, "period"},
-                                                       {ray::KEY_SLASH, "slash"},
-                                                       {ray::KEY_SEMICOLON, "semicolon"},
-                                                       {ray::KEY_EQUAL, "equal"},
-                                                       {ray::KEY_LEFT_BRACKET, "left_bracket"},
-                                                       {ray::KEY_BACKSLASH, "backslash"},
-                                                       {ray::KEY_RIGHT_BRACKET, "right_bracket"},
-                                                       {ray::KEY_GRAVE, "grave"}};
-
-    auto it = key_map.find(key_code);
-    if (it != key_map.end()) {
-        return it->second;
+    for (const auto& [name, code] : key_names) {
+        if (code == key_code) {
+            return std::string(name);
+        }
     }
 
     throw std::runtime_error("Unknown key code: " + std::to_string(key_code));
@@ -113,88 +119,21 @@ static int getKeyCode(const std::string& key) {
 
     // Handle single alphanumeric characters
     if (key.length() == 1 && std::isalnum(static_cast<unsigned char>(key[0]))) {
-        return std::toupper(static_cast<unsigned char>(key[0]));
+        const int c = std::toupper(static_cast<unsigned char>(key[0]));
+        if (c >= 'A' && c <= 'Z') {
+            return SDL_SCANCODE_A + (c - 'A');
+        }
+        return c == '0' ? SDL_SCANCODE_0 : SDL_SCANCODE_1 + (c - '1');
     }
 
-    // Convert to uppercase for comparison
-    std::string upper_key = key;
-    std::ranges::transform(upper_key, upper_key.begin(),
-                           [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+    std::string lower_key = key;
+    std::ranges::transform(lower_key, lower_key.begin(),
+                           [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
-    // Map strings to raylib key codes
-    static const std::map<std::string, int> key_map = {{"SPACE", ray::KEY_SPACE},
-                                                       {"ESCAPE", ray::KEY_ESCAPE},
-                                                       {"ENTER", ray::KEY_ENTER},
-                                                       {"TAB", ray::KEY_TAB},
-                                                       {"BACKSPACE", ray::KEY_BACKSPACE},
-                                                       {"INSERT", ray::KEY_INSERT},
-                                                       {"DELETE", ray::KEY_DELETE},
-                                                       {"RIGHT", ray::KEY_RIGHT},
-                                                       {"LEFT", ray::KEY_LEFT},
-                                                       {"DOWN", ray::KEY_DOWN},
-                                                       {"UP", ray::KEY_UP},
-                                                       {"PAGE_UP", ray::KEY_PAGE_UP},
-                                                       {"PAGE_DOWN", ray::KEY_PAGE_DOWN},
-                                                       {"HOME", ray::KEY_HOME},
-                                                       {"END", ray::KEY_END},
-                                                       {"CAPS_LOCK", ray::KEY_CAPS_LOCK},
-                                                       {"SCROLL_LOCK", ray::KEY_SCROLL_LOCK},
-                                                       {"NUM_LOCK", ray::KEY_NUM_LOCK},
-                                                       {"PRINT_SCREEN", ray::KEY_PRINT_SCREEN},
-                                                       {"PAUSE", ray::KEY_PAUSE},
-                                                       {"F1", ray::KEY_F1},
-                                                       {"F2", ray::KEY_F2},
-                                                       {"F3", ray::KEY_F3},
-                                                       {"F4", ray::KEY_F4},
-                                                       {"F5", ray::KEY_F5},
-                                                       {"F6", ray::KEY_F6},
-                                                       {"F7", ray::KEY_F7},
-                                                       {"F8", ray::KEY_F8},
-                                                       {"F9", ray::KEY_F9},
-                                                       {"F10", ray::KEY_F10},
-                                                       {"F11", ray::KEY_F11},
-                                                       {"F12", ray::KEY_F12},
-                                                       {"LEFT_SHIFT", ray::KEY_LEFT_SHIFT},
-                                                       {"LEFT_CONTROL", ray::KEY_LEFT_CONTROL},
-                                                       {"LEFT_ALT", ray::KEY_LEFT_ALT},
-                                                       {"LEFT_SUPER", ray::KEY_LEFT_SUPER},
-                                                       {"RIGHT_SHIFT", ray::KEY_RIGHT_SHIFT},
-                                                       {"RIGHT_CONTROL", ray::KEY_RIGHT_CONTROL},
-                                                       {"RIGHT_ALT", ray::KEY_RIGHT_ALT},
-                                                       {"RIGHT_SUPER", ray::KEY_RIGHT_SUPER},
-                                                       {"KB_MENU", ray::KEY_KB_MENU},
-                                                       {"KP_0", ray::KEY_KP_0},
-                                                       {"KP_1", ray::KEY_KP_1},
-                                                       {"KP_2", ray::KEY_KP_2},
-                                                       {"KP_3", ray::KEY_KP_3},
-                                                       {"KP_4", ray::KEY_KP_4},
-                                                       {"KP_5", ray::KEY_KP_5},
-                                                       {"KP_6", ray::KEY_KP_6},
-                                                       {"KP_7", ray::KEY_KP_7},
-                                                       {"KP_8", ray::KEY_KP_8},
-                                                       {"KP_9", ray::KEY_KP_9},
-                                                       {"KP_DECIMAL", ray::KEY_KP_DECIMAL},
-                                                       {"KP_DIVIDE", ray::KEY_KP_DIVIDE},
-                                                       {"KP_MULTIPLY", ray::KEY_KP_MULTIPLY},
-                                                       {"KP_SUBTRACT", ray::KEY_KP_SUBTRACT},
-                                                       {"KP_ADD", ray::KEY_KP_ADD},
-                                                       {"KP_ENTER", ray::KEY_KP_ENTER},
-                                                       {"KP_EQUAL", ray::KEY_KP_EQUAL},
-                                                       {"APOSTROPHE", ray::KEY_APOSTROPHE},
-                                                       {"COMMA", ray::KEY_COMMA},
-                                                       {"MINUS", ray::KEY_MINUS},
-                                                       {"PERIOD", ray::KEY_PERIOD},
-                                                       {"SLASH", ray::KEY_SLASH},
-                                                       {"SEMICOLON", ray::KEY_SEMICOLON},
-                                                       {"EQUAL", ray::KEY_EQUAL},
-                                                       {"LEFT_BRACKET", ray::KEY_LEFT_BRACKET},
-                                                       {"BACKSLASH", ray::KEY_BACKSLASH},
-                                                       {"RIGHT_BRACKET", ray::KEY_RIGHT_BRACKET},
-                                                       {"GRAVE", ray::KEY_GRAVE}};
-
-    auto it = key_map.find(upper_key);
-    if (it != key_map.end()) {
-        return it->second;
+    for (const auto& [name, code] : key_names) {
+        if (name == lower_key) {
+            return code;
+        }
     }
 
     throw std::runtime_error("Invalid key: " + key);
@@ -209,7 +148,7 @@ static int getKeyCodeOrDefault(const std::string& v, const char* def) {
             return getKeyCode(def);
         } catch (const std::runtime_error& e2) {
             spdlog::error("Invalid default key '{}': {} -- using escape", def, e2.what());
-            return ray::KEY_ESCAPE;
+            return SDL_SCANCODE_ESCAPE;
         }
     }
 }
@@ -420,16 +359,16 @@ Config get_config() {
     config.keys.restart_key = getKeyCodeOrDefault(config_file["keys"]["restart_key"].value_or("f1"), "f1");
 
     // Parse keys_1p
-    config.keys_1p.left_kat = parseKeyArrayOrDefault(config_file, "keys_1p", "left_kat", {ray::KEY_D});
-    config.keys_1p.left_don = parseKeyArrayOrDefault(config_file, "keys_1p", "left_don", {ray::KEY_F});
-    config.keys_1p.right_don = parseKeyArrayOrDefault(config_file, "keys_1p", "right_don", {ray::KEY_J});
-    config.keys_1p.right_kat = parseKeyArrayOrDefault(config_file, "keys_1p", "right_kat", {ray::KEY_K});
+    config.keys_1p.left_kat = parseKeyArrayOrDefault(config_file, "keys_1p", "left_kat", {SDL_SCANCODE_D});
+    config.keys_1p.left_don = parseKeyArrayOrDefault(config_file, "keys_1p", "left_don", {SDL_SCANCODE_F});
+    config.keys_1p.right_don = parseKeyArrayOrDefault(config_file, "keys_1p", "right_don", {SDL_SCANCODE_J});
+    config.keys_1p.right_kat = parseKeyArrayOrDefault(config_file, "keys_1p", "right_kat", {SDL_SCANCODE_K});
 
     // Parse keys_2p
-    config.keys_2p.left_kat = parseKeyArrayOrDefault(config_file, "keys_2p", "left_kat", {ray::KEY_Z});
-    config.keys_2p.left_don = parseKeyArrayOrDefault(config_file, "keys_2p", "left_don", {ray::KEY_X});
-    config.keys_2p.right_don = parseKeyArrayOrDefault(config_file, "keys_2p", "right_don", {ray::KEY_C});
-    config.keys_2p.right_kat = parseKeyArrayOrDefault(config_file, "keys_2p", "right_kat", {ray::KEY_V});
+    config.keys_2p.left_kat = parseKeyArrayOrDefault(config_file, "keys_2p", "left_kat", {SDL_SCANCODE_Z});
+    config.keys_2p.left_don = parseKeyArrayOrDefault(config_file, "keys_2p", "left_don", {SDL_SCANCODE_X});
+    config.keys_2p.right_don = parseKeyArrayOrDefault(config_file, "keys_2p", "right_don", {SDL_SCANCODE_C});
+    config.keys_2p.right_kat = parseKeyArrayOrDefault(config_file, "keys_2p", "right_kat", {SDL_SCANCODE_V});
 
     // Parse gamepad_1p (fallback to legacy [gamepad] if missing)
     const toml::table* gamepad_1p_node = config_file["gamepad_1p"].as_table();

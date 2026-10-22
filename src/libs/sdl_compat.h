@@ -50,6 +50,9 @@ using SDL_IOStream = SDL_RWops;
 #define SDL_EVENT_KEY_UP SDL_KEYUP
 #define SDL_EVENT_FINGER_DOWN SDL_FINGERDOWN
 #define SDL_EVENT_FINGER_UP SDL_FINGERUP
+#define SDL_EVENT_MOUSE_WHEEL SDL_MOUSEWHEEL
+#define SDL_EVENT_MOUSE_BUTTON_DOWN SDL_MOUSEBUTTONDOWN
+#define SDL_SCANCODE_COUNT SDL_NUM_SCANCODES
 #define SDL_EVENT_FINGER_CANCELED (SDL_USEREVENT + 0x7ff) // no SDL2 equivalent; never fires
 #define SDL_KMOD_NONE KMOD_NONE
 #define SDL_AUDIO_F32 AUDIO_F32SYS
@@ -141,6 +144,41 @@ inline SDL_JoystickID* SDL_GetJoysticks(int* count) {
 inline bool SDL_IsGamepad(SDL_JoystickID id) {
     const int i = yd_joy_index(id);
     return i >= 0 && SDL_IsGameController(i) == SDL_TRUE;
+}
+using SDL_Gamepad = SDL_GameController;
+using SDL_GamepadButton = SDL_GameControllerButton;
+#define SDL_GAMEPAD_BUTTON_SOUTH SDL_CONTROLLER_BUTTON_A
+#define SDL_GAMEPAD_BUTTON_EAST SDL_CONTROLLER_BUTTON_B
+#define SDL_GAMEPAD_BUTTON_WEST SDL_CONTROLLER_BUTTON_X
+#define SDL_GAMEPAD_BUTTON_NORTH SDL_CONTROLLER_BUTTON_Y
+#define SDL_GAMEPAD_BUTTON_BACK SDL_CONTROLLER_BUTTON_BACK
+#define SDL_GAMEPAD_BUTTON_GUIDE SDL_CONTROLLER_BUTTON_GUIDE
+#define SDL_GAMEPAD_BUTTON_START SDL_CONTROLLER_BUTTON_START
+#define SDL_GAMEPAD_BUTTON_LEFT_STICK SDL_CONTROLLER_BUTTON_LEFTSTICK
+#define SDL_GAMEPAD_BUTTON_RIGHT_STICK SDL_CONTROLLER_BUTTON_RIGHTSTICK
+#define SDL_GAMEPAD_BUTTON_LEFT_SHOULDER SDL_CONTROLLER_BUTTON_LEFTSHOULDER
+#define SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER SDL_CONTROLLER_BUTTON_RIGHTSHOULDER
+#define SDL_GAMEPAD_BUTTON_DPAD_UP SDL_CONTROLLER_BUTTON_DPAD_UP
+#define SDL_GAMEPAD_BUTTON_DPAD_DOWN SDL_CONTROLLER_BUTTON_DPAD_DOWN
+#define SDL_GAMEPAD_BUTTON_DPAD_LEFT SDL_CONTROLLER_BUTTON_DPAD_LEFT
+#define SDL_GAMEPAD_BUTTON_DPAD_RIGHT SDL_CONTROLLER_BUTTON_DPAD_RIGHT
+#define SDL_GAMEPAD_AXIS_LEFT_TRIGGER SDL_CONTROLLER_AXIS_TRIGGERLEFT
+#define SDL_GAMEPAD_AXIS_RIGHT_TRIGGER SDL_CONTROLLER_AXIS_TRIGGERRIGHT
+inline SDL_Gamepad* SDL_OpenGamepad(SDL_JoystickID id) {
+    const int i = yd_joy_index(id);
+    return i >= 0 ? SDL_GameControllerOpen(i) : nullptr;
+}
+inline void SDL_CloseGamepad(SDL_Gamepad* gp) {
+    SDL_GameControllerClose(gp);
+}
+inline const char* SDL_GetGamepadName(SDL_Gamepad* gp) {
+    return SDL_GameControllerName(gp);
+}
+inline bool SDL_GetGamepadButton(SDL_Gamepad* gp, SDL_GamepadButton b) {
+    return SDL_GameControllerGetButton(gp, b) != 0;
+}
+inline Sint16 SDL_GetGamepadAxis(SDL_Gamepad* gp, SDL_GameControllerAxis a) {
+    return SDL_GameControllerGetAxis(gp, a);
 }
 inline SDL_Joystick* SDL_OpenJoystick(SDL_JoystickID id) {
     const int i = yd_joy_index(id);

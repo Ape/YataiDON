@@ -198,9 +198,9 @@ std::optional<Screens> OnboardingScreen::update() {
     }
 
     const int rows = kSkinCount + 2;
-    if (ray::IsKeyPressed(ray::KEY_UP)) {
+    if (key_pressed(SDL_SCANCODE_UP)) {
         row = (row + rows - 1) % rows;
-    } else if (ray::IsKeyPressed(ray::KEY_DOWN)) {
+    } else if (key_pressed(SDL_SCANCODE_DOWN)) {
         row = (row + 1) % rows;
     } else if (is_l_kat_pressed() || menu_left_pressed() || is_r_kat_pressed() || menu_right_pressed()) {
         if (row == online_row()) {

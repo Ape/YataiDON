@@ -243,7 +243,7 @@ public:
     }
 
     void update(const ray::Camera2D& camera) {
-        if (ray::IsKeyPressed(ray::KEY_F7)) {
+        if (key_pressed(SDL_SCANCODE_F7)) {
             toggle_open();
         }
         if (slide_anim) {
@@ -264,8 +264,8 @@ public:
 
         const float panel_x = tex.screen_width - PANEL_WIDTH + slide_offset();
         const float tab_width = PANEL_WIDTH / TAB_COUNT;
-        const ray::Vector2 mouse = ray::GetScreenToWorld2D(ray::GetMousePosition(), camera);
-        const bool clicked = ray::IsMouseButtonPressed(ray::MOUSE_BUTTON_LEFT);
+        const ray::Vector2 mouse = ray::GetScreenToWorld2D(mouse_position(), camera);
+        const bool clicked = mouse_pressed(SDL_BUTTON_LEFT);
         const bool mouse_over_panel = mouse.x >= panel_x;
 
         if (clicked) {
@@ -274,11 +274,11 @@ public:
         }
 
         // Releasing the mouse always ends an in-progress scrollbar drag.
-        if (!ray::IsMouseButtonDown(ray::MOUSE_BUTTON_LEFT)) {
+        if (!mouse_down(SDL_BUTTON_LEFT)) {
             scroll_drag = ScrollDrag::None;
         }
 
-        if (editing_field < 0 && !editing_data_ptr && ray::IsKeyPressed(ray::KEY_TAB)) {
+        if (editing_field < 0 && !editing_data_ptr && key_pressed(SDL_SCANCODE_TAB)) {
             active_tab = (active_tab + 1) % TAB_COUNT;
         }
 
@@ -298,7 +298,7 @@ public:
             const bool mouse_in_scenes = mouse_over_panel && mouse.y >= list_top && mouse.y < list_bottom;
 
             if (mouse_in_scenes) {
-                float wheel = ray::GetMouseWheelMove();
+                float wheel = mouse_wheel();
                 if (wheel != 0.0f) {
                     scene_scroll -= (int)wheel;
                 }
@@ -332,7 +332,7 @@ public:
             const bool mouse_in_data = mouse_over_panel && mouse.y >= data_top && mouse.y < data_bottom;
 
             if (mouse_in_data) {
-                float wheel = ray::GetMouseWheelMove();
+                float wheel = mouse_wheel();
                 if (wheel != 0.0f) {
                     data_scroll -= (int)wheel;
                 }
@@ -349,7 +349,7 @@ public:
                     const DataField& f = fields[row];
                     float row_y = data_top + (row - data_scroll) * ROW_HEIGHT;
                     DataFieldRects r = data_field_rects(f, panel_x, row_y);
-                    const int step = ray::IsKeyDown(ray::KEY_LEFT_SHIFT) ? 10 : 1;
+                    const int step = key_down(SDL_SCANCODE_LSHIFT) ? 10 : 1;
                     if (f.kind == DataField::Kind::BOOL) {
                         if (in_rect(mouse, r.value)) {
                             *f.b = !*f.b;
@@ -418,9 +418,9 @@ public:
                     return;
                 }
                 if (in_rect(mouse, buttons.copy_path)) {
-                    ray::SetClipboardText(path.c_str());
+                    SDL_SetClipboardText(path.c_str());
                 } else if (in_rect(mouse, buttons.copy_path_line)) {
-                    ray::SetClipboardText((path + ":" + std::to_string(entry->lua_line)).c_str());
+                    SDL_SetClipboardText((path + ":" + std::to_string(entry->lua_line)).c_str());
                 }
             }
             return;
@@ -440,7 +440,7 @@ public:
         const bool mouse_in_list = mouse_over_panel && mouse.y >= list_top && mouse.y < list_bottom;
 
         if (mouse_in_list) {
-            float wheel = ray::GetMouseWheelMove();
+            float wheel = mouse_wheel();
             if (wheel != 0.0f) {
                 scroll_offset -= (int)(wheel * 3.0f);
             }
@@ -483,7 +483,7 @@ public:
         }
 
         if (clicked && has_selection && mouse_over_panel && mouse.y >= list_bottom) {
-            const int step = ray::IsKeyDown(ray::KEY_LEFT_SHIFT) ? 10 : 1;
+            const int step = key_down(SDL_SCANCODE_LSHIFT) ? 10 : 1;
             for (int i = 0; i < 4; i++) {
                 int* value = field_ptr(i);
                 if (!value) {

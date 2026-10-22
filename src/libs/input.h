@@ -8,6 +8,7 @@
 
 #include "global_data.h"
 #include "ray.h" // IWYU pragma: keep
+#include "sdl_compat.h"
 
 extern std::atomic<bool> input_thread_running;
 extern std::thread input_thread;
@@ -17,6 +18,21 @@ extern std::atomic<bool> touch_drum_pressed;
 void input_polling_thread();
 void poll_keyboard_once();
 void poll_touch_once();
+
+// --- Raw keyboard / mouse / clipboard (SDL) --------------------------------
+// Keys are SDL_Scancode values. Per-frame state (pressed edges, typed characters, wheel) is
+// snapshotted by poll_input_events(), which replaces ray::PollInputEvents().
+void poll_input_events();
+bool key_down(int scancode);
+bool key_pressed(int scancode);
+// Next key pressed this frame (scancode), 0 when none left; consumes it.
+int key_pressed_next();
+// Next typed codepoint this frame, 0 when none left; consumes it.
+int char_pressed();
+float mouse_wheel();
+ray::Vector2 mouse_position();
+bool mouse_down(int button); // SDL_BUTTON_LEFT etc.
+bool mouse_pressed(int button);
 
 // Check if a key was pressed since the last check
 // This consumes the key press event
@@ -29,8 +45,7 @@ bool check_key_released(int key);
 // Most recent controller button press, as the bare button number the
 // config stores (-1 if none since the last call, which this consumes; 0 is
 // a valid real button, so it can't double as the "no event" sentinel).
-// Covers SDL joysticks too, unlike raylib's GetGamepadButtonPressed which
-// only sees devices it has a gamepad mapping for.
+// Covers mapped gamepads and plain SDL joysticks alike.
 int take_gamepad_button_pressed();
 
 // Inject a discrete gamepad-style press into the shared input buffer. Button

@@ -59,7 +59,7 @@ std::optional<Screens> Game2PScreen::update() {
         end_song(end_time, transition_delay, BackgroundNotification::Disabled);
     }
 
-    if (ray::IsKeyPressed(global_data.config->keys.restart_key)) {
+    if (key_pressed(global_data.config->keys.restart_key)) {
         restart_song();
     }
     if (check_key_pressed(global_data.config->keys.back_key)) {

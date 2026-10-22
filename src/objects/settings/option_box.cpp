@@ -305,7 +305,7 @@ void KeybindOptionBox::confirm() {
 void KeybindOptionBox::update(double current_time) {
     flicker_fade->update(current_time);
     if (is_highlighted) {
-        int key = ray::GetKeyPressed();
+        int key = key_pressed_next();
         if (key > 0) {
             value = {key};
             confirm();
@@ -373,13 +373,7 @@ void KeyBindControllerOptionBox::update(double current_time) {
         return;
     }
     {
-        // raylib only reports devices it has a gamepad mapping for; fall
-        // back to the input layer's own polling, which also covers plain
-        // SDL joysticks (most drum controllers).
-        int btn = ray::GetGamepadButtonPressed();
-        if (btn <= 0) {
-            btn = take_gamepad_button_pressed();
-        }
+        int btn = take_gamepad_button_pressed();
         if (btn >= 0) {
             value = {btn};
             confirm();

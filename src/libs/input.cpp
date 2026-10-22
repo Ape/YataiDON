@@ -2,6 +2,10 @@
 
 #include <algorithm>
 #include <array>
+#include <map>
+#include <bitset>
+#include <deque>
+#include <mutex>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -39,6 +43,8 @@ std::thread input_thread;
 static std::atomic<double> last_input_ms{0.0};
 
 static std::unordered_map<SDL_JoystickID, SDL_Joystick*> sdl_joysticks;
+// Joysticks with an SDL gamepad mapping, ordered by id; position is the slot in previous_gamepad_states.
+static std::map<SDL_JoystickID, SDL_Gamepad*> sdl_gamepads;
 // keyed by joy_id * 256 + button_index
 static std::unordered_map<int64_t, bool> sdl_prev_button;
 // keyed by joy_id * 256 + axis_index
@@ -68,9 +74,25 @@ static void refresh_sdl_joysticks() {
         }
     }
 
+    for (auto it = sdl_gamepads.begin(); it != sdl_gamepads.end();) {
+        if (!current.contains(it->first)) {
+            SDL_CloseGamepad(it->second);
+            it = sdl_gamepads.erase(it);
+        } else {
+            ++it;
+        }
+    }
+
     for (int i = 0; i < count; i++) {
         if (SDL_IsGamepad(ids[i])) {
-            continue; // already handled by raylib
+            if (!sdl_gamepads.contains(ids[i])) {
+                SDL_Gamepad* gp = SDL_OpenGamepad(ids[i]);
+                if (gp) {
+                    sdl_gamepads[ids[i]] = gp;
+                    spdlog::info("Gamepad: opened '{}' (id {})", SDL_GetGamepadName(gp), (int)ids[i]);
+                }
+            }
+            continue;
         }
         if (!sdl_joysticks.contains(ids[i])) {
             SDL_Joystick* joy = SDL_OpenJoystick(ids[i]);
@@ -108,7 +130,7 @@ void set_touch_drum_enabled(bool enabled) {
     touch_drum_enabled.store(enabled, std::memory_order_relaxed);
 }
 
-static std::array<bool, 349> previous_key_states{};
+static std::array<bool, SDL_SCANCODE_COUNT> previous_key_states{};
 static std::array<std::array<bool, 18>, 4> previous_gamepad_states{};
 
 // Gamepad/joystick buttons and axes are folded into the key space at these
@@ -212,15 +234,15 @@ bool is_r_don_pressed(PlayerNum player_num, float* strength) {
 }
 
 bool menu_left_pressed(PlayerNum p) {
-    return is_l_kat_pressed(p) || (p != PlayerNum::P2 && ray::IsKeyPressed(ray::KEY_LEFT));
+    return is_l_kat_pressed(p) || (p != PlayerNum::P2 && key_pressed(SDL_SCANCODE_LEFT));
 }
 
 bool menu_right_pressed(PlayerNum p) {
-    return is_r_kat_pressed(p) || (p != PlayerNum::P2 && ray::IsKeyPressed(ray::KEY_RIGHT));
+    return is_r_kat_pressed(p) || (p != PlayerNum::P2 && key_pressed(SDL_SCANCODE_RIGHT));
 }
 
 bool menu_confirm_pressed(PlayerNum p) {
-    return is_l_don_pressed(p) || is_r_don_pressed(p) || (p != PlayerNum::P2 && ray::IsKeyPressed(ray::KEY_ENTER));
+    return is_l_don_pressed(p) || is_r_don_pressed(p) || (p != PlayerNum::P2 && key_pressed(SDL_SCANCODE_RETURN));
 }
 
 bool is_l_kat_pressed(PlayerNum player_num, float* strength) {
@@ -352,12 +374,12 @@ static YD_EventFilterRet SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event
 
     if (event->type == SDL_EVENT_KEY_DOWN && yd_key_scancode(*event) == SDL_SCANCODE_AC_BACK) {
         std::scoped_lock lock(input_mutex);
-        pressed_keys.emplace(ray::KEY_ESCAPE, 1.0f);
+        pressed_keys.emplace(SDL_SCANCODE_ESCAPE, 1.0f);
         return 0;
     }
     if (event->type == SDL_EVENT_KEY_UP && yd_key_scancode(*event) == SDL_SCANCODE_AC_BACK) {
         std::scoped_lock lock(input_mutex);
-        released_keys.insert(ray::KEY_ESCAPE);
+        released_keys.insert(SDL_SCANCODE_ESCAPE);
         return 0;
     }
 
@@ -450,7 +472,7 @@ void poll_keyboard_once() {
     local_released.clear();
 
 #ifdef _WIN32
-    for (int key = 32; key < 349; key++) {
+    for (int key = 0; key < SDL_SCANCODE_COUNT; key++) {
         bool current_state = win32_is_key_down_native(key);
         bool previous_state = previous_key_states[key];
         if (current_state && !previous_state) {
@@ -462,8 +484,10 @@ void poll_keyboard_once() {
         previous_key_states[key] = current_state;
     }
 #else
-    for (int key = 32; key < 349; key++) {
-        bool current_state = ray::IsKeyDown(key);
+    int num_keys = 0;
+    const auto* kb_state = SDL_GetKeyboardState(&num_keys);
+    for (int key = 0; key < std::min(num_keys, (int)SDL_SCANCODE_COUNT); key++) {
+        bool current_state = kb_state[key];
         bool previous_state = previous_key_states[key];
         if (current_state && !previous_state) {
             local_pressed.push_back(key);
@@ -475,25 +499,46 @@ void poll_keyboard_once() {
     }
 #endif
 
-    for (int gamepad = 0; gamepad < 4; gamepad++) {
-        if (!ray::IsGamepadAvailable(gamepad)) {
-            continue;
+    refresh_sdl_joysticks();
+
+    // Button numbers follow raylib's GamepadButton enum, which is what config.toml stores.
+    static constexpr std::pair<SDL_GamepadButton, int> GAMEPAD_BUTTONS[] = {
+        {SDL_GAMEPAD_BUTTON_DPAD_UP, 1},       {SDL_GAMEPAD_BUTTON_DPAD_RIGHT, 2},
+        {SDL_GAMEPAD_BUTTON_DPAD_DOWN, 3},     {SDL_GAMEPAD_BUTTON_DPAD_LEFT, 4},
+        {SDL_GAMEPAD_BUTTON_NORTH, 5},         {SDL_GAMEPAD_BUTTON_EAST, 6},
+        {SDL_GAMEPAD_BUTTON_SOUTH, 7},         {SDL_GAMEPAD_BUTTON_WEST, 8},
+        {SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, 9}, {SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, 11},
+        {SDL_GAMEPAD_BUTTON_BACK, 13},         {SDL_GAMEPAD_BUTTON_GUIDE, 14},
+        {SDL_GAMEPAD_BUTTON_START, 15},        {SDL_GAMEPAD_BUTTON_LEFT_STICK, 16},
+        {SDL_GAMEPAD_BUTTON_RIGHT_STICK, 17},
+    };
+    constexpr float TRIGGER_THRESHOLD = 0.1f;
+
+    int gamepad = 0;
+    for (auto& [id, gp] : sdl_gamepads) {
+        if (gamepad >= 4) {
+            break;
         }
+        std::array<bool, 18> state{};
+        for (const auto& [sdl_btn, btn] : GAMEPAD_BUTTONS) {
+            state[btn] = SDL_GetGamepadButton(gp, sdl_btn);
+        }
+        state[10] = SDL_GetGamepadAxis(gp, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) / 32767.0f > TRIGGER_THRESHOLD;
+        state[12] = SDL_GetGamepadAxis(gp, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) / 32767.0f > TRIGGER_THRESHOLD;
         for (int btn = 1; btn <= 17; btn++) {
             int key = 10000 + btn;
-            bool current_state = ray::IsGamepadButtonDown(gamepad, btn);
             bool previous_state = previous_gamepad_states[gamepad][btn];
-            if (current_state && !previous_state) {
+            if (state[btn] && !previous_state) {
                 local_pressed.push_back(key);
             }
-            if (!current_state && previous_state) {
+            if (!state[btn] && previous_state) {
                 local_released.push_back(key);
             }
-            previous_gamepad_states[gamepad][btn] = current_state;
+            previous_gamepad_states[gamepad][btn] = state[btn];
         }
+        gamepad++;
     }
 
-    refresh_sdl_joysticks();
     constexpr float JOYSTICK_AXIS_THRESHOLD = 0.5f;
 
     for (auto& [joy_id, joy] : sdl_joysticks) {
@@ -869,6 +914,10 @@ void shutdown_sdl_joysticks() {
         SDL_CloseJoystick(joy);
     }
     sdl_joysticks.clear();
+    for (auto& [id, gp] : sdl_gamepads) {
+        SDL_CloseGamepad(gp);
+    }
+    sdl_gamepads.clear();
     sdl_prev_button.clear();
     sdl_prev_axis.clear();
     SDL_QuitSubSystem(SDL_INIT_JOYSTICK);
@@ -882,9 +931,10 @@ bool is_text_input_key(int key) {
         return false;
     }
 
-    return (key >= ray::KEY_SPACE && key <= ray::KEY_GRAVE) || (key >= ray::KEY_KP_0 && key <= ray::KEY_KP_EQUAL) ||
-           (key >= ray::KEY_ESCAPE && key <= ray::KEY_END) ||
-           (key >= ray::KEY_LEFT_SHIFT && key <= ray::KEY_RIGHT_SUPER);
+    return (key >= SDL_SCANCODE_A && key <= SDL_SCANCODE_SLASH) || // letters, digits, enter/esc/bksp/tab/space, punctuation
+           (key >= SDL_SCANCODE_INSERT && key <= SDL_SCANCODE_UP) ||
+           (key >= SDL_SCANCODE_KP_DIVIDE && key <= SDL_SCANCODE_KP_PERIOD) || key == SDL_SCANCODE_KP_EQUALS ||
+           (key >= SDL_SCANCODE_LCTRL && key <= SDL_SCANCODE_RGUI);
 }
 
 void set_keyboard_visible(bool visible) {
@@ -910,7 +960,7 @@ void set_keyboard_visible(bool visible) {
 }
 
 // Unified keyboard text-field editing. See the declaration in input.h.
-// raylib's SDL platform starts text input with the window (for GetCharPressed). With an IME
+// raylib's SDL platform starts text input with the window (for typed characters). With an IME
 // such as a Chinese one, every key press then goes through the IME, and PollInputEvents took
 // 5-150 ms on the frame after a drum hit on a keyboard-type controller. Text input is only on
 // while poll_text_edit is in use.
@@ -938,25 +988,25 @@ void sync_text_input() {
 
 TextEditAction poll_text_edit(std::string& text, const std::function<bool(int)>& accept) {
     text_input_wanted = true;
-    // Ctrl+V pastes the clipboard (first line only, UTF-8 as raylib hands it over).
-    if ((ray::IsKeyDown(ray::KEY_LEFT_CONTROL) || ray::IsKeyDown(ray::KEY_RIGHT_CONTROL)) &&
-        ray::IsKeyPressed(ray::KEY_V)) {
-        const char* clip = ray::GetClipboardText();
+    // Ctrl+V pastes the clipboard (first line only, UTF-8).
+    if ((key_down(SDL_SCANCODE_LCTRL) || key_down(SDL_SCANCODE_RCTRL)) && key_pressed(SDL_SCANCODE_V)) {
+        char* clip = SDL_GetClipboardText();
         if (clip) {
             std::string s(clip);
+            SDL_free(clip);
             const size_t eol = s.find_first_of("\r\n");
             if (eol != std::string::npos) {
                 s.resize(eol);
             }
             text += s;
         }
-        while (ray::GetCharPressed() > 0) {
+        while (char_pressed() > 0) {
         } // the 'v' itself is not typed
         return TextEditAction::None;
     }
 
     TextEditAction action = TextEditAction::None;
-    if (ray::IsKeyPressed(ray::KEY_BACKSPACE)) {
+    if (key_pressed(SDL_SCANCODE_BACKSPACE)) {
         // Remove one whole UTF-8 code point (continuation bytes first).
         while (!text.empty() && ((unsigned char)text.back() & 0xC0) == 0x80) {
             text.pop_back();
@@ -964,26 +1014,159 @@ TextEditAction poll_text_edit(std::string& text, const std::function<bool(int)>&
         if (!text.empty()) {
             text.pop_back();
         }
-    } else if (ray::IsKeyPressed(ray::KEY_ESCAPE)) {
+    } else if (key_pressed(SDL_SCANCODE_ESCAPE)) {
         action = TextEditAction::Cancel;
-    } else if (ray::IsKeyPressed(ray::KEY_ENTER)) {
+    } else if (key_pressed(SDL_SCANCODE_RETURN)) {
         action = TextEditAction::Confirm;
     }
 
-    int key = ray::GetCharPressed();
+    int key = char_pressed();
     while (key > 0) {
         if (key == '\n' || key == '\r') {
             if (action == TextEditAction::None) {
                 action = TextEditAction::Confirm;
             }
         } else if (key >= 0x20 && (!accept || accept(key))) {
-            // GetCharPressed yields a Unicode code point (IME-composed CJK
+            // char_pressed yields a Unicode code point (IME-composed CJK
             // included); store it as UTF-8.
             int n = 0;
             const char* utf8 = ray::CodepointToUTF8(key, &n);
             text.append(utf8, n);
         }
-        key = ray::GetCharPressed();
+        key = char_pressed();
     }
     return action;
+}
+
+// --- Raw keyboard / mouse state ------------------------------------------------------------
+// Events are accumulated by an SDL event watch into `pending`; poll_input_events() publishes
+// them as `frame` right after pumping, so reads see exactly this frame's input (and an event
+// that lands between pumps is carried over rather than lost).
+namespace {
+    struct FrameInput {
+        std::bitset<SDL_SCANCODE_COUNT> key_pressed;
+        std::deque<int> key_queue;
+        std::deque<int> char_queue;
+        std::bitset<8> mouse_pressed;
+        float wheel = 0.0f;
+    };
+
+    std::mutex frame_mutex;
+    FrameInput pending;
+    FrameInput frame;
+    bool frame_watch_registered = false;
+
+    // Decode one UTF-8 code point from the front of `s`, advancing it.
+    int next_codepoint(const char*& s) {
+        const auto* p = reinterpret_cast<const unsigned char*>(s);
+        int len = p[0] < 0x80 ? 1 : p[0] < 0xE0 ? 2 : p[0] < 0xF0 ? 3 : 4;
+        int cp = len == 1 ? p[0] : p[0] & (0xFF >> (len + 1));
+        for (int i = 1; i < len && p[i]; i++) {
+            cp = (cp << 6) | (p[i] & 0x3F);
+        }
+        s += len;
+        return cp;
+    }
+
+    YD_EventFilterRet SDLCALL frame_event_watch(void* /*userdata*/, SDL_Event* event) {
+        std::scoped_lock lock(frame_mutex);
+        switch (event->type) {
+        case SDL_EVENT_KEY_DOWN: {
+            const int sc = yd_key_scancode(*event);
+            if (!event->key.repeat && sc > 0 && sc < SDL_SCANCODE_COUNT) {
+                pending.key_pressed.set(sc);
+                pending.key_queue.push_back(sc);
+            }
+            break;
+        }
+        case SDL_EVENT_TEXT_INPUT:
+            if (event->text.text) {
+                const char* s = event->text.text;
+                while (*s) {
+                    pending.char_queue.push_back(next_codepoint(s));
+                }
+            }
+            break;
+        case SDL_EVENT_MOUSE_WHEEL:
+            pending.wheel += (float)event->wheel.y;
+            break;
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+            if (event->button.button < pending.mouse_pressed.size()) {
+                pending.mouse_pressed.set(event->button.button);
+            }
+            break;
+        default:
+            break;
+        }
+        return 0;
+    }
+} // namespace
+
+void poll_input_events() {
+    if (!frame_watch_registered) {
+        SDL_AddEventWatch(frame_event_watch, nullptr);
+        frame_watch_registered = true;
+    }
+    ray::PollInputEvents();
+    std::scoped_lock lock(frame_mutex);
+    frame = std::move(pending);
+    pending = FrameInput{};
+}
+
+bool key_down(int scancode) {
+    int n = 0;
+    const auto* state = SDL_GetKeyboardState(&n);
+    return scancode >= 0 && scancode < n && state[scancode];
+}
+
+bool key_pressed(int scancode) {
+    std::scoped_lock lock(frame_mutex);
+    return scancode >= 0 && scancode < SDL_SCANCODE_COUNT && frame.key_pressed.test(scancode);
+}
+
+int key_pressed_next() {
+    std::scoped_lock lock(frame_mutex);
+    if (frame.key_queue.empty()) {
+        return 0;
+    }
+    const int sc = frame.key_queue.front();
+    frame.key_queue.pop_front();
+    return sc;
+}
+
+int char_pressed() {
+    std::scoped_lock lock(frame_mutex);
+    if (frame.char_queue.empty()) {
+        return 0;
+    }
+    const int cp = frame.char_queue.front();
+    frame.char_queue.pop_front();
+    return cp;
+}
+
+float mouse_wheel() {
+    std::scoped_lock lock(frame_mutex);
+    return frame.wheel;
+}
+
+ray::Vector2 mouse_position() {
+    float x = 0.0f, y = 0.0f;
+#ifndef YATAIDON_USE_SDL2
+    SDL_GetMouseState(&x, &y);
+#else
+    int ix = 0, iy = 0;
+    SDL_GetMouseState(&ix, &iy);
+    x = (float)ix;
+    y = (float)iy;
+#endif
+    return {x, y};
+}
+
+bool mouse_down(int button) {
+    return (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_MASK(button)) != 0;
+}
+
+bool mouse_pressed(int button) {
+    std::scoped_lock lock(frame_mutex);
+    return button >= 0 && button < (int)frame.mouse_pressed.size() && frame.mouse_pressed.test(button);
 }
