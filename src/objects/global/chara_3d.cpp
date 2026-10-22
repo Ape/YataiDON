@@ -16,6 +16,23 @@
 namespace ray {
 #include <raymath.h>
 }
+
+// raymath lives outside raylib.h, so these stay local to the only file that includes it.
+inline ray::Matrix matrix_multiply(ray::Matrix left, ray::Matrix right) {
+    return ray::MatrixMultiply(left, right);
+}
+
+inline ray::Matrix matrix_translate(float x, float y, float z) {
+    return ray::MatrixTranslate(x, y, z);
+}
+
+inline ray::Matrix matrix_scale(float x, float y, float z) {
+    return ray::MatrixScale(x, y, z);
+}
+
+inline ray::Vector3 vector3_transform(ray::Vector3 v, ray::Matrix mat) {
+    return ray::Vector3Transform(v, mat);
+}
 extern "C" {
 void rlSetCullFace(int mode);
 void rlEnableBackfaceCulling(void);
@@ -26,9 +43,9 @@ static constexpr int RL_CULL_FACE_BACK = 1;
 
 static void draw_model_face_last(ray::Model& model, int face_material_index, const std::vector<int>& blend_materials,
                                  const std::vector<int>& twosided_materials, ray::Vector3 position, float scale) {
-    ray::Matrix matTransform = ray::MatrixMultiply(ray::MatrixScale(scale, scale, scale),
-                                                   ray::MatrixTranslate(position.x, position.y, position.z));
-    ray::Matrix transform = ray::MatrixMultiply(model.transform, matTransform);
+    ray::Matrix matTransform = matrix_multiply(matrix_scale(scale, scale, scale),
+                                                   matrix_translate(position.x, position.y, position.z));
+    ray::Matrix transform = matrix_multiply(model.transform, matTransform);
     auto is_blend = [&](int mat) { return std::ranges::contains(blend_materials, mat); };
     // _CULLNONE materials are drawn two-sided, as the name asks.
     auto draw = [&](int i) {
@@ -37,7 +54,7 @@ static void draw_model_face_last(ray::Model& model, int face_material_index, con
         if (two_sided) {
             rlDisableBackfaceCulling();
         }
-        ray::DrawMesh(model.meshes[i], model.materials[mat], transform);
+        draw_mesh(model.meshes[i], model.materials[mat], transform);
         if (two_sided) {
             rlEnableBackfaceCulling();
         }
@@ -55,7 +72,7 @@ static void draw_model_face_last(ray::Model& model, int face_material_index, con
     if (face_material_index != -1) {
         for (int i = 0; i < model.meshCount; i++) {
             if (model.meshMaterial[i] == face_material_index) {
-                ray::DrawMesh(model.meshes[i], model.materials[model.meshMaterial[i]], transform);
+                draw_mesh(model.meshes[i], model.materials[model.meshMaterial[i]], transform);
             }
         }
     }
@@ -115,19 +132,19 @@ static const AnimSource& anim_source(const fs::path& path) {
     }
 
     if (src.anims) {
-        ray::UnloadModelAnimations(src.anims, src.count);
+        unload_model_animations(src.anims, src.count);
     }
     src = AnimSource{};
     src.mtime = mtime;
     src.size = size;
-    ray::Model glb_model = ray::LoadModel(path.string().c_str());
+    ray::Model glb_model = load_model(path.string().c_str());
     if (glb_model.skeleton.bones) {
         for (int i = 0; i < glb_model.skeleton.boneCount; i++) {
             src.bone_names.emplace_back(glb_model.skeleton.bones[i].name);
         }
     }
-    ray::UnloadModel(glb_model);
-    src.anims = ray::LoadModelAnimations(path.string().c_str(), &src.count);
+    unload_model(glb_model);
+    src.anims = load_model_animations(path.string().c_str(), &src.count);
     return src;
 }
 
@@ -314,7 +331,7 @@ static void normalize_face_mesh_size(ray::Mesh& mesh, float target_size) {
 }
 
 void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, bool normalize_face_scale) {
-    ray::Model model = ray::LoadModel(model_path.string().c_str());
+    ray::Model model = load_model(model_path.string().c_str());
     // The vertex colours stay as shipped: the main shader does not tint by them, and the black
     // line pass reads its per-vertex thickness from the green channel.
 
@@ -366,7 +383,7 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
             const float size = std::max(maxx - minx, maxy - miny);
             if (normalize_face_scale || size > COS_FACE_PLANE_SIZE * 1.02f) {
                 normalize_face_mesh_size(mesh, COS_FACE_PLANE_SIZE);
-                ray::UpdateMeshBuffer(mesh, 0, mesh.vertices, mesh.vertexCount * 3 * (int)sizeof(float), 0);
+                update_mesh_buffer(mesh, 0, mesh.vertices, mesh.vertexCount * 3 * (int)sizeof(float), 0);
             }
         }
     }
@@ -378,7 +395,7 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
     std::erase(additive_indices, face_material_index);
     std::erase(blend_indices, face_material_index);
     for (int idx : additive_indices) {
-        model.materials[idx].maps[ray::MATERIAL_MAP_DIFFUSE].color = {255, 255, 255, 255};
+        model.materials[idx].maps[material_map::DIFFUSE].color = {255, 255, 255, 255};
     }
     // Alpha-tested materials: the textures are binary alpha with black RGB under the
     // transparent texels (fins, tentacles, hair tips). Forcing alpha to 255 painted all of
@@ -481,17 +498,17 @@ Chara3D::Chara3D(std::string& head_name, std::string& body_name, bool mirror, bo
 Chara3D::~Chara3D() {
     for (size_t p = 0; p < parts.size(); p++) {
         if (part_face_material_index[p] != -1 && !face_textures.empty()) {
-            parts[p].materials[part_face_material_index[p]].maps[ray::MATERIAL_MAP_DIFFUSE].texture.id = 0;
+            parts[p].materials[part_face_material_index[p]].maps[material_map::DIFFUSE].texture.id = 0;
         }
-        ray::UnloadModelAnimations(part_anims[p], part_anim_count[p]);
-        ray::UnloadModel(parts[p]);
+        unload_model_animations(part_anims[p], part_anim_count[p]);
+        unload_model(parts[p]);
     }
     unload_shader(null_shader);
     unload_shader(face_shader);
     unload_shader(cutout_shader);
     unload_shader(outline_fxaa_shader);
     if (scene_target.id != 0) {
-        ray::UnloadRenderTexture(scene_target);
+        unload_render_texture(scene_target);
     }
     unload_shader(outline_shader);
     for (auto& tex : face_textures) {
@@ -500,7 +517,7 @@ Chara3D::~Chara3D() {
 }
 
 void Chara3D::set_texture(fs::path& texture_path, int part_index, int material_index) {
-    ray::Texture2D old = parts[part_index].materials[material_index].maps[ray::MATERIAL_MAP_DIFFUSE].texture;
+    ray::Texture2D old = parts[part_index].materials[material_index].maps[material_map::DIFFUSE].texture;
     // Face material textures are owned by face_textures (shared across parts and unloaded
     // in the destructor); unloading here would double-free / use-after-free.
     bool is_face_material =
@@ -509,8 +526,8 @@ void Chara3D::set_texture(fs::path& texture_path, int part_index, int material_i
         unload_texture(old);
     }
     ray::Texture tex = load_texture_mipmapped(texture_path.string().c_str(), texture_filter::BILINEAR);
-    int map_type = ray::MATERIAL_MAP_DIFFUSE;
-    ray::SetMaterialTexture(&parts[part_index].materials[material_index], map_type, tex);
+    int map_type = material_map::DIFFUSE;
+    set_material_texture(&parts[part_index].materials[material_index], map_type, tex);
     render_dirty = true;
 }
 
@@ -585,7 +602,7 @@ void Chara3D::apply_face(int face_index) {
         if (part_face_material_index[p] == -1) {
             continue;
         }
-        parts[p].materials[part_face_material_index[p]].maps[ray::MATERIAL_MAP_DIFFUSE].texture =
+        parts[p].materials[part_face_material_index[p]].maps[material_map::DIFFUSE].texture =
             face_textures[face_index];
     }
     current_face_index = face_index;
@@ -630,7 +647,7 @@ static ray::Texture2D recolor_texture(ray::Image& source, Color body, Color face
 }
 
 static void apply_don_colors(ray::Model& model, int mat_idx, Color body, Color face, Color rim) {
-    auto& map = model.materials[mat_idx].maps[ray::MATERIAL_MAP_DIFFUSE];
+    auto& map = model.materials[mat_idx].maps[material_map::DIFFUSE];
     ray::Image img = load_image_from_texture(map.texture);
     if (!img.data) {
         return;
@@ -739,7 +756,7 @@ void Chara3D::apply_pose() {
         if (ai < 0 || ai >= part_anim_count[p]) {
             continue;
         }
-        ray::UpdateModelAnimation(parts[p], part_anims[p][ai], anim_frame);
+        update_model_animation(parts[p], part_anims[p][ai], anim_frame);
     }
     render_dirty = true;
 }
@@ -819,7 +836,7 @@ void Chara3D::update(double current_ms) {
                         if (ai >= part_anim_count[p]) {
                             continue;
                         }
-                        ray::UpdateModelAnimation(parts[p], part_anims[p][ai], anim_frame);
+                        update_model_animation(parts[p], part_anims[p][ai], anim_frame);
                     }
                     render_dirty = true;
 
@@ -922,7 +939,7 @@ bool Chara3D::screen_bounds(float x, float y, const ray::Camera3D& cam3d, float 
     ray::Matrix rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
     const float s = scale * draw_scale * tex.screen_scale;
     ray::Matrix transform =
-        ray::MatrixMultiply(rot, ray::MatrixMultiply(ray::MatrixScale(s, s, s), ray::MatrixTranslate(x, y, 400.0f)));
+        matrix_multiply(rot, matrix_multiply(matrix_scale(s, s, s), matrix_translate(x, y, 400.0f)));
     x0 = y0 = std::numeric_limits<float>::max();
     x1 = y1 = std::numeric_limits<float>::lowest();
     bool any = false;
@@ -934,7 +951,7 @@ bool Chara3D::screen_bounds(float x, float y, const ray::Camera3D& cam3d, float 
                 continue;
             }
             for (int i = 0; i < mesh.vertexCount; i++) {
-                ray::Vector3 w = ray::Vector3Transform({v[3 * i], v[3 * i + 1], v[3 * i + 2]}, transform);
+                ray::Vector3 w = vector3_transform({v[3 * i], v[3 * i + 1], v[3 * i + 2]}, transform);
                 const float px = (w.x - cam3d.position.x) * zoom + rw * 0.5f;
                 const float py = (w.y - cam3d.position.y) * zoom + rh * 0.5f;
                 x0 = std::min(x0, px);
@@ -996,9 +1013,9 @@ void Chara3D::draw(float x, float y, float scale_mul) {
             const int nw = full_target ? aw : std::max(aw, scene_target_w);
             const int nh = full_target ? ah : std::max(ah, scene_target_h);
             if (scene_target.id != 0) {
-                ray::UnloadRenderTexture(scene_target);
+                unload_render_texture(scene_target);
             }
-            scene_target = ray::LoadRenderTexture(nw, nh);
+            scene_target = load_render_texture(nw, nh);
             full_target = false;
             if (scene_target.id == 0) {
                 spdlog::warn("Chara3D: render texture unavailable, using direct render");
@@ -1030,7 +1047,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         end_mode_2d();
         end_blend_mode();
         render_dirty = false;
-        ray::BeginTextureMode(scene_target);
+        begin_texture_mode(scene_target);
         clear_background(Color::BLANK);
         begin_blend_mode(blend_mode::CUSTOM_SEPARATE); // not BLEND_ALPHA: it blends dst alpha as a*a+dst*(1-a),
                                                          // making opaque pixels under a translucent sheet see-through
@@ -1039,7 +1056,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         draw_outline(x, y, scene_target_w, scene_target_h, rh * SUPERSAMPLE);
         end_mode_3d();
         end_blend_mode();
-        ray::EndTextureMode();
+        end_texture_mode();
     } else {
         end_mode_2d();
         end_blend_mode();
@@ -1065,9 +1082,9 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
 
     if (scene_target.id == 0 || !full_target || scene_target_w != ssw || scene_target_h != ssh) {
         if (scene_target.id != 0) {
-            ray::UnloadRenderTexture(scene_target);
+            unload_render_texture(scene_target);
         }
-        scene_target = ray::LoadRenderTexture(ssw, ssh);
+        scene_target = load_render_texture(ssw, ssh);
         if (scene_target.id == 0) {
             spdlog::warn("Chara3D: render texture unavailable, using direct render");
             use_render_textures = false;
@@ -1107,7 +1124,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
         render_dirty = false;
         ray::Camera3D cam3d = camera2d_to_3d(cam2d);
 
-        ray::BeginTextureMode(scene_target);
+        begin_texture_mode(scene_target);
         clear_background(Color::BLANK);
         begin_blend_mode(blend_mode::CUSTOM_SEPARATE);
         begin_mode_3d(cam3d);
@@ -1115,7 +1132,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
         draw_outline(x, y, ssw, ssh, (float)ssh);
         end_mode_3d();
         end_blend_mode();
-        ray::EndTextureMode();
+        end_texture_mode();
     }
 
     {

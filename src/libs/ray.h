@@ -371,6 +371,58 @@ inline void unload_file_data(unsigned char* data) {
     ray::UnloadFileData(data);
 }
 
+inline ray::RenderTexture2D load_render_texture(int width, int height) {
+    return ray::LoadRenderTexture(width, height);
+}
+
+inline void unload_render_texture(ray::RenderTexture2D target) {
+    ray::UnloadRenderTexture(target);
+}
+
+inline void begin_texture_mode(ray::RenderTexture2D target) {
+    ray::BeginTextureMode(target);
+}
+
+inline void end_texture_mode() {
+    ray::EndTextureMode();
+}
+
+namespace material_map {
+    inline constexpr int DIFFUSE = ray::MATERIAL_MAP_DIFFUSE;
+}
+
+inline ray::Model load_model(const char* path) {
+    return ray::LoadModel(path);
+}
+
+inline void unload_model(ray::Model model) {
+    ray::UnloadModel(model);
+}
+
+inline ray::ModelAnimation* load_model_animations(const char* path, int* count) {
+    return ray::LoadModelAnimations(path, count);
+}
+
+inline void unload_model_animations(ray::ModelAnimation* anims, int count) {
+    ray::UnloadModelAnimations(anims, count);
+}
+
+inline void update_model_animation(ray::Model model, ray::ModelAnimation anim, float frame) {
+    ray::UpdateModelAnimation(model, anim, frame);
+}
+
+inline void draw_mesh(ray::Mesh mesh, ray::Material material, ray::Matrix transform) {
+    ray::DrawMesh(mesh, material, transform);
+}
+
+inline void update_mesh_buffer(ray::Mesh mesh, int index, const void* data, int data_size, int offset) {
+    ray::UpdateMeshBuffer(mesh, index, data, data_size, offset);
+}
+
+inline void set_material_texture(ray::Material* material, int map_type, ray::Texture2D texture) {
+    ray::SetMaterialTexture(material, map_type, texture);
+}
+
 inline void clear_background(Color color) {
     ray::ClearBackground({color.r, color.g, color.b, color.a});
 }
