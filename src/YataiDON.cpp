@@ -658,7 +658,7 @@ int main(int argc, char* argv[]) {
     rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD,
                               RL_FUNC_ADD);
     ray::SetExitKey(ray::KEY_NULL);
-    ray::HideCursor();
+    hide_cursor();
 
     L.next_frame_time = std::chrono::steady_clock::now();
 #ifdef __EMSCRIPTEN__

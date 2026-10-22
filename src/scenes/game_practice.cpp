@@ -70,7 +70,7 @@ void PracticeGameScreen::on_screen_start() {
     mark_action_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
     mark_finish_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
     PracticeTimer::begin_session(get_frame_ms());
-    ray::HideCursor();            // Hide cursor when entering practice mode
+    hide_cursor();            // Hide cursor when entering practice mode
     set_touch_drum_enabled(true); // Enable touch drum (input + drawing) when entering practice mode
     initialize_practice_chart();
 }
@@ -87,7 +87,7 @@ Screens PracticeGameScreen::on_screen_end(Screens next_screen) {
     bars.clear();
     scrobble_note_list.clear();
     markers.clear();
-    ray::HideCursor();            // Hide cursor when leaving practice mode
+    hide_cursor();            // Hide cursor when leaving practice mode
     set_touch_drum_enabled(true); // Re-enable touch drum (input + drawing) when leaving practice mode
     return GameScreen::on_screen_end(next_screen);
 }
@@ -230,7 +230,7 @@ void PracticeGameScreen::pause_practice() {
     }
 
     set_touch_drum_enabled(false);
-    ray::ShowCursor();
+    show_cursor();
 
     if (bars.empty()) {
         return;
@@ -284,7 +284,7 @@ void PracticeGameScreen::resume_practice() {
     }
 
     set_touch_drum_enabled(true);
-    ray::HideCursor();
+    hide_cursor();
     resume_don_anim->start();
 }
 
@@ -312,7 +312,7 @@ void PracticeGameScreen::change_practice_speed(bool down, bool up) {
 void PracticeGameScreen::restart_practice() {
     restart_song();
     initialize_practice_chart();
-    ray::HideCursor();            // Hide cursor on restart
+    hide_cursor();            // Hide cursor on restart
     set_touch_drum_enabled(true); // Re-enable touch drum (input + drawing) on restart
     menu.close();
 }

@@ -33,6 +33,8 @@ float mouse_wheel();
 ray::Vector2 mouse_position();
 bool mouse_down(int button); // SDL_BUTTON_LEFT etc.
 bool mouse_pressed(int button);
+void show_cursor();
+void hide_cursor();
 
 // Check if a key was pressed since the last check
 // This consumes the key press event

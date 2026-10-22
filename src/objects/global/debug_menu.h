@@ -12,6 +12,7 @@
 #include "../../libs/screen.h"
 #include "../../libs/script.h"
 #include "../../libs/texture.h"
+#include "../../libs/time.h"
 #include "../../libs/color_utils.h"
 
 #ifdef DrawTextEx
@@ -68,9 +69,9 @@ public:
                                             std::nullopt, std::nullopt, EaseType::Quadratic);
         slide_anim->start();
         if (open) {
-            ray::ShowCursor();
+            show_cursor();
         } else {
-            ray::HideCursor();
+            hide_cursor();
         }
     }
 
@@ -672,11 +673,11 @@ private:
             it = source_cache.emplace(path.string(), SourceFile{}).first;
         }
         SourceFile& file = it->second;
-        if (ray::GetTime() - file.checked_at < SOURCE_RESTAT_SECONDS) {
+        if (get_current_ms() / 1000.0 - file.checked_at < SOURCE_RESTAT_SECONDS) {
             return file.lines.empty() ? nullptr : &file.lines;
         }
 
-        file.checked_at = ray::GetTime();
+        file.checked_at = get_current_ms() / 1000.0;
         std::error_code ec;
         fs::file_time_type mtime = fs::last_write_time(path, ec);
         if (ec) {
@@ -1015,7 +1016,7 @@ private:
                 draw_rectangle(r.value, fade(Color::WHITE, is_editing ? 0.25f : 0.1f));
                 draw_rectangle_lines_ex(r.value, 1.0f, is_editing ? Color(Color::SKYBLUE) : fade(Color::WHITE, 0.4f));
                 std::string text = is_editing ? edit_data_buffer : *f.s;
-                if (is_editing && std::fmod(ray::GetTime(), 1.0) < 0.5) {
+                if (is_editing && std::fmod(get_current_ms(), 1000.0) < 500.0) {
                     text += "|";
                 }
                 draw_text(text.c_str(), (int)r.value.x + 4, (int)r.value.y + 3, 13, Color::WHITE);
@@ -1037,7 +1038,7 @@ private:
                 draw_rectangle(r.value, fade(Color::WHITE, is_editing ? 0.25f : 0.1f));
                 draw_rectangle_lines_ex(r.value, 1.0f, is_editing ? Color(Color::SKYBLUE) : fade(Color::WHITE, 0.4f));
                 std::string text = is_editing ? edit_data_buffer : data_field_display(f);
-                if (is_editing && std::fmod(ray::GetTime(), 1.0) < 0.5) {
+                if (is_editing && std::fmod(get_current_ms(), 1000.0) < 500.0) {
                     text += "|";
                 }
                 draw_text(text.c_str(), (int)r.value.x + 4, (int)r.value.y + 3, 12, Color::WHITE);
@@ -1364,7 +1365,7 @@ private:
             draw_rectangle_lines_ex(b.value, 1.0f, is_editing ? Color(Color::SKYBLUE) : fade(Color::WHITE, 0.4f));
 
             std::string text = is_editing ? edit_buffer : std::to_string(*value);
-            if (is_editing && std::fmod(ray::GetTime(), 1.0) < 0.5) {
+            if (is_editing && std::fmod(get_current_ms(), 1000.0) < 500.0) {
                 text += "|";
             }
             draw_text(text.c_str(), (int)b.value.x + 4, (int)b.value.y + 4, 14, Color::WHITE);

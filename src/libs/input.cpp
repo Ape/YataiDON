@@ -1170,3 +1170,19 @@ bool mouse_pressed(int button) {
     std::scoped_lock lock(frame_mutex);
     return button >= 0 && button < (int)frame.mouse_pressed.size() && frame.mouse_pressed.test(button);
 }
+
+void show_cursor() {
+#ifndef YATAIDON_USE_SDL2
+    SDL_ShowCursor();
+#else
+    SDL_ShowCursor(SDL_ENABLE);
+#endif
+}
+
+void hide_cursor() {
+#ifndef YATAIDON_USE_SDL2
+    SDL_HideCursor();
+#else
+    SDL_ShowCursor(SDL_DISABLE);
+#endif
+}
