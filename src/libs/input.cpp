@@ -1030,7 +1030,7 @@ TextEditAction poll_text_edit(std::string& text, const std::function<bool(int)>&
             // char_pressed yields a Unicode code point (IME-composed CJK
             // included); store it as UTF-8.
             int n = 0;
-            const char* utf8 = ray::CodepointToUTF8(key, &n);
+            const char* utf8 = codepoint_to_utf8(key, &n);
             text.append(utf8, n);
         }
         key = char_pressed();

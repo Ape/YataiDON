@@ -108,8 +108,8 @@ public:
     bool fonts_loaded = false;
 
     void load_fonts() {
-        ui_font = ray::LoadFontEx(resolve_skin_path("Fonts/debug_ui.ttf").string().c_str(), 32, nullptr, 0);
-        code_font = ray::LoadFontEx(resolve_skin_path("Fonts/debug_code.ttf").string().c_str(), 32, nullptr, 0);
+        ui_font = load_font_ex(resolve_skin_path("Fonts/debug_ui.ttf").string().c_str(), 32, nullptr, 0);
+        code_font = load_font_ex(resolve_skin_path("Fonts/debug_code.ttf").string().c_str(), 32, nullptr, 0);
         set_texture_filter(ui_font.texture, texture_filter::BILINEAR);
         set_texture_filter(code_font.texture, texture_filter::BILINEAR);
         fonts_loaded = true;
@@ -119,8 +119,8 @@ public:
         if (!fonts_loaded) {
             return;
         }
-        ray::UnloadFont(ui_font);
-        ray::UnloadFont(code_font);
+        unload_font(ui_font);
+        unload_font(code_font);
         fonts_loaded = false;
     }
 
@@ -129,7 +129,7 @@ public:
     }
 
     int measure_text(const char* text, int font_size) const {
-        return (int)ray::MeasureTextEx(ui_font, text, (float)font_size, font_size / 10.0f).x;
+        return (int)measure_text_ex(ui_font, text, (float)font_size, font_size / 10.0f).x;
     }
 
     void draw_code_text(const char* text, int x, int y, int font_size, Color color) const {
@@ -137,7 +137,7 @@ public:
     }
 
     int measure_code_text(const char* text, int font_size) const {
-        return (int)ray::MeasureTextEx(code_font, text, (float)font_size, font_size / 10.0f).x;
+        return (int)measure_text_ex(code_font, text, (float)font_size, font_size / 10.0f).x;
     }
 
     FramedTexture* get_selected_framed() const { return dynamic_cast<FramedTexture*>(selected_obj()); }
@@ -729,10 +729,10 @@ private:
             return;
         }
 
-        y = draw_lua_rows(ray::TextFormat("%d draw(s) with this name this frame", selected_draw_count()), x, y, 1,
+        y = draw_lua_rows(text_format("%d draw(s) with this name this frame", selected_draw_count()), x, y, 1,
                           Color::GRAY);
         if (entry->tex_obj) {
-            y = draw_lua_rows(ray::TextFormat("texture loaded by %s", loaded_by(entry->name)), x, y, 2, Color::GRAY);
+            y = draw_lua_rows(text_format("texture loaded by %s", loaded_by(entry->name)), x, y, 2, Color::GRAY);
         }
         y += 6.0f;
 
@@ -749,9 +749,9 @@ private:
         std::string file = fs::path(shown).filename().string();
         y = draw_lua_rows(
             entry->lua_function.empty()
-                ? ray::TextFormat("%s:%d, in the function defined at line %d", file.c_str(), entry->lua_line,
+                ? text_format("%s:%d, in the function defined at line %d", file.c_str(), entry->lua_line,
                                   entry->lua_defined_line)
-                : ray::TextFormat("%s:%d, in %s()", file.c_str(), entry->lua_line, entry->lua_function.c_str()),
+                : text_format("%s:%d, in %s()", file.c_str(), entry->lua_line, entry->lua_function.c_str()),
             x, y, 2, Color::ORANGE);
         y = draw_lua_rows(shown, x, y, 4, fade(Color::ORANGE, 0.6f)) + 6.0f;
 
@@ -1114,7 +1114,7 @@ private:
             break;
         case Position::JsonPlusOffset:
             color = Color::ORANGE;
-            headline = ray::TextFormat("caller adds x%+.0f y%+.0f to the json base", entry.offset_x, entry.offset_y);
+            headline = text_format("caller adds x%+.0f y%+.0f to the json base", entry.offset_x, entry.offset_y);
             break;
         case Position::NoJson:
             color = Color::RED;
@@ -1127,7 +1127,7 @@ private:
             break;
         }
         if (advice.empty()) {
-            advice = entry.scale != 1.0f ? ray::TextFormat("x/y move it 1:1; x2/y2 change by x%.2f", entry.scale)
+            advice = entry.scale != 1.0f ? text_format("x/y move it 1:1; x2/y2 change by x%.2f", entry.scale)
                                          : "x/y move it 1:1 whatever the caller adds";
         }
         draw_rectangle((int)panel_x, (int)top, (int)PANEL_WIDTH, (int)VERDICT_HEIGHT, fade(color, 0.3f));
@@ -1342,7 +1342,7 @@ private:
             return;
         }
 
-        const char* info = ray::TextFormat("%dx%d px, %d frame(s)", obj->width, obj->height, obj->frame_count());
+        const char* info = text_format("%dx%d px, %d frame(s)", obj->width, obj->height, obj->frame_count());
         draw_text(info, (int)panel_x + 8, (int)edit_top + 26, 14, Color::GRAY);
 
         for (int i = 0; i < 4; i++) {
@@ -1384,7 +1384,7 @@ private:
         const float frames_top = edit_top + EDIT_PANEL_HEIGHT;
         const int cols = frame_grid_cols();
 
-        draw_text(ray::TextFormat("Frames (%d)", frame_count), (int)panel_x + 8, (int)frames_top + 2, 14, Color::WHITE);
+        draw_text(text_format("Frames (%d)", frame_count), (int)panel_x + 8, (int)frames_top + 2, 14, Color::WHITE);
 
         for (int idx = 0; idx < frame_count; idx++) {
             float cell_x = panel_x + (idx % cols) * FRAME_CELL_WIDTH;
@@ -1402,7 +1402,7 @@ private:
             draw_rectangle(b.left, fade(Color::WHITE, idx > 0 ? 0.2f : 0.05f));
             draw_text("<", (int)b.left.x + 4, (int)b.left.y, 14, idx > 0 ? Color::WHITE : Color::GRAY);
 
-            const char* index_text = ray::TextFormat("%d", idx);
+            const char* index_text = text_format("%d", idx);
             int index_w = measure_text(index_text, 14);
             draw_text(index_text, (int)(cell_x + (FRAME_CELL_WIDTH - index_w) * 0.5f), (int)b.left.y + 2, 14,
                       Color::WHITE);

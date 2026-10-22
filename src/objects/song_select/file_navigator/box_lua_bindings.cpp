@@ -481,7 +481,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
                               &GenreBG::is_finished, "is_complete", &GenreBG::is_complete);
 
     // Text-measurement helpers the Lua port needs to lay out folder explanations the way
-    // the C++ FolderBox does (word_wrap needs ray::MeasureTextEx, unavailable in Lua).
+    // the C++ FolderBox does (word_wrap needs measure_text_ex, unavailable in Lua).
     lua["text"]["word_wrap"] = [](const std::string& s, double font_size, float spacing, float max_width) {
         return word_wrap(s, static_cast<int>(font_size), spacing, max_width);
     };

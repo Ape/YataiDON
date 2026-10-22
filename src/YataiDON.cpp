@@ -533,7 +533,7 @@ static void run_frame() {
         if (L.current_screen == Screens::RESULT && tex.options[SCO::CROP_RESULT_SCREENSHOT]) {
             ray::ImageCrop(&image, {0, 0, (float)image.width, (float)image.height / 2.0f});
         }
-        ray::ExportImage(image, ray::TextFormat("screenshot%03i.png", screenshot_counter));
+        ray::ExportImage(image, text_format("screenshot%03i.png", screenshot_counter));
         ray::UnloadImage(image);
         screenshot_counter++;
         spdlog::info("Screenshot saved");

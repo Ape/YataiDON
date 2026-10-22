@@ -63,7 +63,7 @@ std::optional<Screens> InputCaliScreen::update() {
             average_latency = latencies[n / 2];
         }
         average_latency_text.reset();
-        average_latency_text.emplace(ray::TextFormat("Average Latency: %.2f ms", average_latency * -1), 40, Color::WHITE,
+        average_latency_text.emplace(text_format("Average Latency: %.2f ms", average_latency * -1), 40, Color::WHITE,
                                      Color::BLUE, false, 4.0);
     }
 

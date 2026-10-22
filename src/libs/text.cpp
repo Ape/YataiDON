@@ -319,7 +319,7 @@ bool FontManager::register_codepoints(SizedFont& entry, int font_size, const std
     const char* ptr = text.c_str();
     while (*ptr) {
         int cp_size = 0;
-        int codepoint = ray::GetCodepointNext(ptr, &cp_size);
+        int codepoint = get_codepoint_next(ptr, &cp_size);
         if (cp_size <= 0) {
             break;
         }
@@ -416,17 +416,17 @@ static int text_margin(float font_size) {
 }
 
 static ray::Image text_image(const ray::Font& font, const char* text, float font_size, float spacing, int margin) {
-    ray::Vector2 sz = ray::MeasureTextEx(font, text, font_size, spacing);
+    ray::Vector2 sz = measure_text_ex(font, text, font_size, spacing);
     ray::Image im = gen_image_color((int)sz.x, (int)sz.y + margin * 2, Color::BLANK);
     int x = 0;
     for (const char* p = text; *p;) {
         int n = 0;
-        int cp = ray::GetCodepointNext(p, &n);
+        int cp = get_codepoint_next(p, &n);
         if (n <= 0) {
             break;
         }
         p += n;
-        int gi = ray::GetGlyphIndex(font, cp);
+        int gi = get_glyph_index(font, cp);
         const ray::GlyphInfo& g = font.glyphs[gi];
         if (cp != ' ' && cp != '\t') {
             ray::Rectangle sr = {0, 0, (float)g.image.width, (float)g.image.height};
@@ -692,18 +692,18 @@ OutlinedText::OutlinedText(std::string text, int font_size, Color color, Color o
     worker_font = named_font_manager(font_name).copy_font(this->text, font_size);
 
     if (is_vertical) {
-        float char_height = ray::MeasureTextEx(worker_font, "A", font_size, spacing).y;
+        float char_height = measure_text_ex(worker_font, "A", font_size, spacing).y;
         float max_char_width = 0.0f;
         int char_count = 0;
         const char* ptr = this->text.c_str();
         while (*ptr) {
             int cp_size = 0;
-            ray::GetCodepointNext(ptr, &cp_size);
+            get_codepoint_next(ptr, &cp_size);
             if (cp_size <= 0) {
                 break;
             }
             std::string s(ptr, cp_size);
-            float w = ray::MeasureTextEx(worker_font, s.c_str(), font_size, spacing).x;
+            float w = measure_text_ex(worker_font, s.c_str(), font_size, spacing).x;
             max_char_width = std::max(max_char_width, w);
             ++char_count;
             ptr += cp_size;
@@ -715,11 +715,11 @@ OutlinedText::OutlinedText(std::string text, int font_size, Color color, Color o
         float sp = (spacing < 0) ? 0.0f : spacing;
         int pad = (int)this->outline_thickness + 2;
         auto lines = split_lines(this->text);
-        float line_h = ray::MeasureTextEx(worker_font, "A", font_size, sp).y;
+        float line_h = measure_text_ex(worker_font, "A", font_size, sp).y;
         float line_advance = line_h + this->outline_thickness * 2;
         float max_w = 0.0f;
         for (const auto& line : lines) {
-            float lw = ray::MeasureTextEx(worker_font, line.c_str(), font_size, sp).x;
+            float lw = measure_text_ex(worker_font, line.c_str(), font_size, sp).x;
             max_w = std::max(max_w, lw);
         }
         width = max_w + pad * 2;
@@ -762,7 +762,7 @@ OutlinedText::~OutlinedText() {
     }
     if (worker_font.glyphCount > 0) {
         worker_font.texture = {};
-        ray::UnloadFont(worker_font);
+        unload_font(worker_font);
     }
     if (texture.has_value()) {
         unload_texture(texture.value());
@@ -772,11 +772,11 @@ OutlinedText::~OutlinedText() {
 OutlinedText::BuildData OutlinedText::build_horizontal_text(Color color, Color outline_color, float spacing) {
     float sp = (spacing < 0) ? 0.0f : spacing;
     auto lines = split_lines(text);
-    float line_h = ray::MeasureTextEx(worker_font, "A", font_size, sp).y;
+    float line_h = measure_text_ex(worker_font, "A", font_size, sp).y;
     float line_advance = line_h + outline_thickness * 2;
     float max_w = 0.0f;
     for (const auto& line : lines) {
-        float lw = ray::MeasureTextEx(worker_font, line.c_str(), font_size, sp).x;
+        float lw = measure_text_ex(worker_font, line.c_str(), font_size, sp).x;
         max_w = std::max(max_w, lw);
     }
 
@@ -800,7 +800,7 @@ OutlinedText::BuildData OutlinedText::build_horizontal_text(Color color, Color o
 }
 
 OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color outline_color, float spacing) {
-    float char_height = ray::MeasureTextEx(worker_font, "A", font_size, spacing).y;
+    float char_height = measure_text_ex(worker_font, "A", font_size, spacing).y;
 
     // Parse the text into items. Consecutive runs of 2+ hgroup chars (!, ?)
     // become a single item drawn horizontally; everything else is one item.
@@ -815,7 +815,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
         const char* ptr = text.c_str();
         while (*ptr) {
             int cp_size = 0;
-            ray::GetCodepointNext(ptr, &cp_size);
+            get_codepoint_next(ptr, &cp_size);
             if (cp_size <= 0) {
                 break;
             }
@@ -836,7 +836,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
             item.chars.assign(raw_chars.begin() + i, raw_chars.begin() + j);
             item.width = 0.0f;
             for (const auto& s : item.chars) {
-                item.width += ray::MeasureTextEx(worker_font, s.c_str(), font_size, spacing).x;
+                item.width += measure_text_ex(worker_font, s.c_str(), font_size, spacing).x;
             }
             items.push_back(std::move(item));
             i = j;
@@ -844,7 +844,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
             TextItem item;
             item.is_hgroup = false;
             item.chars = {raw_chars[i]};
-            item.width = ray::MeasureTextEx(worker_font, raw_chars[i].c_str(), font_size, spacing).x;
+            item.width = measure_text_ex(worker_font, raw_chars[i].c_str(), font_size, spacing).x;
             items.push_back(std::move(item));
             ++i;
         }
@@ -895,7 +895,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
                 // Chars drawn left-to-right, group centred in max_item_width.
                 float cx = pad + (max_item_width - item.width) / 2.0f;
                 for (const auto& s : item.chars) {
-                    float cw = ray::MeasureTextEx(worker_font, s.c_str(), font_size, spacing).x;
+                    float cw = measure_text_ex(worker_font, s.c_str(), font_size, spacing).x;
                     if (pass == 0) {
                         if (outline_thickness > 0) {
                             stamp_outline(target, worker_font, s.c_str(), {cx, y}, font_size, spacing, outline_color,
@@ -973,7 +973,7 @@ bool OutlinedText::upload_pending() {
         build_future.wait();
     }
     worker_font.texture = {};
-    ray::UnloadFont(worker_font);
+    unload_font(worker_font);
     worker_font = {};
 
     ray::Texture tex = load_texture_from_image(*img);

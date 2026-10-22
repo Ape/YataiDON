@@ -193,6 +193,39 @@ inline ray::Texture2D load_texture_mipmapped(const char* path,
     return tex;
 }
 
+inline ray::Vector2 measure_text_ex(const ray::Font& font, const char* text, float font_size, float spacing) {
+    return ray::MeasureTextEx(font, text, font_size, spacing);
+}
+
+template <typename... Args>
+inline const char* text_format(const char* fmt, Args... args) {
+    return ray::TextFormat(fmt, args...);
+}
+
+inline ray::Font load_font_ex(const char* path, int font_size, int* codepoints, int codepoint_count) {
+    return ray::LoadFontEx(path, font_size, codepoints, codepoint_count);
+}
+
+inline void unload_font(ray::Font font) {
+    ray::UnloadFont(font);
+}
+
+inline ray::Font get_font_default() {
+    return ray::GetFontDefault();
+}
+
+inline int get_glyph_index(const ray::Font& font, int codepoint) {
+    return ray::GetGlyphIndex(font, codepoint);
+}
+
+inline int get_codepoint_next(const char* text, int* codepoint_size) {
+    return ray::GetCodepointNext(text, codepoint_size);
+}
+
+inline const char* codepoint_to_utf8(int codepoint, int* utf8_size) {
+    return ray::CodepointToUTF8(codepoint, utf8_size);
+}
+
 inline void clear_background(Color color) {
     ray::ClearBackground({color.r, color.g, color.b, color.a});
 }
