@@ -955,8 +955,8 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         return;
     }
 
-    int rw = ray::GetRenderWidth();
-    int rh = ray::GetRenderHeight();
+    int rw = get_render_width();
+    int rh = get_render_height();
     ray::Camera2D cam2d = compute_camera2d(tex.screen_width, tex.screen_height);
 
     // A rotated camera (and no render textures) keep the full-screen path

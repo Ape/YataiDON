@@ -405,10 +405,10 @@ static void run_frame() {
     apply_queued_window_resize();
 
     if (check_key_pressed(global_data.config->keys.fullscreen_key)) {
-        ray::ToggleFullscreen();
+        toggle_fullscreen();
         spdlog::info("Toggled fullscreen");
     } else if (check_key_pressed(global_data.config->keys.borderless_key)) {
-        ray::ToggleBorderlessWindowed();
+        toggle_borderless_windowed();
         spdlog::info("Toggled borderless windowed mode");
     }
 
@@ -425,7 +425,7 @@ static void run_frame() {
         debug_menu.update(L.camera);
     }
 
-    ray::BeginDrawing();
+    begin_drawing();
 
     if (global_data.camera.border_color != L.last_color) {
         clear_background(global_data.camera.border_color);
@@ -452,7 +452,7 @@ static void run_frame() {
     if (!screen) {
         ray::EndBlendMode();
         ray::EndMode2D();
-        ray::EndDrawing();
+        end_drawing();
         return;
     }
 
@@ -520,10 +520,10 @@ static void run_frame() {
     ray::EndMode2D();
     {
         PROFILE_SCOPE_N("present");
-        ray::EndDrawing();
+        end_drawing();
 
         if (!next_screen.has_value()) {
-            ray::SwapScreenBuffer();
+            swap_screen_buffer();
         }
     }
 
@@ -575,19 +575,19 @@ int main(int argc, char* argv[]) {
     parse_card_reader_args(argc, argv, global_data.config->card_reader);
     Screens initial_screen = check_args(argc, argv);
     init_scores_manager(global_data.config->general.score_method == ScoreMethod::GEN3);
-    unsigned int flags = ray::FLAG_WINDOW_RESIZABLE;
+    unsigned int flags = window_flag::RESIZABLE;
     if (global_data.config->video.vsync) {
-        flags |= ray::FLAG_VSYNC_HINT;
+        flags |= window_flag::VSYNC;
         spdlog::info("VSync enabled");
     }
 #ifdef YATAIDON_PLATFORM_IOS
     ios_configure_window_flags(flags);
 #endif
-    ray::SetConfigFlags(flags);
-    ray::SetTraceLogLevel(ray::LOG_ERROR);
+    set_window_flags(flags);
+    quiet_raylib_log();
     setup_logging(global_data.config->general.log_level);
 
-    ray::InitWindow(1280, 720, "YataiDON");
+    init_window(1280, 720, "YataiDON");
     try {
         load_skin();
     } catch (const std::exception& e) {
@@ -646,18 +646,18 @@ int main(int argc, char* argv[]) {
 
 #if !defined(__EMSCRIPTEN__) && !defined(YATAIDON_PLATFORM_IOS)
     if (global_data.config->video.borderless) {
-        ray::ToggleBorderlessWindowed();
+        toggle_borderless_windowed();
         spdlog::info("Borderless window enabled");
     }
     if (global_data.config->video.fullscreen) {
-        ray::ToggleFullscreen();
+        toggle_fullscreen();
         spdlog::info("Fullscreen enabled");
     }
 #endif
 
     rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD,
                               RL_FUNC_ADD);
-    ray::SetExitKey(ray::KEY_NULL);
+    disable_exit_key();
     hide_cursor();
 
     L.next_frame_time = std::chrono::steady_clock::now();
@@ -669,7 +669,7 @@ int main(int argc, char* argv[]) {
     input_thread = std::thread(input_polling_thread);
     start_midi_input(global_data.config->midi);
 
-    while (!ray::WindowShouldClose()) {
+    while (!window_should_close()) {
         process_midi_events();
 
         // Consume buffered quit-key presses while editing to prevent a delayed game exit after the field closes.
@@ -698,7 +698,7 @@ int main(int argc, char* argv[]) {
 #if defined(__linux__) && !defined(__ANDROID__)
     unix_close_window();
 #else
-    ray::CloseWindow();
+    close_window();
 #endif
     spdlog::info("Game closed");
 #endif

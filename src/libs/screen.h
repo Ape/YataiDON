@@ -14,8 +14,8 @@ inline int virtual_to_screen_x(float virtual_x) {
     if (tex.screen_width <= 0 || tex.screen_height <= 0) {
         return 0;
     }
-    int win_w = ray::GetRenderWidth();
-    int win_h = ray::GetRenderHeight();
+    int win_w = get_render_width();
+    int win_h = get_render_height();
     float scale = std::min((float)win_w / tex.screen_width, (float)win_h / tex.screen_height);
     float effective_zoom = scale * global_data.camera.zoom;
     float zoom_off = (tex.screen_width * scale * (global_data.camera.zoom - 1.0f)) * 0.5f;
@@ -29,8 +29,8 @@ inline int virtual_to_screen_y(float virtual_y) {
     if (tex.screen_width <= 0 || tex.screen_height <= 0) {
         return 0;
     }
-    int win_w = ray::GetRenderWidth();
-    int win_h = ray::GetRenderHeight();
+    int win_w = get_render_width();
+    int win_h = get_render_height();
     float scale = std::min((float)win_w / tex.screen_width, (float)win_h / tex.screen_height);
     float effective_zoom = scale * global_data.camera.zoom;
     float zoom_off = (tex.screen_height * scale * (global_data.camera.zoom - 1.0f)) * 0.5f;

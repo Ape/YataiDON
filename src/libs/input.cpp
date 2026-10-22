@@ -393,8 +393,8 @@ static YD_EventFilterRet SDLCALL touch_event_watch(void* /*userdata*/, SDL_Event
         SDL_FingerID id = yd_finger_id(*event);
         std::scoped_lock lock(input_mutex);
         if (!touch_id_to_vkey.contains(id)) {
-            int sw = ray::GetScreenWidth();
-            int sh = ray::GetScreenHeight();
+            int sw = get_screen_width();
+            int sh = get_screen_height();
             ray::Vector2 pos = {event->tfinger.x * sw, event->tfinger.y * sh};
             int vkey = touch_quadrant_vkey(pos, sw, sh);
 #ifdef YATAIDON_PLATFORM_IOS
@@ -447,8 +447,8 @@ bool draw_touch_drum() {
     global_tex.draw_texture(global_tex.get_texture("overlay/touch_drum"),
                             {.scale = scale, .center = true, .y = y_fix, .fade = 0.5f});
 #ifdef YATAIDON_PLATFORM_IOS
-    ios_draw_touch_navigation_labels(static_cast<float>(ray::GetScreenWidth()),
-                                     static_cast<float>(ray::GetScreenHeight()));
+    ios_draw_touch_navigation_labels(static_cast<float>(get_screen_width()),
+                                     static_cast<float>(get_screen_height()));
 #endif
     return true;
 }

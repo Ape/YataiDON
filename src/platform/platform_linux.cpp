@@ -110,7 +110,7 @@ void unix_close_window() {
         egl_wayland = dlopen("libnvidia-egl-wayland.so.1", RTLD_LAZY | RTLD_NOLOAD);
     }
 
-    ray::CloseWindow();
+    close_window();
 
     if (egl_wayland) {
         dlclose(egl_wayland);

@@ -413,10 +413,10 @@ static ray::Rectangle get_practice_button_rect(TextureObject* tex_obj, int index
     // Convert from virtual coordinates to screen coordinates
     int screen_x = virtual_to_screen_x(x);
     int screen_y = virtual_to_screen_y(y);
-    int screen_w = static_cast<int>(w * std::min((float)ray::GetScreenWidth() / tex.screen_width,
-                                                 (float)ray::GetScreenHeight() / tex.screen_height));
-    int screen_h = static_cast<int>(h * std::min((float)ray::GetScreenWidth() / tex.screen_width,
-                                                 (float)ray::GetScreenHeight() / tex.screen_height));
+    int screen_w = static_cast<int>(w * std::min((float)get_screen_width() / tex.screen_width,
+                                                 (float)get_screen_height() / tex.screen_height));
+    int screen_h = static_cast<int>(h * std::min((float)get_screen_width() / tex.screen_width,
+                                                 (float)get_screen_height() / tex.screen_height));
 
     return {static_cast<float>(screen_x), static_cast<float>(screen_y), static_cast<float>(screen_w),
             static_cast<float>(screen_h)};
@@ -931,8 +931,8 @@ void PracticeGameScreen::draw_balloon_scrobble(const Note& head, double current_
 
 void PracticeGameScreen::draw_notes_scrobble(double current_ms) const {
     int scissor_x = players[0]->get_scissor_x();
-    int win_w = ray::GetRenderWidth();
-    ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, ray::GetRenderHeight());
+    int win_w = get_render_width();
+    ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, get_render_height());
 
     // Draw bars
     for (const auto& bar : std::views::reverse(bars)) {

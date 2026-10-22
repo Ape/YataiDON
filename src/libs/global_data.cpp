@@ -32,13 +32,13 @@ bool apply_queued_window_resize() {
     const int height = queued_window_resize->second;
     queued_window_resize.reset();
 
-    const bool was_fullscreen = ray::IsWindowFullscreen();
+    const bool was_fullscreen = is_window_fullscreen();
     if (was_fullscreen) {
-        ray::ToggleFullscreen();
+        toggle_fullscreen();
     }
-    ray::SetWindowSize(width, height);
+    set_window_size(width, height);
     if (was_fullscreen) {
-        ray::ToggleFullscreen();
+        toggle_fullscreen();
     }
     return true;
 #else

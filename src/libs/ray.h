@@ -73,6 +73,93 @@ inline void draw_texture_pro(ray::Texture2D tex, ray::Rectangle source, ray::Rec
     ray::DrawTexturePro(tex, source, dest, origin, rotation, {tint.r, tint.g, tint.b, tint.a});
 }
 
+inline void draw_text(const char* text, int x, int y, int font_size, Color color) {
+    ray::DrawText(text, x, y, font_size, {color.r, color.g, color.b, color.a});
+}
+
+inline int measure_text(const char* text, int font_size) {
+    return ray::MeasureText(text, font_size);
+}
+
+// --- Window ---------------------------------------------------------------------------------
+namespace window_flag {
+    inline constexpr unsigned RESIZABLE = ray::FLAG_WINDOW_RESIZABLE;
+    inline constexpr unsigned VSYNC = ray::FLAG_VSYNC_HINT;
+    inline constexpr unsigned ALWAYS_RUN = ray::FLAG_WINDOW_ALWAYS_RUN;
+} // namespace window_flag
+
+inline void set_window_flags(unsigned flags) {
+    ray::SetConfigFlags(flags);
+}
+
+inline void quiet_raylib_log() {
+    ray::SetTraceLogLevel(ray::LOG_ERROR);
+}
+
+inline void init_window(int width, int height, const char* title) {
+    ray::InitWindow(width, height, title);
+}
+
+inline void close_window() {
+    ray::CloseWindow();
+}
+
+inline bool window_should_close() {
+    return ray::WindowShouldClose();
+}
+
+inline void disable_exit_key() {
+    ray::SetExitKey(ray::KEY_NULL);
+}
+
+inline void toggle_fullscreen() {
+    ray::ToggleFullscreen();
+}
+
+inline void toggle_borderless_windowed() {
+    ray::ToggleBorderlessWindowed();
+}
+
+inline bool is_window_fullscreen() {
+    return ray::IsWindowFullscreen();
+}
+
+inline void set_window_size(int width, int height) {
+    ray::SetWindowSize(width, height);
+}
+
+inline int get_screen_width() {
+    return ray::GetScreenWidth();
+}
+
+inline int get_screen_height() {
+    return ray::GetScreenHeight();
+}
+
+inline int get_render_width() {
+    return ray::GetRenderWidth();
+}
+
+inline int get_render_height() {
+    return ray::GetRenderHeight();
+}
+
+inline int get_monitor_refresh_rate() {
+    return ray::GetMonitorRefreshRate(ray::GetCurrentMonitor());
+}
+
+inline void begin_drawing() {
+    ray::BeginDrawing();
+}
+
+inline void end_drawing() {
+    ray::EndDrawing();
+}
+
+inline void swap_screen_buffer() {
+    ray::SwapScreenBuffer();
+}
+
 inline void clear_background(Color color) {
     ray::ClearBackground({color.r, color.g, color.b, color.a});
 }

@@ -639,8 +639,8 @@ void Player::draw(double ms_from_start, float x, float y) {
     }
     {
         int scissor_x = virtual_to_screen_x(lane_cover_tex_id->scissor_right());
-        int win_w = ray::GetRenderWidth();
-        ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, ray::GetRenderHeight());
+        int win_w = get_render_width();
+        ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, get_render_height());
         draw_notes(ms_from_start, y);
         ray::EndScissorMode();
     }
@@ -688,8 +688,8 @@ void Player::draw_practice(double ms_from_start, float x, float y, bool draw_not
 
     if (draw_notes_on) {
         int scissor_x = virtual_to_screen_x(lane_cover_tex_id->scissor_right());
-        int win_w = ray::GetRenderWidth();
-        ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, ray::GetRenderHeight());
+        int win_w = get_render_width();
+        ray::BeginScissorMode(scissor_x, 0, win_w - scissor_x, get_render_height());
         draw_notes(ms_from_start, y);
         ray::EndScissorMode();
     }

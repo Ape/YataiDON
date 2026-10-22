@@ -443,7 +443,7 @@ void GameScreen::resync_song(double current_ms) {
     double audio_ms_adjusted = audio_ms + audio_start_ms();
 
     clock.synchronize(current_ms, audio_ms_adjusted,
-                      [] { return ray::GetMonitorRefreshRate(ray::GetCurrentMonitor()); });
+                      [] { return get_monitor_refresh_rate(); });
 }
 
 void GameScreen::init_skip() {
