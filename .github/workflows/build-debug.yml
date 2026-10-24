@@ -16,7 +16,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Clone skins
+        run: |
+          for s in PyTaikoGreen YataiDONRed YataiDONNijiiro; do
+            git clone --depth 1 https://ese.tjadataba.se/Yonokid/$s.git Skins/$s
+          done
 
       - name: Install dependencies
         env:
@@ -145,7 +151,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Clone skins
+        run: |
+          for s in PyTaikoGreen YataiDONRed YataiDONNijiiro; do
+            git clone --depth 1 https://ese.tjadataba.se/Yonokid/$s.git Skins/$s
+          done
 
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
@@ -211,7 +223,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
+
+      - name: Clone skins
+        run: |
+          for s in PyTaikoGreen YataiDONRed YataiDONNijiiro; do
+            git clone --depth 1 https://ese.tjadataba.se/Yonokid/$s.git Skins/$s
+          done
 
       - name: Install dependencies
         run: |
