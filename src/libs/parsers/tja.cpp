@@ -405,7 +405,7 @@ TJAParser::notes_to_position(int diff) {
     ParserState state;
     state.bpm = metadata.bpm;
     state.balloons = metadata.course_data[diff].balloon;
-    state.branch_balloons = metadata.course_data[diff].branch_balloon;
+    state.route_balloons = metadata.course_data[diff].branch_balloon;
     state.curr_note_list = &master_notes.notes;
     state.curr_timeline = &master_notes.timeline;
     master_notes.tempo_map.points = {{current_ms, 0.0, metadata.bpm}};
@@ -1351,23 +1351,18 @@ Note TJAParser::add_note(char item, ParserState& state) {
 
     if (note.type == NoteType::BALLOON_HEAD || note.type == NoteType::KUSUDAMA) {
         state.balloon_index++;
-        // A branch's own list counts the balloons on its route; outside the branches, the
-        // normal branch's list. Without one, BALLOON as before.
-        const size_t route = state.branch == -1 ? 0 : static_cast<size_t>(state.branch);
-        const std::vector<int>& own = state.branch_balloons[route];
-        if (!own.empty()) {
-            const size_t i = state.branch_balloon_route_cursor[route];
-            note.count = i < own.size() ? own[i] : 1;
-        } else {
-            note.count = (state.balloon_cursor < state.balloons.size()) ? state.balloons[state.balloon_cursor] : 1;
-        }
-        // A balloon outside the branches is on every route
+        // own route list if set, else BALLOON; a balloon outside the branches advances every route
+        const size_t route = std::max(state.branch, 0);
+        const auto& own = state.route_balloons[route];
+        const size_t cursor = own.empty() ? state.balloon_cursor : state.route_cursor[route];
+        const auto& list = own.empty() ? state.balloons : own;
+        note.count = cursor < list.size() ? list[cursor] : 1;
         if (state.branch == -1) {
-            for (size_t& i : state.branch_balloon_route_cursor) {
+            for (size_t& i : state.route_cursor) {
                 i++;
             }
         } else {
-            state.branch_balloon_route_cursor[route]++;
+            state.route_cursor[route]++;
         }
         state.balloon_cursor++;
         return note;
