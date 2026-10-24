@@ -1,4 +1,5 @@
 #include "chara_3d.h"
+#include "../../libs/gfx_native.h"
 
 #include <algorithm>
 #include <cmath>
@@ -426,9 +427,9 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
     part_anim_count.push_back(anim_count);
 }
 
-static void init_shaders(ray::Shader& outline_fxaa_shader, int& outline_fxaa_size_loc, int& outline_fxaa_thickness_loc,
-                         ray::Shader& null_shader, ray::Shader& face_shader, ray::Shader& cutout_shader,
-                         ray::Shader& outline_shader, bool& use_render_textures) {
+static void init_shaders(Shader& outline_fxaa_shader, int& outline_fxaa_size_loc, int& outline_fxaa_thickness_loc,
+                         Shader& null_shader, Shader& face_shader, Shader& cutout_shader,
+                         Shader& outline_shader, bool& use_render_textures) {
     outline_fxaa_shader = load_shader("shader/pass.vs", "shader/outline_fxaa.fs");
     outline_fxaa_size_loc = get_shader_location(outline_fxaa_shader, "texSize");
     outline_fxaa_thickness_loc = get_shader_location(outline_fxaa_shader, "outlineThickness");
@@ -858,7 +859,7 @@ void Chara3D::update(double current_ms) {
 }
 
 void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h, float full_h) {
-    std::vector<std::vector<ray::Shader>> saved(parts.size());
+    std::vector<std::vector<Shader>> saved(parts.size());
     for (size_t p = 0; p < parts.size(); p++) {
         saved[p].resize(parts[p].materialCount);
         for (int i = 0; i < parts[p].materialCount; i++) {
@@ -873,7 +874,7 @@ void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h, float full_h) {
 
     std::vector<Mat4> saved_transform(parts.size());
     float y_angle = mirror ? -rot_y : rot_y;
-    Mat4 rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
+    Mat4 rot = rotation_xyz(rot_x * deg2rad, y_angle * deg2rad, rot_z * deg2rad);
     for (size_t p = 0; p < parts.size(); p++) {
         saved_transform[p] = parts[p].transform;
         parts[p].transform = rot;
@@ -911,7 +912,7 @@ void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h, float full_h) {
 void Chara3D::draw_3d(float x, float y) {
     std::vector<Mat4> saved(parts.size());
     float y_angle = mirror ? -rot_y : rot_y;
-    Mat4 rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
+    Mat4 rot = rotation_xyz(rot_x * deg2rad, y_angle * deg2rad, rot_z * deg2rad);
     for (size_t p = 0; p < parts.size(); p++) {
         saved[p] = parts[p].transform;
         parts[p].transform = rot;
@@ -932,10 +933,10 @@ static constexpr float SUPERSAMPLE = 2.0f;
 // Screen rectangle (render pixels) of the posed model: the CPU-skinned vertices (animVertices,
 // see UpdateModelAnimation) through the same transform draw_3d uses, then the orthographic
 // camera of camera2d_to_3d (camera rotation 0).
-bool Chara3D::screen_bounds(float x, float y, const ray::Camera3D& cam3d, float zoom, int rw, int rh, float& x0,
+bool Chara3D::screen_bounds(float x, float y, const Camera3D& cam3d, float zoom, int rw, int rh, float& x0,
                             float& y0, float& x1, float& y1) {
     float y_angle = mirror ? -rot_y : rot_y;
-    Mat4 rot = rotation_xyz(rot_x * DEG2RAD, y_angle * DEG2RAD, rot_z * DEG2RAD);
+    Mat4 rot = rotation_xyz(rot_x * deg2rad, y_angle * deg2rad, rot_z * deg2rad);
     const float s = scale * draw_scale * tex.screen_scale;
     Mat4 transform = matrix_multiply(rot, matrix_multiply(matrix_scale(s, s, s), matrix_translate(x, y, 400.0f)));
     x0 = y0 = std::numeric_limits<float>::max();
@@ -970,7 +971,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
 
     int rw = get_render_width();
     int rh = get_render_height();
-    ray::Camera2D cam2d = compute_camera2d(tex.screen_width, tex.screen_height);
+    Camera2D cam2d = compute_camera2d(tex.screen_width, tex.screen_height);
 
     // A rotated camera (and no render textures) keep the full-screen path
     if (!use_render_textures || cam2d.rotation != 0.0f) {
@@ -978,7 +979,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         return;
     }
 
-    ray::Camera3D cam3d = camera2d_to_3d(cam2d);
+    Camera3D cam3d = camera2d_to_3d(cam2d);
     const float zoom = std::max(cam2d.zoom, 0.0001f);
     if (full_target || x != last_draw_x || y != last_draw_y || zoom != last_zoom || cam3d.position.x != last_cam_x ||
         cam3d.position.y != last_cam_y || rw != last_rw || rh != last_rh) {
@@ -1035,7 +1036,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         region_y = (int)std::floor((by0 + by1) * 0.5f - region_h * 0.5f);
 
         // the full-screen camera narrowed to that rectangle: same centre offset and pixel scale
-        ray::Camera3D rc = cam3d;
+        Camera3D rc = cam3d;
         const float wcx = cam3d.position.x + (region_x + region_w * 0.5f - rw * 0.5f) / zoom;
         const float wcy = cam3d.position.y + (region_y + region_h * 0.5f - rh * 0.5f) / zoom;
         rc.position.x = rc.target.x = wcx;
@@ -1074,7 +1075,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
 }
 
 // The whole screen at 2x: kept for a rotated camera and as the fallback.
-void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Camera2D& cam2d) {
+void Chara3D::draw_full_target(float x, float y, int rw, int rh, const Camera2D& cam2d) {
     int ssw = (int)((float)rw * SUPERSAMPLE);
     int ssh = (int)((float)rh * SUPERSAMPLE);
 
@@ -1098,7 +1099,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
     }
 
     if (!use_render_textures) {
-        ray::Camera3D cam3d = camera2d_to_3d(cam2d);
+        Camera3D cam3d = camera2d_to_3d(cam2d);
         end_mode_2d();
         end_blend_mode();
         begin_mode_3d(cam3d);
@@ -1120,7 +1121,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const ray::Came
 
     if (render_dirty) {
         render_dirty = false;
-        ray::Camera3D cam3d = camera2d_to_3d(cam2d);
+        Camera3D cam3d = camera2d_to_3d(cam2d);
 
         begin_texture_mode(scene_target);
         clear_background(Color::BLANK);

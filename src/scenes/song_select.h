@@ -33,7 +33,7 @@ protected:
     Statistics cached_stats;
     std::future<Statistics> stats_future;
 
-    ray::Shader shader;
+    Shader shader;
     Color color;
     std::unique_ptr<SongNum> song_num;
 

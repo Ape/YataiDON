@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "global_data.h"
-#include "ray.h" // IWYU pragma: keep
+#include "gfx.h" // IWYU pragma: keep
 #include "sdl_compat.h"
 
 extern std::atomic<bool> input_thread_running;
@@ -111,12 +111,3 @@ TextEditAction poll_text_edit(std::string& text, const std::function<bool(int)>&
 // edited, i.e. poll_text_edit ran since the last call. Call once per frame after the screen update.
 void sync_text_input();
 
-namespace ray {
-    inline bool operator==(const Color& a, const Color& b) {
-        return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a;
-    }
-
-    inline bool operator!=(const Color& a, const Color& b) {
-        return !(a == b);
-    }
-} // namespace ray

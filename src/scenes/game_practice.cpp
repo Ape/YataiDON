@@ -431,7 +431,7 @@ std::optional<Screens> PracticeGameScreen::handle_mouse_input() {
     // Get mouse/touch position
     Vec2 mouse_pos = mouse_position();
     bool clicked = mouse_pressed(SDL_BUTTON_LEFT);
-    ray::Camera2D camera = {0, 0, 0, 1.0f};
+    Camera2D camera;
 
     int player_idx = (global_data.player_num == PlayerNum::P1) ? 0 : 1;
     int other_idx = (global_data.player_num == PlayerNum::P1) ? 1 : 0;

@@ -3,7 +3,7 @@
 #include "../../libs/animation.h"
 #include "../../libs/color_utils.h"
 #include "../../libs/parsers/tja.h"
-#include "../../libs/ray.h"
+#include "../../libs/gfx.h"
 #include "../../libs/texture.h"
 
 class GaugeHitEffect {

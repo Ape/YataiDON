@@ -3,6 +3,8 @@
 #include <iostream>
 #include <rlgl.h>
 
+#include "libs/gfx_native.h"
+
 #include "libs/animation.h"
 #include "libs/audio.h"
 #include "libs/camera_utils.h"
@@ -261,7 +263,7 @@ Screens check_args(int argc, char* argv[]) {
 struct LoopState {
     std::unordered_map<Screens, std::unique_ptr<Screen>> screens;
     Screens current_screen = Screens::LOADING;
-    ray::Camera2D camera = {};
+    Camera2D camera = {};
     std::chrono::steady_clock::duration target_duration =
         std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::duration<double>(1.0 / 60.0));
     std::chrono::time_point<std::chrono::steady_clock> next_frame_time = std::chrono::steady_clock::now();

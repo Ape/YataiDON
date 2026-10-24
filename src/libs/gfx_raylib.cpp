@@ -1,8 +1,8 @@
-#pragma once
+#include "gfx.h"
 
-#include "color_utils.h"
-#include "gfx_types.h"
-#include "math_types.h"
+#include <cstdarg>
+#include <cstdio>
+
 namespace ray {
     extern "C" {
 #include <raylib.h>
@@ -22,416 +22,399 @@ namespace ray {
     }
 } // namespace ray
 
-#if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
-#include "sdl_compat.h"
-#endif
-#include <algorithm>
-#include <string>
+static_assert(window_flag::RESIZABLE == ray::FLAG_WINDOW_RESIZABLE);
+static_assert(window_flag::VSYNC == ray::FLAG_VSYNC_HINT);
+static_assert(window_flag::ALWAYS_RUN == ray::FLAG_WINDOW_ALWAYS_RUN);
+static_assert(texture_filter::BILINEAR == ray::TEXTURE_FILTER_BILINEAR);
+static_assert(texture_filter::TRILINEAR == ray::TEXTURE_FILTER_TRILINEAR);
+static_assert(texture_wrap::CLAMP == ray::TEXTURE_WRAP_CLAMP);
+static_assert(blend_mode::ADDITIVE == ray::BLEND_ADDITIVE);
+static_assert(blend_mode::CUSTOM_SEPARATE == ray::BLEND_CUSTOM_SEPARATE);
+static_assert(shader_uniform::FLOAT == ray::SHADER_UNIFORM_FLOAT);
+static_assert(shader_uniform::VEC2 == ray::SHADER_UNIFORM_VEC2);
+static_assert(shader_uniform::VEC3 == ray::SHADER_UNIFORM_VEC3);
+static_assert(pixel_format::RGB8 == ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
+static_assert(pixel_format::RGBA8 == ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+static_assert(material_map::DIFFUSE == ray::MATERIAL_MAP_DIFFUSE);
 
-inline Color fade(Color c, float alpha) {
-    return Color(c.r, c.g, c.b, static_cast<uint8_t>(std::clamp(alpha, 0.0f, 1.0f) * 255.0f + 0.5f));
+const char* text_format(const char* fmt, ...) {
+    static char buffers[4][1024];
+    static int index = 0;
+    char* out = buffers[index];
+    index = (index + 1) % 4;
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(out, sizeof(buffers[0]), fmt, args);
+    va_end(args);
+    return out;
 }
 
-inline void draw_rectangle(int x, int y, int w, int h, Color color) {
+void draw_rectangle(int x, int y, int w, int h, Color color) {
     ray::DrawRectangle(x, y, w, h, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_rectangle(Rect rec, Color color) {
+void draw_rectangle(Rect rec, Color color) {
     ray::DrawRectangleRec(rec, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_rectangle_rounded(Rect rec, float roundness, int segments, Color color) {
+void draw_rectangle_rounded(Rect rec, float roundness, int segments, Color color) {
     ray::DrawRectangleRounded(rec, roundness, segments, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_rectangle_rounded_lines_ex(Rect rec, float roundness, int segments, float thickness, Color color) {
+void draw_rectangle_rounded_lines_ex(Rect rec, float roundness, int segments, float thickness, Color color) {
     ray::DrawRectangleRoundedLinesEx(rec, roundness, segments, thickness, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_rectangle_lines(int x, int y, int w, int h, Color color) {
+void draw_rectangle_lines(int x, int y, int w, int h, Color color) {
     ray::DrawRectangleLines(x, y, w, h, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_rectangle_lines_ex(Rect rec, float thickness, Color color) {
+void draw_rectangle_lines_ex(Rect rec, float thickness, Color color) {
     ray::DrawRectangleLinesEx(rec, thickness, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_line(int x0, int y0, int x1, int y1, Color color) {
+void draw_line(int x0, int y0, int x1, int y1, Color color) {
     ray::DrawLine(x0, y0, x1, y1, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_model(ray::Model model, Vec3 pos, float scale, Color tint) {
+void draw_model(ray::Model model, Vec3 pos, float scale, Color tint) {
     ray::DrawModel(model, pos, scale, {tint.r, tint.g, tint.b, tint.a});
 }
 
-inline void draw_text_ex(ray::Font font, const char* text, Vec2 pos, float font_size, float spacing, Color color) {
+void draw_text_ex(ray::Font font, const char* text, Vec2 pos, float font_size, float spacing, Color color) {
     ray::DrawTextEx(font, text, pos, font_size, spacing, {color.r, color.g, color.b, color.a});
 }
 
-inline void draw_texture_pro(Texture tex, Rect source, Rect dest, Vec2 origin, float rotation, Color tint) {
+void draw_texture_pro(Texture tex, Rect source, Rect dest, Vec2 origin, float rotation, Color tint) {
     ray::DrawTexturePro(tex, source, dest, origin, rotation, {tint.r, tint.g, tint.b, tint.a});
 }
 
-inline void draw_text(const char* text, int x, int y, int font_size, Color color) {
+void draw_text(const char* text, int x, int y, int font_size, Color color) {
     ray::DrawText(text, x, y, font_size, {color.r, color.g, color.b, color.a});
 }
 
-inline int measure_text(const char* text, int font_size) {
+int measure_text(const char* text, int font_size) {
     return ray::MeasureText(text, font_size);
 }
 
-// --- Window ---------------------------------------------------------------------------------
-namespace window_flag {
-    inline constexpr unsigned RESIZABLE = ray::FLAG_WINDOW_RESIZABLE;
-    inline constexpr unsigned VSYNC = ray::FLAG_VSYNC_HINT;
-    inline constexpr unsigned ALWAYS_RUN = ray::FLAG_WINDOW_ALWAYS_RUN;
-} // namespace window_flag
-
-inline void set_window_flags(unsigned flags) {
+void set_window_flags(unsigned flags) {
     ray::SetConfigFlags(flags);
 }
 
-inline void quiet_raylib_log() {
+void quiet_raylib_log() {
     ray::SetTraceLogLevel(ray::LOG_ERROR);
 }
 
-inline void init_window(int width, int height, const char* title) {
+void init_window(int width, int height, const char* title) {
     ray::InitWindow(width, height, title);
 }
 
-inline void close_window() {
+void close_window() {
     ray::CloseWindow();
 }
 
-inline bool window_should_close() {
+bool window_should_close() {
     return ray::WindowShouldClose();
 }
 
-inline void disable_exit_key() {
+void disable_exit_key() {
     ray::SetExitKey(ray::KEY_NULL);
 }
 
-inline void toggle_fullscreen() {
+void toggle_fullscreen() {
     ray::ToggleFullscreen();
 }
 
-inline void toggle_borderless_windowed() {
+void toggle_borderless_windowed() {
     ray::ToggleBorderlessWindowed();
 }
 
-inline bool is_window_fullscreen() {
+bool is_window_fullscreen() {
     return ray::IsWindowFullscreen();
 }
 
-inline void set_window_size(int width, int height) {
+void set_window_size(int width, int height) {
     ray::SetWindowSize(width, height);
 }
 
-inline int get_screen_width() {
+int get_screen_width() {
     return ray::GetScreenWidth();
 }
 
-inline int get_screen_height() {
+int get_screen_height() {
     return ray::GetScreenHeight();
 }
 
-inline int get_render_width() {
+int get_render_width() {
     return ray::GetRenderWidth();
 }
 
-inline int get_render_height() {
+int get_render_height() {
     return ray::GetRenderHeight();
 }
 
-inline int get_monitor_refresh_rate() {
+int get_monitor_refresh_rate() {
     return ray::GetMonitorRefreshRate(ray::GetCurrentMonitor());
 }
 
-inline void begin_drawing() {
+void begin_drawing() {
     ray::BeginDrawing();
 }
 
-inline void end_drawing() {
+void end_drawing() {
     ray::EndDrawing();
 }
 
-inline void swap_screen_buffer() {
+void swap_screen_buffer() {
     ray::SwapScreenBuffer();
 }
 
-namespace texture_filter {
-    inline constexpr ray::TextureFilter BILINEAR = ray::TEXTURE_FILTER_BILINEAR;
-    inline constexpr ray::TextureFilter TRILINEAR = ray::TEXTURE_FILTER_TRILINEAR;
-} // namespace texture_filter
-
-inline Texture load_texture(const char* path) {
+Texture load_texture(const char* path) {
     return ray::LoadTexture(path);
 }
 
-inline Texture load_texture_from_image(ray::Image image) {
+Texture load_texture_from_image(ray::Image image) {
     return ray::LoadTextureFromImage(image);
 }
 
-inline void unload_texture(Texture tex) {
+void unload_texture(Texture tex) {
     ray::UnloadTexture(tex);
 }
 
-inline void set_texture_filter(Texture tex, ray::TextureFilter filter) {
+void set_texture_filter(Texture tex, int filter) {
     ray::SetTextureFilter(tex, filter);
 }
 
-inline void gen_texture_mipmaps(Texture& tex) {
+void set_texture_wrap(Texture tex, int wrap) {
+    ray::SetTextureWrap(tex, wrap);
+}
+
+void gen_texture_mipmaps(Texture& tex) {
     ray::Texture2D native = tex;
     ray::GenTextureMipmaps(&native);
     tex = native;
 }
 
-inline Texture load_texture_mipmapped(const char* path, ray::TextureFilter filter = texture_filter::TRILINEAR) {
+Texture load_texture_mipmapped(const char* path, int filter) {
     Texture tex = ray::LoadTexture(path);
     gen_texture_mipmaps(tex);
     set_texture_filter(tex, filter);
     return tex;
 }
 
-inline Vec2 measure_text_ex(const ray::Font& font, const char* text, float font_size, float spacing) {
+Vec2 measure_text_ex(const ray::Font& font, const char* text, float font_size, float spacing) {
     return ray::MeasureTextEx(font, text, font_size, spacing);
 }
 
-template<typename... Args>
-inline const char* text_format(const char* fmt, Args... args) {
-    return ray::TextFormat(fmt, args...);
-}
-
-inline ray::Font load_font_ex(const char* path, int font_size, int* codepoints, int codepoint_count) {
+ray::Font load_font_ex(const char* path, int font_size, int* codepoints, int codepoint_count) {
     return ray::LoadFontEx(path, font_size, codepoints, codepoint_count);
 }
 
-inline void unload_font(ray::Font font) {
+void unload_font(ray::Font font) {
     ray::UnloadFont(font);
 }
 
-inline ray::Font get_font_default() {
+ray::Font get_font_default() {
     return ray::GetFontDefault();
 }
 
-inline int get_glyph_index(const ray::Font& font, int codepoint) {
+int get_glyph_index(const ray::Font& font, int codepoint) {
     return ray::GetGlyphIndex(font, codepoint);
 }
 
-inline int get_codepoint_next(const char* text, int* codepoint_size) {
+int get_codepoint_next(const char* text, int* codepoint_size) {
     return ray::GetCodepointNext(text, codepoint_size);
 }
 
-inline const char* codepoint_to_utf8(int codepoint, int* utf8_size) {
+const char* codepoint_to_utf8(int codepoint, int* utf8_size) {
     return ray::CodepointToUTF8(codepoint, utf8_size);
 }
 
-namespace blend_mode {
-    inline constexpr int ADDITIVE = ray::BLEND_ADDITIVE;
-    inline constexpr int CUSTOM_SEPARATE = ray::BLEND_CUSTOM_SEPARATE;
-} // namespace blend_mode
-
-inline void begin_scissor_mode(int x, int y, int width, int height) {
+void begin_scissor_mode(int x, int y, int width, int height) {
     ray::BeginScissorMode(x, y, width, height);
 }
 
-inline void end_scissor_mode() {
+void end_scissor_mode() {
     ray::EndScissorMode();
 }
 
-inline void begin_blend_mode(int mode) {
+void begin_blend_mode(int mode) {
     ray::BeginBlendMode(mode);
 }
 
-inline void end_blend_mode() {
+void end_blend_mode() {
     ray::EndBlendMode();
 }
 
-inline void begin_mode_2d(ray::Camera2D camera) {
+void begin_mode_2d(Camera2D camera) {
     ray::BeginMode2D(camera);
 }
 
-inline void end_mode_2d() {
+void end_mode_2d() {
     ray::EndMode2D();
 }
 
-inline void begin_mode_3d(ray::Camera3D camera) {
+void begin_mode_3d(Camera3D camera) {
     ray::BeginMode3D(camera);
 }
 
-inline void end_mode_3d() {
+void end_mode_3d() {
     ray::EndMode3D();
 }
 
-inline Vec2 get_screen_to_world_2d(Vec2 position, ray::Camera2D camera) {
+Vec2 get_screen_to_world_2d(Vec2 position, Camera2D camera) {
     return ray::GetScreenToWorld2D(position, camera);
 }
 
-namespace shader_uniform {
-    inline constexpr int FLOAT = ray::SHADER_UNIFORM_FLOAT;
-    inline constexpr int VEC2 = ray::SHADER_UNIFORM_VEC2;
-    inline constexpr int VEC3 = ray::SHADER_UNIFORM_VEC3;
-} // namespace shader_uniform
-
-inline void unload_shader(ray::Shader shader) {
+void unload_shader(Shader shader) {
     ray::UnloadShader(shader);
 }
 
-inline bool is_shader_valid(ray::Shader shader) {
+bool is_shader_valid(Shader shader) {
     return ray::IsShaderValid(shader);
 }
 
-inline int get_shader_location(ray::Shader shader, const char* name) {
+int get_shader_location(Shader shader, const char* name) {
     return ray::GetShaderLocation(shader, name);
 }
 
-inline void set_shader_value(ray::Shader shader, int loc, const void* value, int uniform_type) {
+void set_shader_value(Shader shader, int loc, const void* value, int uniform_type) {
     ray::SetShaderValue(shader, loc, value, uniform_type);
 }
 
-inline void begin_shader_mode(ray::Shader shader) {
+void begin_shader_mode(Shader shader) {
     ray::BeginShaderMode(shader);
 }
 
-inline void end_shader_mode() {
+void end_shader_mode() {
     ray::EndShaderMode();
 }
 
-namespace pixel_format {
-    inline constexpr int RGB8 = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8;
-    inline constexpr int RGBA8 = ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-} // namespace pixel_format
-
-inline ray::Image load_image(const char* path) {
+ray::Image load_image(const char* path) {
     return ray::LoadImage(path);
 }
 
-inline ray::Image load_image_from_texture(Texture tex) {
+ray::Image load_image_from_texture(Texture tex) {
     return ray::LoadImageFromTexture(tex);
 }
 
-inline ray::Image load_image_from_screen() {
+ray::Image load_image_from_screen() {
     return ray::LoadImageFromScreen();
 }
 
-inline void unload_image(ray::Image image) {
+void unload_image(ray::Image image) {
     ray::UnloadImage(image);
 }
 
-inline bool export_image(ray::Image image, const char* path) {
+bool export_image(ray::Image image, const char* path) {
     return ray::ExportImage(image, path);
 }
 
-inline ray::Image image_copy(ray::Image image) {
+ray::Image image_copy(ray::Image image) {
     return ray::ImageCopy(image);
 }
 
-inline ray::Image image_from_image(ray::Image image, Rect rec) {
+ray::Image image_from_image(ray::Image image, Rect rec) {
     return ray::ImageFromImage(image, rec);
 }
 
-inline void image_format(ray::Image* image, int new_format) {
+void image_format(ray::Image* image, int new_format) {
     ray::ImageFormat(image, new_format);
 }
 
-inline void image_crop(ray::Image* image, Rect crop) {
+void image_crop(ray::Image* image, Rect crop) {
     ray::ImageCrop(image, crop);
 }
 
-inline void image_rotate_cw(ray::Image* image) {
+void image_rotate_cw(ray::Image* image) {
     ray::ImageRotateCW(image);
 }
 
-inline void image_draw_image_pro(ray::Image* dst, ray::Image src, Rect src_rec, Rect dst_rec, Vec2 origin,
-                                 float rotation, Color tint) {
+void image_draw_image_pro(ray::Image* dst, ray::Image src, Rect src_rec, Rect dst_rec, Vec2 origin, float rotation, Color tint) {
     ray::ImageDrawImagePro(dst, src, src_rec, dst_rec, origin, rotation, {tint.r, tint.g, tint.b, tint.a});
 }
 
-inline Rect get_image_alpha_border(ray::Image image, float threshold) {
+Rect get_image_alpha_border(ray::Image image, float threshold) {
     return ray::GetImageAlphaBorder(image, threshold);
 }
 
-inline int get_pixel_data_size(int width, int height, int format) {
+int get_pixel_data_size(int width, int height, int format) {
     return ray::GetPixelDataSize(width, height, format);
 }
 
-inline void update_texture(Texture tex, const void* pixels) {
+void update_texture(Texture tex, const void* pixels) {
     ray::UpdateTexture(tex, pixels);
 }
 
-inline bool is_texture_valid(Texture tex) {
+bool is_texture_valid(Texture tex) {
     return ray::IsTextureValid(tex);
 }
 
-inline unsigned char* load_file_data(const char* path, int* size) {
+unsigned char* load_file_data(const char* path, int* size) {
     return ray::LoadFileData(path, size);
 }
 
-inline void unload_file_data(unsigned char* data) {
+void unload_file_data(unsigned char* data) {
     ray::UnloadFileData(data);
 }
 
-inline ray::RenderTexture2D load_render_texture(int width, int height) {
+RenderTarget load_render_texture(int width, int height) {
     return ray::LoadRenderTexture(width, height);
 }
 
-inline void unload_render_texture(ray::RenderTexture2D target) {
+void unload_render_texture(RenderTarget target) {
     ray::UnloadRenderTexture(target);
 }
 
-inline void begin_texture_mode(ray::RenderTexture2D target) {
+void begin_texture_mode(RenderTarget target) {
     ray::BeginTextureMode(target);
 }
 
-inline void end_texture_mode() {
+void end_texture_mode() {
     ray::EndTextureMode();
 }
 
-namespace material_map {
-    inline constexpr int DIFFUSE = ray::MATERIAL_MAP_DIFFUSE;
-}
-
-inline ray::Model load_model(const char* path) {
+ray::Model load_model(const char* path) {
     return ray::LoadModel(path);
 }
 
-inline void unload_model(ray::Model model) {
+void unload_model(ray::Model model) {
     ray::UnloadModel(model);
 }
 
-inline ray::ModelAnimation* load_model_animations(const char* path, int* count) {
+ray::ModelAnimation* load_model_animations(const char* path, int* count) {
     return ray::LoadModelAnimations(path, count);
 }
 
-inline void unload_model_animations(ray::ModelAnimation* anims, int count) {
+void unload_model_animations(ray::ModelAnimation* anims, int count) {
     ray::UnloadModelAnimations(anims, count);
 }
 
-inline void update_model_animation(ray::Model model, ray::ModelAnimation anim, float frame) {
+void update_model_animation(ray::Model model, ray::ModelAnimation anim, float frame) {
     ray::UpdateModelAnimation(model, anim, frame);
 }
 
-inline void draw_mesh(ray::Mesh mesh, ray::Material material, Mat4 transform) {
+void draw_mesh(ray::Mesh mesh, ray::Material material, Mat4 transform) {
     ray::DrawMesh(mesh, material, transform);
 }
 
-inline void update_mesh_buffer(ray::Mesh mesh, int index, const void* data, int data_size, int offset) {
+void update_mesh_buffer(ray::Mesh mesh, int index, const void* data, int data_size, int offset) {
     ray::UpdateMeshBuffer(mesh, index, data, data_size, offset);
 }
 
-inline void set_material_texture(ray::Material* material, int map_type, Texture texture) {
+void set_material_texture(ray::Material* material, int map_type, Texture texture) {
     ray::SetMaterialTexture(material, map_type, texture);
 }
 
-inline void clear_background(Color color) {
+void clear_background(Color color) {
     ray::ClearBackground({color.r, color.g, color.b, color.a});
 }
 
-inline ray::Image gen_image_color(int w, int h, Color color) {
+ray::Image gen_image_color(int w, int h, Color color) {
     return ray::GenImageColor(w, h, {color.r, color.g, color.b, color.a});
 }
 
-inline ray::Shader load_shader(const char* vs_path, const char* fs_path) {
+Shader load_shader(const char* vs_path, const char* fs_path) {
 #if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
     auto repath = [](const char* p) -> std::string {
         if (!p) {
@@ -500,3 +483,4 @@ inline ray::Shader load_shader(const char* vs_path, const char* fs_path) {
 #endif
     return ray::LoadShader(vs_path, fs_path);
 }
+

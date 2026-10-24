@@ -30,7 +30,7 @@ private:
 
     TextureObject* t_genre = nullptr;
     TextureObject* t_song_num_plate = nullptr;
-    ray::Shader genre_shader{};
+    Shader genre_shader{};
     bool genre_shader_loaded = false;
 
 public:

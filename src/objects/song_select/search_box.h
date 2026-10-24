@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../libs/animation.h"
-#include "../../libs/ray.h"
+#include "../../libs/gfx.h"
 #include "../../libs/texture.h"
 
 class SongSelectScript;

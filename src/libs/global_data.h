@@ -12,7 +12,7 @@
 
 #include "color_utils.h"
 #include "config.h"
-#include "ray.h" // IWYU pragma: keep
+#include "gfx.h" // IWYU pragma: keep
 
 namespace fs = std::filesystem;
 

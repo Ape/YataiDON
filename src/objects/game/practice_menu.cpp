@@ -132,7 +132,7 @@ const char* PracticeMenu::dialog_name() const {
 }
 
 // Handle mouse/touch input for menu navigation and selection
-PracticeMenu::Action PracticeMenu::handle_mouse_input(const ray::Camera2D& camera, Vec2 mouse_pos, bool clicked,
+PracticeMenu::Action PracticeMenu::handle_mouse_input(const Camera2D& camera, Vec2 mouse_pos, bool clicked,
                                                       bool auto_on) {
     if (!open) {
         return Action::NONE;

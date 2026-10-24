@@ -1,4 +1,5 @@
 #include "text.h"
+#include "gfx_native.h"
 
 #include <cmath>
 #include <cstdlib>

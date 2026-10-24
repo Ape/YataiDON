@@ -1,13 +1,14 @@
 #pragma once
 
 #include <limits>
+#include "../../libs/gfx_native.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 #include "../../libs/color_utils.h"
-#include "../../libs/ray.h"
+#include "../../libs/gfx.h"
 #include "../../libs/texture.h"
 
 class BaseAnimation;
@@ -108,7 +109,7 @@ private:
     void apply_pose();
     bool use_render_textures = true;
 
-    ray::RenderTexture2D scene_target = {};
+    RenderTarget scene_target = {};
     int scene_target_w = 0;
     int scene_target_h = 0;
 
@@ -129,14 +130,14 @@ private:
     int last_rw = 0;
     int last_rh = 0;
 
-    ray::Shader null_shader;
-    ray::Shader face_shader;
-    ray::Shader cutout_shader;
-    ray::Shader outline_shader;
+    Shader null_shader;
+    Shader face_shader;
+    Shader cutout_shader;
+    Shader outline_shader;
     int outline_param_loc = -1;
     int outline_size_loc = -1;
 
-    ray::Shader outline_fxaa_shader;
+    Shader outline_fxaa_shader;
     int outline_fxaa_size_loc = -1;
     int outline_fxaa_thickness_loc = -1;
     int outline_fxaa_tint_color_loc = -1;
@@ -147,8 +148,8 @@ private:
     void load_face_anims(fs::path& anim_path);
     void draw_outline(float x, float y, int rt_w, int rt_h, float full_h);
     void draw_3d(float x, float y);
-    void draw_full_target(float x, float y, int rw, int rh, const ray::Camera2D& cam2d);
-    bool screen_bounds(float x, float y, const ray::Camera3D& cam3d, float zoom, int rw, int rh, float& x0, float& y0,
+    void draw_full_target(float x, float y, int rw, int rh, const Camera2D& cam2d);
+    bool screen_bounds(float x, float y, const Camera3D& cam3d, float zoom, int rw, int rh, float& x0, float& y0,
                        float& x1, float& y1);
     void ensure_render_targets(int rw, int rh);
     void prewarm_render_targets();

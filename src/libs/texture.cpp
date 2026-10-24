@@ -1,4 +1,5 @@
 #include "texture.h"
+#include "gfx_native.h"
 
 #include <algorithm>
 #include <atomic>
@@ -385,7 +386,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
         }
     }
 
-    ray::TextureFilter filter = texture_filter::BILINEAR;
+    int filter = texture_filter::BILINEAR;
     for (int i = 0; i < tex_obj->frame_count(); i++) {
         if (const Texture* t = tex_obj->frame_texture(i)) {
             set_texture_filter(*const_cast<Texture*>(t), filter);

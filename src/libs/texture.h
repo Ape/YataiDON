@@ -12,7 +12,7 @@
 
 #include "animation.h"
 #include "color_utils.h"
-#include "ray.h" // IWYU pragma: keep
+#include "gfx.h" // IWYU pragma: keep
 #include "skin_config.h"
 
 namespace fs = std::filesystem;
@@ -101,7 +101,7 @@ struct SingleTexture : public TextureObject {
 
     SingleTexture(const std::string& name, std::shared_ptr<Texture> tex)
         : TextureObject(name, tex->width, tex->height), texture(std::move(tex)) {
-        SetTextureWrap(*texture, ray::TEXTURE_WRAP_CLAMP);
+        set_texture_wrap(*texture, texture_wrap::CLAMP);
     }
 
     const Texture* frame_texture(int) const override { return texture.get(); }
@@ -114,7 +114,7 @@ struct FramedTexture : public TextureObject {
         : TextureObject(name, texs.empty() ? 0 : texs[0]->width, texs.empty() ? 0 : texs[0]->height),
           textures(std::move(texs)) {
         for (auto& tex : textures) {
-            SetTextureWrap(*tex, ray::TEXTURE_WRAP_CLAMP);
+            set_texture_wrap(*tex, texture_wrap::CLAMP);
         }
     }
 

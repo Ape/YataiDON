@@ -4,7 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 
-#include "../../../libs/ray.h"
+#include "../../../libs/gfx.h"
 
 float rgb_to_hue(int r, int g, int b) {
     float rf = r / 255.0f;

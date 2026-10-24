@@ -4,7 +4,7 @@
 
 #include "global_data.h"
 
-inline ray::Camera2D compute_camera2d(int virtual_width, int virtual_height) {
+inline Camera2D compute_camera2d(int virtual_width, int virtual_height) {
     int vw = std::max(virtual_width, 1);
     int vh = std::max(virtual_height, 1);
     int sw = std::max(get_render_width(), 1);
@@ -31,13 +31,13 @@ inline ray::Camera2D compute_camera2d(int virtual_width, int virtual_height) {
     return {{offset_x, offset_y}, target, global_data.camera.rotation, eff_zoom};
 }
 
-inline ray::Camera3D camera2d_to_3d(ray::Camera2D cam) {
+inline Camera3D camera2d_to_3d(Camera2D cam) {
     float sw = (float)get_render_width();
     float sh = (float)get_render_height();
     float zoom = std::max(cam.zoom, 0.0001f); // guard divide-by-zero/negative zoom
-    float rot = cam.rotation * DEG2RAD;
+    float rot = cam.rotation * deg2rad;
     float cx = (sw * 0.5f - cam.offset.x) / zoom + cam.target.x;
     float cy = (sh * 0.5f - cam.offset.y) / zoom + cam.target.y;
     return {
-        {cx, cy, -100.0f}, {cx, cy, 0.0f}, {std::sin(rot), -std::cos(rot), 0.0f}, sh / zoom, ray::CAMERA_ORTHOGRAPHIC};
+        {cx, cy, -100.0f}, {cx, cy, 0.0f}, {std::sin(rot), -std::cos(rot), 0.0f}, sh / zoom, camera_projection::ORTHOGRAPHIC};
 }

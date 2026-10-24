@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include "../../libs/gfx_native.h"
 #include <cmath>
 #include <fstream>
 #include <map>
@@ -243,7 +244,7 @@ public:
         return true;
     }
 
-    void update(const ray::Camera2D& camera) {
+    void update(const Camera2D& camera) {
         if (key_pressed(SDL_SCANCODE_F7)) {
             toggle_open();
         }

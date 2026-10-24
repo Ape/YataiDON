@@ -41,7 +41,7 @@ public:
     std::unique_ptr<MoveAnimation> move_right;
 
 private:
-    ray::Shader shader;
+    Shader shader;
     bool shader_loaded = false;
     std::unique_ptr<OutlinedText> name;
     TextureIndex texture_index;

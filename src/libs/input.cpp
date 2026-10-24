@@ -1,4 +1,5 @@
 #include "input.h"
+#include "gfx_native.h"
 
 #include <algorithm>
 #include <array>

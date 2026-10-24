@@ -5,7 +5,7 @@
 #include <string_view>
 
 #include "global_data.h"
-#include "ray.h"
+#include "gfx.h"
 #include "sdl_compat.h"
 
 // Key codes are SDL_Scancode values. Letters and digits are handled separately in both directions.
