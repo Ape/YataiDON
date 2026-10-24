@@ -1,15 +1,14 @@
 #include <algorithm>
 #include <cstdlib>
 #include <iostream>
-#include <rlgl.h>
 
 #include "libs/audio/audio.h"
 #include "libs/file/filesystem.h"
 #include "libs/file/logging.h"
 #include "libs/file/script.h"
+#include "libs/gfx.h"
 #include "libs/gfx/camera_utils.h"
 #include "libs/gfx/text.h"
-#include "libs/gfx_native.h"
 #include "libs/global_data.h"
 #include "libs/input/ime_ui.h"
 #include "libs/input/input.h"
@@ -84,12 +83,12 @@ static void draw_skin_update_status() {
     if (!st.current_skin.empty() && st.files_total > 0) {
         skin_line += " (" + std::to_string(st.files_done) + " / " + std::to_string(st.files_total) + " files)";
     }
-    ray::Font skin_font = font_manager.get_font(skin_line, size);
+    Font skin_font = font_manager.get_font(skin_line, size);
     draw_text_ex(skin_font, skin_line.c_str(), Vec2{x, y}, static_cast<float>(size), 1.0f, Color::YELLOW);
 
     if (!st.current_file.empty()) {
         y += static_cast<float>(size);
-        ray::Font file_font = font_manager.get_font(st.current_file, size);
+        Font file_font = font_manager.get_font(st.current_file, size);
         draw_text_ex(file_font, st.current_file.c_str(), Vec2{x, y}, static_cast<float>(size), 1.0f, Color::WHITE);
     }
 }
@@ -534,7 +533,7 @@ static void run_frame() {
 
     if (key_pressed(SDL_SCANCODE_F12)) {
         static int screenshot_counter = 0;
-        ray::Image image = load_image_from_screen();
+        Image image = load_image_from_screen();
         if (L.current_screen == Screens::RESULT && tex.options[SCO::CROP_RESULT_SCREENSHOT]) {
             image_crop(&image, {0, 0, (float)image.width, (float)image.height / 2.0f});
         }
@@ -662,8 +661,7 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
-    rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD,
-                              RL_FUNC_ADD);
+    set_separate_alpha_blend();
     disable_exit_key();
     hide_cursor();
 

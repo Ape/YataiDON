@@ -57,6 +57,11 @@ struct Vec3 {
     }
 };
 
+// Plain aggregate (raylib's Vector4 / Quaternion layout).
+struct Vec4 {
+    float x = 0.0f, y = 0.0f, z = 0.0f, w = 0.0f;
+};
+
 struct Rect {
     float x = 0.0f, y = 0.0f, width = 0.0f, height = 0.0f;
 
@@ -116,3 +121,48 @@ struct Mat4 {
         return T{m0, m4, m8, m12, m1, m5, m9, m13, m2, m6, m10, m14, m3, m7, m11, m15};
     }
 };
+
+// raymath-compatible helpers (same conventions as raylib's MatrixMultiply etc.).
+constexpr Mat4 matrix_multiply(const Mat4& l, const Mat4& r) {
+    Mat4 m;
+    m.m0 = l.m0 * r.m0 + l.m1 * r.m4 + l.m2 * r.m8 + l.m3 * r.m12;
+    m.m1 = l.m0 * r.m1 + l.m1 * r.m5 + l.m2 * r.m9 + l.m3 * r.m13;
+    m.m2 = l.m0 * r.m2 + l.m1 * r.m6 + l.m2 * r.m10 + l.m3 * r.m14;
+    m.m3 = l.m0 * r.m3 + l.m1 * r.m7 + l.m2 * r.m11 + l.m3 * r.m15;
+    m.m4 = l.m4 * r.m0 + l.m5 * r.m4 + l.m6 * r.m8 + l.m7 * r.m12;
+    m.m5 = l.m4 * r.m1 + l.m5 * r.m5 + l.m6 * r.m9 + l.m7 * r.m13;
+    m.m6 = l.m4 * r.m2 + l.m5 * r.m6 + l.m6 * r.m10 + l.m7 * r.m14;
+    m.m7 = l.m4 * r.m3 + l.m5 * r.m7 + l.m6 * r.m11 + l.m7 * r.m15;
+    m.m8 = l.m8 * r.m0 + l.m9 * r.m4 + l.m10 * r.m8 + l.m11 * r.m12;
+    m.m9 = l.m8 * r.m1 + l.m9 * r.m5 + l.m10 * r.m9 + l.m11 * r.m13;
+    m.m10 = l.m8 * r.m2 + l.m9 * r.m6 + l.m10 * r.m10 + l.m11 * r.m14;
+    m.m11 = l.m8 * r.m3 + l.m9 * r.m7 + l.m10 * r.m11 + l.m11 * r.m15;
+    m.m12 = l.m12 * r.m0 + l.m13 * r.m4 + l.m14 * r.m8 + l.m15 * r.m12;
+    m.m13 = l.m12 * r.m1 + l.m13 * r.m5 + l.m14 * r.m9 + l.m15 * r.m13;
+    m.m14 = l.m12 * r.m2 + l.m13 * r.m6 + l.m14 * r.m10 + l.m15 * r.m14;
+    m.m15 = l.m12 * r.m3 + l.m13 * r.m7 + l.m14 * r.m11 + l.m15 * r.m15;
+    return m;
+}
+
+constexpr Mat4 matrix_translate(float x, float y, float z) {
+    Mat4 m;
+    m.m0 = m.m5 = m.m10 = m.m15 = 1.0f;
+    m.m12 = x;
+    m.m13 = y;
+    m.m14 = z;
+    return m;
+}
+
+constexpr Mat4 matrix_scale(float x, float y, float z) {
+    Mat4 m;
+    m.m0 = x;
+    m.m5 = y;
+    m.m10 = z;
+    m.m15 = 1.0f;
+    return m;
+}
+
+constexpr Vec3 vector3_transform(Vec3 v, const Mat4& m) {
+    return {m.m0 * v.x + m.m4 * v.y + m.m8 * v.z + m.m12, m.m1 * v.x + m.m5 * v.y + m.m9 * v.z + m.m13,
+            m.m2 * v.x + m.m6 * v.y + m.m10 * v.z + m.m14};
+}

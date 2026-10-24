@@ -27,7 +27,7 @@ struct Color {
     static const Color SKYBLUE;
     static const Color YELLOW;
 
-    // Implicit interop with raylib's ray::Color (and its WHITE/BLACK/... macros), without including ray.h.
+    // Implicit interop with raylib's Color (and its WHITE/BLACK/... macros), without including ray.h.
     template<class T>
         requires(!std::same_as<T, Color> &&
                  requires(const T& t) {

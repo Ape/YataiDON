@@ -213,7 +213,7 @@ bool SongSelectScript::draw_sort_window(DiffSortSelect* window) {
 }
 
 // The text box player_ui.draw_search_box draws (the skin's search_box_layout, centered on screen)
-static ray::Rectangle search_box_rect(const sol::table& skin) {
+static Rect search_box_rect(const sol::table& skin) {
     const float S = tex.screen_scale;
     float x = 0;
     float y = 0;

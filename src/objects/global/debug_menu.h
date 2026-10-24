@@ -8,9 +8,9 @@
 
 #include "../../libs/file/filesystem.h"
 #include "../../libs/file/script.h"
+#include "../../libs/gfx.h"
 #include "../../libs/gfx/color_utils.h"
 #include "../../libs/gfx/texture.h"
-#include "../../libs/gfx_native.h"
 #include "../../libs/input/input.h"
 #include "../../libs/math/animation.h"
 #include "../../libs/screen.h"
@@ -104,8 +104,8 @@ public:
         source_cache.clear();
     }
 
-    ray::Font ui_font{};
-    ray::Font code_font{};
+    Font ui_font{};
+    Font code_font{};
     bool fonts_loaded = false;
 
     void load_fonts() {

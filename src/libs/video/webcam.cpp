@@ -1,7 +1,7 @@
 #include "webcam.h"
 
+#include "../gfx.h"
 #include "../gfx/sdl_compat.h"
-#include "../gfx_native.h"
 #if YATAIDON_SDL_CAMERA
 #include <SDL3/SDL_camera.h>
 #endif
@@ -161,7 +161,7 @@ void WebCamera::update() {
         m_width = rgba->w;
         m_height = rgba->h;
 
-        ray::Image img{};
+        Image img{};
         img.data = pixels;
         img.width = m_width;
         img.height = m_height;
@@ -183,7 +183,7 @@ void WebCamera::update() {
         m_texture.reset();
         m_width = rgba->w;
         m_height = rgba->h;
-        ray::Image img{};
+        Image img{};
         img.data = pixels;
         img.width = m_width;
         img.height = m_height;

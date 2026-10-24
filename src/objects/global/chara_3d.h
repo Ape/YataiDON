@@ -9,7 +9,6 @@
 #include "../../libs/gfx.h"
 #include "../../libs/gfx/color_utils.h"
 #include "../../libs/gfx/texture.h"
-#include "../../libs/gfx_native.h"
 
 class BaseAnimation;
 
@@ -70,7 +69,7 @@ enum class AnimIndex : int {
 
 class Chara3D {
 private:
-    std::vector<ray::Model> parts;
+    std::vector<Model> parts;
     std::vector<std::unordered_map<std::string, int>> part_material_indices;
     std::vector<std::vector<int>> part_recolor_indices;
     std::vector<std::vector<int>> part_additive_indices;
@@ -80,7 +79,7 @@ private:
     std::vector<std::vector<int>>
         part_blend_indices; // alpha-blended (_A_AB / glTF BLEND) materials: drawn after the face
     std::vector<int> part_face_material_index;
-    std::vector<ray::ModelAnimation*> part_anims;
+    std::vector<ModelAnimation*> part_anims;
     std::vector<int> part_anim_count;
 
     void load_part(const fs::path& model_path, const fs::path& anim_path, bool normalize_face_scale = false);

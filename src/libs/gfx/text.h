@@ -9,7 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../gfx_native.h"
+#include "../gfx.h"
 #include "color_utils.h"
 #include "texture.h"
 
@@ -18,9 +18,9 @@ private:
     fs::path font_path;
 
     struct SizedFont {
-        ray::Font font{}; // texture + recs + glyph structs; glyph images are fresh crops, not aliases of `cache`
+        Font font{}; // texture + recs + glyph structs; glyph images are fresh crops, not aliases of `cache`
         std::unordered_set<int> codepoints; // only what was asked for AT THIS SIZE
-        std::vector<ray::GlyphInfo> cache;  // rasterized once per codepoint (images owned here)
+        std::vector<GlyphInfo> cache;       // rasterized once per codepoint (images owned here)
         bool atlas_dirty = false;
         uint64_t last_used = 0;
         bool loaded = false;
@@ -50,8 +50,8 @@ public:
     FontManager();
     void init(const fs::path& font_path);
     void unload();
-    ray::Font get_font(const std::string& text, int font_size);
-    ray::Font copy_font(const std::string& text, int font_size);
+    Font get_font(const std::string& text, int font_size);
+    Font copy_font(const std::string& text, int font_size);
     void register_text(const std::string& text, int font_size);
 
     void load_text_config(const fs::path& skin_root);
@@ -99,9 +99,9 @@ private:
     float outline_thickness;
     float v_advance = 1.0f;
 
-    ray::Font worker_font;
+    Font worker_font;
 
-    std::optional<ray::Image> pending_image;
+    std::optional<Image> pending_image;
     mutable std::mutex pending_mutex;
 
     std::optional<Texture> texture;
@@ -109,7 +109,7 @@ private:
     std::future<void> build_future;
 
     struct BuildData {
-        ray::Image img;
+        Image img;
     };
 
     BuildData build_horizontal_text(Color color, Color outline_color, float spacing);

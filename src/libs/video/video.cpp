@@ -4,8 +4,8 @@
 #include <spdlog/spdlog.h>
 
 #include "../audio/audio.h"
+#include "../gfx.h"
 #include "../gfx/texture.h"
-#include "../gfx_native.h"
 #include "../profiler.h"
 
 VideoPlayer::VideoPlayer(fs::path path) : is_finished_arr{false, false} {
@@ -150,7 +150,7 @@ void VideoPlayer::upload_frame(const DecodedFrame& frame) {
     }
 
     if (!texture.has_value()) {
-        ray::Image image{};
+        Image image{};
         image.data = const_cast<void*>(pixels_ptr); // raylib copies on load
         image.width = frame.width;
         image.height = frame.height;

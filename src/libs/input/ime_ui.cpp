@@ -32,7 +32,7 @@ namespace {
     ImeState ime;
     bool ime_active = false;
     bool field_set = false;
-    ray::Rectangle field{};
+    Rect field{};
     std::array<int, 4> last_area{-1, -1, -1, -1};
 
     // Byte offset of code point `cp` in `s` (clamped to its end).
@@ -83,13 +83,13 @@ namespace {
     }
 
     // Where any OS IME UI that still shows should go: the field, in window coordinates.
-    void update_text_input_area(const ray::Camera2D& camera, ray::Rectangle r) {
+    void update_text_input_area(const Camera2D& camera, Rect r) {
         SDL_Window* win = main_window();
         if (!win) {
             return;
         }
-        ray::Vector2 a = ray::GetWorldToScreen2D({r.x, r.y}, camera);
-        ray::Vector2 b = ray::GetWorldToScreen2D({r.x + r.width, r.y + r.height}, camera);
+        Vec2 a = get_world_to_screen_2d({r.x, r.y}, camera);
+        Vec2 b = get_world_to_screen_2d({r.x + r.width, r.y + r.height}, camera);
         int ww = 0;
         int wh = 0;
         int pw = 0;
@@ -107,7 +107,7 @@ namespace {
         }
     }
 #else
-    void update_text_input_area(const ray::Camera2D&, ray::Rectangle) {}
+    void update_text_input_area(const Camera2D&, Rect) {}
 #endif
 } // namespace
 
@@ -130,12 +130,12 @@ void ime_ui_text_input_changed(bool active) {
     last_area = {-1, -1, -1, -1};
 }
 
-void ime_ui_set_field(ray::Rectangle rect) {
+void ime_ui_set_field(Rect rect) {
     field = rect;
     field_set = true;
 }
 
-void ime_ui_draw(const ray::Camera2D& camera) {
+void ime_ui_draw(const Camera2D& camera) {
     const bool had_field = field_set;
     field_set = false;
     if (!ime_active) {
@@ -144,7 +144,7 @@ void ime_ui_draw(const ray::Camera2D& camera) {
     const float S = tex.screen_scale;
     const auto sw = static_cast<float>(tex.screen_width);
     const auto sh = static_cast<float>(tex.screen_height);
-    const ray::Rectangle r = had_field ? field : ray::Rectangle{sw / 4, sh * 0.3f, sw / 2, 60 * S};
+    const Rect r = had_field ? field : Rect{sw / 4, sh * 0.3f, sw / 2, 60 * S};
 
     update_text_input_area(camera, r);
 
@@ -180,9 +180,9 @@ void ime_ui_draw(const ray::Camera2D& camera) {
     for (const auto& l : labels) {
         all += l;
     }
-    ray::Font font = global_data.skinless ? ray::GetFontDefault() : font_manager.get_font(all, fs);
+    Font font = global_data.skinless ? get_font_default() : font_manager.get_font(all, fs);
     auto measure = [&](const std::string& s) {
-        return ray::MeasureTextEx(font, s.c_str(), static_cast<float>(fs), spacing).x;
+        return measure_text_ex(font, s.c_str(), static_cast<float>(fs), spacing).x;
     };
 
     const float pad = 12 * S;
@@ -221,7 +221,7 @@ void ime_ui_draw(const ray::Camera2D& camera) {
     }
 
     const Color border{119, 26, 45, 255}; // the default search box's outline
-    const ray::Rectangle panel{x, y, w, h};
+    const Rect panel{x, y, w, h};
     const float round = std::min(24 * S / std::min(w, h), 1.0f);
     draw_rectangle_rounded(panel, round, 16, Color{255, 255, 255, 245});
     draw_rectangle_rounded_lines_ex(panel, round, 16, 3 * S, border);
@@ -230,35 +230,34 @@ void ime_ui_draw(const ray::Camera2D& camera) {
     if (comp_h > 0) {
         const float tx = x + pad;
         const float ty = cy + (row_h - fs) / 2;
-        ray::DrawTextEx(font, st.composition.c_str(), {tx, ty}, static_cast<float>(fs), spacing, Color::BLACK);
+        draw_text_ex(font, st.composition.c_str(), {tx, ty}, static_cast<float>(fs), spacing, Color::BLACK);
         const float uy = ty + fs + 2 * S;
-        draw_rectangle(ray::Rectangle{tx, uy, comp_w, 2 * S}, Color{90, 90, 90, 255});
+        draw_rectangle(Rect{tx, uy, comp_w, 2 * S}, Color{90, 90, 90, 255});
         const size_t b0 = utf8_offset(st.composition, st.start);
         const float x0 = tx + measure(st.composition.substr(0, b0));
         if (st.length > 0) {
             const size_t b1 = utf8_offset(st.composition, st.start + st.length);
             const float x1 = tx + measure(st.composition.substr(0, b1));
-            draw_rectangle(ray::Rectangle{x0, uy - 1 * S, x1 - x0, 4 * S}, border);
+            draw_rectangle(Rect{x0, uy - 1 * S, x1 - x0, 4 * S}, border);
         } else {
-            draw_rectangle(ray::Rectangle{x0, ty - 2 * S, 2 * S, fs + 4 * S}, Color::BLACK); // caret
+            draw_rectangle(Rect{x0, ty - 2 * S, 2 * S, fs + 4 * S}, Color::BLACK); // caret
         }
         cy += comp_h + sep;
         if (cand_h > 0) {
-            draw_rectangle(ray::Rectangle{x + pad, cy - sep / 2 - 1 * S, w - 2 * pad, 1 * S},
-                           Color{200, 200, 200, 255});
+            draw_rectangle(Rect{x + pad, cy - sep / 2 - 1 * S, w - 2 * pad, 1 * S}, Color{200, 200, 200, 255});
         }
     }
     float cx = x + pad + pad;
     for (size_t i = 0; i < labels.size(); ++i) {
         const bool is_sel = static_cast<int>(i) == sel;
-        const ray::Rectangle cell = horizontal ? ray::Rectangle{cx - pad / 2, cy, label_w[i] + pad, row_h}
-                                               : ray::Rectangle{x + pad, cy, w - 2 * pad, row_h};
+        const Rect cell =
+            horizontal ? Rect{cx - pad / 2, cy, label_w[i] + pad, row_h} : Rect{x + pad, cy, w - 2 * pad, row_h};
         if (is_sel) {
             draw_rectangle_rounded(cell, 0.3f, 8, border);
         }
         const float tx = horizontal ? cx : x + 2 * pad;
-        ray::DrawTextEx(font, labels[i].c_str(), {tx, cy + (row_h - fs) / 2}, static_cast<float>(fs), spacing,
-                        is_sel ? Color::WHITE : Color::BLACK);
+        draw_text_ex(font, labels[i].c_str(), {tx, cy + (row_h - fs) / 2}, static_cast<float>(fs), spacing,
+                     is_sel ? Color::WHITE : Color::BLACK);
         if (horizontal) {
             cx += label_w[i] + gap;
         } else {
@@ -270,7 +269,7 @@ void ime_ui_draw(const ray::Camera2D& camera) {
     }
     if (!page_label.empty()) {
         const float pw = measure(page_label);
-        ray::DrawTextEx(font, page_label.c_str(), {x + w - pad - pw * 0.7f, cy + 2 * S}, fs * 0.7f, spacing,
-                        Color{110, 110, 110, 255});
+        draw_text_ex(font, page_label.c_str(), {x + w - pad - pw * 0.7f, cy + 2 * S}, fs * 0.7f, spacing,
+                     Color{110, 110, 110, 255});
     }
 }

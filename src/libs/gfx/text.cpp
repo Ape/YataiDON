@@ -8,7 +8,7 @@
 
 #include "../file/filesystem.h"
 #include "../file/script.h"
-#include "../gfx_native.h"
+#include "../gfx.h"
 #include "../global_data.h"
 #include "han_fold_table.h"
 
@@ -45,7 +45,7 @@ void FontManager::init(const fs::path& font_path) {
     }
 
     if (sentinel_texture.id == 0) {
-        ray::Image px = gen_image_color(1, 1, Color::BLANK);
+        Image px = gen_image_color(1, 1, Color::BLANK);
         sentinel_texture = load_texture_from_image(px);
         unload_image(px);
     }
@@ -159,14 +159,14 @@ void FontManager::evict_lru(int keep_size) {
     }
 }
 
-// Rasterize only the codepoints not yet in the cache (stb_truetype via LoadFontData).
+// Rasterize only the codepoints not yet in the cache (stb_truetype via load_font_data).
 bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vector<int>& cps) {
     if (cps.empty()) {
         return true;
     }
     int count = 0;
-    ray::GlyphInfo* g = ray::LoadFontData(font_data.data(), (int)font_data.size(), font_size, cps.data(),
-                                          (int)cps.size(), ray::FONT_DEFAULT, &count);
+    GlyphInfo* g =
+        load_font_data(font_data.data(), (int)font_data.size(), font_size, cps.data(), (int)cps.size(), &count);
     if (!g) {
         return false;
     }
@@ -175,7 +175,7 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
         entry.cache.push_back(g[i]);
         got.insert(g[i].value);
     } // take ownership of the glyph images
-    RL_FREE(g); // array only; images now live in `cache`
+    std::free(g); // array only; images now live in `cache`
     entry.atlas_dirty = true;
 
     std::vector<int> missing, alts;
@@ -193,8 +193,8 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
         return true;
     }
     int alt_count = 0;
-    ray::GlyphInfo* ag = ray::LoadFontData(font_data.data(), (int)font_data.size(), font_size, alts.data(),
-                                           (int)alts.size(), ray::FONT_DEFAULT, &alt_count);
+    GlyphInfo* ag =
+        load_font_data(font_data.data(), (int)font_data.size(), font_size, alts.data(), (int)alts.size(), &alt_count);
     if (!ag) {
         for (int cp : missing) {
             entry.codepoints.erase(cp);
@@ -208,7 +208,7 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
             if (assigned[k] || alts[k] != ag[i].value) {
                 continue;
             }
-            ray::GlyphInfo gi = ag[i];
+            GlyphInfo gi = ag[i];
             gi.value = missing[k];
             if (used) {
                 gi.image = image_copy(ag[i].image); // two originals folding to one form
@@ -221,7 +221,7 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
             unload_image(ag[i].image);
         }
     }
-    RL_FREE(ag);
+    std::free(ag);
     // Any alt LoadFontData silently dropped never got assigned; retry those too.
     for (size_t k = 0; k < alts.size(); k++) {
         if (!assigned[k]) {
@@ -236,7 +236,7 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
 void FontManager::rebuild_atlas(SizedFont& entry, int font_size) {
     release_font(entry);
     const int n = (int)entry.cache.size();
-    ray::Font f{};
+    Font f{};
     f.baseSize = font_size;
     f.glyphCount = n;
     f.glyphPadding = 4; // FONT_TTF_DEFAULT_CHARS_PADDING, same as LoadFontEx
@@ -244,22 +244,22 @@ void FontManager::rebuild_atlas(SizedFont& entry, int font_size) {
         entry.atlas_dirty = false;
         return;
     } // nothing to pack; keep loaded == false
-    f.glyphs = (ray::GlyphInfo*)RL_MALLOC(sizeof(ray::GlyphInfo) * n);
+    f.glyphs = (GlyphInfo*)std::malloc(sizeof(GlyphInfo) * n);
     if (!f.glyphs) {
         return;
     }
     for (int i = 0; i < n; i++) {
         f.glyphs[i] = entry.cache[i];
     }
-    ray::Image atlas = ray::GenImageFontAtlas(f.glyphs, &f.recs, n, font_size, f.glyphPadding, 0);
+    Image atlas = gen_image_font_atlas(f.glyphs, &f.recs, n, font_size, f.glyphPadding);
     if (!atlas.data || !f.recs) {
         if (atlas.data) {
             unload_image(atlas);
         }
         if (f.recs) {
-            RL_FREE(f.recs);
+            std::free(f.recs);
         }
-        RL_FREE(f.glyphs);
+        std::free(f.glyphs);
         return;
     }
     f.texture = load_texture_from_image(atlas);
@@ -291,10 +291,10 @@ void FontManager::release_font(SizedFont& entry) {
         }
     }
     if (entry.font.recs) {
-        RL_FREE(entry.font.recs);
+        std::free(entry.font.recs);
     }
     if (entry.font.glyphs) {
-        RL_FREE(entry.font.glyphs);
+        std::free(entry.font.glyphs);
     }
     entry.font = {};
     entry.loaded = false;
@@ -366,7 +366,7 @@ static Color clear_of(Color c) {
     return Color{c.r, c.g, c.b, 0};
 }
 
-static void blit_over(ray::Image* dst, const ray::Image& src, int x0, int y0) {
+static void blit_over(Image* dst, const Image& src, int x0, int y0) {
     if (!dst->data || !src.data) {
         return;
     }
@@ -416,9 +416,9 @@ static int text_margin(float font_size) {
     return (int)std::ceil(font_size * 0.25f);
 }
 
-static ray::Image text_image(const ray::Font& font, const char* text, float font_size, float spacing, int margin) {
+static Image text_image(const Font& font, const char* text, float font_size, float spacing, int margin) {
     Vec2 sz = measure_text_ex(font, text, font_size, spacing);
-    ray::Image im = gen_image_color((int)sz.x, (int)sz.y + margin * 2, Color::BLANK);
+    Image im = gen_image_color((int)sz.x, (int)sz.y + margin * 2, Color::BLANK);
     int x = 0;
     for (const char* p = text; *p;) {
         int n = 0;
@@ -428,7 +428,7 @@ static ray::Image text_image(const ray::Font& font, const char* text, float font
         }
         p += n;
         int gi = get_glyph_index(font, cp);
-        const ray::GlyphInfo& g = font.glyphs[gi];
+        const GlyphInfo& g = font.glyphs[gi];
         if (cp != ' ' && cp != '\t') {
             Rect sr = {0, 0, (float)g.image.width, (float)g.image.height};
             Rect dr = {(float)(x + g.offsetX), (float)(margin + g.offsetY), font.recs[gi].width, font.recs[gi].height};
@@ -439,10 +439,10 @@ static ray::Image text_image(const ray::Font& font, const char* text, float font
     return im;
 }
 
-static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* text, Vec2 pos, float font_size,
-                            float spacing, Color tint) {
+static void draw_text_clean(Image* dst, const Font& font, const char* text, Vec2 pos, float font_size, float spacing,
+                            Color tint) {
     const int m = text_margin(font_size);
-    ray::Image t = text_image(font, text, font_size, spacing, m);
+    Image t = text_image(font, text, font_size, spacing, m);
     if (t.data && t.width > 0 && t.height > 0) {
         if (t.format != pixel_format::RGBA8) {
             image_format(&t, pixel_format::RGBA8);
@@ -460,10 +460,10 @@ static void draw_text_clean(ray::Image* dst, const ray::Font& font, const char* 
     unload_image(t);
 }
 
-static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* text, Vec2 pos, float font_size,
-                          float spacing, Color outline_color, float radius) {
+static void stamp_outline(Image* dst, const Font& font, const char* text, Vec2 pos, float font_size, float spacing,
+                          Color outline_color, float radius) {
     const int m = text_margin(font_size);
-    ray::Image cov = text_image(font, text, font_size, spacing, m);
+    Image cov = text_image(font, text, font_size, spacing, m);
     if (!cov.data || cov.width <= 0 || cov.height <= 0) {
         unload_image(cov);
         return;
@@ -519,7 +519,7 @@ static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* te
             }
         }
     }
-    ray::Image o = gen_image_color(OW, OH, Color{outline_color.r, outline_color.g, outline_color.b, 0});
+    Image o = gen_image_color(OW, OH, Color{outline_color.r, outline_color.g, outline_color.b, 0});
     unsigned char* op = (unsigned char*)o.data;
     for (int i = 0; i < OW * OH; i++) {
         op[i * 4 + 3] = (unsigned char)((out[i] * (int)outline_color.a) / 255);
@@ -529,27 +529,27 @@ static void stamp_outline(ray::Image* dst, const ray::Font& font, const char* te
     unload_image(cov);
 }
 
-static ray::Font deep_copy_font(const ray::Font& src) {
-    ray::Font dst = src;
+static Font deep_copy_font(const Font& src) {
+    Font dst = src;
     dst.glyphs = nullptr;
     dst.recs = nullptr;
     dst.glyphCount = 0;
     if (src.glyphCount > 0 && src.glyphs && src.recs) {
         dst.glyphCount = src.glyphCount;
-        dst.glyphs = (ray::GlyphInfo*)RL_MALLOC(src.glyphCount * sizeof(ray::GlyphInfo));
-        memcpy(dst.glyphs, src.glyphs, src.glyphCount * sizeof(ray::GlyphInfo));
+        dst.glyphs = (GlyphInfo*)std::malloc(src.glyphCount * sizeof(GlyphInfo));
+        memcpy(dst.glyphs, src.glyphs, src.glyphCount * sizeof(GlyphInfo));
         for (int i = 0; i < src.glyphCount; i++) {
-            const ray::Image& si = src.glyphs[i].image;
-            ray::Image& di = dst.glyphs[i].image;
+            const Image& si = src.glyphs[i].image;
+            Image& di = dst.glyphs[i].image;
             if (si.data && si.width > 0 && si.height > 0) {
                 int dataSize = get_pixel_data_size(si.width, si.height, si.format);
-                di.data = RL_MALLOC(dataSize);
+                di.data = std::malloc(dataSize);
                 memcpy(di.data, si.data, dataSize);
             } else {
                 di.data = nullptr;
             }
         }
-        dst.recs = (ray::Rectangle*)RL_MALLOC(src.glyphCount * sizeof(ray::Rectangle));
+        dst.recs = (Rect*)std::malloc(src.glyphCount * sizeof(Rect));
         memcpy(dst.recs, src.recs, src.glyphCount * sizeof(Rect));
     }
     return dst;
@@ -557,14 +557,14 @@ static ray::Font deep_copy_font(const ray::Font& src) {
 
 // NOTE: the returned Font aliases manager-owned glyphs/recs/texture; it is only valid
 // until the next acquire()/register_text() call for any size. Use copy_font() to keep it.
-ray::Font FontManager::get_font(const std::string& text, int font_size) {
+Font FontManager::get_font(const std::string& text, int font_size) {
     std::scoped_lock lock(font_mutex);
     return acquire(text, font_size).font;
 }
 
-ray::Font FontManager::copy_font(const std::string& text, int font_size) {
+Font FontManager::copy_font(const std::string& text, int font_size) {
     std::scoped_lock lock(font_mutex);
-    ray::Font copy = deep_copy_font(acquire(text, font_size).font);
+    Font copy = deep_copy_font(acquire(text, font_size).font);
     copy.texture = sentinel_texture;
     return copy;
 }
@@ -782,9 +782,9 @@ OutlinedText::BuildData OutlinedText::build_horizontal_text(Color color, Color o
     int pad = (int)outline_thickness + 2;
 
     top_extra = std::max(0, text_margin(font_size) - pad);
-    ray::Image img = gen_image_color((int)max_w + pad * 2,
-                                     (int)(line_advance * (float)(lines.size() - 1) + line_h) + pad * 2 + top_extra,
-                                     clear_of(outline_thickness > 0 ? outline_color : color));
+    Image img = gen_image_color((int)max_w + pad * 2,
+                                (int)(line_advance * (float)(lines.size() - 1) + line_h) + pad * 2 + top_extra,
+                                clear_of(outline_thickness > 0 ? outline_color : color));
 
     for (int li = 0; li < (int)lines.size(); li++) {
         float y = pad + top_extra + li * line_advance;
@@ -879,12 +879,12 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
     }
     int img_h = items.empty() ? pad * 2 : (int)(y_positions.back() + char_height + pad);
 
-    ray::Image img = gen_image_color(img_w, img_h, clear_of(color));
-    ray::Image outline_img = gen_image_color(img_w, img_h, clear_of(outline_color));
+    Image img = gen_image_color(img_w, img_h, clear_of(color));
+    Image outline_img = gen_image_color(img_w, img_h, clear_of(outline_color));
 
     // Two passes: 0 = outlines onto outline_img, 1 = fills onto img.
     for (int pass = 0; pass < 2; pass++) {
-        ray::Image* target = (pass == 0) ? &outline_img : &img;
+        Image* target = (pass == 0) ? &outline_img : &img;
 
         for (int i = 0; i < (int)items.size(); i++) {
             const auto& item = items[i];
@@ -915,8 +915,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
                 if (!is_beside_prev_char(s) && in_rotate_set(s)) {
                     int tmp_w = (int)char_width + pad * 2;
                     int tmp_h = (int)char_height + pad * 2;
-                    ray::Image tmp =
-                        gen_image_color(tmp_w, tmp_h, clear_of(outline_thickness > 0 ? outline_color : color));
+                    Image tmp = gen_image_color(tmp_w, tmp_h, clear_of(outline_thickness > 0 ? outline_color : color));
 
                     if (pass == 0) {
                         if (outline_thickness > 0) {
@@ -957,7 +956,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
 }
 
 bool OutlinedText::upload_pending() {
-    std::optional<ray::Image> img;
+    std::optional<Image> img;
     {
         std::scoped_lock lock(pending_mutex);
         if (!pending_image.has_value()) {

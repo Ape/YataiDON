@@ -1,4 +1,6 @@
+#include <bit>
 #include <cstdarg>
+#include <cstddef>
 #include <cstdio>
 
 #include "gfx.h"
@@ -19,8 +21,44 @@ namespace ray {
 #undef RED
 #undef SKYBLUE
 #undef YELLOW
+#include <rlgl.h>
     }
 } // namespace ray
+
+// Project data types share raylib's layout; convert by bit copy / pointer cast.
+template<class To, class From>
+static To to(const From& v) {
+    static_assert(sizeof(To) == sizeof(From));
+    return std::bit_cast<To>(v);
+}
+template<class To, class From>
+static To* to_ptr(From* p) {
+    static_assert(sizeof(To) == sizeof(From));
+    return reinterpret_cast<To*>(p);
+}
+template<class To, class From>
+static const To* to_ptr(const From* p) {
+    static_assert(sizeof(To) == sizeof(From));
+    return reinterpret_cast<const To*>(p);
+}
+
+#define SAME_OFFSET(T, f) static_assert(offsetof(T, f) == offsetof(ray::T, f))
+SAME_OFFSET(Image, format);
+SAME_OFFSET(GlyphInfo, image);
+SAME_OFFSET(Font, glyphs);
+SAME_OFFSET(Transform, scale);
+SAME_OFFSET(BoneInfo, parent);
+SAME_OFFSET(Mesh, boneCount);
+SAME_OFFSET(Mesh, vboId);
+SAME_OFFSET(MaterialMap, value);
+SAME_OFFSET(Material, params);
+SAME_OFFSET(ModelSkeleton, bindPose);
+SAME_OFFSET(Model, skeleton);
+SAME_OFFSET(Model, boneMatrices);
+SAME_OFFSET(ModelAnimation, keyframePoses);
+static_assert(sizeof(Mesh) == sizeof(ray::Mesh) && sizeof(Model) == sizeof(ray::Model) &&
+              sizeof(Material) == sizeof(ray::Material) && sizeof(ModelAnimation) == sizeof(ray::ModelAnimation));
+#undef SAME_OFFSET
 
 static_assert(window_flag::RESIZABLE == ray::FLAG_WINDOW_RESIZABLE);
 static_assert(window_flag::VSYNC == ray::FLAG_VSYNC_HINT);
@@ -36,6 +74,8 @@ static_assert(shader_uniform::VEC3 == ray::SHADER_UNIFORM_VEC3);
 static_assert(pixel_format::RGB8 == ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
 static_assert(pixel_format::RGBA8 == ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
 static_assert(material_map::DIFFUSE == ray::MATERIAL_MAP_DIFFUSE);
+static_assert(cull_face::FRONT == ray::RL_CULL_FACE_FRONT);
+static_assert(cull_face::BACK == ray::RL_CULL_FACE_BACK);
 
 const char* text_format(const char* fmt, ...) {
     static char buffers[4][1024];
@@ -77,12 +117,12 @@ void draw_line(int x0, int y0, int x1, int y1, Color color) {
     ray::DrawLine(x0, y0, x1, y1, {color.r, color.g, color.b, color.a});
 }
 
-void draw_model(ray::Model model, Vec3 pos, float scale, Color tint) {
-    ray::DrawModel(model, pos, scale, {tint.r, tint.g, tint.b, tint.a});
+void draw_model(Model model, Vec3 pos, float scale, Color tint) {
+    ray::DrawModel(to<ray::Model>(model), pos, scale, {tint.r, tint.g, tint.b, tint.a});
 }
 
-void draw_text_ex(ray::Font font, const char* text, Vec2 pos, float font_size, float spacing, Color color) {
-    ray::DrawTextEx(font, text, pos, font_size, spacing, {color.r, color.g, color.b, color.a});
+void draw_text_ex(Font font, const char* text, Vec2 pos, float font_size, float spacing, Color color) {
+    ray::DrawTextEx(to<ray::Font>(font), text, pos, font_size, spacing, {color.r, color.g, color.b, color.a});
 }
 
 void draw_texture_pro(Texture tex, Rect source, Rect dest, Vec2 origin, float rotation, Color tint) {
@@ -111,6 +151,10 @@ void init_window(int width, int height, const char* title) {
 
 void close_window() {
     ray::CloseWindow();
+}
+
+void poll_window_events() {
+    ray::PollInputEvents();
 }
 
 bool window_should_close() {
@@ -173,8 +217,8 @@ Texture load_texture(const char* path) {
     return ray::LoadTexture(path);
 }
 
-Texture load_texture_from_image(ray::Image image) {
-    return ray::LoadTextureFromImage(image);
+Texture load_texture_from_image(Image image) {
+    return ray::LoadTextureFromImage(to<ray::Image>(image));
 }
 
 void unload_texture(Texture tex) {
@@ -202,24 +246,35 @@ Texture load_texture_mipmapped(const char* path, int filter) {
     return tex;
 }
 
-Vec2 measure_text_ex(const ray::Font& font, const char* text, float font_size, float spacing) {
-    return ray::MeasureTextEx(font, text, font_size, spacing);
+Vec2 measure_text_ex(const Font& font, const char* text, float font_size, float spacing) {
+    return ray::MeasureTextEx(to<ray::Font>(font), text, font_size, spacing);
 }
 
-ray::Font load_font_ex(const char* path, int font_size, int* codepoints, int codepoint_count) {
-    return ray::LoadFontEx(path, font_size, codepoints, codepoint_count);
+Font load_font_ex(const char* path, int font_size, int* codepoints, int codepoint_count) {
+    return to<Font>(ray::LoadFontEx(path, font_size, codepoints, codepoint_count));
 }
 
-void unload_font(ray::Font font) {
-    ray::UnloadFont(font);
+void unload_font(Font font) {
+    ray::UnloadFont(to<ray::Font>(font));
 }
 
-ray::Font get_font_default() {
-    return ray::GetFontDefault();
+Font get_font_default() {
+    return to<Font>(ray::GetFontDefault());
 }
 
-int get_glyph_index(const ray::Font& font, int codepoint) {
-    return ray::GetGlyphIndex(font, codepoint);
+GlyphInfo* load_font_data(const unsigned char* data, int data_size, int font_size, const int* codepoints,
+                          int codepoint_count, int* glyph_count) {
+    return to_ptr<GlyphInfo>(
+        ray::LoadFontData(data, data_size, font_size, codepoints, codepoint_count, ray::FONT_DEFAULT, glyph_count));
+}
+
+Image gen_image_font_atlas(const GlyphInfo* glyphs, Rect** recs, int glyph_count, int font_size, int padding) {
+    return to<Image>(ray::GenImageFontAtlas(to_ptr<ray::GlyphInfo>(glyphs), reinterpret_cast<ray::Rectangle**>(recs),
+                                            glyph_count, font_size, padding, 0));
+}
+
+int get_glyph_index(const Font& font, int codepoint) {
+    return ray::GetGlyphIndex(to<ray::Font>(font), codepoint);
 }
 
 int get_codepoint_next(const char* text, int* codepoint_size) {
@@ -242,6 +297,19 @@ void begin_blend_mode(int mode) {
     ray::BeginBlendMode(mode);
 }
 
+void set_separate_alpha_blend() {
+    ray::rlSetBlendFactorsSeparate(RL_SRC_ALPHA, RL_ONE_MINUS_SRC_ALPHA, RL_ONE, RL_ONE_MINUS_SRC_ALPHA, RL_FUNC_ADD,
+                                   RL_FUNC_ADD);
+}
+
+void set_backface_culling(bool enabled) {
+    enabled ? ray::rlEnableBackfaceCulling() : ray::rlDisableBackfaceCulling();
+}
+
+void set_cull_face(int face) {
+    ray::rlSetCullFace(face);
+}
+
 void end_blend_mode() {
     ray::EndBlendMode();
 }
@@ -260,6 +328,10 @@ void begin_mode_3d(Camera3D camera) {
 
 void end_mode_3d() {
     ray::EndMode3D();
+}
+
+Vec2 get_world_to_screen_2d(Vec2 position, Camera2D camera) {
+    return ray::GetWorldToScreen2D(position, camera);
 }
 
 Vec2 get_screen_to_world_2d(Vec2 position, Camera2D camera) {
@@ -290,53 +362,53 @@ void end_shader_mode() {
     ray::EndShaderMode();
 }
 
-ray::Image load_image(const char* path) {
-    return ray::LoadImage(path);
+Image load_image(const char* path) {
+    return to<Image>(ray::LoadImage(path));
 }
 
-ray::Image load_image_from_texture(Texture tex) {
-    return ray::LoadImageFromTexture(tex);
+Image load_image_from_texture(Texture tex) {
+    return to<Image>(ray::LoadImageFromTexture(tex));
 }
 
-ray::Image load_image_from_screen() {
-    return ray::LoadImageFromScreen();
+Image load_image_from_screen() {
+    return to<Image>(ray::LoadImageFromScreen());
 }
 
-void unload_image(ray::Image image) {
-    ray::UnloadImage(image);
+void unload_image(Image image) {
+    ray::UnloadImage(to<ray::Image>(image));
 }
 
-bool export_image(ray::Image image, const char* path) {
-    return ray::ExportImage(image, path);
+bool export_image(Image image, const char* path) {
+    return ray::ExportImage(to<ray::Image>(image), path);
 }
 
-ray::Image image_copy(ray::Image image) {
-    return ray::ImageCopy(image);
+Image image_copy(Image image) {
+    return to<Image>(ray::ImageCopy(to<ray::Image>(image)));
 }
 
-ray::Image image_from_image(ray::Image image, Rect rec) {
-    return ray::ImageFromImage(image, rec);
+Image image_from_image(Image image, Rect rec) {
+    return to<Image>(ray::ImageFromImage(to<ray::Image>(image), rec));
 }
 
-void image_format(ray::Image* image, int new_format) {
-    ray::ImageFormat(image, new_format);
+void image_format(Image* image, int new_format) {
+    ray::ImageFormat(to_ptr<ray::Image>(image), new_format);
 }
 
-void image_crop(ray::Image* image, Rect crop) {
-    ray::ImageCrop(image, crop);
+void image_crop(Image* image, Rect crop) {
+    ray::ImageCrop(to_ptr<ray::Image>(image), crop);
 }
 
-void image_rotate_cw(ray::Image* image) {
-    ray::ImageRotateCW(image);
+void image_rotate_cw(Image* image) {
+    ray::ImageRotateCW(to_ptr<ray::Image>(image));
 }
 
-void image_draw_image_pro(ray::Image* dst, ray::Image src, Rect src_rec, Rect dst_rec, Vec2 origin, float rotation,
-                          Color tint) {
-    ray::ImageDrawImagePro(dst, src, src_rec, dst_rec, origin, rotation, {tint.r, tint.g, tint.b, tint.a});
+void image_draw_image_pro(Image* dst, Image src, Rect src_rec, Rect dst_rec, Vec2 origin, float rotation, Color tint) {
+    ray::ImageDrawImagePro(to_ptr<ray::Image>(dst), to<ray::Image>(src), src_rec, dst_rec, origin, rotation,
+                           {tint.r, tint.g, tint.b, tint.a});
 }
 
-Rect get_image_alpha_border(ray::Image image, float threshold) {
-    return ray::GetImageAlphaBorder(image, threshold);
+Rect get_image_alpha_border(Image image, float threshold) {
+    return ray::GetImageAlphaBorder(to<ray::Image>(image), threshold);
 }
 
 int get_pixel_data_size(int width, int height, int format) {
@@ -375,44 +447,44 @@ void end_texture_mode() {
     ray::EndTextureMode();
 }
 
-ray::Model load_model(const char* path) {
-    return ray::LoadModel(path);
+Model load_model(const char* path) {
+    return to<Model>(ray::LoadModel(path));
 }
 
-void unload_model(ray::Model model) {
-    ray::UnloadModel(model);
+void unload_model(Model model) {
+    ray::UnloadModel(to<ray::Model>(model));
 }
 
-ray::ModelAnimation* load_model_animations(const char* path, int* count) {
-    return ray::LoadModelAnimations(path, count);
+ModelAnimation* load_model_animations(const char* path, int* count) {
+    return to_ptr<ModelAnimation>(ray::LoadModelAnimations(path, count));
 }
 
-void unload_model_animations(ray::ModelAnimation* anims, int count) {
-    ray::UnloadModelAnimations(anims, count);
+void unload_model_animations(ModelAnimation* anims, int count) {
+    ray::UnloadModelAnimations(to_ptr<ray::ModelAnimation>(anims), count);
 }
 
-void update_model_animation(ray::Model model, ray::ModelAnimation anim, float frame) {
-    ray::UpdateModelAnimation(model, anim, frame);
+void update_model_animation(Model model, ModelAnimation anim, float frame) {
+    ray::UpdateModelAnimation(to<ray::Model>(model), to<ray::ModelAnimation>(anim), frame);
 }
 
-void draw_mesh(ray::Mesh mesh, ray::Material material, Mat4 transform) {
-    ray::DrawMesh(mesh, material, transform);
+void draw_mesh(Mesh mesh, Material material, Mat4 transform) {
+    ray::DrawMesh(to<ray::Mesh>(mesh), to<ray::Material>(material), transform);
 }
 
-void update_mesh_buffer(ray::Mesh mesh, int index, const void* data, int data_size, int offset) {
-    ray::UpdateMeshBuffer(mesh, index, data, data_size, offset);
+void update_mesh_buffer(Mesh mesh, int index, const void* data, int data_size, int offset) {
+    ray::UpdateMeshBuffer(to<ray::Mesh>(mesh), index, data, data_size, offset);
 }
 
-void set_material_texture(ray::Material* material, int map_type, Texture texture) {
-    ray::SetMaterialTexture(material, map_type, texture);
+void set_material_texture(Material* material, int map_type, Texture texture) {
+    ray::SetMaterialTexture(to_ptr<ray::Material>(material), map_type, texture);
 }
 
 void clear_background(Color color) {
     ray::ClearBackground({color.r, color.g, color.b, color.a});
 }
 
-ray::Image gen_image_color(int w, int h, Color color) {
-    return ray::GenImageColor(w, h, {color.r, color.g, color.b, color.a});
+Image gen_image_color(int w, int h, Color color) {
+    return to<Image>(ray::GenImageColor(w, h, {color.r, color.g, color.b, color.a}));
 }
 
 Shader load_shader(const char* vs_path, const char* fs_path) {

@@ -33,7 +33,7 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
         return result;
     }
 
-    ray::Font font = font_manager.get_font(text, font_size);
+    Font font = font_manager.get_font(text, font_size);
 
     std::vector<std::string> words;
     size_t start = 0;

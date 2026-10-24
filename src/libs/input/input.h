@@ -21,7 +21,7 @@ void poll_touch_once();
 
 // --- Raw keyboard / mouse / clipboard (SDL) --------------------------------
 // Keys are SDL_Scancode values. Per-frame state (pressed edges, typed characters, wheel) is
-// snapshotted by poll_input_events(), which replaces ray::PollInputEvents().
+// snapshotted by poll_input_events(), which replaces poll_window_events().
 void poll_input_events();
 bool key_down(int scancode);
 bool key_pressed(int scancode);

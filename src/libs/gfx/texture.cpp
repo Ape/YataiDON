@@ -13,7 +13,7 @@
 
 #include "../file/filesystem.h"
 #include "../file/script.h"
-#include "../gfx_native.h"
+#include "../gfx.h"
 #include "../global_data.h"
 #include "../profiler.h"
 #include "text.h"
@@ -462,8 +462,8 @@ std::shared_ptr<Texture> shared_texture(Texture tex) {
     });
 }
 
-void decode_images_parallel(const std::vector<fs::path>& files, std::vector<ray::Image>& out) {
-    out.assign(files.size(), ray::Image{});
+void decode_images_parallel(const std::vector<fs::path>& files, std::vector<Image>& out) {
+    out.assign(files.size(), Image{});
     if (files.empty()) {
         return;
     }
@@ -487,7 +487,7 @@ void decode_images_parallel(const std::vector<fs::path>& files, std::vector<ray:
                     out[i] = load_image(files[i].string().c_str());
                 } catch (const std::exception& e) {
                     spdlog::error("Failed to decode image {}: {}", files[i].string(), e.what());
-                    out[i] = ray::Image{};
+                    out[i] = Image{};
                 }
             }
         });
@@ -660,7 +660,7 @@ public:
 
     // The decoded image for path when it's part of this prefetch (waiting for a worker that
     // has started it, decoding it here if none has); false when it isn't.
-    bool take(const fs::path& path, ray::Image& image, Rect& border, bool& has_border) {
+    bool take(const fs::path& path, Image& image, Rect& border, bool& has_border) {
         std::unique_lock<std::mutex> lock(mutex);
         auto found = index.find(image_key(path));
         if (found == index.end()) {
@@ -680,7 +680,7 @@ public:
         image = it.image;
         border = it.border;
         has_border = it.has_border;
-        it.image = ray::Image{};
+        it.image = Image{};
         it.state = State::Taken;
         held -= it.bytes;
         cv.notify_all();
@@ -701,7 +701,7 @@ public:
                 if (it.image.data) {
                     unload_image(it.image);
                 }
-                it.image = ray::Image{};
+                it.image = Image{};
                 held -= it.bytes;
                 it.state = State::Dropped;
             }
@@ -723,7 +723,7 @@ private:
         fs::path path;
         size_t group;
         State state = State::Pending;
-        ray::Image image{};
+        Image image{};
         Rect border{};
         bool want_border = false;
         bool has_border = false;
@@ -731,12 +731,12 @@ private:
     };
 
     // true when border was computed
-    static bool decode(const fs::path& path, bool want_border, ray::Image& image, Rect& border) {
+    static bool decode(const fs::path& path, bool want_border, Image& image, Rect& border) {
         try {
             image = load_image(path.string().c_str());
         } catch (const std::exception& e) {
             spdlog::error("Failed to decode image {}: {}", path.string(), e.what());
-            image = ray::Image{};
+            image = Image{};
         }
         border = Rect{};
         if (!want_border || !image.data) {
@@ -759,7 +759,7 @@ private:
             Item& it = items[next++];
             it.state = State::Decoding;
             lock.unlock();
-            ray::Image image;
+            Image image;
             Rect border;
             const bool has_border = decode(it.path, it.want_border, image, border);
             lock.lock();
@@ -896,7 +896,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
             }
 
             // images load_screen_textures already decoded, the rest here
-            std::vector<ray::Image> images(files.size());
+            std::vector<Image> images(files.size());
             std::vector<Rect> borders(files.size());
             std::vector<char> has_border(files.size(), 0);
             std::vector<fs::path> rest;
@@ -910,7 +910,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                     rest_index.push_back(i);
                 }
             }
-            std::vector<ray::Image> decoded;
+            std::vector<Image> decoded;
             decode_images_parallel(rest, decoded);
             for (size_t k = 0; k < rest.size(); ++k) {
                 images[rest_index[k]] = decoded[k];
@@ -928,7 +928,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
                         size_t fi = p.first_file + i;
                         std::shared_ptr<Texture> tex = gpu[fi];
                         if (!tex) {
-                            const ray::Image& img = images[fi];
+                            const Image& img = images[fi];
                             if (!img.data) {
                                 spdlog::error("Failed to decode image for texture {}: Frame {}", p.name, i);
                                 ok = false;
@@ -960,7 +960,7 @@ void TextureWrapper::load_folder(const std::string& screen_name, const std::stri
 
                     if (!p.framed && !obj->crop_data.has_value() && p.mapping->IsObject() &&
                         !p.mapping->HasMember("x2")) {
-                        const ray::Image& img = images[p.first_file];
+                        const Image& img = images[p.first_file];
                         if (img.data) {
                             const Rect border =
                                 has_border[p.first_file] ? borders[p.first_file] : get_image_alpha_border(img, 0.0f);

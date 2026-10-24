@@ -5,6 +5,7 @@
 #include <type_traits>
 
 #include "../math/math_types.h"
+#include "color_utils.h"
 
 // Backend-neutral GPU texture handle. Layout matches raylib's Texture, so it
 // converts implicitly to/from it (same pattern as Vec2 in math_types.h).
@@ -128,4 +129,91 @@ struct RenderTarget {
     constexpr operator T() const {
         return std::bit_cast<T>(*this);
     }
+};
+
+// CPU-side and 3D data types. Plain aggregates whose layout matches raylib's, so the
+// raylib backend reinterprets them directly (layout checked in gfx_raylib.cpp).
+// Arrays inside them are malloc'd and owned by the matching unload_* call.
+
+struct Image {
+    void* data = nullptr;
+    int width = 0, height = 0, mipmaps = 0, format = 0;
+};
+
+struct GlyphInfo {
+    int value = 0;
+    int offsetX = 0, offsetY = 0, advanceX = 0;
+    Image image;
+};
+
+struct Font {
+    int baseSize = 0, glyphCount = 0, glyphPadding = 0;
+    Texture texture;
+    Rect* recs = nullptr;
+    GlyphInfo* glyphs = nullptr;
+};
+
+struct Transform {
+    Vec3 translation;
+    Vec4 rotation; // quaternion
+    Vec3 scale;
+};
+
+struct BoneInfo {
+    char name[32] = {};
+    int parent = 0;
+};
+
+struct Mesh {
+    int vertexCount = 0, triangleCount = 0;
+    float* vertices = nullptr;
+    float* texcoords = nullptr;
+    float* texcoords2 = nullptr;
+    float* normals = nullptr;
+    float* tangents = nullptr;
+    unsigned char* colors = nullptr;
+    unsigned short* indices = nullptr;
+    int boneCount = 0;
+    unsigned char* boneIndices = nullptr;
+    float* boneWeights = nullptr;
+    float* animVertices = nullptr; // CPU-skinned positions
+    float* animNormals = nullptr;
+    unsigned int vaoId = 0; // backend buffer handles
+    unsigned int* vboId = nullptr;
+};
+
+struct MaterialMap {
+    Texture texture;
+    Color color;
+    float value = 0.0f;
+};
+
+struct Material {
+    Shader shader;
+    MaterialMap* maps = nullptr;
+    float params[4] = {};
+};
+
+struct ModelSkeleton {
+    unsigned int boneCount = 0;
+    BoneInfo* bones = nullptr;
+    Transform* bindPose = nullptr;
+};
+
+struct Model {
+    Mat4 transform;
+    int meshCount = 0, materialCount = 0;
+    Mesh* meshes = nullptr;
+    Material* materials = nullptr;
+    int* meshMaterial = nullptr;
+    ModelSkeleton skeleton;
+    Transform* currentPose = nullptr;
+    Mat4* boneMatrices = nullptr;
+};
+
+struct ModelAnimation {
+    char name[32] = {};
+    unsigned int boneCount = 0;
+    int keyframeCount = 0;
+    Transform** keyframePoses = nullptr; // [keyframe][bone]
 };

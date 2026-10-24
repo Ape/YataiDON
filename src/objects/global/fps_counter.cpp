@@ -36,7 +36,7 @@ void FPSCounter::draw() {
 
     Color color;
     std::string fps_text = std::to_string(curr_fps) + " FPS";
-    ray::Font font = font_manager.get_font(fps_text, size);
+    Font font = font_manager.get_font(fps_text, size);
 
     if (curr_fps < 30) {
         color = Color::RED;

@@ -11,38 +11,11 @@
 
 #include "../../libs/file/filesystem.h"
 #include "../../libs/file/scores.h"
+#include "../../libs/gfx.h"
 #include "../../libs/gfx/camera_utils.h"
-#include "../../libs/gfx_native.h"
 #include "../../libs/math/animation.h"
-namespace ray {
-#include <raymath.h>
-}
 
-// raymath lives outside raylib.h, so these stay local to the only file that includes it.
-inline Mat4 matrix_multiply(Mat4 left, Mat4 right) {
-    return ray::MatrixMultiply(left, right);
-}
-
-inline Mat4 matrix_translate(float x, float y, float z) {
-    return ray::MatrixTranslate(x, y, z);
-}
-
-inline Mat4 matrix_scale(float x, float y, float z) {
-    return ray::MatrixScale(x, y, z);
-}
-
-inline Vec3 vector3_transform(Vec3 v, Mat4 mat) {
-    return ray::Vector3Transform(v, mat);
-}
-extern "C" {
-void rlSetCullFace(int mode);
-void rlEnableBackfaceCulling(void);
-void rlDisableBackfaceCulling(void);
-}
-static constexpr int RL_CULL_FACE_FRONT = 0;
-static constexpr int RL_CULL_FACE_BACK = 1;
-
-static void draw_model_face_last(ray::Model& model, int face_material_index, const std::vector<int>& blend_materials,
+static void draw_model_face_last(Model& model, int face_material_index, const std::vector<int>& blend_materials,
                                  const std::vector<int>& twosided_materials, Vec3 position, float scale) {
     Mat4 matTransform =
         matrix_multiply(matrix_scale(scale, scale, scale), matrix_translate(position.x, position.y, position.z));
@@ -53,11 +26,11 @@ static void draw_model_face_last(ray::Model& model, int face_material_index, con
         const int mat = model.meshMaterial[i];
         const bool two_sided = std::ranges::contains(twosided_materials, mat);
         if (two_sided) {
-            rlDisableBackfaceCulling();
+            set_backface_culling(false);
         }
         draw_mesh(model.meshes[i], model.materials[mat], transform);
         if (two_sided) {
-            rlEnableBackfaceCulling();
+            set_backface_culling(true);
         }
     };
 
@@ -115,7 +88,7 @@ struct AnimSource {
     fs::file_time_type mtime;
     std::uintmax_t size = 0;
     std::vector<std::string> bone_names; // the glb's skeleton; empty if it has none
-    ray::ModelAnimation* anims = nullptr;
+    ModelAnimation* anims = nullptr;
     int count = 0;
 };
 
@@ -138,7 +111,7 @@ static const AnimSource& anim_source(const fs::path& path) {
     src = AnimSource{};
     src.mtime = mtime;
     src.size = size;
-    ray::Model glb_model = load_model(path.string().c_str());
+    Model glb_model = load_model(path.string().c_str());
     if (glb_model.skeleton.bones) {
         for (int i = 0; i < glb_model.skeleton.boneCount; i++) {
             src.bone_names.emplace_back(glb_model.skeleton.bones[i].name);
@@ -152,7 +125,7 @@ static const AnimSource& anim_source(const fs::path& path) {
 // A copy of `src`'s animations for `model`: the poses reordered to the model's bones, bones the glb
 // does not animate held at the model's bind pose (copied as they are when either side has no
 // skeleton). Freed with UnloadModelAnimations.
-static ray::ModelAnimation* reindexed_animations(const ray::Model& model, const AnimSource& src) {
+static ModelAnimation* reindexed_animations(const Model& model, const AnimSource& src) {
     if (!src.anims || src.count <= 0) {
         return nullptr;
     }
@@ -162,13 +135,13 @@ static ray::ModelAnimation* reindexed_animations(const ray::Model& model, const 
         glb_bone_idx[src.bone_names[i]] = i;
     }
 
-    auto* out = (ray::ModelAnimation*)std::calloc(src.count, sizeof(ray::ModelAnimation));
+    auto* out = (ModelAnimation*)std::calloc(src.count, sizeof(ModelAnimation));
     if (!out) {
         return nullptr;
     }
     for (int a = 0; a < src.count; a++) {
-        const ray::ModelAnimation& in = src.anims[a];
-        ray::ModelAnimation& anim = out[a];
+        const ModelAnimation& in = src.anims[a];
+        ModelAnimation& anim = out[a];
         std::memcpy(anim.name, in.name, sizeof(anim.name));
         anim.boneCount = in.boneCount;
         if (in.keyframeCount <= 0 || !in.keyframePoses) {
@@ -176,7 +149,7 @@ static ray::ModelAnimation* reindexed_animations(const ray::Model& model, const 
         }
 
         const int n = reindex ? model.skeleton.boneCount : (int)in.boneCount;
-        anim.keyframePoses = (ray::ModelAnimPose*)std::calloc(in.keyframeCount, sizeof(ray::ModelAnimPose));
+        anim.keyframePoses = (Transform**)std::calloc(in.keyframeCount, sizeof(Transform*));
         if (!anim.keyframePoses) {
             continue;
         }
@@ -184,12 +157,12 @@ static ray::ModelAnimation* reindexed_animations(const ray::Model& model, const 
         anim.boneCount = n;
         for (int f = 0; f < in.keyframeCount; f++) {
             // calloc'd: a failed allocation leaves the rest null, which UnloadModelAnimations frees safely
-            anim.keyframePoses[f] = (ray::Transform*)std::malloc(n * sizeof(ray::Transform));
+            anim.keyframePoses[f] = (Transform*)std::malloc(n * sizeof(Transform));
             if (!anim.keyframePoses[f]) {
                 break;
             }
             if (!reindex) {
-                std::memcpy(anim.keyframePoses[f], in.keyframePoses[f], n * sizeof(ray::Transform));
+                std::memcpy(anim.keyframePoses[f], in.keyframePoses[f], n * sizeof(Transform));
                 continue;
             }
             for (int b = 0; b < n; b++) {
@@ -304,7 +277,7 @@ parse_glb_material_indices(const std::string& path, std::vector<int>& recolor_ou
     return result;
 }
 
-static void normalize_face_mesh_size(ray::Mesh& mesh, float target_size) {
+static void normalize_face_mesh_size(Mesh& mesh, float target_size) {
     if (mesh.vertexCount == 0 || !mesh.vertices) {
         return;
     }
@@ -332,7 +305,7 @@ static void normalize_face_mesh_size(ray::Mesh& mesh, float target_size) {
 }
 
 void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, bool normalize_face_scale) {
-    ray::Model model = load_model(model_path.string().c_str());
+    Model model = load_model(model_path.string().c_str());
     // The vertex colours stay as shipped: the main shader does not tint by them, and the black
     // line pass reads its per-vertex thickness from the green channel.
 
@@ -412,7 +385,7 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
     }
 
     const AnimSource& anim_src = anim_source(anim_path);
-    ray::ModelAnimation* anims = reindexed_animations(model, anim_src);
+    ModelAnimation* anims = reindexed_animations(model, anim_src);
     int anim_count = anims ? anim_src.count : 0;
 
     parts.push_back(model);
@@ -566,7 +539,7 @@ void Chara3D::load_face_textures(fs::path& face_dir) {
         return;
     }
     std::ranges::sort(paths);
-    ray::Image sheet = load_image(paths[0].string().c_str());
+    Image sheet = load_image(paths[0].string().c_str());
     // Frames are square and stacked vertically; derive the size from the
     // sheet width instead of assuming 128px, so higher-resolution skins
     // slice on the right boundaries (the UVs are normalized anyway).
@@ -574,7 +547,7 @@ void Chara3D::load_face_textures(fs::path& face_dir) {
     int frame_count = frame_size > 0 ? sheet.height / frame_size : 0;
     for (int f = 0; f < frame_count; f++) {
         Rect rect = {0, (float)(f * frame_size), (float)frame_size, (float)frame_size};
-        ray::Image frame_img = image_from_image(sheet, rect);
+        Image frame_img = image_from_image(sheet, rect);
         face_textures.push_back(load_texture_from_image(frame_img));
         unload_image(frame_img);
     }
@@ -609,8 +582,8 @@ void Chara3D::apply_face(int face_index) {
     render_dirty = true;
 }
 
-static Texture recolor_texture(ray::Image& source, Color body, Color face, Color rim) {
-    ray::Image img = image_copy(source);
+static Texture recolor_texture(Image& source, Color body, Color face, Color rim) {
+    Image img = image_copy(source);
     image_format(&img, pixel_format::RGBA8);
 
     unsigned char* pixels = (unsigned char*)img.data;
@@ -646,9 +619,9 @@ static Texture recolor_texture(ray::Image& source, Color body, Color face, Color
     return result;
 }
 
-static void apply_don_colors(ray::Model& model, int mat_idx, Color body, Color face, Color rim) {
+static void apply_don_colors(Model& model, int mat_idx, Color body, Color face, Color rim) {
     auto& map = model.materials[mat_idx].maps[material_map::DIFFUSE];
-    ray::Image img = load_image_from_texture(map.texture);
+    Image img = load_image_from_texture(map.texture);
     if (!img.data) {
         return;
     }
@@ -894,11 +867,11 @@ void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h, float full_h) {
         set_shader_value(outline_shader, outline_size_loc, size, shader_uniform::VEC2);
         const float draw_size = scale * draw_scale * tex.screen_scale;
 
-        rlSetCullFace(RL_CULL_FACE_FRONT);
+        set_cull_face(cull_face::FRONT);
         for (auto& part : parts) {
             draw_model(part, {x, y, 400.0f}, draw_size, Color::WHITE);
         }
-        rlSetCullFace(RL_CULL_FACE_BACK);
+        set_cull_face(cull_face::BACK);
     }
 
     for (size_t p = 0; p < parts.size(); p++) {
@@ -944,7 +917,7 @@ bool Chara3D::screen_bounds(float x, float y, const Camera3D& cam3d, float zoom,
     bool any = false;
     for (const auto& part : parts) {
         for (int m = 0; m < part.meshCount; m++) {
-            const ray::Mesh& mesh = part.meshes[m];
+            const Mesh& mesh = part.meshes[m];
             const float* v = mesh.animVertices ? mesh.animVertices : mesh.vertices;
             if (!v) {
                 continue;

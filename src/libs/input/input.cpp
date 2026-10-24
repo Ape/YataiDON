@@ -12,8 +12,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "../gfx.h"
 #include "../gfx/texture.h"
-#include "../gfx_native.h"
 #include "../math/animation.h"
 #include "../profiler.h"
 #include "../time.h"
@@ -1104,7 +1104,7 @@ void poll_input_events() {
         SDL_AddEventWatch(frame_event_watch, nullptr);
         frame_watch_registered = true;
     }
-    ray::PollInputEvents();
+    poll_window_events();
     std::scoped_lock lock(frame_mutex);
     frame = std::move(pending);
     pending = FrameInput{};
