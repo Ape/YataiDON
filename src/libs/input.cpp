@@ -14,6 +14,7 @@
 #include <unordered_set>
 
 #include "animation.h"
+#include "ime_ui.h"
 #include "profiler.h"
 #include "spdlog/spdlog.h"
 #include "texture.h"
@@ -941,13 +942,10 @@ bool is_text_input_key(int key) {
 void set_keyboard_visible(bool visible) {
     keyboard_editing = visible;
 #if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
-    int count = 0;
-    SDL_Window** windows = SDL_GetWindows(&count);
-    if (!windows || count == 0) {
+    SDL_Window* win = main_window();
+    if (!win) {
         return;
     }
-    SDL_Window* win = windows[0];
-    SDL_free(windows);
     if (visible) {
         SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "1");
         SDL_StartTextInput(win);
@@ -971,17 +969,15 @@ static bool text_input_active = true; // raylib started it
 void sync_text_input() {
 #if defined(PLATFORM_DESKTOP_SDL)
     if (text_input_wanted != text_input_active) {
-        int count = 0;
-        SDL_Window** windows = SDL_GetWindows(&count);
-        if (windows && count > 0) {
+        if (SDL_Window* win = main_window()) {
             if (text_input_wanted) {
-                SDL_StartTextInput(windows[0]);
+                SDL_StartTextInput(win);
             } else {
-                SDL_StopTextInput(windows[0]);
+                SDL_StopTextInput(win);
             }
             text_input_active = text_input_wanted;
+            ime_ui_text_input_changed(text_input_active);
         }
-        SDL_free(windows);
     }
 #endif
     text_input_wanted = false;

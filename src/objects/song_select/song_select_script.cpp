@@ -1,5 +1,6 @@
 #include "song_select_script.h"
 
+#include "../../libs/ime_ui.h"
 #include "diff_sort.h"
 #include "file_navigator/box_back.h"
 #include "file_navigator/box_folder.h"
@@ -211,11 +212,28 @@ bool SongSelectScript::draw_sort_window(DiffSortSelect* window) {
     return false;
 }
 
+// The text box player_ui.draw_search_box draws (the skin's search_box_layout, centered on screen)
+static ray::Rectangle search_box_rect(const sol::table& skin) {
+    const float S = tex.screen_scale;
+    float x = 0;
+    float y = 0;
+    float w = 400 * S;
+    float h = 60 * S;
+    if (sol::optional<sol::table> layout = skin.valid() ? skin["search_box_layout"] : sol::nullopt) {
+        x = layout->get_or<float>("x", x);
+        y = layout->get_or<float>("y", y);
+        w = layout->get_or<float>("width", w);
+        h = layout->get_or<float>("height", h);
+    }
+    return {tex.screen_width / 2.0f - w / 2 + x, tex.screen_height / 2.0f - h / 2 + y, w, h};
+}
+
 bool SongSelectScript::draw_search_box(const std::string& search, double bg_resize, double fade_in) {
     sol::table box = script_manager.lua->create_table();
     box["search"] = search;
     box["bg_resize"] = bg_resize;
     box["fade_in"] = fade_in;
+    ime_ui_set_field(search_box_rect(lua_object));
     if (fn_draw_search_box.valid() && call_handled(fn_draw_search_box, "SongSelect:draw_search_box", box)) {
         return true;
     }
