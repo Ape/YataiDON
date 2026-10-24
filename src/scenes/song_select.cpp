@@ -2,8 +2,8 @@
 
 #include <filesystem>
 
-#include "../libs/input.h"
-#include "../libs/network.h"
+#include "../libs/input/input.h"
+#include "../libs/network/network.h"
 #include "../objects/global/practice_timer.h"
 
 void SongSelectScreen::on_screen_start() {

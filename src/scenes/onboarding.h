@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-#include "../libs/color_utils.h"
+#include "../libs/gfx/color_utils.h"
 #include "../libs/screen.h"
 
 class OnboardingScreen : public Screen {

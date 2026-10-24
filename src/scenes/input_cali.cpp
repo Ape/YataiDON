@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-#include "../libs/input.h"
+#include "../libs/input/input.h"
 
 static const fs::path CALI_TJA_PATH = "Songs/Calibration.tja";
 static constexpr double NO_AUTOPLAY_HIT_YET = -1e18;

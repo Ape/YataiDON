@@ -1,6 +1,6 @@
 #include "result.h"
 
-#include "../libs/input.h"
+#include "../libs/input/input.h"
 
 void ResultScreen::on_screen_start() {
     Screen::on_screen_start();

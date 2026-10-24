@@ -2,11 +2,11 @@
 
 #include <variant>
 #ifdef SUPPORT_FUMEN
-#include "optional/fumen.h"
+#include "../optional/fumen.h"
 #endif
-#include "global_data.h"
-#include "parsers/osu.h"
-#include "parsers/tja.h"
+#include "../global_data.h"
+#include "osu.h"
+#include "tja.h"
 
 // Exposes the same public interface as TJAParser so existing code
 // can be updated by substituting SongParser for TJAParser.

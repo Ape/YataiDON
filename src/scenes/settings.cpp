@@ -1,11 +1,11 @@
 #include "settings.h"
 
-#include "../libs/audio.h"
-#include "../libs/filesystem.h"
+#include "../libs/audio/audio.h"
+#include "../libs/file/filesystem.h"
 #include "../libs/global_data.h"
-#include "../libs/input.h"
-#include "../libs/network.h"
-#include "../libs/scores.h"
+#include "../libs/input/input.h"
+#include "../libs/network/network.h"
+#include "../libs/file/scores.h"
 #include "../objects/song_select/file_navigator/navigator.h"
 
 void save_config(const Config& config);

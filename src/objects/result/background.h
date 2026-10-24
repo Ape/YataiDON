@@ -3,7 +3,7 @@
 #include <sol/sol.hpp>
 
 #include "../../libs/global_data.h"
-#include "../../libs/script.h"
+#include "../../libs/file/script.h"
 
 class ResultBackground : public LuaScript {
     sol::protected_function fn_draw;

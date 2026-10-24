@@ -13,11 +13,17 @@
 #include <unordered_map>
 #include <unordered_set>
 
+<<<<<<< Updated upstream:src/libs/input.cpp
 #include "animation.h"
 #include "profiler.h"
+=======
+#include "../math/animation.h"
+#include "ime_ui.h"
+#include "../profiler.h"
+>>>>>>> Stashed changes:src/libs/input/input.cpp
 #include "spdlog/spdlog.h"
-#include "texture.h"
-#include "time.h"
+#include "../gfx/texture.h"
+#include "../time.h"
 
 #ifndef __EMSCRIPTEN__
 #include <libremidi/libremidi.hpp>
@@ -32,12 +38,12 @@
 // handling used to live in platform_linux.cpp and has been folded into this
 // file (handle_linux_text_input below).
 #ifdef _WIN32
-#include "../platform/platform_windows.h"
+#include "../../platform/platform_windows.h"
 #elif defined(YATAIDON_PLATFORM_IOS)
-#include "../platform/platform_ios.h"
+#include "../../platform/platform_ios.h"
 #endif
 
-#include "sdl_compat.h"
+#include "../gfx/sdl_compat.h"
 std::atomic<bool> input_thread_running{true};
 std::thread input_thread;
 

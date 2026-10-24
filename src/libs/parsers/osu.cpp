@@ -6,7 +6,7 @@
 #include <sstream>
 #include <string_view>
 
-#include "../md5.h"
+#include "../math/md5.h"
 
 std::vector<std::string> OsuParser::read_file_lines(const fs::path& path) {
     std::vector<std::string> lines;

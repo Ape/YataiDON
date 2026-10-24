@@ -7,9 +7,15 @@
 #include <unordered_map>
 #include <vector>
 
+<<<<<<< Updated upstream
 #include "../../libs/color_utils.h"
 #include "../../libs/gfx.h"
 #include "../../libs/texture.h"
+=======
+#include "../../libs/gfx/color_utils.h"
+#include "../../libs/gfx/ray.h"
+#include "../../libs/gfx/texture.h"
+>>>>>>> Stashed changes
 
 class BaseAnimation;
 

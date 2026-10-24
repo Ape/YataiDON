@@ -2,9 +2,9 @@
 
 #include <stdexcept>
 
-#include "../../libs/audio.h"
-#include "../../libs/filesystem.h"
-#include "../../libs/input.h"
+#include "../../libs/audio/audio.h"
+#include "../../libs/file/filesystem.h"
+#include "../../libs/input/input.h"
 
 std::unique_ptr<BaseOptionBox> SettingsBox::make_option_box(const rapidjson::Value& opt) {
     if (!opt.HasMember("type") || !opt["type"].IsString() || !opt.HasMember("path") || !opt["path"].IsString()) {

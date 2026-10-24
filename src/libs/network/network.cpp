@@ -16,11 +16,11 @@
 #include <spdlog/spdlog.h>
 
 #include "android_ca.h"
-#include "color_utils.h"
-#include "global_data.h"
-#include "parsers/tja.h"
-#include "scores.h"
-#include "sha256.h"
+#include "../gfx/color_utils.h"
+#include "../global_data.h"
+#include "../parsers/tja.h"
+#include "../file/scores.h"
+#include "../math/sha256.h"
 
 #if defined(NETWORK_ENABLED) && defined(__ANDROID__)
 #include <fstream>
@@ -28,7 +28,7 @@
 #include <sstream>
 #include <vector>
 
-#include "sdl_compat.h"
+#include "../gfx/sdl_compat.h"
 #endif
 
 #ifdef GetObject

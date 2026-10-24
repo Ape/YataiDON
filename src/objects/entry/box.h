@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../libs/screen.h"
-#include "../../libs/script.h"
+#include "../../libs/file/script.h"
 
 class Box : public LuaScript {
 private:

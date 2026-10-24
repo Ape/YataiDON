@@ -4,8 +4,8 @@
 #include <cmath>
 #include <thread>
 
-#include "../../../libs/audio.h"
-#include "../../../libs/song_parser.h"
+#include "../../../libs/audio/audio.h"
+#include "../../../libs/parsers/song_parser.h"
 #include "box_base.h"
 #include "score_history.h"
 

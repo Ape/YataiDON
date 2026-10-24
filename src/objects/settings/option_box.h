@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "../../libs/screen.h"
-#include "../../libs/text.h"
+#include "../../libs/gfx/text.h"
 #include "config_ref.h"
 
 class BaseOptionBox {

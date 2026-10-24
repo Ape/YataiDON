@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../libs/script.h"
-#include "../../libs/text.h"
+#include "../../libs/file/script.h"
+#include "../../libs/gfx/text.h"
 
 class Transition : public LuaScript {
 private:

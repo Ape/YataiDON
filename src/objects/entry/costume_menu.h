@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "../../libs/global_data.h" // IWYU pragma: keep
-#include "../../libs/script.h"
+#include "../../libs/file/script.h"
 
 enum class CostumePickStage {
     NONE,

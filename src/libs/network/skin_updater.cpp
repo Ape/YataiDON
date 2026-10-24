@@ -11,14 +11,14 @@
 #include <vector>
 
 #include "android_ca.h"
-#include "sha256.h"
+#include "../math/sha256.h"
 
 #ifndef __EMSCRIPTEN__
 
 #include <cpr/cpr.h>
 
 #ifdef _WIN32
-#include "../platform/platform_windows.h"
+#include "../../platform/platform_windows.h"
 #endif
 
 #if defined(__ANDROID__)

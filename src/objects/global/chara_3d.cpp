@@ -10,10 +10,10 @@
 #include <mutex>
 #include <rapidjson/document.h>
 
-#include "../../libs/animation.h"
-#include "../../libs/camera_utils.h"
-#include "../../libs/filesystem.h"
-#include "../../libs/scores.h"
+#include "../../libs/math/animation.h"
+#include "../../libs/gfx/camera_utils.h"
+#include "../../libs/file/filesystem.h"
+#include "../../libs/file/scores.h"
 namespace ray {
 #include <raymath.h>
 }

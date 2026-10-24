@@ -4,9 +4,9 @@
 #include <climits>
 #include <spdlog/spdlog.h>
 
-#include "audio.h"
-#include "profiler.h"
-#include "texture.h"
+#include "../audio/audio.h"
+#include "../profiler.h"
+#include "../gfx/texture.h"
 
 VideoPlayer::VideoPlayer(fs::path path) : is_finished_arr{false, false} {
     if (path.extension() == ".png" || path.extension() == ".jpg") {

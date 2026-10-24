@@ -9,15 +9,15 @@
 #include <spdlog/spdlog.h>
 #include <string_view>
 
-#include "../objects/enums.h"
-#include "../objects/song_select/file_navigator/box_lua_bindings.h"
-#include "audio.h"
+#include "../../objects/enums.h"
+#include "../../objects/song_select/file_navigator/box_lua_bindings.h"
+#include "../audio/audio.h"
 #include "filesystem.h"
-#include "global_data.h"
-#include "input.h"
-#include "screen.h"
-#include "text.h"
-#include "webcam.h"
+#include "../global_data.h"
+#include "../input/input.h"
+#include "../screen.h"
+#include "../gfx/text.h"
+#include "../video/webcam.h"
 
 namespace {
     constexpr int LUA_SITE_MAX_LEVELS = 8;

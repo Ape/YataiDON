@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <string>
 
-#include "../../../libs/scores.h"
-#include "../../../libs/song_parser.h"
-#include "../../../libs/text.h"
+#include "../../../libs/file/scores.h"
+#include "../../../libs/parsers/song_parser.h"
+#include "../../../libs/gfx/text.h"
 
 DanBox::DanBox(const fs::path& path, const std::string& title, int color, const std::vector<DanSongEntry>& songs_in,
                const std::vector<Exam>& exams_in, int total_notes_in)

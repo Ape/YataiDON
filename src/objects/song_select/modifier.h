@@ -9,8 +9,8 @@
 
 #include "../../libs/global_data.h"
 #include "../../libs/parsers/tja.h"
-#include "../../libs/scores.h"
-#include "../../libs/text.h"
+#include "../../libs/file/scores.h"
+#include "../../libs/gfx/text.h"
 
 class ModifierSelector {
 private:

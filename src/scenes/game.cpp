@@ -3,13 +3,13 @@
 #include <algorithm>
 #include <cmath>
 
-#include "../libs/animation.h"
-#include "../libs/filesystem.h"
-#include "../libs/input.h"
-#include "../libs/network.h"
-#include "../libs/scores.h"
-#include "../libs/script.h"
-#include "../libs/text.h"
+#include "../libs/math/animation.h"
+#include "../libs/file/filesystem.h"
+#include "../libs/input/input.h"
+#include "../libs/network/network.h"
+#include "../libs/file/scores.h"
+#include "../libs/file/script.h"
+#include "../libs/gfx/text.h"
 
 void GameScreen::on_screen_start() {
     Screen::on_screen_start();

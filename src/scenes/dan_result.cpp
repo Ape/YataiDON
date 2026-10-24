@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <cmath>
 
-#include "../libs/filesystem.h"
-#include "../libs/input.h"
-#include "../libs/scores.h"
+#include "../libs/file/filesystem.h"
+#include "../libs/input/input.h"
+#include "../libs/file/scores.h"
 
 // the shoudan celebration and the congrats popup are skin art: a skin without the folder skips them
 static bool has_dan_result_art(const char* subset) {

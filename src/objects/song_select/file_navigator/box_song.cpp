@@ -2,8 +2,8 @@
 
 #include <thread>
 
-#include "../../../libs/audio.h"
-#include "../../../libs/text.h"
+#include "../../../libs/audio/audio.h"
+#include "../../../libs/gfx/text.h"
 #include "navigator.h"
 
 namespace {

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <rlgl.h>
 
+<<<<<<< Updated upstream
 #include "libs/gfx_native.h"
 
 #include "libs/animation.h"
@@ -13,13 +14,24 @@
 #include "libs/input.h"
 #include "libs/logging.h"
 #include "libs/network.h"
+=======
+#include "libs/math/animation.h"
+#include "libs/audio/audio.h"
+#include "libs/gfx/camera_utils.h"
+#include "libs/file/filesystem.h"
+#include "libs/global_data.h"
+#include "libs/input/ime_ui.h"
+#include "libs/input/input.h"
+#include "libs/file/logging.h"
+#include "libs/network/network.h"
+>>>>>>> Stashed changes
 #include "libs/profiler.h"
 #include "libs/screen.h"
-#include "libs/script.h"
-#include "libs/skin_updater.h"
-#include "libs/song_parser.h"
-#include "libs/text.h"
-#include "libs/webcam.h"
+#include "libs/file/script.h"
+#include "libs/network/skin_updater.h"
+#include "libs/parsers/song_parser.h"
+#include "libs/gfx/text.h"
+#include "libs/video/webcam.h"
 
 #ifdef _WIN32
 #include "platform/platform_windows.h"
@@ -32,7 +44,7 @@
 #endif
 
 #ifdef PLATFORM_ANDROID
-#include "libs/sdl_main_compat.h"
+#include "libs/gfx/sdl_main_compat.h"
 #endif
 
 #include "objects/global/debug_menu.h"

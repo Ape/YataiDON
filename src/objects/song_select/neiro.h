@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../../libs/global_data.h"
-#include "../../libs/scores.h"
-#include "../../libs/text.h"
+#include "../../libs/file/scores.h"
+#include "../../libs/gfx/text.h"
 
 class NeiroSelector {
 private:

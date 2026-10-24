@@ -1,10 +1,15 @@
 #pragma once
 
-#include "../../libs/animation.h"
-#include "../../libs/color_utils.h"
+#include "../../libs/math/animation.h"
+#include "../../libs/gfx/color_utils.h"
 #include "../../libs/parsers/tja.h"
+<<<<<<< Updated upstream
 #include "../../libs/gfx.h"
 #include "../../libs/texture.h"
+=======
+#include "../../libs/gfx/ray.h"
+#include "../../libs/gfx/texture.h"
+>>>>>>> Stashed changes
 
 class GaugeHitEffect {
 private:

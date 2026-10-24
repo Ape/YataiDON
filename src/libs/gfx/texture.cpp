@@ -12,14 +12,14 @@
 #include <string_view>
 #include <thread>
 
-#include "filesystem.h"
-#include "global_data.h"
-#include "profiler.h"
-#include "script.h"
+#include "../file/filesystem.h"
+#include "../global_data.h"
+#include "../profiler.h"
+#include "../file/script.h"
 #include "text.h"
 
 #ifdef _WIN32
-#include "../platform/platform_windows.h"
+#include "../../platform/platform_windows.h"
 #endif
 
 namespace {

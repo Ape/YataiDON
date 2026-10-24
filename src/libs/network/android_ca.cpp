@@ -6,7 +6,7 @@
 #include <spdlog/spdlog.h>
 #include <string>
 
-#include "sdl_compat.h"
+#include "../gfx/sdl_compat.h"
 
 namespace {
 

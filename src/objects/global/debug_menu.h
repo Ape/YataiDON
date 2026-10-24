@@ -7,13 +7,13 @@
 #include <map>
 #include <unordered_set>
 
-#include "../../libs/animation.h"
-#include "../../libs/color_utils.h"
-#include "../../libs/filesystem.h"
-#include "../../libs/input.h"
+#include "../../libs/math/animation.h"
+#include "../../libs/gfx/color_utils.h"
+#include "../../libs/file/filesystem.h"
+#include "../../libs/input/input.h"
 #include "../../libs/screen.h"
-#include "../../libs/script.h"
-#include "../../libs/texture.h"
+#include "../../libs/file/script.h"
+#include "../../libs/gfx/texture.h"
 #include "../../libs/time.h"
 
 #ifdef DrawTextEx

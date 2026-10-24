@@ -1,8 +1,8 @@
 #pragma once
 
-#include "av.h"
-#include "config.h"
-#include "sdl_compat.h"
+#include "../video/av.h"
+#include "../file/config.h"
+#include "../gfx/sdl_compat.h"
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
 #include <RtAudio.h>
 #endif

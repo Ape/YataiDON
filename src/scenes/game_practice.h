@@ -1,8 +1,8 @@
 #pragma once
 #include <array>
 
-#include "../libs/color_utils.h"
-#include "../libs/input.h"
+#include "../libs/gfx/color_utils.h"
+#include "../libs/input/input.h"
 #include "../objects/game/practice_menu.h"
 #include "game.h"
 

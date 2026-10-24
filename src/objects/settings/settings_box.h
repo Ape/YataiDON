@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-#include "../../libs/text.h"
+#include "../../libs/gfx/text.h"
 #include "option_box.h"
 
 class SettingsBox {

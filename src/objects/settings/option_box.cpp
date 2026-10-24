@@ -3,8 +3,14 @@
 #include <algorithm>
 #include <cmath>
 
+<<<<<<< Updated upstream
 #include "../../libs/animation.h"
 #include "../../libs/input.h"
+=======
+#include "../../libs/math/animation.h"
+#include "../../libs/input/ime_ui.h"
+#include "../../libs/input/input.h"
+>>>>>>> Stashed changes
 
 std::string getKeyString(int key_code);
 

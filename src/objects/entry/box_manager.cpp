@@ -1,7 +1,7 @@
 ﻿#include "box_manager.h"
 
 #include "../../libs/global_data.h"
-#include "../../libs/text.h"
+#include "../../libs/gfx/text.h"
 
 static constexpr int ENTRY_FADE_OUT_ANIM_ID = 9;
 

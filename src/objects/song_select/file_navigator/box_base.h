@@ -3,8 +3,8 @@
 #include <cmath>
 #include <numbers>
 
-#include "../../../libs/color_utils.h"
-#include "../../../libs/text.h"
+#include "../../../libs/gfx/color_utils.h"
+#include "../../../libs/gfx/text.h"
 #include "../../enums.h"
 
 struct BoxDef {

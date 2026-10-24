@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <string_view>
 
-#include "../../libs/audio.h"
+#include "../../libs/audio/audio.h"
 
 const std::array<std::string, 5> ModifierSelector::BASE_MOD_NAMES = {"auto", "speed", "display", "inverse", "random"};
 

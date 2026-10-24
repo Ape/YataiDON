@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../libs/text.h"
+#include "../../libs/gfx/text.h"
 
 class SongNum {
 private:

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../libs/network.h"
-#include "../libs/scores.h"
+#include "../libs/network/network.h"
+#include "../libs/file/scores.h"
 #include "../libs/screen.h"
 #include "../objects/entry/box_manager.h"
 #include "../objects/entry/entry_script.h"

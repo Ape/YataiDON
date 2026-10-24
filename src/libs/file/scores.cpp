@@ -2,10 +2,10 @@
 
 #include <numeric>
 
-#include "color_utils.h"
-#include "network.h"
-#include "sha256.h"
-#include "song_parser.h"
+#include "../gfx/color_utils.h"
+#include "../network/network.h"
+#include "../math/sha256.h"
+#include "../parsers/song_parser.h"
 
 static void ensure_dan_table(sqlite3* db);
 

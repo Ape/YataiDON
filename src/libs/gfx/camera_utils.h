@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <cmath>
 
-#include "global_data.h"
+#include "../global_data.h"
 
 inline Camera2D compute_camera2d(int virtual_width, int virtual_height) {
     int vw = std::max(virtual_width, 1);

@@ -11,7 +11,7 @@
 #include <windows.h>
 #include <dbghelp.h> // must follow windows.h
 
-#include "../libs/sdl_compat.h"
+#include "../libs/gfx/sdl_compat.h"
 // clang-format on
 
 namespace {

@@ -5,9 +5,9 @@
 #include <mutex>
 #include <sqlite3.h>
 
-#include "color_utils.h"
-#include "global_data.h"
-#include "parsers/tja.h"
+#include "../gfx/color_utils.h"
+#include "../global_data.h"
+#include "../parsers/tja.h"
 
 inline int64_t unix_now() {
     return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch())

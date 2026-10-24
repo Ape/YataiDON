@@ -3,9 +3,9 @@
 #include <spdlog/spdlog.h>
 
 #include "../../libs/global_data.h"
-#include "../../libs/input.h"
-#include "../../libs/network.h"
-#include "../../libs/scores.h"
+#include "../../libs/input/input.h"
+#include "../../libs/network/network.h"
+#include "../../libs/file/scores.h"
 
 static void apply_pd_look(Chara3D& chara, PlayerData* pd, PlayerNum player_num) {
     std::string player_id = get_player_id(player_num);

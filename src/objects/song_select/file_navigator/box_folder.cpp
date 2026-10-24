@@ -7,9 +7,9 @@
 #include <mutex>
 #include <unordered_set>
 
-#include "../../../libs/audio.h"
-#include "../../../libs/filesystem.h"
-#include "../../../libs/scores.h"
+#include "../../../libs/audio/audio.h"
+#include "../../../libs/file/filesystem.h"
+#include "../../../libs/file/scores.h"
 #include "navigator.h"
 
 namespace {

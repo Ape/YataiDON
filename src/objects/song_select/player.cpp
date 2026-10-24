@@ -2,10 +2,10 @@
 
 #include <algorithm>
 
-#include "../../libs/audio.h"
-#include "../../libs/input.h"
-#include "../../libs/scores.h"
-#include "../../libs/text.h"
+#include "../../libs/audio/audio.h"
+#include "../../libs/input/input.h"
+#include "../../libs/file/scores.h"
+#include "../../libs/gfx/text.h"
 #include "song_select_script.h"
 
 void SongSelectPlayer::try_lua_selector(bool is_half, float fade_in, int pass) {

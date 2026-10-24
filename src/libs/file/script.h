@@ -10,8 +10,8 @@
 #include <string_view>
 #include <utility>
 
-#include "profiler.h"
-#include "texture.h"
+#include "../profiler.h"
+#include "../gfx/texture.h"
 
 class LuaScript {
 public:

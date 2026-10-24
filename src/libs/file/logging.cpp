@@ -26,15 +26,15 @@
 #endif
 
 #ifdef _WIN32
-#include "../platform/platform_windows.h"
+#include "../../platform/platform_windows.h"
 #elif defined(__APPLE__) && !defined(YATAIDON_PLATFORM_IOS)
-#include "../platform/platform_macos.h"
+#include "../../platform/platform_macos.h"
 #elif defined(__ANDROID__)
-#include "../platform/platform_android.h"
+#include "../../platform/platform_android.h"
 #elif defined(__EMSCRIPTEN__)
-#include "../platform/platform_emscripten.h"
+#include "../../platform/platform_emscripten.h"
 #elif !defined(YATAIDON_PLATFORM_IOS)
-#include "../platform/platform_linux.h"
+#include "../../platform/platform_linux.h"
 #endif
 
 static void log_stacktrace() {

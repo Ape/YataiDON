@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <functional>
 
-#include "../../libs/text.h"
-#include "../../libs/texture.h"
+#include "../../libs/gfx/text.h"
+#include "../../libs/gfx/texture.h"
 
 FPSCounter::FPSCounter() {
     lastTime = get_current_ms();

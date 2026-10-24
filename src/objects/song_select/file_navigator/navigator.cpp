@@ -3,9 +3,9 @@
 #include <algorithm>
 #include <cctype>
 
-#include "../../../libs/filesystem.h"
-#include "../../../libs/han_fold_table.h"
-#include "../../../libs/text.h"
+#include "../../../libs/file/filesystem.h"
+#include "../../../libs/gfx/han_fold_table.h"
+#include "../../../libs/gfx/text.h"
 #include "../song_select_script.h"
 #include "box_back.h"
 #include "box_song_osu.h"

@@ -2,7 +2,7 @@
 
 #include "../../libs/global_data.h"
 #include "../../libs/parsers/tja.h"
-#include "../../libs/script.h"
+#include "../../libs/file/script.h"
 
 // Timing/lifetime only; the curve and drawing live in the skin's note_arc.lua.
 class NoteArc : public LuaScript {

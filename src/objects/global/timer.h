@@ -2,7 +2,7 @@
 
 #include <functional>
 
-#include "../../libs/script.h"
+#include "../../libs/file/script.h"
 
 class Timer : public LuaScript {
     sol::protected_function fn_update;

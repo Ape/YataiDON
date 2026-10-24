@@ -3,6 +3,12 @@
 #include <cstdarg>
 #include <cstdio>
 
+<<<<<<<< Updated upstream:src/libs/gfx_raylib.cpp
+========
+#include "color_utils.h"
+#include "gfx_types.h"
+#include "../math/math_types.h"
+>>>>>>>> Stashed changes:src/libs/gfx/ray.h
 namespace ray {
     extern "C" {
 #include <raylib.h>

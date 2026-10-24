@@ -9,7 +9,7 @@
 #include <mutex>
 #include <stdexcept>
 
-#include "../libs/input.h"
+#include "../libs/input/input.h"
 #include "../libs/global_data.h"
 
 namespace {

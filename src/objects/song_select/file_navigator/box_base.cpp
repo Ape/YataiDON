@@ -2,7 +2,7 @@
 
 #include <string_view>
 
-#include "../../../libs/text.h"
+#include "../../../libs/gfx/text.h"
 #include "color_utils.h"
 
 BaseBox::BaseBox(const fs::path& path, const BoxDef& box_def)

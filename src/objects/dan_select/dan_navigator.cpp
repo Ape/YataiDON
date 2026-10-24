@@ -4,7 +4,7 @@
 #include <climits>
 #include <tuple>
 
-#include "../../libs/text.h"
+#include "../../libs/gfx/text.h"
 #ifdef SUPPORT_FUMEN
 #include "../../libs/optional/gen3.h"
 #include "../../libs/optional/gen4.h"
@@ -17,10 +17,10 @@
 #include <filesystem>
 #include <iterator>
 
-#include "../../libs/filesystem.h"
-#include "../../libs/input.h"
-#include "../../libs/script.h"
-#include "../../libs/song_parser.h"
+#include "../../libs/file/filesystem.h"
+#include "../../libs/input/input.h"
+#include "../../libs/file/script.h"
+#include "../../libs/parsers/song_parser.h"
 #include "../song_select/file_navigator/navigator.h"
 
 int DanNavigator::total_notes_for(const std::vector<DanSongEntry>& songs) {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../libs/color_utils.h"
+#include "../libs/gfx/color_utils.h"
 #include "../libs/screen.h"
 #include "../objects/game/song_info.h"
 #include "../objects/game/transition.h"

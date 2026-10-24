@@ -2,8 +2,8 @@
 
 #include "miniz.h" // IWYU pragma: keep
 #ifdef SUPPORT_FUMEN
-#include "optional/gen3.h"
-#include "optional/gen4.h"
+#include "../optional/gen3.h"
+#include "../optional/gen4.h"
 #endif
 #include <algorithm>
 #include <fstream>
@@ -12,19 +12,19 @@
 #include <unordered_set>
 
 #ifdef YATAIDON_PLATFORM_IOS
-#include "../platform/platform_ios.h"
+#include "../../platform/platform_ios.h"
 #endif
 
 #ifdef _WIN32
-#include "../platform/platform_windows.h"
+#include "../../platform/platform_windows.h"
 #elif defined(__APPLE__) && !defined(YATAIDON_PLATFORM_IOS)
-#include "../platform/platform_macos.h"
+#include "../../platform/platform_macos.h"
 #elif defined(__ANDROID__)
-#include "../platform/platform_android.h"
+#include "../../platform/platform_android.h"
 #elif defined(__EMSCRIPTEN__)
-#include "../platform/platform_emscripten.h"
+#include "../../platform/platform_emscripten.h"
 #else
-#include "../platform/platform_linux.h"
+#include "../../platform/platform_linux.h"
 #endif
 
 void set_working_directory_to_executable() {

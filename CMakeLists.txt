@@ -214,7 +214,7 @@ if(CARD_READER_ENABLED)
   target_compile_definitions(${PROJECT_NAME} PRIVATE CARD_READER_ENABLED)
 endif()
 
-# Shift-JIS charts and box.def files are converted with iconv outside Windows (src/libs/text.cpp)
+# Shift-JIS charts and box.def files are converted with iconv outside Windows (src/libs/gfx/text.cpp)
 if(NOT WIN32 AND NOT EMSCRIPTEN)
   find_package(Iconv)
   if(Iconv_FOUND)

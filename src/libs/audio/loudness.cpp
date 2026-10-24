@@ -21,8 +21,8 @@
 #include <vector>
 
 #ifdef SUPPORT_FUMEN
-#include "optional/nub.h"
-#include "optional/nus3bank.h"
+#include "../optional/nub.h"
+#include "../optional/nus3bank.h"
 #endif
 
 #ifdef _WIN32

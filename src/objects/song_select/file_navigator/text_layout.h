@@ -5,7 +5,7 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../../../libs/text.h"
+#include "../../../libs/gfx/text.h"
 
 inline bool language_is_cjk(const std::string& lang) {
     static const std::unordered_set<std::string> cjk = {

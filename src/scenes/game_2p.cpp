@@ -2,8 +2,8 @@
 
 #include <algorithm>
 
-#include "../libs/animation.h"
-#include "../libs/input.h"
+#include "../libs/math/animation.h"
+#include "../libs/input/input.h"
 
 void Game2PScreen::release_chart_resources() {
     parser_2p.reset();

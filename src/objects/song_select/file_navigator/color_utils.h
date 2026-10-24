@@ -4,7 +4,7 @@
 #include <map>
 #include <optional>
 
-#include "../../../libs/color_utils.h"
+#include "../../../libs/gfx/color_utils.h"
 #include "../../enums.h"
 
 float rgb_to_hue(int r, int g, int b);

@@ -1,6 +1,6 @@
 #include "diff_sort.h"
 
-#include "../../libs/audio.h"
+#include "../../libs/audio/audio.h"
 #include "song_select_script.h"
 
 static constexpr double SORT_IN_MS = 1000.0 / 60.0 * 10.0;

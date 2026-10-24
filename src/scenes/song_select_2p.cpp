@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <filesystem>
 
-#include "../libs/input.h"
+#include "../libs/input/input.h"
 
 void SongSelect2PScreen::on_screen_start() {
     SongSelectScreen::on_screen_start();

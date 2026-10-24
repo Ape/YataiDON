@@ -1,13 +1,13 @@
 #include "audio.h"
 
 #include "loudness.h"
-#include "profiler.h"
+#include "../profiler.h"
 #include "spdlog/spdlog.h"
 #ifdef YATAIDON_PLATFORM_IOS
-#include "../platform/platform_ios.h"
+#include "../../platform/platform_ios.h"
 #endif
 #ifdef _WIN32
-#include "../platform/platform_windows.h"
+#include "../../platform/platform_windows.h"
 #endif
 
 // Global iOS audio stream for platform access
@@ -15,8 +15,8 @@
 SDL_AudioStream* g_ios_audio_stream = nullptr;
 #endif
 #ifdef SUPPORT_FUMEN
-#include "optional/nub.h"
-#include "optional/nus3bank.h"
+#include "../optional/nub.h"
+#include "../optional/nus3bank.h"
 #endif
 #include <algorithm>
 #include <atomic>
@@ -28,7 +28,7 @@ SDL_AudioStream* g_ios_audio_stream = nullptr;
 #include <thread>
 #include <unordered_set>
 
-#include "filesystem.h"
+#include "../file/filesystem.h"
 
 #ifdef SUPPORT_FUMEN
 static bool is_bank_file(const fs::path& p) {

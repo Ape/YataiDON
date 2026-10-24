@@ -7,13 +7,13 @@
 #include <spdlog/spdlog.h>
 #include <vector>
 
-#include "filesystem.h"
-#include "global_data.h"
+#include "../file/filesystem.h"
+#include "../global_data.h"
 #include "han_fold_table.h"
-#include "script.h"
+#include "../file/script.h"
 
 #if defined(_WIN32)
-#include "../platform/platform_windows.h"
+#include "../../platform/platform_windows.h"
 #elif defined(YATAIDON_HAVE_ICONV)
 #include <iconv.h>
 #endif

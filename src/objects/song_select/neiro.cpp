@@ -1,7 +1,7 @@
 #include "neiro.h"
 
-#include "../../libs/audio.h"
-#include "../../libs/filesystem.h"
+#include "../../libs/audio/audio.h"
+#include "../../libs/file/filesystem.h"
 
 NeiroSelector::NeiroSelector(PlayerNum player_num, PlayerData* player) : player_num(player_num), player(player) {
     static int next_instance_id = 0;

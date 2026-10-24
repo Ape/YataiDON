@@ -7,11 +7,11 @@
 
 #include "../objects/global/debug_menu.h"
 #include "../objects/song_select/file_navigator/navigator.h"
-#include "audio.h"
-#include "filesystem.h"
-#include "script.h"
-#include "text.h"
-#include "texture.h"
+#include "audio/audio.h"
+#include "file/filesystem.h"
+#include "file/script.h"
+#include "gfx/text.h"
+#include "gfx/texture.h"
 
 GlobalData global_data;
 

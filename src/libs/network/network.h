@@ -1,6 +1,6 @@
 #pragma once
 
-#include "scores.h"
+#include "../file/scores.h"
 
 #if defined(NETWORK_URL) && defined(NETWORK_AUTH_KEY)
 #define NETWORK_ENABLED 1
@@ -24,7 +24,7 @@
 #include <thread>
 #include <vector>
 
-#include "color_utils.h"
+#include "../gfx/color_utils.h"
 
 enum class InputLogType {
     KAT_L = 0,

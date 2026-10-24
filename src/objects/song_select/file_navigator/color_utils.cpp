@@ -4,7 +4,11 @@
 #include <cmath>
 #include <stdexcept>
 
+<<<<<<< Updated upstream
 #include "../../../libs/gfx.h"
+=======
+#include "../../../libs/gfx/ray.h"
+>>>>>>> Stashed changes
 
 float rgb_to_hue(int r, int g, int b) {
     float rf = r / 255.0f;
