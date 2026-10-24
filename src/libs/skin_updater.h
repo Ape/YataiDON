@@ -48,9 +48,8 @@ private:
     bool update_one_skin(const std::filesystem::path& skin_dir, const std::string& repo_url, const std::string& branch);
     void set_current_skin(const std::string& name);
     void set_current_file(const std::string& file);
-    void note_file_updated();
-    void set_progress(int done, int total);
-    void note_file_done();
+    void set_files_total(int total);
+    void note_file_done(bool updated);
 
     std::atomic<bool> started_{false};
     std::atomic<bool> running_{false};

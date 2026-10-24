@@ -158,86 +158,62 @@ namespace {
         return r.status_code == 200 && r.error.code == cpr::ErrorCode::OK;
     }
 
-    // Sessions kept for a whole pass: curl keeps each one's connection open, so the skins and files
-    // of a server reuse it instead of making a new TLS handshake per skin and per download thread.
-    class SessionPool {
-    public:
-        std::unique_ptr<cpr::Session> take() {
+    // reused across skins and threads, so each server pays one TLS handshake
+    std::mutex pool_mutex;
+    std::vector<std::unique_ptr<cpr::Session>> pool;
+
+    // end of a pass: closes the connections
+    void clear_session_pool() {
+        std::scoped_lock lock(pool_mutex);
+        pool.clear();
+    }
+
+    // a session from the pool, returned to it on destruction
+    struct PooledSession {
+        std::unique_ptr<cpr::Session> session;
+
+        PooledSession() {
             {
-                std::scoped_lock lock(mutex_);
-                if (!free_.empty()) {
-                    std::unique_ptr<cpr::Session> s = std::move(free_.back());
-                    free_.pop_back();
-                    return s;
+                std::scoped_lock lock(pool_mutex);
+                if (!pool.empty()) {
+                    session = std::move(pool.back());
+                    pool.pop_back();
+                    return;
                 }
             }
-            auto s = std::make_unique<cpr::Session>();
-            init_session(*s);
-            return s;
+            session = std::make_unique<cpr::Session>();
+            init_session(*session);
         }
-
-        void give_back(std::unique_ptr<cpr::Session> s) {
-            std::scoped_lock lock(mutex_);
-            free_.push_back(std::move(s));
+        ~PooledSession() {
+            std::scoped_lock lock(pool_mutex);
+            pool.push_back(std::move(session));
         }
-
-        // at the end of a pass: closes the connections
-        void clear() {
-            std::scoped_lock lock(mutex_);
-            free_.clear();
-        }
-
-    private:
-        std::mutex mutex_;
-        std::vector<std::unique_ptr<cpr::Session>> free_;
-    };
-
-    SessionPool session_pool;
-
-    // a session from the pool, returned to it when this goes out of scope
-    struct PooledSession {
-        std::unique_ptr<cpr::Session> session = session_pool.take();
-        PooledSession() = default;
-        PooledSession(const PooledSession&) = delete;
-        PooledSession& operator=(const PooledSession&) = delete;
-        ~PooledSession() { session_pool.give_back(std::move(session)); }
         cpr::Session& operator*() const { return *session; }
     };
 
-    // Downloads are written to a file in <skin>/.skin-update-tmp and renamed over the target only
-    // once complete, so a pass cut short (the game killed, a full disk) leaves the old file, never a
-    // half-written one. The folder is emptied at the start and end of each skin's pass.
+    // downloads land here, then rename over the target; cleared per skin
     constexpr const char* kTempDirName = ".skin-update-tmp";
 
     fs::path temp_dir(const fs::path& skin_dir) {
         return skin_dir / kTempDirName;
     }
 
-    // Writes `body` to `tmp`, then renames it over `target` (std::filesystem::rename replaces an
-    // existing file, on Windows too). On failure the temp file is removed and `target` is untouched.
+    // on failure the temp file is removed and `target` is untouched
     bool write_atomically(const fs::path& tmp, const fs::path& target, const std::string& body) {
         std::error_code ec;
         fs::create_directories(tmp.parent_path(), ec);
-        {
-            std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
-            if (!out) {
-                return false;
-            }
-            out << body;
-            out.close();
-            if (!out) {
-                fs::remove(tmp, ec);
-                return false;
-            }
-        }
         fs::create_directories(target.parent_path(), ec);
-        fs::rename(tmp, target, ec);
-        if (ec) {
-            std::error_code rm_ec;
-            fs::remove(tmp, rm_ec);
-            return false;
+        std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
+        out << body;
+        out.close();
+        if (out) {
+            fs::rename(tmp, target, ec);
+            if (!ec) {
+                return true;
+            }
         }
-        return true;
+        fs::remove(tmp, ec);
+        return false;
     }
 
 } // namespace
@@ -255,20 +231,15 @@ void SkinUpdater::set_current_file(const std::string& file) {
     current_file_ = file;
 }
 
-void SkinUpdater::note_file_updated() {
+void SkinUpdater::set_files_total(int total) {
     std::scoped_lock lock(status_mutex_);
-    ++files_updated_;
-}
-
-void SkinUpdater::set_progress(int done, int total) {
-    std::scoped_lock lock(status_mutex_);
-    files_done_ = done;
     files_total_ = total;
 }
 
-void SkinUpdater::note_file_done() {
+void SkinUpdater::note_file_done(bool updated) {
     std::scoped_lock lock(status_mutex_);
     ++files_done_;
+    files_updated_ += updated;
 }
 
 bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const std::string& repo_url,
@@ -346,7 +317,7 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
         jobs.push_back({rel_path, hash, std::move(local_file), key});
     }
 
-    set_progress(0, static_cast<int>(jobs.size()));
+    set_files_total(static_cast<int>(jobs.size()));
     std::mutex result_mutex;
     std::atomic<size_t> next_job{0};
     auto worker = [&] {
@@ -372,7 +343,7 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
                     skin_dir.filename().string(), job.rel_path);
                 std::scoped_lock lock(result_mutex);
                 complete = false;
-                note_file_done();
+                note_file_done(false);
                 continue;
             }
 
@@ -382,7 +353,7 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
                              job.rel_path);
                 std::scoped_lock lock(result_mutex);
                 complete = false;
-                note_file_done();
+                note_file_done(false);
                 continue;
             }
             uintmax_t size = 0;
@@ -396,8 +367,7 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
                 }
                 ++updated;
             }
-            note_file_updated();
-            note_file_done();
+            note_file_done(true);
         }
     };
     {
@@ -478,7 +448,7 @@ void SkinUpdater::scan_skins() {
 
         update_one_skin(entry.path(), strip_dot_git(repo_url), branch);
     }
-    session_pool.clear();
+    clear_session_pool();
 }
 
 void SkinUpdater::start() {
@@ -497,11 +467,7 @@ void SkinUpdater::start() {
             spdlog::error("Skin update: unhandled exception: {}", e.what());
         }
         running_ = false;
-        std::scoped_lock lock(status_mutex_);
-        current_skin_.clear();
-        current_file_.clear();
-        files_done_ = 0;
-        files_total_ = 0;
+        set_current_skin({});
     });
 }
 
@@ -534,13 +500,9 @@ void SkinUpdater::download(std::vector<Request> requests) {
                 failed_.push_back(r.name);
             }
         }
-        session_pool.clear();
+        clear_session_pool();
         running_ = false;
-        std::scoped_lock lock(status_mutex_);
-        current_skin_.clear();
-        current_file_.clear();
-        files_done_ = 0;
-        files_total_ = 0;
+        set_current_skin({});
     });
 }
 
