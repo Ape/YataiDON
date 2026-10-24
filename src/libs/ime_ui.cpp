@@ -1,6 +1,7 @@
 #include "ime_ui.h"
 
 #include <algorithm>
+#include <array>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -32,65 +33,83 @@ namespace {
     bool ime_active = false;
     bool field_set = false;
     ray::Rectangle field{};
-#ifdef YATAIDON_IME_UI
-    SDL_Rect last_area{-1, -1, -1, -1};
-#endif
+    std::array<int, 4> last_area{-1, -1, -1, -1};
 
     // Byte offset of code point `cp` in `s` (clamped to its end).
     size_t utf8_offset(const std::string& s, int cp) {
         size_t i = 0;
         for (int n = 0; n < cp && i < s.size(); ++n) {
             ++i;
-            while (i < s.size() && ((unsigned char)s[i] & 0xC0) == 0x80) {
+            while (i < s.size() && (static_cast<unsigned char>(s[i]) & 0xC0) == 0x80) {
                 ++i;
             }
         }
         return i;
     }
-} // namespace
 
 #ifdef YATAIDON_IME_UI
-static bool SDLCALL ime_event_watch(void* /*userdata*/, SDL_Event* event) {
-    switch (event->type) {
-    case SDL_EVENT_TEXT_EDITING: {
-        std::scoped_lock lock(ime_mutex);
-        ime.composition = event->edit.text ? event->edit.text : "";
-        ime.start = std::max(0, (int)event->edit.start);
-        ime.length = std::max(0, (int)event->edit.length);
-        break;
-    }
-    case SDL_EVENT_TEXT_EDITING_CANDIDATES: {
-        const auto& c = event->edit_candidates;
-        std::scoped_lock lock(ime_mutex);
-        ime.candidates.clear();
-        for (int i = 0; c.candidates && i < c.num_candidates; ++i) {
-            ime.candidates.emplace_back(c.candidates[i] ? c.candidates[i] : "");
+    bool SDLCALL ime_event_watch(void* /*userdata*/, SDL_Event* event) {
+        switch (event->type) {
+        case SDL_EVENT_TEXT_EDITING: {
+            std::scoped_lock lock(ime_mutex);
+            ime.composition = event->edit.text ? event->edit.text : "";
+            ime.start = std::max(0, static_cast<int>(event->edit.start));
+            ime.length = std::max(0, static_cast<int>(event->edit.length));
+            break;
         }
-        ime.selected = c.selected_candidate;
-        ime.horizontal = c.horizontal;
-        ime.page_size = ime.candidates.empty() ? 0 : std::max(ime.page_size, (int)ime.candidates.size());
-        break;
+        case SDL_EVENT_TEXT_EDITING_CANDIDATES: {
+            const auto& c = event->edit_candidates;
+            std::scoped_lock lock(ime_mutex);
+            ime.candidates.clear();
+            for (int i = 0; c.candidates && i < c.num_candidates; ++i) {
+                ime.candidates.emplace_back(c.candidates[i] ? c.candidates[i] : "");
+            }
+            ime.selected = c.selected_candidate;
+            ime.horizontal = c.horizontal;
+            ime.page_size =
+                ime.candidates.empty() ? 0 : std::max(ime.page_size, static_cast<int>(ime.candidates.size()));
+            break;
+        }
+        case SDL_EVENT_TEXT_INPUT: {
+            std::scoped_lock lock(ime_mutex);
+            ime.composition.clear(); // committed
+            ime.start = ime.length = 0;
+            break;
+        }
+        default:
+            break;
+        }
+        return true;
     }
-    case SDL_EVENT_TEXT_INPUT: {
-        std::scoped_lock lock(ime_mutex);
-        ime.composition.clear(); // committed
-        ime.start = ime.length = 0;
-        break;
-    }
-    default:
-        break;
-    }
-    return true;
-}
 
-static SDL_Window* main_window() {
-    int count = 0;
-    SDL_Window** windows = SDL_GetWindows(&count);
-    SDL_Window* win = (windows && count > 0) ? windows[0] : nullptr;
-    SDL_free(windows);
-    return win;
-}
+    // Where any OS IME UI that still shows should go: the field, in window coordinates.
+    void update_text_input_area(const ray::Camera2D& camera, ray::Rectangle r) {
+        SDL_Window* win = main_window();
+        if (!win) {
+            return;
+        }
+        ray::Vector2 a = ray::GetWorldToScreen2D({r.x, r.y}, camera);
+        ray::Vector2 b = ray::GetWorldToScreen2D({r.x + r.width, r.y + r.height}, camera);
+        int ww = 0;
+        int wh = 0;
+        int pw = 0;
+        int ph = 0;
+        SDL_GetWindowSize(win, &ww, &wh);
+        SDL_GetWindowSizeInPixels(win, &pw, &ph);
+        const float kx = pw > 0 ? static_cast<float>(ww) / pw : 1.0f;
+        const float ky = ph > 0 ? static_cast<float>(wh) / ph : 1.0f;
+        const std::array<int, 4> area{static_cast<int>(a.x * kx), static_cast<int>(a.y * ky),
+                                      static_cast<int>((b.x - a.x) * kx), static_cast<int>((b.y - a.y) * ky)};
+        if (area != last_area) {
+            const SDL_Rect rect{area[0], area[1], area[2], area[3]};
+            SDL_SetTextInputArea(win, &rect, 0);
+            last_area = area;
+        }
+    }
+#else
+    void update_text_input_area(const ray::Camera2D&, ray::Rectangle) {}
 #endif
+} // namespace
 
 void ime_ui_set_hint() {
 #ifdef YATAIDON_IME_UI
@@ -108,9 +127,7 @@ void ime_ui_text_input_changed(bool active) {
     std::scoped_lock lock(ime_mutex);
     ime_active = active;
     ime = ImeState{};
-#ifdef YATAIDON_IME_UI
     last_area = {-1, -1, -1, -1};
-#endif
 }
 
 void ime_ui_set_field(ray::Rectangle rect) {
@@ -125,32 +142,11 @@ void ime_ui_draw(const ray::Camera2D& camera) {
         return;
     }
     const float S = tex.screen_scale;
-    const auto sw = (float)tex.screen_width;
-    const auto sh = (float)tex.screen_height;
+    const auto sw = static_cast<float>(tex.screen_width);
+    const auto sh = static_cast<float>(tex.screen_height);
     const ray::Rectangle r = had_field ? field : ray::Rectangle{sw / 4, sh * 0.3f, sw / 2, 60 * S};
 
-#ifdef YATAIDON_IME_UI
-    // Where any OS IME UI that still shows should go: the field, in window coordinates.
-    if (SDL_Window* win = main_window()) {
-        ray::Vector2 a = ray::GetWorldToScreen2D({r.x, r.y}, camera);
-        ray::Vector2 b = ray::GetWorldToScreen2D({r.x + r.width, r.y + r.height}, camera);
-        int ww = 0;
-        int wh = 0;
-        int pw = 0;
-        int ph = 0;
-        SDL_GetWindowSize(win, &ww, &wh);
-        SDL_GetWindowSizeInPixels(win, &pw, &ph);
-        const float kx = pw > 0 ? (float)ww / pw : 1.0f;
-        const float ky = ph > 0 ? (float)wh / ph : 1.0f;
-        SDL_Rect area{(int)(a.x * kx), (int)(a.y * ky), (int)((b.x - a.x) * kx), (int)((b.y - a.y) * ky)};
-        if (area.x != last_area.x || area.y != last_area.y || area.w != last_area.w || area.h != last_area.h) {
-            SDL_SetTextInputArea(win, &area, 0);
-            last_area = area;
-        }
-    }
-#else
-    (void)camera;
-#endif
+    update_text_input_area(camera, r);
 
     ImeState st;
     {
@@ -172,20 +168,22 @@ void ime_ui_draw(const ray::Camera2D& camera) {
     // SDL's Windows backend reports the selection over the whole list, the strings for one page.
     int sel = st.selected;
     int page = 0;
-    if (sel >= (int)labels.size() && st.page_size > 0) {
+    if (sel >= static_cast<int>(labels.size()) && st.page_size > 0) {
         page = sel / st.page_size;
         sel -= page * st.page_size;
     }
     const std::string page_label = page > 0 ? "p." + std::to_string(page + 1) : "";
 
-    const int fs = std::max(8, (int)(30 * S));
+    const int fs = std::max(8, static_cast<int>(30 * S));
     const float spacing = 1.0f;
     std::string all = st.composition + page_label;
     for (const auto& l : labels) {
         all += l;
     }
     ray::Font font = global_data.skinless ? ray::GetFontDefault() : font_manager.get_font(all, fs);
-    auto measure = [&](const std::string& s) { return ray::MeasureTextEx(font, s.c_str(), (float)fs, spacing).x; };
+    auto measure = [&](const std::string& s) {
+        return ray::MeasureTextEx(font, s.c_str(), static_cast<float>(fs), spacing).x;
+    };
 
     const float pad = 12 * S;
     const float row_h = fs * 1.25f;
@@ -198,46 +196,28 @@ void ime_ui_draw(const ray::Camera2D& camera) {
     for (const auto& l : labels) {
         label_w.push_back(measure(l));
     }
-    bool horizontal = st.horizontal;
+    const bool horizontal = st.horizontal;
+    float cand_w = 0;
     float cand_h = 0;
-    float sep = 0;
-    float w = 0;
-    float h = 0;
-    auto size_panel = [&] {
-        float cand_w = 0;
-        cand_h = 0;
-        if (!labels.empty()) {
-            for (float lw : label_w) {
-                cand_w = horizontal ? cand_w + lw + gap : std::max(cand_w, lw);
-            }
-            cand_w -= horizontal ? gap : 0;
-            cand_h = horizontal ? row_h : row_h * labels.size();
-            if (!page_label.empty()) {
-                cand_h += row_h * 0.8f;
-            }
+    if (!labels.empty()) {
+        for (float lw : label_w) {
+            cand_w = horizontal ? cand_w + lw + gap : std::max(cand_w, lw);
         }
-        sep = (comp_h > 0 && cand_h > 0) ? 10 * S : 0;
-        w = std::max({comp_w, cand_w + 2 * pad, 160 * S}) + 2 * pad;
-        h = comp_h + sep + cand_h + 2 * pad;
-    };
-    size_panel();
-    const float below = sh - margin - (r.y + r.height + 10 * S);
-    const float above = r.y - 10 * S - margin;
-    if (!horizontal && h > below && h > above) {
-        horizontal = true; // a vertical list fits on neither side of the field: lay it out in a row
-        size_panel();
-        if (w > sw - 2 * margin) {
-            horizontal = false;
-            size_panel();
+        cand_w -= horizontal ? gap : 0;
+        cand_h = horizontal ? row_h : row_h * labels.size();
+        if (!page_label.empty()) {
+            cand_h += row_h * 0.8f;
         }
     }
-    float x = r.x + r.width / 2 - w / 2;
-    x = std::clamp(x, margin, std::max(margin, sw - w - margin));
+    const float sep = (comp_h > 0 && cand_h > 0) ? 10 * S : 0;
+    const float w = std::max({comp_w, cand_w + 2 * pad, 160 * S}) + 2 * pad;
+    const float h = comp_h + sep + cand_h + 2 * pad;
+    const float below = sh - margin - (r.y + r.height + 10 * S);
+    const float above = r.y - 10 * S - margin;
+    const float x = std::clamp(r.x + r.width / 2 - w / 2, margin, std::max(margin, sw - w - margin));
     float y = r.y + r.height + 10 * S;
-    if (h > below && h <= above) {
-        y = r.y - h - 10 * S;
-    } else if (h > below) {
-        y = std::max(margin, sh - margin - h);
+    if (h > below) { // not below the field: above it, else as far down as fits
+        y = h <= above ? r.y - h - 10 * S : std::max(margin, sh - margin - h);
     }
 
     const Color border{119, 26, 45, 255}; // the default search box's outline
@@ -250,7 +230,7 @@ void ime_ui_draw(const ray::Camera2D& camera) {
     if (comp_h > 0) {
         const float tx = x + pad;
         const float ty = cy + (row_h - fs) / 2;
-        ray::DrawTextEx(font, st.composition.c_str(), {tx, ty}, (float)fs, spacing, Color::BLACK);
+        ray::DrawTextEx(font, st.composition.c_str(), {tx, ty}, static_cast<float>(fs), spacing, Color::BLACK);
         const float uy = ty + fs + 2 * S;
         draw_rectangle(ray::Rectangle{tx, uy, comp_w, 2 * S}, Color{90, 90, 90, 255});
         const size_t b0 = utf8_offset(st.composition, st.start);
@@ -270,14 +250,14 @@ void ime_ui_draw(const ray::Camera2D& camera) {
     }
     float cx = x + pad + pad;
     for (size_t i = 0; i < labels.size(); ++i) {
-        const bool is_sel = (int)i == sel;
+        const bool is_sel = static_cast<int>(i) == sel;
         const ray::Rectangle cell = horizontal ? ray::Rectangle{cx - pad / 2, cy, label_w[i] + pad, row_h}
                                                : ray::Rectangle{x + pad, cy, w - 2 * pad, row_h};
         if (is_sel) {
             draw_rectangle_rounded(cell, 0.3f, 8, border);
         }
         const float tx = horizontal ? cx : x + 2 * pad;
-        ray::DrawTextEx(font, labels[i].c_str(), {tx, cy + (row_h - fs) / 2}, (float)fs, spacing,
+        ray::DrawTextEx(font, labels[i].c_str(), {tx, cy + (row_h - fs) / 2}, static_cast<float>(fs), spacing,
                         is_sel ? Color::WHITE : Color::BLACK);
         if (horizontal) {
             cx += label_w[i] + gap;
