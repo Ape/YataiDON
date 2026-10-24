@@ -33,28 +33,16 @@ double get_ms_per_measure(double bpm_val, double time_sig) {
 
 namespace {
     bool is_name_char(char c) {
-        return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_';
-    }
-
-    // part[n] goes on with a command name ("#N" in "#NEXTSONG")
-    bool continues_name(const std::string& part, size_t n) {
-        return n < part.size() && is_name_char(part[n]);
+        return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
     }
 
     // A NAME:value header line, such as "EXAM4:r,58,65,m" or "BALLOON:5"
     bool is_header_line(const std::string& line) {
-        if (line.empty() || line[0] == '_' || !is_name_char(line[0])) {
-            return false;
-        }
-        for (char c : line) {
-            if (c == ':') {
-                return true;
-            }
-            if (!is_name_char(c) && !(c >= '0' && c <= '9')) {
-                return false;
-            }
-        }
-        return false;
+        size_t colon = line.find(':');
+        return colon != std::string::npos && is_name_char(line[0]) &&
+               std::ranges::all_of(line.substr(0, colon), [](char c) {
+                   return is_name_char(c) || std::isdigit(static_cast<unsigned char>(c));
+               });
     }
 } // namespace
 
@@ -490,9 +478,9 @@ TJAParser::notes_to_position(int diff) {
             // Handle commands (lines starting with #)
             if (!part.empty() && part[0] == '#') {
                 for (const auto& [cmd_prefix, handler] : cached_cmds) {
-                    // The whole name must match: #NEXTSONG / #NOTATIONOFF are not #N, #EXAM is not
-                    // #E (a value may follow without a space, as in "#SCROLL0.5")
-                    if (part.starts_with(cmd_prefix) && !continues_name(part, cmd_prefix.length())) {
+                    // whole name only: #NEXTSONG is not #N
+                    if (part.starts_with(cmd_prefix) &&
+                        !(part.size() > cmd_prefix.size() && is_name_char(part[cmd_prefix.size()]))) {
                         std::string value = trim(part.substr(cmd_prefix.length()));
                         handler(value, state);
                         break;
@@ -713,8 +701,7 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
         }
     }
 
-    // The chart ends at the first #END after its #START: a P1/P2 chart can come before the #START
-    // whose #END stopped the search above
+    // chart ends at the first #END after its own #START
     if (note_start != -1) {
         note_end = -1;
         for (size_t i = note_start; i < data.size(); i++) {
@@ -744,8 +731,7 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
         const std::string& line = data[i];
 
         if (is_header_line(line)) {
-            // NAME:value inside the notes (EXAM4: after #NEXTSONG in dan charts) is not note data
-            continue;
+            continue; // e.g. EXAM4: after #NEXTSONG in dan charts
         }
         if (line[0] == '#') {
             if (line.starts_with("#NMSCROLL") || line.starts_with("#BMSCROLL") || line.starts_with("#HBSCROLL")) {
