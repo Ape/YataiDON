@@ -4,6 +4,7 @@
 #include <cctype>
 #include <cstdint>
 #include <fstream>
+#include <memory>
 #include <spdlog/spdlog.h>
 #include <sstream>
 #include <unordered_map>
@@ -157,12 +158,72 @@ namespace {
         return r.status_code == 200 && r.error.code == cpr::ErrorCode::OK;
     }
 
+    // reused across skins and threads, so each server pays one TLS handshake
+    std::mutex pool_mutex;
+    std::vector<std::unique_ptr<cpr::Session>> pool;
+
+    // end of a pass: closes the connections
+    void clear_session_pool() {
+        std::scoped_lock lock(pool_mutex);
+        pool.clear();
+    }
+
+    // a session from the pool, returned to it on destruction
+    struct PooledSession {
+        std::unique_ptr<cpr::Session> session;
+
+        PooledSession() {
+            {
+                std::scoped_lock lock(pool_mutex);
+                if (!pool.empty()) {
+                    session = std::move(pool.back());
+                    pool.pop_back();
+                    return;
+                }
+            }
+            session = std::make_unique<cpr::Session>();
+            init_session(*session);
+        }
+        ~PooledSession() {
+            std::scoped_lock lock(pool_mutex);
+            pool.push_back(std::move(session));
+        }
+        cpr::Session& operator*() const { return *session; }
+    };
+
+    // downloads land here, then rename over the target; cleared per skin
+    constexpr const char* kTempDirName = ".skin-update-tmp";
+
+    fs::path temp_dir(const fs::path& skin_dir) {
+        return skin_dir / kTempDirName;
+    }
+
+    // on failure the temp file is removed and `target` is untouched
+    bool write_atomically(const fs::path& tmp, const fs::path& target, const std::string& body) {
+        std::error_code ec;
+        fs::create_directories(tmp.parent_path(), ec);
+        fs::create_directories(target.parent_path(), ec);
+        std::ofstream out(tmp, std::ios::binary | std::ios::trunc);
+        out << body;
+        out.close();
+        if (out) {
+            fs::rename(tmp, target, ec);
+            if (!ec) {
+                return true;
+            }
+        }
+        fs::remove(tmp, ec);
+        return false;
+    }
+
 } // namespace
 
 void SkinUpdater::set_current_skin(const std::string& name) {
     std::scoped_lock lock(status_mutex_);
     current_skin_ = name;
     current_file_.clear();
+    files_done_ = 0;
+    files_total_ = 0;
 }
 
 void SkinUpdater::set_current_file(const std::string& file) {
@@ -170,17 +231,24 @@ void SkinUpdater::set_current_file(const std::string& file) {
     current_file_ = file;
 }
 
-void SkinUpdater::note_file_updated() {
+void SkinUpdater::set_files_total(int total) {
     std::scoped_lock lock(status_mutex_);
-    ++files_updated_;
+    files_total_ = total;
+}
+
+void SkinUpdater::note_file_done(bool updated) {
+    std::scoped_lock lock(status_mutex_);
+    ++files_done_;
+    files_updated_ += updated;
 }
 
 bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const std::string& repo_url,
                                   const std::string& branch) {
     set_current_skin(skin_dir.filename().string());
+    std::error_code tmp_ec;
+    fs::remove_all(temp_dir(skin_dir), tmp_ec); // left by a pass that was cut short
 
-    cpr::Session session;
-    init_session(session);
+    PooledSession session;
 
     auto raw_url = [&](const std::string& rel_path) { return repo_url + "/raw/branch/" + branch + "/" + rel_path; };
 
@@ -188,7 +256,7 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
 
     // a whole manifest or nothing: files it doesn't list get removed below, so a truncated
     // one would delete everything past the cut (and the last line must be complete)
-    cpr::Response checksums = get_url(session, raw_url("checksums.sha256"), 60000, 5000);
+    cpr::Response checksums = get_url(*session, raw_url("checksums.sha256"), 60000, 5000);
     if (!fetched(checksums) || checksums.text.empty() || checksums.text.back() != '\n') {
         spdlog::warn("Skin update ({}): could not fetch a complete checksums.sha256 (HTTP {}, curl error {}: {})",
                      skin_dir.filename().string(), checksums.status_code, static_cast<int>(checksums.error.code),
@@ -219,7 +287,7 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
 
         fs::path local_file = (skin_dir / rel_path).lexically_normal();
         const fs::path local_rel = local_file.lexically_relative(skin_dir);
-        if (local_rel.empty() || *local_rel.begin() == "..") {
+        if (local_rel.empty() || *local_rel.begin() == ".." || *local_rel.begin() == kTempDirName) {
             spdlog::warn("Skin update ({}): skipping unsafe manifest path {}", skin_dir.filename().string(), rel_path);
             continue;
         }
@@ -249,11 +317,11 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
         jobs.push_back({rel_path, hash, std::move(local_file), key});
     }
 
+    set_files_total(static_cast<int>(jobs.size()));
     std::mutex result_mutex;
     std::atomic<size_t> next_job{0};
     auto worker = [&] {
-        cpr::Session job_session;
-        init_session(job_session);
+        PooledSession job_session;
         for (size_t i = next_job.fetch_add(1); i < jobs.size(); i = next_job.fetch_add(1)) {
             const Job& job = jobs[i];
             set_current_file(job.rel_path);
@@ -261,7 +329,7 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
             std::string body;
             bool got = false;
             for (const std::string& url : {media_url(job.rel_path), raw_url(job.rel_path)}) {
-                cpr::Response resp = get_url(job_session, url, 60000, 5000);
+                cpr::Response resp = get_url(*job_session, url, 60000, 5000);
 
                 if (fetched(resp) && crypto::to_hex(crypto::sha256(resp.text)) == job.hash) {
                     body = std::move(resp.text);
@@ -275,32 +343,31 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
                     skin_dir.filename().string(), job.rel_path);
                 std::scoped_lock lock(result_mutex);
                 complete = false;
+                note_file_done(false);
                 continue;
             }
 
-            std::error_code mkdir_ec;
-            fs::create_directories(job.local_file.parent_path(), mkdir_ec);
-            std::ofstream out(job.local_file, std::ios::binary | std::ios::trunc);
-            if (!out) {
-                spdlog::warn("Skin update ({}): failed to write {}", skin_dir.filename().string(), job.rel_path);
+            const fs::path tmp = temp_dir(skin_dir) / (std::to_string(i) + ".tmp");
+            if (!write_atomically(tmp, job.local_file, body)) {
+                spdlog::warn("Skin update ({}): failed to write {}; keeping the old file", skin_dir.filename().string(),
+                             job.rel_path);
                 std::scoped_lock lock(result_mutex);
                 complete = false;
+                note_file_done(false);
                 continue;
             }
-            out << body;
-            out.close();
             uintmax_t size = 0;
             int64_t mtime = 0;
             {
                 std::scoped_lock lock(result_mutex);
-                if (out && file_stamp(job.local_file, size, mtime)) {
+                if (file_stamp(job.local_file, size, mtime)) {
                     seen[job.key] = HashCacheEntry{job.hash, size, mtime};
                 } else {
                     seen.erase(job.key);
                 }
                 ++updated;
             }
-            note_file_updated();
+            note_file_done(true);
         }
     };
     {
@@ -348,6 +415,7 @@ bool SkinUpdater::update_one_skin(const std::filesystem::path& skin_dir, const s
     }
 
     save_hash_cache(skin_dir, seen);
+    fs::remove_all(temp_dir(skin_dir), tmp_ec);
     spdlog::info("Skin update ({}): {} file(s) updated, {} removed", skin_dir.filename().string(), updated, removed);
     return complete;
 }
@@ -380,6 +448,7 @@ void SkinUpdater::scan_skins() {
 
         update_one_skin(entry.path(), strip_dot_git(repo_url), branch);
     }
+    clear_session_pool();
 }
 
 void SkinUpdater::start() {
@@ -398,9 +467,7 @@ void SkinUpdater::start() {
             spdlog::error("Skin update: unhandled exception: {}", e.what());
         }
         running_ = false;
-        std::scoped_lock lock(status_mutex_);
-        current_skin_.clear();
-        current_file_.clear();
+        set_current_skin({});
     });
 }
 
@@ -433,10 +500,9 @@ void SkinUpdater::download(std::vector<Request> requests) {
                 failed_.push_back(r.name);
             }
         }
+        clear_session_pool();
         running_ = false;
-        std::scoped_lock lock(status_mutex_);
-        current_skin_.clear();
-        current_file_.clear();
+        set_current_skin({});
     });
 }
 
@@ -465,6 +531,8 @@ SkinUpdater::Status SkinUpdater::snapshot() {
     s.current_skin = current_skin_;
     s.current_file = current_file_;
     s.files_updated = files_updated_;
+    s.files_done = files_done_;
+    s.files_total = files_total_;
     s.failed = failed_;
     return s;
 }
