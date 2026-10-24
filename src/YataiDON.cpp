@@ -80,8 +80,11 @@ static void draw_skin_update_status() {
     const float x = static_cast<float>(size);
     float y = static_cast<float>(size) * 2.0f;
 
-    const std::string skin_line =
+    std::string skin_line =
         st.current_skin.empty() ? "Checking for skin updates..." : "Updating skin: " + st.current_skin;
+    if (!st.current_skin.empty() && st.files_total > 0) {
+        skin_line += " (" + std::to_string(st.files_done) + " / " + std::to_string(st.files_total) + " files)";
+    }
     ray::Font skin_font = font_manager.get_font(skin_line, size);
     draw_text_ex(skin_font, skin_line.c_str(), Vec2{x, y}, static_cast<float>(size), 1.0f, Color::YELLOW);
 
@@ -515,6 +518,7 @@ static void run_frame() {
 
         debug_menu.draw();
     }
+    ime_ui_draw(L.camera);
 
     draw_outer_border(tex.screen_width, tex.screen_height, L.last_color);
 
@@ -589,7 +593,9 @@ int main(int argc, char* argv[]) {
     quiet_raylib_log();
     setup_logging(global_data.config->general.log_level);
 
+    ime_ui_set_hint();
     init_window(1280, 720, "YataiDON");
+    ime_ui_install();
     try {
         load_skin();
     } catch (const std::exception& e) {
