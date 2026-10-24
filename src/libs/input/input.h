@@ -6,15 +6,9 @@
 #include <thread>
 #include <vector>
 
-<<<<<<< Updated upstream:src/libs/input.h
-#include "global_data.h"
-#include "gfx.h" // IWYU pragma: keep
-#include "sdl_compat.h"
-=======
 #include "../global_data.h"
-#include "../gfx/ray.h" // IWYU pragma: keep
+#include "../gfx.h" // IWYU pragma: keep
 #include "../gfx/sdl_compat.h"
->>>>>>> Stashed changes:src/libs/input/input.h
 
 extern std::atomic<bool> input_thread_running;
 extern std::thread input_thread;

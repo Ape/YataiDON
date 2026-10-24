@@ -15,13 +15,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-<<<<<<< Updated upstream
 #include "../libs/gfx.h"
-#include "../libs/sdl_compat.h"
-=======
-#include "../libs/gfx/ray.h"
 #include "../libs/gfx/sdl_compat.h"
->>>>>>> Stashed changes
 
 #if !defined(__ANDROID__) && !defined(YATAIDON_PLATFORM_IOS) && !defined(__EMSCRIPTEN__)
 #include <cpptrace/cpptrace.hpp>

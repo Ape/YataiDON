@@ -321,3 +321,12 @@ inline bool SDL_GetAudioDeviceFormat(SDL_AudioDeviceID, SDL_AudioSpec* spec, int
 }
 
 #endif // YATAIDON_USE_SDL2
+
+// The game's (only) window, or nullptr.
+inline SDL_Window* main_window() {
+    int count = 0;
+    SDL_Window** windows = SDL_GetWindows(&count);
+    SDL_Window* win = (windows && count > 0) ? windows[0] : nullptr;
+    SDL_free(windows);
+    return win;
+}

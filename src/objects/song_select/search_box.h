@@ -1,14 +1,8 @@
 #pragma once
 
-<<<<<<< Updated upstream
-#include "../../libs/animation.h"
-#include "../../libs/gfx.h"
-#include "../../libs/texture.h"
-=======
 #include "../../libs/math/animation.h"
-#include "../../libs/gfx/ray.h"
+#include "../../libs/gfx.h"
 #include "../../libs/gfx/texture.h"
->>>>>>> Stashed changes
 
 class SongSelectScript;
 

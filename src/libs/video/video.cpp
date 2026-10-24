@@ -1,5 +1,5 @@
 #include "video.h"
-#include "gfx_native.h"
+#include "../gfx_native.h"
 
 #include <climits>
 #include <spdlog/spdlog.h>

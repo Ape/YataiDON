@@ -4,7 +4,7 @@
 #include <concepts>
 #include <type_traits>
 
-#include "math_types.h"
+#include "../math/math_types.h"
 
 // Backend-neutral GPU texture handle. Layout matches raylib's Texture, so it
 // converts implicitly to/from it (same pattern as Vec2 in math_types.h).

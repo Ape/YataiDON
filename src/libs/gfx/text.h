@@ -1,7 +1,7 @@
 #pragma once
 
 #include <future>
-#include "gfx_native.h"
+#include "../gfx_native.h"
 #include <mutex>
 #include <optional>
 #include <string>

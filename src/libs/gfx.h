@@ -6,11 +6,11 @@
 
 #include <cstdint>
 
-#include "color_utils.h"
-#include "gfx_types.h"
-#include "math_types.h"
+#include "gfx/color_utils.h"
+#include "gfx/gfx_types.h"
+#include "math/math_types.h"
 #if defined(PLATFORM_ANDROID) || defined(YATAIDON_PLATFORM_IOS)
-#include "sdl_compat.h"
+#include "gfx/sdl_compat.h"
 #endif
 #include <algorithm>
 #include <string>

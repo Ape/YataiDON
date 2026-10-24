@@ -10,11 +10,7 @@
 #include <vector>
 
 #include "av.h"
-<<<<<<< Updated upstream:src/libs/video.h
-#include "gfx.h" // IWYU pragma: keep
-=======
-#include "../gfx/ray.h" // IWYU pragma: keep
->>>>>>> Stashed changes:src/libs/video/video.h
+#include "../gfx.h" // IWYU pragma: keep
 
 namespace fs = std::filesystem;
 

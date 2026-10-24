@@ -12,13 +12,8 @@
 
 #include "../math/animation.h"
 #include "color_utils.h"
-<<<<<<< Updated upstream:src/libs/texture.h
-#include "gfx.h" // IWYU pragma: keep
-#include "skin_config.h"
-=======
-#include "ray.h" // IWYU pragma: keep
+#include "../gfx.h" // IWYU pragma: keep
 #include "../skin_config.h"
->>>>>>> Stashed changes:src/libs/gfx/texture.h
 
 namespace fs = std::filesystem;
 

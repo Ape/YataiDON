@@ -3,13 +3,8 @@
 #include <optional>
 
 // clang-format off
-<<<<<<< Updated upstream:src/libs/webcam.h
-#include "sdl_compat.h" // before ray.h: raylib.h must not be the first to pull in <stdarg.h>
-#include "gfx.h"       // IWYU pragma: keep
-=======
 #include "../gfx/sdl_compat.h" // before ray.h: raylib.h must not be the first to pull in <stdarg.h>
-#include "../gfx/ray.h"       // IWYU pragma: keep
->>>>>>> Stashed changes:src/libs/video/webcam.h
+#include "../gfx.h"       // IWYU pragma: keep
 // clang-format on
 
 class WebCamera {

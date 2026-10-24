@@ -10,15 +10,9 @@
 #include <string>
 #include <vector>
 
-<<<<<<< Updated upstream
-#include "color_utils.h"
-#include "config.h"
-#include "gfx.h" // IWYU pragma: keep
-=======
 #include "gfx/color_utils.h"
 #include "file/config.h"
-#include "gfx/ray.h" // IWYU pragma: keep
->>>>>>> Stashed changes
+#include "gfx.h" // IWYU pragma: keep
 
 namespace fs = std::filesystem;
 

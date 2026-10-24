@@ -1,5 +1,5 @@
 #include "input.h"
-#include "gfx_native.h"
+#include "../gfx_native.h"
 
 #include <algorithm>
 #include <array>
@@ -13,14 +13,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-<<<<<<< Updated upstream:src/libs/input.cpp
-#include "animation.h"
-#include "profiler.h"
-=======
 #include "../math/animation.h"
 #include "ime_ui.h"
 #include "../profiler.h"
->>>>>>> Stashed changes:src/libs/input/input.cpp
 #include "spdlog/spdlog.h"
 #include "../gfx/texture.h"
 #include "../time.h"
