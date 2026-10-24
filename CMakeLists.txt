@@ -87,6 +87,13 @@ if(IOS)
   endif()
 endif()
 
+set(YATAIDON_GFX_BACKEND "raylib" CACHE STRING "Graphics backend: raylib or bgfx")
+set_property(CACHE YATAIDON_GFX_BACKEND PROPERTY STRINGS raylib bgfx)
+if(NOT YATAIDON_GFX_BACKEND STREQUAL "raylib")
+  message(FATAL_ERROR "YATAIDON_GFX_BACKEND=${YATAIDON_GFX_BACKEND}: only raylib is implemented so far")
+endif()
+message(STATUS "Graphics backend: ${YATAIDON_GFX_BACKEND}")
+
 include(cmake/deps.cmake)
 set(YATAIDON_SKINS_DIR "${CMAKE_SOURCE_DIR}/Skins" CACHE PATH "Skins used for iOS bundling")
 
@@ -102,6 +109,9 @@ file(GLOB_RECURSE HeaderFiles CONFIGURE_DEPENDS
 # Exclude platform-specific and optional sources from main glob
 list(FILTER CppFiles EXCLUDE REGEX "/src/libs/optional/")
 list(FILTER CppFiles EXCLUDE REGEX "/src/platform/")
+# One graphics backend (src/libs/gfx_<backend>.cpp) implements src/libs/gfx.h
+list(FILTER CppFiles EXCLUDE REGEX "/src/libs/gfx_[a-z0-9]+\\.cpp$")
+list(APPEND CppFiles ${CMAKE_SOURCE_DIR}/src/libs/gfx_${YATAIDON_GFX_BACKEND}.cpp)
 
 # Platform-specific sources
 if(WIN32)

@@ -37,8 +37,6 @@ private:
     std::unordered_map<int, SizedFont> fonts;
     uint64_t use_clock = 0;
 
-    Texture sentinel_texture{};
-
     mutable std::mutex font_mutex;
 
     static constexpr size_t MAX_SIZED_FONTS = 32;

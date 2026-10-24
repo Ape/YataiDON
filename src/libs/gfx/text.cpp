@@ -31,23 +31,9 @@ void FontManager::init(const fs::path& font_path) {
         release_cache(entry);
     }
     fonts.clear();
-    {
-        int size = 0;
-        unsigned char* data = load_file_data(font_path.string().c_str(), &size);
-        if (!data || size <= 0) {
-            if (data) {
-                unload_file_data(data);
-            }
-            throw std::runtime_error("Failed to read font data: " + font_path.string());
-        }
-        font_data.assign(data, data + size);
-        unload_file_data(data);
-    }
-
-    if (sentinel_texture.id == 0) {
-        Image px = gen_image_color(1, 1, Color::BLANK);
-        sentinel_texture = load_texture_from_image(px);
-        unload_image(px);
+    font_data = load_file_bytes(font_path.string().c_str());
+    if (font_data.empty()) {
+        throw std::runtime_error("Failed to read font data: " + font_path.string());
     }
 }
 
@@ -131,10 +117,6 @@ void FontManager::unload() {
         release_cache(entry);
     }
     fonts.clear();
-    if (sentinel_texture.id != 0) {
-        unload_texture(sentinel_texture);
-        sentinel_texture = {};
-    }
 }
 
 void FontManager::evict_lru(int keep_size) {
@@ -164,18 +146,12 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
     if (cps.empty()) {
         return true;
     }
-    int count = 0;
-    GlyphInfo* g =
-        load_font_data(font_data.data(), (int)font_data.size(), font_size, cps.data(), (int)cps.size(), &count);
-    if (!g) {
-        return false;
-    }
+    std::vector<GlyphInfo> glyphs = load_font_data(font_data, font_size, cps);
     std::unordered_set<int> got;
-    for (int i = 0; i < count; i++) {
-        entry.cache.push_back(g[i]);
-        got.insert(g[i].value);
-    } // take ownership of the glyph images
-    std::free(g); // array only; images now live in `cache`
+    for (const GlyphInfo& g : glyphs) {
+        entry.cache.push_back(g); // takes ownership of the glyph image
+        got.insert(g.value);
+    }
     entry.atlas_dirty = true;
 
     std::vector<int> missing, alts;
@@ -192,17 +168,9 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
     if (missing.empty()) {
         return true;
     }
-    int alt_count = 0;
-    GlyphInfo* ag =
-        load_font_data(font_data.data(), (int)font_data.size(), font_size, alts.data(), (int)alts.size(), &alt_count);
-    if (!ag) {
-        for (int cp : missing) {
-            entry.codepoints.erase(cp);
-        }
-        return true;
-    }
+    std::vector<GlyphInfo> ag = load_font_data(font_data, font_size, alts);
     std::vector<bool> assigned(alts.size(), false);
-    for (int i = 0; i < alt_count; i++) {
+    for (size_t i = 0; i < ag.size(); i++) {
         bool used = false;
         for (size_t k = 0; k < alts.size(); k++) {
             if (assigned[k] || alts[k] != ag[i].value) {
@@ -221,8 +189,7 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
             unload_image(ag[i].image);
         }
     }
-    std::free(ag);
-    // Any alt LoadFontData silently dropped never got assigned; retry those too.
+    // Any alt the font lacks never got assigned; retry those too.
     for (size_t k = 0; k < alts.size(); k++) {
         if (!assigned[k]) {
             entry.codepoints.erase(missing[k]);
@@ -231,15 +198,15 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
     return true;
 }
 
-// Pack the cached glyphs into a fresh atlas texture. Glyph images stay in `cache`
-// (raylib's LoadFontEx would crop them out of the atlas; nothing here reads them).
+// Pack the cached glyphs into a fresh atlas texture. The Font's glyph images alias
+// the GRAYSCALE bitmaps owned by `cache` (text_coverage composites from them).
 void FontManager::rebuild_atlas(SizedFont& entry, int font_size) {
     release_font(entry);
     const int n = (int)entry.cache.size();
     Font f{};
     f.baseSize = font_size;
     f.glyphCount = n;
-    f.glyphPadding = 4; // FONT_TTF_DEFAULT_CHARS_PADDING, same as LoadFontEx
+    f.glyphPadding = 4; // same as load_font
     if (n == 0) {
         entry.atlas_dirty = false;
         return;
@@ -263,12 +230,6 @@ void FontManager::rebuild_atlas(SizedFont& entry, int font_size) {
         return;
     }
     f.texture = load_texture_from_image(atlas);
-    // Like LoadFontEx: the Font's own glyph images are GRAY_ALPHA crops of the atlas
-    // (ImageDrawTextEx / OutlinedText composite from them). The cache keeps the raw
-    // GRAYSCALE bitmaps GenImageFontAtlas needs for the next repack.
-    for (int i = 0; i < n; i++) {
-        f.glyphs[i].image = image_from_image(atlas, f.recs[i]);
-    }
     unload_image(atlas);
     set_texture_filter(f.texture, texture_filter::BILINEAR);
     entry.font = f;
@@ -277,18 +238,13 @@ void FontManager::rebuild_atlas(SizedFont& entry, int font_size) {
 }
 
 // Free texture/recs/glyph-struct array of a font built by rebuild_atlas. Never
-// UnloadFont(): that would free the glyph images we still own in `cache`.
+// unload_font(): that would free the glyph images still owned by `cache`.
 void FontManager::release_font(SizedFont& entry) {
     if (!entry.loaded) {
         return;
     }
     if (entry.font.texture.id != 0) {
         unload_texture(entry.font.texture);
-    }
-    if (entry.font.glyphs) {
-        for (int i = 0; i < entry.font.glyphCount; i++) {
-            unload_image(entry.font.glyphs[i].image);
-        }
     }
     if (entry.font.recs) {
         std::free(entry.font.recs);
@@ -366,14 +322,9 @@ static Color clear_of(Color c) {
     return Color{c.r, c.g, c.b, 0};
 }
 
+// Both images are RGBA8 (every canvas here comes from gen_image_color).
 static void blit_over(Image* dst, const Image& src, int x0, int y0) {
     if (!dst->data || !src.data) {
-        return;
-    }
-    if (dst->format != pixel_format::RGBA8 || src.format != pixel_format::RGBA8) {
-        Rect sr = {0, 0, (float)src.width, (float)src.height};
-        Rect dr = {(float)x0, (float)y0, (float)src.width, (float)src.height};
-        image_draw_image_pro(dst, src, sr, dr, {0, 0}, 0.0f, Color::WHITE);
         return;
     }
     unsigned char* d = (unsigned char*)dst->data;
@@ -416,9 +367,21 @@ static int text_margin(float font_size) {
     return (int)std::ceil(font_size * 0.25f);
 }
 
-static Image text_image(const Font& font, const char* text, float font_size, float spacing, int margin) {
+// Alpha-only rendering of a line: every caller recolors it, so only coverage is kept.
+struct Coverage {
+    std::vector<unsigned char> a;
+    int w = 0, h = 0;
+};
+
+static Coverage text_coverage(const Font& font, const char* text, float font_size, float spacing, int margin) {
     Vec2 sz = measure_text_ex(font, text, font_size, spacing);
-    Image im = gen_image_color((int)sz.x, (int)sz.y + margin * 2, Color::BLANK);
+    Coverage c;
+    c.w = (int)sz.x;
+    c.h = (int)sz.y + margin * 2;
+    if (c.w <= 0 || c.h <= 0) {
+        return {};
+    }
+    c.a.assign((size_t)c.w * c.h, 0);
     int x = 0;
     for (const char* p = text; *p;) {
         int n = 0;
@@ -429,56 +392,58 @@ static Image text_image(const Font& font, const char* text, float font_size, flo
         p += n;
         int gi = get_glyph_index(font, cp);
         const GlyphInfo& g = font.glyphs[gi];
-        if (cp != ' ' && cp != '\t') {
-            Rect sr = {0, 0, (float)g.image.width, (float)g.image.height};
-            Rect dr = {(float)(x + g.offsetX), (float)(margin + g.offsetY), font.recs[gi].width, font.recs[gi].height};
-            image_draw_image_pro(&im, g.image, sr, dr, {0, 0}, 0.0f, Color::WHITE);
+        const auto* px = static_cast<const unsigned char*>(g.image.data);
+        if (px && cp != ' ' && cp != '\t') {
+            const int ox = x + g.offsetX, oy = margin + g.offsetY;
+            for (int y = 0; y < g.image.height; y++) {
+                if (oy + y < 0 || oy + y >= c.h) {
+                    continue;
+                }
+                for (int gx = 0; gx < g.image.width; gx++) {
+                    if (ox + gx < 0 || ox + gx >= c.w) {
+                        continue;
+                    }
+                    const unsigned s = px[y * g.image.width + gx];
+                    unsigned char& d = c.a[(oy + y) * c.w + ox + gx];
+                    if (s) { // alpha "over", same integer rounding as before (raylib's ColorAlphaBlend)
+                        d = s == 255 ? 255 : (unsigned char)(((s + 1) * 256 + d * (255 - s)) >> 8);
+                    }
+                }
+            }
         }
         x += (g.advanceX == 0 ? (int)(font.recs[gi].width + spacing) : g.advanceX + (int)spacing);
     }
-    return im;
+    return c;
 }
 
 static void draw_text_clean(Image* dst, const Font& font, const char* text, Vec2 pos, float font_size, float spacing,
                             Color tint) {
     const int m = text_margin(font_size);
-    Image t = text_image(font, text, font_size, spacing, m);
-    if (t.data && t.width > 0 && t.height > 0) {
-        if (t.format != pixel_format::RGBA8) {
-            image_format(&t, pixel_format::RGBA8);
-        }
-        unsigned char* px = (unsigned char*)t.data;
-        const int n = t.width * t.height;
-        for (int i = 0; i < n; i++) {
-            px[i * 4 + 0] = tint.r;
-            px[i * 4 + 1] = tint.g;
-            px[i * 4 + 2] = tint.b;
-            px[i * 4 + 3] = (unsigned char)((px[i * 4 + 3] * (int)tint.a) / 255);
-        }
-        blit_over(dst, t, (int)pos.x, (int)pos.y - m);
+    Coverage c = text_coverage(font, text, font_size, spacing, m);
+    if (c.a.empty()) {
+        return;
     }
+    Image t = gen_image_color(c.w, c.h, tint);
+    auto* px = static_cast<unsigned char*>(t.data);
+    for (size_t i = 0; i < c.a.size(); i++) {
+        px[i * 4 + 3] = (unsigned char)((c.a[i] * (int)tint.a) / 255);
+    }
+    blit_over(dst, t, (int)pos.x, (int)pos.y - m);
     unload_image(t);
 }
 
 static void stamp_outline(Image* dst, const Font& font, const char* text, Vec2 pos, float font_size, float spacing,
                           Color outline_color, float radius) {
     const int m = text_margin(font_size);
-    Image cov = text_image(font, text, font_size, spacing, m);
-    if (!cov.data || cov.width <= 0 || cov.height <= 0) {
-        unload_image(cov);
+    Coverage cov = text_coverage(font, text, font_size, spacing, m);
+    if (cov.a.empty()) {
         return;
     }
-    if (cov.format != pixel_format::RGBA8) {
-        image_format(&cov, pixel_format::RGBA8);
-    }
+    const std::vector<unsigned char>& a = cov.a;
     const int r = (int)std::ceil(radius + 0.5f);
-    const int W = cov.width, H = cov.height;
+    const int W = cov.w, H = cov.h;
     const int OW = W + 2 * r, OH = H + 2 * r;
-    std::vector<unsigned char> a(W * H), out(OW * OH, 0);
-    const unsigned char* cp = (const unsigned char*)cov.data;
-    for (int i = 0; i < W * H; i++) {
-        a[i] = cp[i * 4 + 3];
-    }
+    std::vector<unsigned char> out(OW * OH, 0);
     // disk weights, 0..255, with the soft 1 px rim; rows carry their non-zero span
     const int D = 2 * r + 1;
     std::vector<unsigned char> wt(D * D, 0);
@@ -526,7 +491,6 @@ static void stamp_outline(Image* dst, const Font& font, const char* text, Vec2 p
     }
     blit_over(dst, o, (int)pos.x - r, (int)pos.y - m - r);
     unload_image(o);
-    unload_image(cov);
 }
 
 static Font deep_copy_font(const Font& src) {
@@ -565,7 +529,7 @@ Font FontManager::get_font(const std::string& text, int font_size) {
 Font FontManager::copy_font(const std::string& text, int font_size) {
     std::scoped_lock lock(font_mutex);
     Font copy = deep_copy_font(acquire(text, font_size).font);
-    copy.texture = sentinel_texture;
+    copy.texture = {}; // CPU-only: measured and composited, never drawn
     return copy;
 }
 

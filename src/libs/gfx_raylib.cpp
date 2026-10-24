@@ -72,23 +72,13 @@ static_assert(blend_mode::CUSTOM_SEPARATE == ray::BLEND_CUSTOM_SEPARATE);
 static_assert(shader_uniform::FLOAT == ray::SHADER_UNIFORM_FLOAT);
 static_assert(shader_uniform::VEC2 == ray::SHADER_UNIFORM_VEC2);
 static_assert(shader_uniform::VEC3 == ray::SHADER_UNIFORM_VEC3);
+static_assert(pixel_format::GRAYSCALE == ray::PIXELFORMAT_UNCOMPRESSED_GRAYSCALE);
+static_assert(pixel_format::GRAY_ALPHA == ray::PIXELFORMAT_UNCOMPRESSED_GRAY_ALPHA);
 static_assert(pixel_format::RGB8 == ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8);
 static_assert(pixel_format::RGBA8 == ray::PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
 static_assert(material_map::DIFFUSE == ray::MATERIAL_MAP_DIFFUSE);
 static_assert(cull_face::FRONT == ray::RL_CULL_FACE_FRONT);
 static_assert(cull_face::BACK == ray::RL_CULL_FACE_BACK);
-
-const char* text_format(const char* fmt, ...) {
-    static char buffers[4][1024];
-    static int index = 0;
-    char* out = buffers[index];
-    index = (index + 1) % 4;
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(out, sizeof(buffers[0]), fmt, args);
-    va_end(args);
-    return out;
-}
 
 void draw_rectangle(int x, int y, int w, int h, Color color) {
     ray::DrawRectangle(x, y, w, h, {color.r, color.g, color.b, color.a});
@@ -222,10 +212,6 @@ void swap_screen_buffer() {
     ray::SwapScreenBuffer();
 }
 
-Texture load_texture(const char* path) {
-    return ray::LoadTexture(path);
-}
-
 Texture load_texture_from_image(Image image) {
     return ray::LoadTextureFromImage(to<ray::Image>(image));
 }
@@ -248,50 +234,8 @@ void gen_texture_mipmaps(Texture& tex) {
     tex = native;
 }
 
-Texture load_texture_mipmapped(const char* path, int filter) {
-    Texture tex = ray::LoadTexture(path);
-    gen_texture_mipmaps(tex);
-    set_texture_filter(tex, filter);
-    return tex;
-}
-
-Vec2 measure_text_ex(const Font& font, const char* text, float font_size, float spacing) {
-    return ray::MeasureTextEx(to<ray::Font>(font), text, font_size, spacing);
-}
-
-Font load_font_ex(const char* path, int font_size, int* codepoints, int codepoint_count) {
-    return to<Font>(ray::LoadFontEx(path, font_size, codepoints, codepoint_count));
-}
-
-void unload_font(Font font) {
-    ray::UnloadFont(to<ray::Font>(font));
-}
-
 Font get_font_default() {
     return to<Font>(ray::GetFontDefault());
-}
-
-GlyphInfo* load_font_data(const unsigned char* data, int data_size, int font_size, const int* codepoints,
-                          int codepoint_count, int* glyph_count) {
-    return to_ptr<GlyphInfo>(
-        ray::LoadFontData(data, data_size, font_size, codepoints, codepoint_count, ray::FONT_DEFAULT, glyph_count));
-}
-
-Image gen_image_font_atlas(const GlyphInfo* glyphs, Rect** recs, int glyph_count, int font_size, int padding) {
-    return to<Image>(ray::GenImageFontAtlas(to_ptr<ray::GlyphInfo>(glyphs), reinterpret_cast<ray::Rectangle**>(recs),
-                                            glyph_count, font_size, padding, 0));
-}
-
-int get_glyph_index(const Font& font, int codepoint) {
-    return ray::GetGlyphIndex(to<ray::Font>(font), codepoint);
-}
-
-int get_codepoint_next(const char* text, int* codepoint_size) {
-    return ray::GetCodepointNext(text, codepoint_size);
-}
-
-const char* codepoint_to_utf8(int codepoint, int* utf8_size) {
-    return ray::CodepointToUTF8(codepoint, utf8_size);
 }
 
 void begin_scissor_mode(int x, int y, int width, int height) {
@@ -371,10 +315,6 @@ void end_shader_mode() {
     ray::EndShaderMode();
 }
 
-Image load_image(const char* path) {
-    return to<Image>(ray::LoadImage(path));
-}
-
 Image load_image_from_texture(Texture tex) {
     return to<Image>(ray::LoadImageFromTexture(tex));
 }
@@ -383,61 +323,12 @@ Image load_image_from_screen() {
     return to<Image>(ray::LoadImageFromScreen());
 }
 
-void unload_image(Image image) {
-    ray::UnloadImage(to<ray::Image>(image));
-}
-
-bool export_image(Image image, const char* path) {
-    return ray::ExportImage(to<ray::Image>(image), path);
-}
-
-Image image_copy(Image image) {
-    return to<Image>(ray::ImageCopy(to<ray::Image>(image)));
-}
-
-Image image_from_image(Image image, Rect rec) {
-    return to<Image>(ray::ImageFromImage(to<ray::Image>(image), rec));
-}
-
-void image_format(Image* image, int new_format) {
-    ray::ImageFormat(to_ptr<ray::Image>(image), new_format);
-}
-
-void image_crop(Image* image, Rect crop) {
-    ray::ImageCrop(to_ptr<ray::Image>(image), crop);
-}
-
-void image_rotate_cw(Image* image) {
-    ray::ImageRotateCW(to_ptr<ray::Image>(image));
-}
-
-void image_draw_image_pro(Image* dst, Image src, Rect src_rec, Rect dst_rec, Vec2 origin, float rotation, Color tint) {
-    ray::ImageDrawImagePro(to_ptr<ray::Image>(dst), to<ray::Image>(src), src_rec, dst_rec, origin, rotation,
-                           {tint.r, tint.g, tint.b, tint.a});
-}
-
-Rect get_image_alpha_border(Image image, float threshold) {
-    return ray::GetImageAlphaBorder(to<ray::Image>(image), threshold);
-}
-
-int get_pixel_data_size(int width, int height, int format) {
-    return ray::GetPixelDataSize(width, height, format);
-}
-
 void update_texture(Texture tex, const void* pixels) {
     ray::UpdateTexture(tex, pixels);
 }
 
 bool is_texture_valid(Texture tex) {
     return ray::IsTextureValid(tex);
-}
-
-unsigned char* load_file_data(const char* path, int* size) {
-    return ray::LoadFileData(path, size);
-}
-
-void unload_file_data(unsigned char* data) {
-    ray::UnloadFileData(data);
 }
 
 RenderTarget load_render_texture(int width, int height) {
@@ -490,10 +381,6 @@ void set_material_texture(Material* material, int map_type, Texture texture) {
 
 void clear_background(Color color) {
     ray::ClearBackground({color.r, color.g, color.b, color.a});
-}
-
-Image gen_image_color(int w, int h, Color color) {
-    return to<Image>(ray::GenImageColor(w, h, {color.r, color.g, color.b, color.a}));
 }
 
 Shader load_shader(const char* vs_path, const char* fs_path) {

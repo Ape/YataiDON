@@ -535,7 +535,9 @@ static void run_frame() {
         static int screenshot_counter = 0;
         Image image = load_image_from_screen();
         if (L.current_screen == Screens::RESULT && tex.options[SCO::CROP_RESULT_SCREENSHOT]) {
-            image_crop(&image, {0, 0, (float)image.width, (float)image.height / 2.0f});
+            Image top = image_from_image(image, {0, 0, (float)image.width, (float)(image.height / 2)});
+            unload_image(image);
+            image = top;
         }
         export_image(image, text_format("screenshot%03i.png", screenshot_counter));
         unload_image(image);

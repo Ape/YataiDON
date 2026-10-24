@@ -12,7 +12,9 @@
 #include "gfx/sdl_compat.h"
 #endif
 #include <algorithm>
+#include <span>
 #include <string>
+#include <vector>
 
 inline constexpr float deg2rad = 3.14159265358979323846f / 180.0f;
 
@@ -47,6 +49,8 @@ namespace shader_uniform {
 } // namespace shader_uniform
 
 namespace pixel_format {
+    inline constexpr int GRAYSCALE = 1;
+    inline constexpr int GRAY_ALPHA = 2;
     inline constexpr int RGB8 = 4;
     inline constexpr int RGBA8 = 7;
 } // namespace pixel_format
@@ -102,12 +106,13 @@ void set_texture_wrap(Texture tex, int wrap);
 void gen_texture_mipmaps(Texture& tex);
 Texture load_texture_mipmapped(const char* path, int filter = texture_filter::TRILINEAR);
 Vec2 measure_text_ex(const Font& font, const char* text, float font_size, float spacing);
-Font load_font_ex(const char* path, int font_size, int* codepoints, int codepoint_count);
+// Loads printable ASCII; falls back to the default font.
+Font load_font(const char* path, int font_size);
 void unload_font(Font font);
-// Rasterizes codepoints; the returned array (and each glyph's image data) is
-// malloc'd: free images with unload_image and the array with std::free.
-GlyphInfo* load_font_data(const unsigned char* data, int data_size, int font_size, const int* codepoints,
-                          int codepoint_count, int* glyph_count);
+// Rasterizes the codepoints the font has; each glyph's GRAYSCALE image is the
+// caller's to free with unload_image.
+std::vector<GlyphInfo> load_font_data(std::span<const unsigned char> data, int font_size,
+                                      std::span<const int> codepoints);
 // Packs glyph images into an atlas; *recs receives a malloc'd array of glyph_count rects.
 Image gen_image_font_atlas(const GlyphInfo* glyphs, Rect** recs, int glyph_count, int font_size, int padding);
 Font get_font_default();
@@ -143,15 +148,13 @@ bool export_image(Image image, const char* path);
 Image image_copy(Image image);
 Image image_from_image(Image image, Rect rec);
 void image_format(Image* image, int new_format);
-void image_crop(Image* image, Rect crop);
 void image_rotate_cw(Image* image);
-void image_draw_image_pro(Image* dst, Image src, Rect src_rec, Rect dst_rec, Vec2 origin, float rotation, Color tint);
 Rect get_image_alpha_border(Image image, float threshold);
 int get_pixel_data_size(int width, int height, int format);
 void update_texture(Texture tex, const void* pixels);
 bool is_texture_valid(Texture tex);
-unsigned char* load_file_data(const char* path, int* size);
-void unload_file_data(unsigned char* data);
+// Whole file, or empty on failure.
+std::vector<unsigned char> load_file_bytes(const char* path);
 RenderTarget load_render_texture(int width, int height);
 void unload_render_texture(RenderTarget target);
 void begin_texture_mode(RenderTarget target);
