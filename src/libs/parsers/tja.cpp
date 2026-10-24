@@ -32,6 +32,21 @@ double get_ms_per_measure(double bpm_val, double time_sig) {
     return 60000 * (time_sig * 4) / bpm_val;
 }
 
+namespace {
+    bool is_name_char(char c) {
+        return std::isalpha(static_cast<unsigned char>(c)) || c == '_';
+    }
+
+    // A NAME:value header line, such as "EXAM4:r,58,65,m" or "BALLOON:5"
+    bool is_header_line(const std::string& line) {
+        size_t colon = line.find(':');
+        return colon != std::string::npos && is_name_char(line[0]) &&
+               std::ranges::all_of(line.substr(0, colon), [](char c) {
+                   return is_name_char(c) || std::isdigit(static_cast<unsigned char>(c));
+               });
+    }
+} // namespace
+
 const std::regex TJAParser::complex_number_regex(R"(([+-]?[0-9]*\.?[0-9]+)?([+-][0-9]*\.?[0-9]+)?j?)");
 
 int calculate_base_score(const NoteList& notes) {
@@ -430,7 +445,9 @@ TJAParser::notes_to_position(int diff) {
             // Handle commands (lines starting with #)
             if (!part.empty() && part[0] == '#') {
                 for (const auto& [cmd_prefix, handler] : cached_cmds) {
-                    if (part.starts_with(cmd_prefix)) {
+                    // whole name only: #NEXTSONG is not #N
+                    if (part.starts_with(cmd_prefix) &&
+                        !(part.size() > cmd_prefix.size() && is_name_char(part[cmd_prefix.size()]))) {
                         std::string value = trim(part.substr(cmd_prefix.length()));
                         handler(value, state);
                         break;
@@ -651,7 +668,9 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
         }
     }
 
-    if (note_start != -1 && note_end == -1) {
+    // chart ends at the first #END after its own #START
+    if (note_start != -1) {
+        note_end = -1;
         for (size_t i = note_start; i < data.size(); i++) {
             if (data[i] == "#END") {
                 note_end = i;
@@ -678,6 +697,9 @@ std::vector<std::vector<std::string>> TJAParser::data_to_notes(int diff) {
     for (int i = note_start; i < note_end; i++) {
         const std::string& line = data[i];
 
+        if (is_header_line(line)) {
+            continue; // e.g. EXAM4: after #NEXTSONG in dan charts
+        }
         if (line[0] == '#') {
             if (line.starts_with("#NMSCROLL") || line.starts_with("#BMSCROLL") || line.starts_with("#HBSCROLL")) {
                 continue;
