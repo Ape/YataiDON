@@ -4,6 +4,7 @@
 #include <cstdio>
 
 #include "gfx.h"
+#include "gfx/sdl_compat.h" // before raylib.h: raylib.h must not be the first to pull in <stdarg.h>
 
 namespace ray {
     extern "C" {
@@ -145,12 +146,20 @@ void quiet_raylib_log() {
     ray::SetTraceLogLevel(ray::LOG_ERROR);
 }
 
+static SDL_Window* window = nullptr;
+
+SDL_Window* main_window() {
+    return window;
+}
+
 void init_window(int width, int height, const char* title) {
     ray::InitWindow(width, height, title);
+    window = SDL_GL_GetCurrentWindow(); // raylib's SDL platform keeps its window private
 }
 
 void close_window() {
     ray::CloseWindow();
+    window = nullptr;
 }
 
 void poll_window_events() {

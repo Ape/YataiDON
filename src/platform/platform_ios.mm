@@ -11,6 +11,7 @@
 
 #include "../libs/input/input.h"
 #include "../libs/global_data.h"
+#include "../libs/gfx/sdl_compat.h"
 
 namespace {
 std::mutex clock_mutex;
@@ -123,16 +124,11 @@ int ios_run_main_loop(void (*run_frame)()) {
     poll_touch_once();
     g_ios_frame_callback = run_frame;
     
-    int window_count = 0;
-    SDL_Window** windows = SDL_GetWindows(&window_count);
-    if (!windows || window_count == 0) {
-        SDL_free(windows);
-        return 1;
-    }
+    SDL_Window* win = main_window();
+    if (!win) return 1;
     
-    bool registered = SDL_SetiOSAnimationCallback(windows[0], 1,
+    bool registered = SDL_SetiOSAnimationCallback(win, 1,
         [](void*) { g_ios_frame_callback(); }, nullptr);
-    SDL_free(windows);
     
     if (!registered) return 1;
     
@@ -145,11 +141,8 @@ void ios_shutdown() {
 }
 
 void ios_set_keyboard_visible(bool visible) {
-    int count = 0;
-    SDL_Window** windows = SDL_GetWindows(&count);
-    if (!windows || count == 0) return;
-    SDL_Window* win = windows[0];
-    SDL_free(windows);
+    SDL_Window* win = main_window();
+    if (!win) return;
     
     if (visible) {
         SDL_SetHint(SDL_HINT_ENABLE_SCREEN_KEYBOARD, "1");

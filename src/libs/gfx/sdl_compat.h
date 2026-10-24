@@ -99,25 +99,6 @@ inline void SDL_StopTextInput(SDL_Window*) {
     ::SDL_StopTextInput();
 }
 
-// SDL2 cannot enumerate windows. Returns the window with the current GL context (raylib's),
-// falling back to keyboard focus. Call from the render thread. Free with SDL_free().
-inline SDL_Window** SDL_GetWindows(int* count) {
-    SDL_Window* w = SDL_GL_GetCurrentWindow();
-    if (!w) {
-        w = SDL_GetKeyboardFocus();
-    }
-    if (count) {
-        *count = w ? 1 : 0;
-    }
-    if (!w) {
-        return nullptr;
-    }
-    auto** arr = static_cast<SDL_Window**>(SDL_malloc(2 * sizeof(SDL_Window*)));
-    arr[0] = w;
-    arr[1] = nullptr;
-    return arr;
-}
-
 // ---- Joysticks (SDL3 uses instance IDs, SDL2 enumerates by index) --------------------------
 
 inline int yd_joy_index(SDL_JoystickID id) {
@@ -322,11 +303,5 @@ inline bool SDL_GetAudioDeviceFormat(SDL_AudioDeviceID, SDL_AudioSpec* spec, int
 
 #endif // YATAIDON_USE_SDL2
 
-// The game's (only) window, or nullptr.
-inline SDL_Window* main_window() {
-    int count = 0;
-    SDL_Window** windows = SDL_GetWindows(&count);
-    SDL_Window* win = (windows && count > 0) ? windows[0] : nullptr;
-    SDL_free(windows);
-    return win;
-}
+// The game's (only) window, or nullptr before init_window(). Owned by the gfx backend.
+SDL_Window* main_window();
