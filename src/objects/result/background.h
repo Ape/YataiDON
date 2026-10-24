@@ -2,8 +2,8 @@
 
 #include <sol/sol.hpp>
 
-#include "../../libs/global_data.h"
 #include "../../libs/file/script.h"
+#include "../../libs/global_data.h"
 
 class ResultBackground : public LuaScript {
     sol::protected_function fn_draw;

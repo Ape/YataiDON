@@ -1,5 +1,4 @@
 #include "texture.h"
-#include "../gfx_native.h"
 
 #include <algorithm>
 #include <atomic>
@@ -13,9 +12,10 @@
 #include <thread>
 
 #include "../file/filesystem.h"
+#include "../file/script.h"
+#include "../gfx_native.h"
 #include "../global_data.h"
 #include "../profiler.h"
-#include "../file/script.h"
 #include "text.h"
 
 #ifdef _WIN32

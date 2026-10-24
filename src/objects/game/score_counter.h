@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../libs/global_data.h"
 #include "../../libs/file/script.h"
+#include "../../libs/global_data.h"
 
 // The score on the lane cover plus the points that pop up as they are earned. The skin's
 // ScoreCounter (game/score_counter.lua) owns the animations and the drawing.

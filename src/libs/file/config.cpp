@@ -4,9 +4,9 @@
 #include <spdlog/spdlog.h>
 #include <string_view>
 
-#include "../global_data.h"
 #include "../gfx.h"
 #include "../gfx/sdl_compat.h"
+#include "../global_data.h"
 
 // Key codes are SDL_Scancode values. Letters and digits are handled separately in both directions.
 static const std::vector<std::pair<std::string_view, int>> key_names = {{"space", SDL_SCANCODE_SPACE},

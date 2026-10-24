@@ -1,5 +1,4 @@
 #include "input.h"
-#include "../gfx_native.h"
 
 #include <algorithm>
 #include <array>
@@ -13,12 +12,13 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "../math/animation.h"
-#include "ime_ui.h"
-#include "../profiler.h"
-#include "spdlog/spdlog.h"
 #include "../gfx/texture.h"
+#include "../gfx_native.h"
+#include "../math/animation.h"
+#include "../profiler.h"
 #include "../time.h"
+#include "ime_ui.h"
+#include "spdlog/spdlog.h"
 
 #ifndef __EMSCRIPTEN__
 #include <libremidi/libremidi.hpp>

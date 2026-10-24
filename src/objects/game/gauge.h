@@ -2,10 +2,10 @@
 
 #include <cmath>
 
-#include "../../libs/math/animation.h"
-#include "../../libs/global_data.h"
 #include "../../libs/file/script.h"
 #include "../../libs/gfx/texture.h"
+#include "../../libs/global_data.h"
+#include "../../libs/math/animation.h"
 
 class Gauge : public LuaScript {
 public:

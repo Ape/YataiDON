@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <filesystem>
 
-#include "../libs/input/input.h"
 #include "../libs/file/script.h"
+#include "../libs/input/input.h"
 #include "../objects/song_select/song_select_script.h"
 
 static constexpr double DAN_INTRO_MS = 80.0 * 1000.0 / 60.0;

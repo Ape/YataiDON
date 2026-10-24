@@ -3,23 +3,22 @@
 #include <iostream>
 #include <rlgl.h>
 
-#include "libs/gfx_native.h"
-
-#include "libs/math/animation.h"
 #include "libs/audio/audio.h"
-#include "libs/gfx/camera_utils.h"
 #include "libs/file/filesystem.h"
+#include "libs/file/logging.h"
+#include "libs/file/script.h"
+#include "libs/gfx/camera_utils.h"
+#include "libs/gfx/text.h"
+#include "libs/gfx_native.h"
 #include "libs/global_data.h"
 #include "libs/input/ime_ui.h"
 #include "libs/input/input.h"
-#include "libs/file/logging.h"
+#include "libs/math/animation.h"
 #include "libs/network/network.h"
-#include "libs/profiler.h"
-#include "libs/screen.h"
-#include "libs/file/script.h"
 #include "libs/network/skin_updater.h"
 #include "libs/parsers/song_parser.h"
-#include "libs/gfx/text.h"
+#include "libs/profiler.h"
+#include "libs/screen.h"
 #include "libs/video/webcam.h"
 
 #ifdef _WIN32

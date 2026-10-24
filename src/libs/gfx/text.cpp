@@ -1,5 +1,4 @@
 #include "text.h"
-#include "../gfx_native.h"
 
 #include <cmath>
 #include <cstdlib>
@@ -8,9 +7,10 @@
 #include <vector>
 
 #include "../file/filesystem.h"
+#include "../file/script.h"
+#include "../gfx_native.h"
 #include "../global_data.h"
 #include "han_fold_table.h"
-#include "../file/script.h"
 
 #if defined(_WIN32)
 #include "../../platform/platform_windows.h"

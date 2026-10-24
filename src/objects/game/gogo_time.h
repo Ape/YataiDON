@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../libs/math/animation.h"
 #include "../../libs/gfx/texture.h"
+#include "../../libs/math/animation.h"
 
 class GogoTime {
 private:

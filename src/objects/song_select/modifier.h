@@ -7,10 +7,10 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../../libs/global_data.h"
-#include "../../libs/parsers/tja.h"
 #include "../../libs/file/scores.h"
 #include "../../libs/gfx/text.h"
+#include "../../libs/global_data.h"
+#include "../../libs/parsers/tja.h"
 
 class ModifierSelector {
 private:

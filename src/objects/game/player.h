@@ -2,10 +2,10 @@
 
 #include <unordered_map>
 
-#include "../../libs/network/network.h"
-#include "../../libs/screen.h"
-#include "../../libs/parsers/song_parser.h"
 #include "../../libs/gfx/text.h"
+#include "../../libs/network/network.h"
+#include "../../libs/parsers/song_parser.h"
+#include "../../libs/screen.h"
 #include "../global/chara_3d.h"
 #include "../global/nameplate.h"
 #include "background.h"

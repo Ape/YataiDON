@@ -10,10 +10,10 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../math/animation.h"
-#include "color_utils.h"
 #include "../gfx.h" // IWYU pragma: keep
+#include "../math/animation.h"
 #include "../skin_config.h"
+#include "color_utils.h"
 
 namespace fs = std::filesystem;
 

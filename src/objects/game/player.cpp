@@ -8,9 +8,9 @@
 #include <vector>
 
 #include "../../libs/audio/audio.h"
-#include "../../libs/input/input.h"
 #include "../../libs/file/scores.h"
 #include "../../libs/gfx/text.h"
+#include "../../libs/input/input.h"
 
 Player::Player(std::optional<SongParser>& parser_ref, PlayerNum player_num_param, int difficulty_param,
                bool is_2p_param, const Modifiers& modifiers_param)

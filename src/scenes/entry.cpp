@@ -4,10 +4,10 @@
 #include <thread>
 
 #include "../libs/file/config.h"
+#include "../libs/file/scores.h"
 #include "../libs/global_data.h"
 #include "../libs/input/input.h"
 #include "../libs/network/network.h"
-#include "../libs/file/scores.h"
 
 void EntryScreen::on_screen_start() {
     Screen::on_screen_start();

@@ -6,9 +6,9 @@
 #include <string>
 #include <vector>
 
-#include "../global_data.h"
 #include "../gfx/text.h"
 #include "../gfx/texture.h"
+#include "../global_data.h"
 
 #if defined(PLATFORM_DESKTOP_SDL)
 #include "../gfx/sdl_compat.h"

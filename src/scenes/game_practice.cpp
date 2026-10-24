@@ -5,8 +5,8 @@
 #include <numbers>
 #include <ranges>
 
-#include "../libs/math/animation.h"
 #include "../libs/input/input.h"
+#include "../libs/math/animation.h"
 #include "../objects/global/practice_timer.h"
 
 // Forward declaration for set_touch_drum_enabled from input.cpp

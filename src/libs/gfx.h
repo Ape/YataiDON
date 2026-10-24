@@ -16,13 +16,13 @@
 #include <string>
 
 namespace ray {
-struct Image;
-struct Font;
-struct GlyphInfo;
-struct Model;
-struct ModelAnimation;
-struct Mesh;
-struct Material;
+    struct Image;
+    struct Font;
+    struct GlyphInfo;
+    struct Model;
+    struct ModelAnimation;
+    struct Mesh;
+    struct Material;
 } // namespace ray
 
 inline constexpr float deg2rad = 3.14159265358979323846f / 180.0f;
@@ -138,7 +138,8 @@ ray::Image image_from_image(ray::Image image, Rect rec);
 void image_format(ray::Image* image, int new_format);
 void image_crop(ray::Image* image, Rect crop);
 void image_rotate_cw(ray::Image* image);
-void image_draw_image_pro(ray::Image* dst, ray::Image src, Rect src_rec, Rect dst_rec, Vec2 origin, float rotation, Color tint);
+void image_draw_image_pro(ray::Image* dst, ray::Image src, Rect src_rec, Rect dst_rec, Vec2 origin, float rotation,
+                          Color tint);
 Rect get_image_alpha_border(ray::Image image, float threshold);
 int get_pixel_data_size(int width, int height, int format);
 void update_texture(Texture tex, const void* pixels);

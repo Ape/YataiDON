@@ -1,7 +1,7 @@
 #include "audio.h"
 
-#include "loudness.h"
 #include "../profiler.h"
+#include "loudness.h"
 #include "spdlog/spdlog.h"
 #ifdef YATAIDON_PLATFORM_IOS
 #include "../../platform/platform_ios.h"

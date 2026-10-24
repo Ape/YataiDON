@@ -18,8 +18,8 @@
 #include <iterator>
 
 #include "../../libs/file/filesystem.h"
-#include "../../libs/input/input.h"
 #include "../../libs/file/script.h"
+#include "../../libs/input/input.h"
 #include "../../libs/parsers/song_parser.h"
 #include "../song_select/file_navigator/navigator.h"
 

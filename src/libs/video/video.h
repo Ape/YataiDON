@@ -9,8 +9,8 @@
 #include <thread>
 #include <vector>
 
-#include "av.h"
 #include "../gfx.h" // IWYU pragma: keep
+#include "av.h"
 
 namespace fs = std::filesystem;
 

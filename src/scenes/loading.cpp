@@ -3,10 +3,10 @@
 #include <unordered_set>
 
 #include "../libs/file/filesystem.h"
-#include "../libs/global_data.h"
-#include "../libs/input/input.h"
 #include "../libs/file/scores.h"
 #include "../libs/file/script.h"
+#include "../libs/global_data.h"
+#include "../libs/input/input.h"
 #include "../libs/network/skin_updater.h"
 #include "../libs/parsers/song_parser.h"
 #include "../objects/song_select/file_navigator/navigator.h"

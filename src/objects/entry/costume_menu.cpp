@@ -6,9 +6,9 @@
 
 #include "../../libs/audio/audio.h"
 #include "../../libs/file/filesystem.h"
-#include "../../libs/input/input.h"
 #include "../../libs/gfx/text.h"
 #include "../../libs/gfx/texture.h"
+#include "../../libs/input/input.h"
 
 CostumeMenu::CostumeMenu(PlayerNum player_num) : player_num(player_num), is_2p(player_num == PlayerNum::P2) {
     const SkinInfo* info = font_manager.get_text_info("entry_costume_text");

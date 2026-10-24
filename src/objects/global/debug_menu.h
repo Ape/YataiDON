@@ -1,19 +1,19 @@
 #pragma once
 
 #include <algorithm>
-#include "../../libs/gfx_native.h"
 #include <cmath>
 #include <fstream>
 #include <map>
 #include <unordered_set>
 
-#include "../../libs/math/animation.h"
-#include "../../libs/gfx/color_utils.h"
 #include "../../libs/file/filesystem.h"
-#include "../../libs/input/input.h"
-#include "../../libs/screen.h"
 #include "../../libs/file/script.h"
+#include "../../libs/gfx/color_utils.h"
 #include "../../libs/gfx/texture.h"
+#include "../../libs/gfx_native.h"
+#include "../../libs/input/input.h"
+#include "../../libs/math/animation.h"
+#include "../../libs/screen.h"
 #include "../../libs/time.h"
 
 #ifdef DrawTextEx

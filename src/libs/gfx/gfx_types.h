@@ -44,7 +44,7 @@ struct Texture {
 
 // Same-layout bit conversion to/from a backend struct (evaluated lazily, so the
 // class is complete when sizeof is checked).
-template <class Self, class T>
+template<class Self, class T>
 concept bit_convertible = !std::same_as<Self, T> && std::is_trivially_copyable_v<T> && sizeof(T) == sizeof(Self);
 
 struct Camera2D {
@@ -56,12 +56,12 @@ struct Camera2D {
     constexpr Camera2D() = default;
     constexpr Camera2D(Vec2 offset, Vec2 target, float rotation, float zoom)
         : offset(offset), target(target), rotation(rotation), zoom(zoom) {}
-    template <class T>
+    template<class T>
         requires bit_convertible<Camera2D, T>
     constexpr Camera2D(const T& t) {
         *this = std::bit_cast<Camera2D>(t);
     }
-    template <class T>
+    template<class T>
         requires bit_convertible<Camera2D, T>
     constexpr operator T() const {
         return std::bit_cast<T>(*this);
@@ -69,8 +69,8 @@ struct Camera2D {
 };
 
 namespace camera_projection {
-inline constexpr int PERSPECTIVE = 0;
-inline constexpr int ORTHOGRAPHIC = 1;
+    inline constexpr int PERSPECTIVE = 0;
+    inline constexpr int ORTHOGRAPHIC = 1;
 } // namespace camera_projection
 
 struct Camera3D {
@@ -83,12 +83,12 @@ struct Camera3D {
     constexpr Camera3D() = default;
     constexpr Camera3D(Vec3 position, Vec3 target, Vec3 up, float fovy, int projection)
         : position(position), target(target), up(up), fovy(fovy), projection(projection) {}
-    template <class T>
+    template<class T>
         requires bit_convertible<Camera3D, T>
     constexpr Camera3D(const T& t) {
         *this = std::bit_cast<Camera3D>(t);
     }
-    template <class T>
+    template<class T>
         requires bit_convertible<Camera3D, T>
     constexpr operator T() const {
         return std::bit_cast<T>(*this);
@@ -100,12 +100,12 @@ struct Shader {
     int* locs = nullptr;
 
     constexpr Shader() = default;
-    template <class T>
+    template<class T>
         requires bit_convertible<Shader, T>
     constexpr Shader(const T& t) {
         *this = std::bit_cast<Shader>(t);
     }
-    template <class T>
+    template<class T>
         requires bit_convertible<Shader, T>
     constexpr operator T() const {
         return std::bit_cast<T>(*this);
@@ -118,12 +118,12 @@ struct RenderTarget {
     Texture depth;
 
     constexpr RenderTarget() = default;
-    template <class T>
+    template<class T>
         requires bit_convertible<RenderTarget, T>
     constexpr RenderTarget(const T& t) {
         *this = std::bit_cast<RenderTarget>(t);
     }
-    template <class T>
+    template<class T>
         requires bit_convertible<RenderTarget, T>
     constexpr operator T() const {
         return std::bit_cast<T>(*this);

@@ -6,9 +6,9 @@
 #include <thread>
 #include <vector>
 
-#include "../global_data.h"
 #include "../gfx.h" // IWYU pragma: keep
 #include "../gfx/sdl_compat.h"
+#include "../global_data.h"
 
 extern std::atomic<bool> input_thread_running;
 extern std::thread input_thread;
@@ -110,4 +110,3 @@ TextEditAction poll_text_edit(std::string& text, const std::function<bool(int)>&
 // Desktop: keeps SDL text input (and with it the OS IME) on only while a text field is being
 // edited, i.e. poll_text_edit ran since the last call. Call once per frame after the screen update.
 void sync_text_input();
-

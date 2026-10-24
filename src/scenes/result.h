@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../libs/screen.h"
 #include "../libs/gfx/text.h"
+#include "../libs/screen.h"
 #include "../objects/game/song_info.h"
 #include "../objects/global/allnet_indicator.h"
 #include "../objects/global/coin_overlay.h"

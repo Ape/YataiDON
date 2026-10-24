@@ -1,5 +1,4 @@
 #include "chara_3d.h"
-#include "../../libs/gfx_native.h"
 
 #include <algorithm>
 #include <cmath>
@@ -10,10 +9,11 @@
 #include <mutex>
 #include <rapidjson/document.h>
 
-#include "../../libs/math/animation.h"
-#include "../../libs/gfx/camera_utils.h"
 #include "../../libs/file/filesystem.h"
 #include "../../libs/file/scores.h"
+#include "../../libs/gfx/camera_utils.h"
+#include "../../libs/gfx_native.h"
+#include "../../libs/math/animation.h"
 namespace ray {
 #include <raymath.h>
 }
@@ -428,8 +428,8 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
 }
 
 static void init_shaders(Shader& outline_fxaa_shader, int& outline_fxaa_size_loc, int& outline_fxaa_thickness_loc,
-                         Shader& null_shader, Shader& face_shader, Shader& cutout_shader,
-                         Shader& outline_shader, bool& use_render_textures) {
+                         Shader& null_shader, Shader& face_shader, Shader& cutout_shader, Shader& outline_shader,
+                         bool& use_render_textures) {
     outline_fxaa_shader = load_shader("shader/pass.vs", "shader/outline_fxaa.fs");
     outline_fxaa_size_loc = get_shader_location(outline_fxaa_shader, "texSize");
     outline_fxaa_thickness_loc = get_shader_location(outline_fxaa_shader, "outlineThickness");
@@ -933,8 +933,8 @@ static constexpr float SUPERSAMPLE = 2.0f;
 // Screen rectangle (render pixels) of the posed model: the CPU-skinned vertices (animVertices,
 // see UpdateModelAnimation) through the same transform draw_3d uses, then the orthographic
 // camera of camera2d_to_3d (camera rotation 0).
-bool Chara3D::screen_bounds(float x, float y, const Camera3D& cam3d, float zoom, int rw, int rh, float& x0,
-                            float& y0, float& x1, float& y1) {
+bool Chara3D::screen_bounds(float x, float y, const Camera3D& cam3d, float zoom, int rw, int rh, float& x0, float& y0,
+                            float& x1, float& y1) {
     float y_angle = mirror ? -rot_y : rot_y;
     Mat4 rot = rotation_xyz(rot_x * deg2rad, y_angle * deg2rad, rot_z * deg2rad);
     const float s = scale * draw_scale * tex.screen_scale;

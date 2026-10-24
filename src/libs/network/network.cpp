@@ -15,12 +15,12 @@
 #include <rapidjson/writer.h>
 #include <spdlog/spdlog.h>
 
-#include "android_ca.h"
+#include "../file/scores.h"
 #include "../gfx/color_utils.h"
 #include "../global_data.h"
-#include "../parsers/tja.h"
-#include "../file/scores.h"
 #include "../math/sha256.h"
+#include "../parsers/tja.h"
+#include "android_ca.h"
 
 #if defined(NETWORK_ENABLED) && defined(__ANDROID__)
 #include <fstream>

@@ -7,8 +7,8 @@
 #include <string>
 
 #include "audio/audio.h"
-#include "global_data.h"
 #include "gfx/texture.h"
+#include "global_data.h"
 
 inline int virtual_to_screen_x(float virtual_x) {
     if (tex.screen_width <= 0 || tex.screen_height <= 0) {

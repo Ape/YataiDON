@@ -1,7 +1,6 @@
 #pragma once
 
 #include <future>
-#include "../gfx_native.h"
 #include <mutex>
 #include <optional>
 #include <string>
@@ -10,6 +9,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "../gfx_native.h"
 #include "color_utils.h"
 #include "texture.h"
 

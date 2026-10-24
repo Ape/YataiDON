@@ -1,7 +1,7 @@
 #include "retry_game.h"
 
-#include "../libs/input/input.h"
 #include "../libs/file/scores.h"
+#include "../libs/input/input.h"
 
 void RetryGameScreen::on_screen_start() {
     Screen::on_screen_start();

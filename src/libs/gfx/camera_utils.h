@@ -38,6 +38,9 @@ inline Camera3D camera2d_to_3d(Camera2D cam) {
     float rot = cam.rotation * deg2rad;
     float cx = (sw * 0.5f - cam.offset.x) / zoom + cam.target.x;
     float cy = (sh * 0.5f - cam.offset.y) / zoom + cam.target.y;
-    return {
-        {cx, cy, -100.0f}, {cx, cy, 0.0f}, {std::sin(rot), -std::cos(rot), 0.0f}, sh / zoom, camera_projection::ORTHOGRAPHIC};
+    return {{cx, cy, -100.0f},
+            {cx, cy, 0.0f},
+            {std::sin(rot), -std::cos(rot), 0.0f},
+            sh / zoom,
+            camera_projection::ORTHOGRAPHIC};
 }

@@ -16,10 +16,10 @@
 #include <string_view>
 #include <utility>
 
-#include "../math/md5.h"
-#include "../profiler.h"
 #include "../gfx/sdl_compat.h"
 #include "../gfx/text.h"
+#include "../math/md5.h"
+#include "../profiler.h"
 
 #ifdef _WIN32
 #include "platform/platform_windows.h"

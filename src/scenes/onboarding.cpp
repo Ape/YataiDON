@@ -3,10 +3,10 @@
 #include <algorithm>
 
 #include "../libs/file/filesystem.h"
+#include "../libs/gfx/text.h"
 #include "../libs/global_data.h"
 #include "../libs/input/input.h"
 #include "../libs/network/skin_updater.h"
-#include "../libs/gfx/text.h"
 
 void save_config(const Config& config);
 

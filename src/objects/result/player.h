@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../../libs/global_data.h"
 #include "../../libs/file/script.h"
+#include "../../libs/global_data.h"
 #include "../enums.h"
 #include "../global/chara_3d.h"
 #include "../global/nameplate.h"

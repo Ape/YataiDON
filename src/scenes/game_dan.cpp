@@ -2,9 +2,9 @@
 
 #include <algorithm>
 
-#include "../libs/input/input.h"
 #include "../libs/file/script.h"
 #include "../libs/gfx/text.h"
+#include "../libs/input/input.h"
 
 void DanGameScreen::on_screen_start() {
     Screen::on_screen_start();

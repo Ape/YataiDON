@@ -1,7 +1,7 @@
 #include "webcam.h"
-#include "../gfx_native.h"
 
 #include "../gfx/sdl_compat.h"
+#include "../gfx_native.h"
 #if YATAIDON_SDL_CAMERA
 #include <SDL3/SDL_camera.h>
 #endif

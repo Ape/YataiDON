@@ -11,8 +11,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "android_ca.h"
 #include "../math/sha256.h"
+#include "android_ca.h"
 
 #ifndef __EMSCRIPTEN__
 

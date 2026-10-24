@@ -5,8 +5,8 @@
 #include <vector>
 
 #include "../libs/file/filesystem.h"
-#include "../libs/screen.h"
 #include "../libs/gfx/text.h"
+#include "../libs/screen.h"
 #include "../libs/video/video.h"
 #include "../objects/global/allnet_indicator.h"
 #include "../objects/global/coin_overlay.h"

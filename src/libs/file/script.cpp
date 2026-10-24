@@ -12,12 +12,12 @@
 #include "../../objects/enums.h"
 #include "../../objects/song_select/file_navigator/box_lua_bindings.h"
 #include "../audio/audio.h"
-#include "filesystem.h"
+#include "../gfx/text.h"
 #include "../global_data.h"
 #include "../input/input.h"
 #include "../screen.h"
-#include "../gfx/text.h"
 #include "../video/webcam.h"
+#include "filesystem.h"
 
 namespace {
     constexpr int LUA_SITE_MAX_LEVELS = 8;

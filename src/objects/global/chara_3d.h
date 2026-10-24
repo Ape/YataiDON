@@ -1,15 +1,15 @@
 #pragma once
 
 #include <limits>
-#include "../../libs/gfx_native.h"
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-#include "../../libs/gfx/color_utils.h"
 #include "../../libs/gfx.h"
+#include "../../libs/gfx/color_utils.h"
 #include "../../libs/gfx/texture.h"
+#include "../../libs/gfx_native.h"
 
 class BaseAnimation;
 

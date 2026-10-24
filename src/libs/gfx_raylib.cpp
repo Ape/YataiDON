@@ -1,7 +1,7 @@
-#include "gfx.h"
-
 #include <cstdarg>
 #include <cstdio>
+
+#include "gfx.h"
 
 namespace ray {
     extern "C" {
@@ -330,7 +330,8 @@ void image_rotate_cw(ray::Image* image) {
     ray::ImageRotateCW(image);
 }
 
-void image_draw_image_pro(ray::Image* dst, ray::Image src, Rect src_rec, Rect dst_rec, Vec2 origin, float rotation, Color tint) {
+void image_draw_image_pro(ray::Image* dst, ray::Image src, Rect src_rec, Rect dst_rec, Vec2 origin, float rotation,
+                          Color tint) {
     ray::ImageDrawImagePro(dst, src, src_rec, dst_rec, origin, rotation, {tint.r, tint.g, tint.b, tint.a});
 }
 
@@ -483,4 +484,3 @@ Shader load_shader(const char* vs_path, const char* fs_path) {
 #endif
     return ray::LoadShader(vs_path, fs_path);
 }
-

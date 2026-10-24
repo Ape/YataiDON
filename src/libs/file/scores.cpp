@@ -3,8 +3,8 @@
 #include <numeric>
 
 #include "../gfx/color_utils.h"
-#include "../network/network.h"
 #include "../math/sha256.h"
+#include "../network/network.h"
 #include "../parsers/song_parser.h"
 
 static void ensure_dan_table(sqlite3* db);
