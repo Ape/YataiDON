@@ -75,18 +75,13 @@ Judgment::Judgment(Judgments type, bool big) : type(type) {
 }
 
 void Judgment::update(double current_ms) {
-    BaseAnimation* animations[] = {fade_animation_1, fade_animation_2, fade_animation_3, move_animation,
-                                   texture_animation};
+    BaseAnimation* animations[] = {fade_animation_1,  fade_animation_2, fade_animation_3, move_animation,
+                                   texture_animation, outer_scale,      ray_scale,        ray_fade,
+                                   ray2_scale,        ray2_fade};
 
     for (auto& animation : animations) {
         if (animation) {
             animation->update(current_ms);
-        }
-    }
-    for (BaseAnimation* a : {(BaseAnimation*)outer_scale, (BaseAnimation*)ray_scale, (BaseAnimation*)ray_fade,
-                             (BaseAnimation*)ray2_scale, (BaseAnimation*)ray2_fade}) {
-        if (a) {
-            a->update(current_ms);
         }
     }
 }

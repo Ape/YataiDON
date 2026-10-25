@@ -21,8 +21,8 @@ bool DanTransition::start() {
     if (!tex.has_texture("dan_transition/flash") || !don_rise || !emblem_fade || !emblem_spin || !flash) {
         don_rise = emblem_spin = nullptr, emblem_fade = flash = nullptr;
     }
-    for (BaseAnimation* a : {(BaseAnimation*)slide_in, (BaseAnimation*)don_rise, (BaseAnimation*)emblem_fade,
-                             (BaseAnimation*)emblem_spin, (BaseAnimation*)flash}) {
+    BaseAnimation* animations[] = {slide_in, don_rise, emblem_fade, emblem_spin, flash};
+    for (BaseAnimation* a : animations) {
         if (a) {
             a->start();
         }
@@ -47,8 +47,8 @@ void DanTransition::update(double current_ms) {
         start_ms = current_ms;
     }
     last_ms = current_ms;
-    for (BaseAnimation* a : {(BaseAnimation*)slide_in, (BaseAnimation*)don_rise, (BaseAnimation*)emblem_fade,
-                             (BaseAnimation*)emblem_spin, (BaseAnimation*)flash}) {
+    BaseAnimation* animations[] = {slide_in, don_rise, emblem_fade, emblem_spin, flash};
+    for (BaseAnimation* a : animations) {
         if (a) {
             a->update(current_ms);
         }
@@ -60,7 +60,7 @@ bool DanTransition::is_started() const {
 }
 
 bool DanTransition::is_finished() const {
-    return started && (flash ? (BaseAnimation*)flash : (BaseAnimation*)slide_in)->is_finished;
+    return started && (flash ? flash->is_finished : slide_in->is_finished);
 }
 
 double DanTransition::duration() const {
