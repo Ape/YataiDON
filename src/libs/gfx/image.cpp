@@ -214,16 +214,19 @@ Rect get_image_alpha_border(Image image, float threshold) {
     return {(float)x_min, (float)y_min, (float)(x_max + 1 - x_min), (float)(y_max + 1 - y_min)};
 }
 
-Texture load_texture(const char* path) {
+static Texture load_texture(const char* path, bool mipmaps) {
     Image image = load_image(path);
-    Texture tex = image.data ? load_texture_from_image(image) : Texture{};
+    Texture tex = image.data ? load_texture_from_image(image, mipmaps) : Texture{};
     unload_image(image);
     return tex;
 }
 
+Texture load_texture(const char* path) {
+    return load_texture(path, false);
+}
+
 Texture load_texture_mipmapped(const char* path, int filter) {
-    Texture tex = load_texture(path);
-    gen_texture_mipmaps(tex);
+    Texture tex = load_texture(path, true);
     set_texture_filter(tex, filter);
     return tex;
 }

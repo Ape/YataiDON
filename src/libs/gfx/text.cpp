@@ -146,7 +146,7 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
     if (cps.empty()) {
         return true;
     }
-    std::vector<GlyphInfo> glyphs = load_font_data(font_data, font_size, cps);
+    std::vector<GlyphInfo> glyphs = load_font_data(font_bytes(), font_size, cps);
     std::unordered_set<int> got;
     for (const GlyphInfo& g : glyphs) {
         entry.cache.push_back(g); // takes ownership of the glyph image
@@ -168,7 +168,7 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
     if (missing.empty()) {
         return true;
     }
-    std::vector<GlyphInfo> ag = load_font_data(font_data, font_size, alts);
+    std::vector<GlyphInfo> ag = load_font_data(font_bytes(), font_size, alts);
     std::vector<bool> assigned(alts.size(), false);
     for (size_t i = 0; i < ag.size(); i++) {
         bool used = false;

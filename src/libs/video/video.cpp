@@ -82,6 +82,7 @@ void VideoPlayer::audio_manager() {
 void VideoPlayer::decode_loop() {
     PROFILE_THREAD_NAME("video decode");
 #ifndef __EMSCRIPTEN__
+    SwsContext* sws = nullptr; // reused for every frame of this run
     try {
         container->seek(0);
         frame_generator = container->decode_video(0);
@@ -91,8 +92,6 @@ void VideoPlayer::decode_loop() {
             if (!frame_generator->next(current_decoded_frame)) {
                 break; // EOF
             }
-            current_decoded_frame->reformat("rgb24");
-
             DecodedFrame frame;
             {
                 std::scoped_lock lock(queue_mutex);
@@ -101,8 +100,7 @@ void VideoPlayer::decode_loop() {
                     spare_buffers.pop_back();
                 }
             }
-            av::AVPlane plane = current_decoded_frame->plane(0);
-            frame.bytes.assign(plane.data(), plane.data() + plane.size());
+            current_decoded_frame->to_rgba(sws, frame.bytes);
             frame.width = current_decoded_frame->width();
             frame.height = current_decoded_frame->height();
             frame.index = produced++;
@@ -120,6 +118,7 @@ void VideoPlayer::decode_loop() {
     } catch (const std::exception& e) {
         spdlog::error("Video decode thread error: {}", e.what());
     }
+    sws_freeContext(sws);
     std::scoped_lock lock(queue_mutex);
     decode_eof = true;
 #endif
@@ -155,7 +154,7 @@ void VideoPlayer::upload_frame(const DecodedFrame& frame) {
         image.width = frame.width;
         image.height = frame.height;
         image.mipmaps = 1;
-        image.format = pixel_format::RGB8;
+        image.format = pixel_format::RGBA8;
 
         Texture tex = load_texture_from_image(image);
         set_texture_filter(tex, texture_filter::TRILINEAR);

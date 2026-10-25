@@ -219,7 +219,11 @@ static Rect search_box_rect(const sol::table& skin) {
     float y = 0;
     float w = 400 * S;
     float h = 60 * S;
-    if (sol::optional<sol::table> layout = skin.valid() ? skin["search_box_layout"] : sol::nullopt) {
+    sol::optional<sol::table> layout;
+    if (skin.valid()) {
+        layout = skin["search_box_layout"];
+    }
+    if (layout) {
         x = layout->get_or<float>("x", x);
         y = layout->get_or<float>("y", y);
         w = layout->get_or<float>("width", w);

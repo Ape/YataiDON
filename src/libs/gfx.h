@@ -1,7 +1,6 @@
 #pragma once
 
-// Backend-neutral graphics interface. No backend header is included here; the
-// implementation lives in gfx_raylib.cpp.
+// no particular graphics backend here
 
 #include <cstdint>
 
@@ -99,15 +98,17 @@ void begin_drawing();
 void end_drawing();
 void swap_screen_buffer();
 Texture load_texture(const char* path);
-Texture load_texture_from_image(Image image);
+Texture load_texture_from_image(Image image, bool mipmaps = false);
 void unload_texture(Texture tex);
 void set_texture_filter(Texture tex, int filter);
 void set_texture_wrap(Texture tex, int wrap);
-void gen_texture_mipmaps(Texture& tex);
 Texture load_texture_mipmapped(const char* path, int filter = texture_filter::TRILINEAR);
 Vec2 measure_text_ex(const Font& font, const char* text, float font_size, float spacing);
 // Loads printable ASCII; falls back to the default font.
 Font load_font(const char* path, int font_size);
+Font load_font_from_memory(std::span<const unsigned char> data, int font_size);
+// Built-in CJK + Latin TTF (assets/fonts/default.ttf), embedded at build time.
+std::span<const unsigned char> default_font_ttf();
 void unload_font(Font font);
 // Rasterizes the codepoints the font has; each glyph's GRAYSCALE image is the
 // caller's to free with unload_image.

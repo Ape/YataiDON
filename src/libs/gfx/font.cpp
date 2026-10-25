@@ -105,7 +105,23 @@ Image gen_image_font_atlas(const GlyphInfo* glyphs, Rect** recs_out, int glyph_c
     return atlas;
 }
 
+extern const unsigned char default_font_ttf_data[];
+extern const size_t default_font_ttf_data_size;
+
+std::span<const unsigned char> default_font_ttf() {
+    return {default_font_ttf_data, default_font_ttf_data_size};
+}
+
 Font load_font(const char* path, int font_size) {
+    std::vector<unsigned char> data = load_file_bytes(path);
+    if (data.empty()) {
+        spdlog::warn("FONT: [{}] no glyphs loaded, reverted to default font", path);
+        return get_font_default();
+    }
+    return load_font_from_memory(data, font_size);
+}
+
+Font load_font_from_memory(std::span<const unsigned char> data, int font_size) {
     static constexpr auto ascii = [] {
         std::array<int, 95> cps{};
         for (int i = 0; i < 95; i++) {
@@ -113,9 +129,9 @@ Font load_font(const char* path, int font_size) {
         }
         return cps;
     }();
-    std::vector<GlyphInfo> glyphs = load_font_data(load_file_bytes(path), font_size, ascii);
+    std::vector<GlyphInfo> glyphs = load_font_data(data, font_size, ascii);
     if (glyphs.empty()) {
-        spdlog::warn("FONT: [{}] no glyphs loaded, reverted to default font", path);
+        spdlog::warn("FONT: no glyphs loaded, reverted to default font");
         return get_font_default();
     }
     Font font;

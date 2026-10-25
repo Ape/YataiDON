@@ -40,35 +40,13 @@ namespace av {
     }
 
     // ---------------------------------------------------------------------------
-    // AVPlane  –  a non-owning view over one plane of a decoded/reformatted frame
-    // ---------------------------------------------------------------------------
-    class AVPlane {
-    public:
-        AVPlane(const uint8_t* data, std::size_t size) : data_(data), size_(size) {}
-
-        const uint8_t* data() const { return data_; }
-        std::size_t size() const { return size_; }
-
-    private:
-        const uint8_t* data_;
-        std::size_t size_;
-    };
-
-    // ---------------------------------------------------------------------------
-    // AVDecodedFrame  –  a single video frame, optionally reformatted to RGB24
+    // AVDecodedFrame  –  a single decoded video frame
     // ---------------------------------------------------------------------------
     class AVDecodedFrame {
     public:
         explicit AVDecodedFrame(::AVFrame* frame) : frame_(frame) {}
 
         ~AVDecodedFrame() {
-            if (rgb_frame_) {
-                av_freep(&rgb_frame_->data[0]);
-                av_frame_free(&rgb_frame_);
-            }
-            if (sws_ctx_) {
-                sws_freeContext(sws_ctx_);
-            }
             if (frame_) {
                 av_frame_free(&frame_);
             }
@@ -78,63 +56,26 @@ namespace av {
         AVDecodedFrame(const AVDecodedFrame&) = delete;
         AVDecodedFrame& operator=(const AVDecodedFrame&) = delete;
 
-        // Convert the frame in-place to packed RGB24 using swscale.
-        void reformat(const std::string& fmt) {
-            if (fmt != "rgb24") {
-                throw std::runtime_error("av::AVDecodedFrame::reformat: only \"rgb24\" is supported");
+        // Converts the frame to packed RGBA (width * height * 4 bytes) in `out`. `ctx` is the
+        // caller's swscale context, reused across frames while size and source format hold.
+        void to_rgba(SwsContext*& ctx, std::vector<uint8_t>& out) const {
+            const int w = frame_->width, h = frame_->height;
+            ctx = sws_getCachedContext(ctx, w, h, static_cast<AVPixelFormat>(frame_->format), w, h, AV_PIX_FMT_RGBA,
+                                       SWS_BILINEAR, nullptr, nullptr, nullptr);
+            if (!ctx) {
+                throw std::runtime_error("sws_getCachedContext failed");
             }
-            if (rgb_frame_) {
-                return; // already converted
-            }
-
-            rgb_frame_ = av_frame_alloc();
-            if (!rgb_frame_) {
-                throw std::runtime_error("av_frame_alloc failed");
-            }
-
-            rgb_frame_->format = AV_PIX_FMT_RGB24;
-            rgb_frame_->width = frame_->width;
-            rgb_frame_->height = frame_->height;
-
-            int ret = av_image_alloc(rgb_frame_->data, rgb_frame_->linesize, frame_->width, frame_->height,
-                                     AV_PIX_FMT_RGB24, 1);
-            check(ret, "av_image_alloc");
-
-            sws_ctx_ =
-                sws_getContext(frame_->width, frame_->height, static_cast<AVPixelFormat>(frame_->format), frame_->width,
-                               frame_->height, AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
-
-            if (!sws_ctx_) {
-                throw std::runtime_error("sws_getContext failed");
-            }
-
-            sws_scale(sws_ctx_, frame_->data, frame_->linesize, 0, frame_->height, rgb_frame_->data,
-                      rgb_frame_->linesize);
+            out.resize(static_cast<std::size_t>(w) * h * 4);
+            uint8_t* dst[1] = {out.data()};
+            const int dst_linesize[1] = {w * 4};
+            sws_scale(ctx, frame_->data, frame_->linesize, 0, h, dst, dst_linesize);
         }
 
         int width() const { return frame_->width; }
         int height() const { return frame_->height; }
 
-        // Returns plane 0 of the (possibly reformatted) frame.
-        // Must call reformat() first for RGB24 data.
-        AVPlane plane(int index) const {
-            if (index != 0) {
-                throw std::runtime_error("av::AVDecodedFrame::plane: only plane 0 is supported");
-            }
-            const ::AVFrame* src = rgb_frame_ ? rgb_frame_ : frame_;
-            // av_image_get_buffer_size() returns the size of the *entire* frame
-            // buffer (all planes combined). For a non-reformatted planar source
-            // (e.g. YUV420P) data[0] holds only the luma plane, so advertising
-            // the whole-frame size here would let callers read past plane 0.
-            // Report plane 0's own size instead.
-            std::size_t size = static_cast<std::size_t>(src->linesize[0]) * static_cast<std::size_t>(src->height);
-            return AVPlane(src->data[0], size);
-        }
-
     private:
         ::AVFrame* frame_;
-        ::AVFrame* rgb_frame_{nullptr};
-        SwsContext* sws_ctx_{nullptr};
     };
 
     // ---------------------------------------------------------------------------

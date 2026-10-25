@@ -28,6 +28,11 @@ private:
 
     std::vector<unsigned char> font_data; // the .ttf bytes, read once
 
+    // font_data, or the built-in default font until init() loads a skin font
+    std::span<const unsigned char> font_bytes() const {
+        return font_data.empty() ? default_font_ttf() : std::span<const unsigned char>(font_data);
+    }
+
     bool rasterize_new(SizedFont& entry, int font_size, const std::vector<int>& cps);   // font_mutex held
     void rebuild_atlas(SizedFont& entry, int font_size);                                // font_mutex held
     void release_font(SizedFont& entry);                                                // font_mutex held

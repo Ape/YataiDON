@@ -212,8 +212,12 @@ void swap_screen_buffer() {
     ray::SwapScreenBuffer();
 }
 
-Texture load_texture_from_image(Image image) {
-    return ray::LoadTextureFromImage(to<ray::Image>(image));
+Texture load_texture_from_image(Image image, bool mipmaps) {
+    ray::Texture2D tex = ray::LoadTextureFromImage(to<ray::Image>(image));
+    if (mipmaps) {
+        ray::GenTextureMipmaps(&tex);
+    }
+    return tex;
 }
 
 void unload_texture(Texture tex) {
@@ -226,12 +230,6 @@ void set_texture_filter(Texture tex, int filter) {
 
 void set_texture_wrap(Texture tex, int wrap) {
     ray::SetTextureWrap(tex, wrap);
-}
-
-void gen_texture_mipmaps(Texture& tex) {
-    ray::Texture2D native = tex;
-    ray::GenTextureMipmaps(&native);
-    tex = native;
 }
 
 Font get_font_default() {

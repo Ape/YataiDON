@@ -180,7 +180,7 @@ void ime_ui_draw(const Camera2D& camera) {
     for (const auto& l : labels) {
         all += l;
     }
-    Font font = global_data.skinless ? get_font_default() : font_manager.get_font(all, fs);
+    Font font = font_manager.get_font(all, fs);
     auto measure = [&](const std::string& s) {
         return measure_text_ex(font, s.c_str(), static_cast<float>(fs), spacing).x;
     };

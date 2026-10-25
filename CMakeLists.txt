@@ -89,8 +89,12 @@ endif()
 
 set(YATAIDON_GFX_BACKEND "raylib" CACHE STRING "Graphics backend: raylib or bgfx")
 set_property(CACHE YATAIDON_GFX_BACKEND PROPERTY STRINGS raylib bgfx)
-if(NOT YATAIDON_GFX_BACKEND STREQUAL "raylib")
-  message(FATAL_ERROR "YATAIDON_GFX_BACKEND=${YATAIDON_GFX_BACKEND}: only raylib is implemented so far")
+if(YATAIDON_GFX_BACKEND STREQUAL "bgfx")
+  if(NOT UNIX OR APPLE OR ANDROID OR EMSCRIPTEN OR YATAIDON_USE_SDL2)
+    message(FATAL_ERROR "YATAIDON_GFX_BACKEND=bgfx: only Linux desktop with SDL3 is supported so far")
+  endif()
+elseif(NOT YATAIDON_GFX_BACKEND STREQUAL "raylib")
+  message(FATAL_ERROR "YATAIDON_GFX_BACKEND must be raylib or bgfx")
 endif()
 message(STATUS "Graphics backend: ${YATAIDON_GFX_BACKEND}")
 
@@ -202,8 +206,45 @@ target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
     ${tomlplusplus_SOURCE_DIR}/include
 )
 
+# Built-in default font
+set(_default_font ${CMAKE_SOURCE_DIR}/src/libs/gfx/default.ttf)
+set(_default_font_cpp ${CMAKE_BINARY_DIR}/generated/default_font_ttf.cpp)
+add_custom_command(
+  OUTPUT ${_default_font_cpp}
+  COMMAND ${CMAKE_COMMAND} -DIN=${_default_font} -DOUT=${_default_font_cpp} -DNAME=default_font_ttf_data
+          -P ${CMAKE_SOURCE_DIR}/cmake/embed.cmake
+  DEPENDS ${_default_font} ${CMAKE_SOURCE_DIR}/cmake/embed.cmake
+  VERBATIM
+)
+target_sources(${PROJECT_NAME} PRIVATE ${_default_font_cpp})
+
+if(YATAIDON_GFX_BACKEND STREQUAL "raylib")
+  target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
+else()
+  target_link_libraries(${PROJECT_NAME} PRIVATE bgfx bx SDL3::SDL3)
+  # Shaders compile to SPIR-V headers embedded by src/libs/gfx_bgfx.cpp
+  include(${bgfx_SOURCE_DIR}/cmake/bgfxToolUtils.cmake)
+  FetchContent_GetProperties(bgfx_source SOURCE_DIR _bgfx_src)
+  set(_shader_dir ${CMAKE_SOURCE_DIR}/shader/bgfx)
+  foreach(_type VERTEX FRAGMENT)
+    string(SUBSTRING ${_type} 0 1 _prefix)
+    string(TOLOWER ${_prefix} _prefix)
+    file(GLOB _shaders CONFIGURE_DEPENDS ${_shader_dir}/${_prefix}s_*.sc)
+    bgfx_compile_shaders(
+      TYPE ${_type}
+      SHADERS ${_shaders}
+      VARYING_DEF ${_shader_dir}/varying.def.sc
+      OUTPUT_DIR ${CMAKE_BINARY_DIR}/generated/shaders
+      INCLUDE_DIRS ${_bgfx_src}/src
+      PROFILES spirv
+      AS_HEADERS
+      OUT_FILES_VAR _shader_headers
+    )
+    target_sources(${PROJECT_NAME} PRIVATE ${_shader_headers})
+  endforeach()
+endif()
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
-    raylib
     tomlplusplus::tomlplusplus
     spdlog::spdlog
     lua::lua
