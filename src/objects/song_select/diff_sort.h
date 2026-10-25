@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iterator>
+
 #include "file_navigator/navigator.h"
 
 class SongSelectScript;
@@ -70,7 +72,7 @@ public:
     int lua_num_boxes() const { return num_boxes; }
     int lua_prev_diff() const { return prev_diff; }
     int lua_prev_level() const { return prev_level; }
-    int lua_limit(int box) const { return (box >= 0 && box < (int)limits.size()) ? limits[box] : 0; }
+    int lua_limit(int box) const { return (box >= 0 && box < std::ssize(limits)) ? limits[box] : 0; }
     CourseStats lua_stats(int diff, int level) { return statistics[diff][level]; }
     std::array<int, 3> lua_sums(int diff) { return diff_sort_sum_stat[diff]; } // total, clears, full combos
     // the classic window's animations: bg_resize, diff_fade_in, box_flicker, bounce, arrow_fade, arrow_move

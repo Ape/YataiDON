@@ -1,5 +1,7 @@
 #include "player.h"
 
+#include <iterator>
+
 #include "../../libs/audio/audio.h"
 #include "../../libs/file/scores.h"
 
@@ -115,23 +117,23 @@ void ResultPlayer::assign_field(const std::string& field_name, const std::string
 
 void ResultPlayer::update_score_animation(double current_ms, bool is_skipped) {
     if (is_skipped) {
-        while (update_index < (int)update_list.size()) {
+        while (update_index < std::ssize(update_list)) {
             auto& [field_name, value] = update_list[update_index];
             assign_field(field_name, std::to_string(value));
             update_index++;
         }
     } else if (count_up_instant) {
-        if (score_delay.has_value() && update_index < (int)update_list.size() && current_ms > score_delay.value()) {
+        if (score_delay.has_value() && update_index < std::ssize(update_list) && current_ms > score_delay.value()) {
             auto& [field_name, value] = update_list[update_index];
             assign_field(field_name, std::to_string(value));
-            bool is_last = (update_index == (int)update_list.size() - 1);
+            bool is_last = (update_index == std::ssize(update_list) - 1);
             if (!count_up_sound_1p_only || player_num == PlayerNum::P1) {
                 audio.play_sound(is_last ? count_up_score_sound : count_up_row_sound, VolumePreset::SOUND);
             }
             update_index++;
-            score_delay.value() += (update_index == (int)update_list.size() - 1) ? count_up_score_ms : count_up_row_ms;
+            score_delay.value() += (update_index == std::ssize(update_list) - 1) ? count_up_score_ms : count_up_row_ms;
         }
-    } else if (score_delay.has_value() && update_index < (int)update_list.size()) {
+    } else if (score_delay.has_value() && update_index < std::ssize(update_list)) {
         if (current_ms > score_delay.value()) {
             if (score_animator.has_value() && !score_animator->is_finished) {
                 auto& [field_name, curr_num] = update_list[update_index];
@@ -144,12 +146,12 @@ void ResultPlayer::update_score_animation(double current_ms, bool is_skipped) {
                 if (score_animator->is_finished) {
                     audio.play_sound("don", VolumePreset::SOUND);
                     score_delay.value() += 750;
-                    if (update_index == (int)update_list.size() - 1) {
+                    if (update_index == std::ssize(update_list) - 1) {
                         rows_done_ms = current_ms;
                         return;
                     }
                     update_index++;
-                    if (update_index < (int)update_list.size()) {
+                    if (update_index < std::ssize(update_list)) {
                         score_animator = ScoreAnimator(std::get<1>(update_list[update_index]));
                     }
                 }
@@ -157,7 +159,7 @@ void ResultPlayer::update_score_animation(double current_ms, bool is_skipped) {
             }
         }
     }
-    if (rows_done_ms == 0 && update_index >= (int)update_list.size()) {
+    if (rows_done_ms == 0 && update_index >= std::ssize(update_list)) {
         rows_done_ms = current_ms;
     }
     if (!score.empty() && !high_score_sound_played) {

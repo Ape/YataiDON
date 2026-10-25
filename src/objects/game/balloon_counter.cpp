@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <stdexcept>
 
 BalloonCounter::BalloonCounter(int count, bool is_2p) : balloon_total(count), is_2p(is_2p) {
@@ -87,7 +88,7 @@ void BalloonCounter::draw(float y) {
             margin = m->x;
         }
         float total_width = counter.length() * margin;
-        for (int i = 0; i < (int)counter.size(); i++) {
+        for (int i = 0; i < std::ssize(counter); i++) {
             char digit = counter[i];
             tex.draw_texture(t_counter, {.frame = digit - '0',
                                          .x = x_offset - (total_width / 2.0f) + (i * margin),

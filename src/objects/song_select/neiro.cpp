@@ -1,5 +1,7 @@
 #include "neiro.h"
 
+#include <iterator>
+
 #include "../../libs/audio/audio.h"
 #include "../../libs/file/filesystem.h"
 
@@ -44,7 +46,7 @@ NeiroSelector::NeiroSelector(PlayerNum player_num, PlayerData* player) : player_
 }
 
 void NeiroSelector::load_sound() {
-    if (selected_sound == (int)sounds.size() - 1) {
+    if (selected_sound == std::ssize(sounds) - 1) {
         curr_sound.clear();
         return;
     }
@@ -70,7 +72,7 @@ void NeiroSelector::left() {
     change_seq++;
 
     direction = 1;
-    if (selected_sound == (int)sounds.size() - 1) {
+    if (selected_sound == std::ssize(sounds) - 1) {
         return;
     }
     audio.play_sound(curr_sound, VolumePreset::HITSOUND);
@@ -90,7 +92,7 @@ void NeiroSelector::right() {
     change_seq++;
 
     direction = -1;
-    if (selected_sound == (int)sounds.size() - 1) {
+    if (selected_sound == std::ssize(sounds) - 1) {
         return;
     }
     audio.play_sound(curr_sound, VolumePreset::HITSOUND);
@@ -100,7 +102,7 @@ void NeiroSelector::confirm() {
     if (move->is_started && !move->is_finished) {
         return;
     }
-    player->neiro_index = selected_sound == (int)sounds.size() - 1 ? -1 : selected_sound;
+    player->neiro_index = selected_sound == std::ssize(sounds) - 1 ? -1 : selected_sound;
     is_confirmed = true;
     if (move_out) {
         move = move_out;

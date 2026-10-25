@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cmath>
 #include <filesystem>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
@@ -74,11 +75,11 @@ struct Exam {
     bool per_song() const { return !song_red.empty(); }
     // The exam as it applies to song i: red/gold swapped for that song's pair.
     Exam for_song(int i) const {
-        assert(!per_song() || (i >= 0 && i < (int)song_red.size()));
+        assert(!per_song() || (i >= 0 && i < std::ssize(song_red)));
         Exam ex = *this;
-        if (per_song() && i >= 0 && i < (int)song_red.size()) {
+        if (per_song() && i >= 0 && i < std::ssize(song_red)) {
             ex.red = song_red[i];
-            ex.gold = i < (int)song_gold.size() ? song_gold[i] : song_red[i];
+            ex.gold = i < std::ssize(song_gold) ? song_gold[i] : song_red[i];
         }
         // the view of one song is a plain pair again (captions print a single number)
         ex.song_red.clear();

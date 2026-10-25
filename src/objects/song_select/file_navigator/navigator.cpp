@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <iterator>
 
 #include "../../../libs/file/filesystem.h"
 #include "../../../libs/gfx/han_fold_table.h"
@@ -458,7 +459,7 @@ void Navigator::init(std::vector<fs::path> songs_paths) {
             load_all_roots();
         } else {
             if (inline_state.has_value()) {
-                if (open_index >= 0 && open_index < (int)items.size()) {
+                if (open_index >= 0 && open_index < std::ssize(items)) {
                     if (dynamic_cast<SongBox*>(items[open_index].get())) {
                         reopen_song_path = items[open_index]->path;
                     }
@@ -504,8 +505,8 @@ void Navigator::collapse_inline_now() {
 
     InlineState& state = *inline_state;
     int end = state.first_song_index + state.songs_count;
-    if (state.first_song_index < 0 || end > (int)items.size() || state.folder_index < 0 ||
-        state.folder_index >= (int)items.size() || !state.saved_folder_box) {
+    if (state.first_song_index < 0 || end > std::ssize(items) || state.folder_index < 0 ||
+        state.folder_index >= std::ssize(items) || !state.saved_folder_box) {
         return;
     }
 
@@ -660,7 +661,7 @@ void Navigator::flush_pending_boxes() {
             std::vector<int> sortable_indices;
             std::vector<std::unique_ptr<BaseBox>> sortable;
             int first_sortable = dynamic_cast<BackBox*>(items[0].get()) ? 1 : 0;
-            for (int i = first_sortable; i < (int)items.size(); i++) {
+            for (int i = first_sortable; i < std::ssize(items); i++) {
                 if (!items[i]->preserve_order) {
                     sortable_indices.push_back(i);
                     sortable.push_back(std::move(items[i]));
@@ -669,12 +670,12 @@ void Navigator::flush_pending_boxes() {
             std::ranges::sort(sortable, [](const std::unique_ptr<BaseBox>& a, const std::unique_ptr<BaseBox>& b) {
                 return alpha_less(a->path.filename().string(), b->path.filename().string());
             });
-            for (int j = 0; j < (int)sortable_indices.size(); j++) {
+            for (int j = 0; j < std::ssize(sortable_indices); j++) {
                 items[sortable_indices[j]] = std::move(sortable[j]);
             }
         }
         if (restore_cursor_path && !inline_state.has_value()) {
-            for (int i = 0; i < (int)items.size(); i++) {
+            for (int i = 0; i < std::ssize(items); i++) {
                 if (items[i]->path == *restore_cursor_path) {
                     open_index = i;
                     break;
@@ -1263,7 +1264,7 @@ void Navigator::add_to_recent(const SongBox* song) {
     auto entries = read_song_list(song_list_path);
     std::erase_if(entries, [&](const SongListEntry& e) { return e.title == title && e.subtitle == subtitle; });
     entries.insert(entries.begin(), {std::move(hash), title, subtitle});
-    if ((int)entries.size() > 25) {
+    if (std::ssize(entries) > 25) {
         entries.resize(25);
     }
 
@@ -1281,7 +1282,7 @@ void Navigator::promote_recent_box(const SongBox* song) {
 
     int first = inline_state->first_song_index;
     int end = first + inline_state->songs_count;
-    if (first < 0 || end > (int)items.size()) {
+    if (first < 0 || end > std::ssize(items)) {
         return;
     }
 
@@ -1293,7 +1294,7 @@ void Navigator::promote_recent_box(const SongBox* song) {
     }
 
     int pos = -1;
-    for (int i = 0; i < (int)slots.size(); i++) {
+    for (int i = 0; i < std::ssize(slots); i++) {
         if (items[slots[i]]->path == song->path) {
             pos = i;
             break;
@@ -1870,7 +1871,7 @@ void Navigator::load_current_directory(const fs::path path) {
 #endif
             if (!game.empty()) {
                 restore_cursor_path = game;
-            } else if (open_index >= 0 && open_index < (int)items.size()) {
+            } else if (open_index >= 0 && open_index < std::ssize(items)) {
                 restore_cursor_path = items[open_index]->path;
             }
         }
@@ -1882,7 +1883,7 @@ void Navigator::load_current_directory(const fs::path path) {
         if (inline_state.has_value()) {
             collapse_inline_now();
             items[open_index]->close_box();
-            for (int i = 0; i < (int)items.size(); i++) {
+            for (int i = 0; i < std::ssize(items); i++) {
                 if (items[i]->path == path) {
                     open_index = i;
                     break;
@@ -2004,7 +2005,7 @@ bool Navigator::jump_to_song_path(const fs::path& song_path) {
         load_full(final_folder);
     } else {
         int folder_index = -1;
-        for (int i = 0; i < (int)items.size(); i++) {
+        for (int i = 0; i < std::ssize(items); i++) {
             if (items[i]->path == final_folder) {
                 folder_index = i;
                 break;
@@ -2051,7 +2052,7 @@ bool Navigator::jump_to_song_path(const fs::path& song_path) {
     }
 
     int target_index = -1;
-    for (int i = 0; i < (int)items.size(); i++) {
+    for (int i = 0; i < std::ssize(items); i++) {
         if (items[i]->path == song_path) {
             target_index = i;
             break;
@@ -2884,7 +2885,7 @@ void Navigator::draw() {
             pending_inline_folder != nullptr && genre_bg_end_pos.has_value()) {
             start_pos = pending_inline_folder->left_bound;
             end_pos = genre_bg_end_pos.value(); // approximation while loading
-        } else if (genre_bg_start < (int)items.size() && genre_bg_end < (int)items.size()) {
+        } else if (genre_bg_start < std::ssize(items) && genre_bg_end < std::ssize(items)) {
             start_pos = items[genre_bg_start]->left_bound;
             end_pos = items[genre_bg_end]->right_bound;
         } else {

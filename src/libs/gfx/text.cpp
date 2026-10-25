@@ -750,7 +750,7 @@ OutlinedText::BuildData OutlinedText::build_horizontal_text(Color color, Color o
                                 (int)(line_advance * (float)(lines.size() - 1) + line_h) + pad * 2 + top_extra,
                                 clear_of(outline_thickness > 0 ? outline_color : color));
 
-    for (int li = 0; li < (int)lines.size(); li++) {
+    for (size_t li = 0; li < lines.size(); li++) {
         float y = pad + top_extra + li * line_advance;
         if (outline_thickness > 0) {
             stamp_outline(&img, worker_font, lines[li].c_str(), {(float)pad, y}, font_size, sp, outline_color,
@@ -788,10 +788,10 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
     }
 
     std::vector<TextItem> items;
-    for (int i = 0; i < (int)raw_chars.size();) {
+    for (size_t i = 0; i < raw_chars.size();) {
         if (is_hgroup_char(raw_chars[i])) {
-            int j = i;
-            while (j < (int)raw_chars.size() && is_hgroup_char(raw_chars[j])) {
+            size_t j = i;
+            while (j < raw_chars.size() && is_hgroup_char(raw_chars[j])) {
                 j++;
             }
             TextItem item;
@@ -826,7 +826,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
     static constexpr float beside_advance_factor = 0.3f;
     std::vector<float> y_positions(items.size(), (float)pad);
     float current_y = (float)pad;
-    for (int i = 1; i < (int)items.size(); i++) {
+    for (size_t i = 1; i < items.size(); i++) {
         float advance;
         const auto& first = items[i].chars[0];
         if (items[i].is_hgroup) {
@@ -850,7 +850,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
     for (int pass = 0; pass < 2; pass++) {
         Image* target = (pass == 0) ? &outline_img : &img;
 
-        for (int i = 0; i < (int)items.size(); i++) {
+        for (size_t i = 0; i < items.size(); i++) {
             const auto& item = items[i];
             float y = y_positions[i];
 

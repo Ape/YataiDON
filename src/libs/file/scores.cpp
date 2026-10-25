@@ -1,5 +1,6 @@
 #include "scores.h"
 
+#include <iterator>
 #include <numeric>
 
 #include "../gfx/color_utils.h"
@@ -1200,7 +1201,7 @@ void ScoresManager::save_dan_score(const std::string& player_id, const std::stri
         spdlog::error("save_dan_score: songs prepare failed: {}", sqlite3_errmsg(db_fsd));
         return;
     }
-    for (int i = 0; i < (int)rd.songs.size(); i++) {
+    for (int i = 0; i < std::ssize(rd.songs); i++) {
         const auto& s = rd.songs[i];
         sqlite3_bind_int64(stmt, 1, id);
         sqlite3_bind_int(stmt, 2, i);

@@ -1,5 +1,6 @@
 #include "box_song.h"
 
+#include <iterator>
 #include <thread>
 
 #include "../../../libs/audio/audio.h"
@@ -76,7 +77,7 @@ void SongBox::refresh_scores() {
 }
 
 std::string SongBox::hash_for(int difficulty) {
-    if (difficulty < 0 || difficulty >= (int)hashes.size()) {
+    if (difficulty < 0 || difficulty >= std::ssize(hashes)) {
         return "";
     }
     if (hashes[difficulty].empty()) {

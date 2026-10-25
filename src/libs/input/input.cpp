@@ -5,6 +5,7 @@
 #include <bitset>
 #include <cstdint>
 #include <deque>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -160,7 +161,7 @@ bool is_input_key_pressed(const std::vector<int>& keys, const std::vector<int>& 
 
 static bool keys_held(const std::vector<int>& keys, const std::vector<int>& pad) {
     for (int k : keys) {
-        if (k >= 0 && k < (int)previous_key_states.size() && previous_key_states[k]) {
+        if (k >= 0 && k < std::ssize(previous_key_states) && previous_key_states[k]) {
             return true;
         }
     }
@@ -1165,7 +1166,7 @@ bool mouse_down(int button) {
 
 bool mouse_pressed(int button) {
     std::scoped_lock lock(frame_mutex);
-    return button >= 0 && button < (int)frame.mouse_pressed.size() && frame.mouse_pressed.test(button);
+    return button >= 0 && button < std::ssize(frame.mouse_pressed) && frame.mouse_pressed.test(button);
 }
 
 void show_cursor() {

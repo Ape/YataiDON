@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cmath>
+#include <iterator>
 #include <thread>
 
 #include "../../../libs/audio/audio.h"
@@ -127,7 +128,7 @@ public:
             info.level = (int)std::round(it->second.level);
             info.is_branching = it->second.is_branching;
         }
-        if (diff >= 0 && diff < (int)scores.size() && scores[diff].has_value()) {
+        if (diff >= 0 && diff < std::ssize(scores) && scores[diff].has_value()) {
             info.crown = (int)scores[diff]->crown;
             info.rank = (int)scores[diff]->rank;
         }

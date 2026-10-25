@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <iterator>
 #include <spdlog/spdlog.h>
 #include <string_view>
 
@@ -77,7 +78,7 @@ static SessionData& current_session() {
         return fallback;
     }
     int idx = (int)global_data.player_num;
-    if (idx < 0 || idx >= (int)global_data.session_data.size()) {
+    if (idx < 0 || idx >= std::ssize(global_data.session_data)) {
         idx = 0;
     }
     return global_data.session_data[idx];

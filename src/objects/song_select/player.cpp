@@ -1,6 +1,7 @@
 #include "player.h"
 
 #include <algorithm>
+#include <iterator>
 
 #include "../../libs/audio/audio.h"
 #include "../../libs/file/scores.h"
@@ -187,7 +188,7 @@ SongSelectState SongSelectPlayer::select_song() {
     BaseBox* item = navigator.get_current_item();
     if (navigator.is_directory(item) && item->genre_index == GenreIndex::DAN) {
         global_data.session_data[(int)player_num].selected_dan_folder = item->path;
-        if ((int)player_num >= 0 && (int)player_num < (int)global_data.dan_folder.size()) {
+        if ((int)player_num >= 0 && (int)player_num < std::ssize(global_data.dan_folder)) {
             global_data.dan_folder[(int)player_num] = item->path;
         }
         return SongSelectState::DAN_SELECTED;

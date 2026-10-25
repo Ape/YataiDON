@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 
 #include "../libs/file/filesystem.h"
 #include "../libs/file/scores.h"
@@ -74,7 +75,7 @@ void DanResultScreen::on_screen_start() {
     }
     gauge_exam = -1;
     const DanResultData& rd = sd.dan_result_data;
-    for (int i = 0; i < (int)rd.exams.size() && i < (int)rd.exam_data.size(); i++) {
+    for (int i = 0; i < std::ssize(rd.exams) && i < std::ssize(rd.exam_data); i++) {
         if (rd.exams[i].type == "gauge") {
             gauge_exam = i;
             gauge_value = std::max(0, std::min(100, rd.exam_data[i].counter_value));
@@ -341,7 +342,7 @@ void DanResultScreen::update_sounds(double now) {
     }
 
     if (!is_page2) {
-        while (page1_plates_played < (int)rd.songs.size() && page1_plates_played < 3 &&
+        while (page1_plates_played < std::ssize(rd.songs) && page1_plates_played < 3 &&
                on_page >= SONG_LAND_MS[page1_plates_played]) {
             audio.play_sound("partial_plate", VolumePreset::SOUND);
             page1_plates_played++;
@@ -362,13 +363,13 @@ void DanResultScreen::update_sounds(double now) {
         se_gauge_max = true;
         audio.play_sound("achieve_tamashii", VolumePreset::SOUND);
     }
-    for (int i = 0; i < (int)rows.size(); i++) {
+    for (int i = 0; i < std::ssize(rows); i++) {
         if (i == gauge_exam) {
             continue;
         }
         if (!se_row_fill[i] && on_page >= rows[i].fill0 && rows[i].filld > 0 && !page2_skipped) {
             se_row_fill[i] = true;
-            const bool less = i < (int)rd.exams.size() && rd.exams[i].range == "less";
+            const bool less = i < std::ssize(rd.exams) && rd.exams[i].range == "less";
             audio.play_sound(less ? "gauge_down_loop" : "gauge_up_loop", VolumePreset::SOUND);
         }
         if (!se_row_judge[i] && on_page >= rows[i].numin && !page2_skipped) {

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 
 #include "../../libs/input/ime_ui.h"
 #include "../../libs/input/input.h"
@@ -111,7 +112,7 @@ IntOptionBox::IntOptionBox(const std::string& name, const std::string& descripti
 
         if (!value_list.empty()) {
             bool matched = false;
-            for (int i = 0; i < (int)value_list.size(); i++) {
+            for (int i = 0; i < std::ssize(value_list); i++) {
                 if (value_list[i].first == value) {
                     value_index = i;
                     matched = true;
@@ -189,7 +190,7 @@ StrOptionBox::StrOptionBox(const std::string& name, const std::string& descripti
             value_list.emplace_back(k, v);
         }
         bool matched = false;
-        for (int i = 0; i < (int)value_list.size(); i++) {
+        for (int i = 0; i < std::ssize(value_list); i++) {
             if (value_list[i].first == value) {
                 value_index = i;
                 matched = true;
@@ -287,13 +288,13 @@ KeybindOptionBox::KeybindOptionBox(const std::string& name, const std::string& d
 
 void KeybindOptionBox::rebuild_text() {
     std::string label;
-    for (int i = 0; i < (int)value.size(); i++) {
+    for (int i = 0; i < std::ssize(value); i++) {
         try {
             label += getKeyString(value[i]);
         } catch (...) {
             label += std::to_string(value[i]);
         }
-        if (i + 1 < (int)value.size()) {
+        if (i + 1 < std::ssize(value)) {
             label += ", ";
         }
     }
@@ -348,9 +349,9 @@ KeyBindControllerOptionBox::KeyBindControllerOptionBox(const std::string& name, 
 
 void KeyBindControllerOptionBox::rebuild_text() {
     std::string label;
-    for (int i = 0; i < (int)value.size(); i++) {
+    for (int i = 0; i < std::ssize(value); i++) {
         label += std::to_string(value[i]);
-        if (i + 1 < (int)value.size()) {
+        if (i + 1 < std::ssize(value)) {
             label += ", ";
         }
     }

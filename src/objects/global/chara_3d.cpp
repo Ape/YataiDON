@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <iterator>
 #include <map>
 #include <mutex>
 #include <rapidjson/document.h>
@@ -131,7 +132,7 @@ static ModelAnimation* reindexed_animations(const Model& model, const AnimSource
     }
     const bool reindex = model.skeleton.bones && !src.bone_names.empty();
     std::unordered_map<std::string, int> glb_bone_idx;
-    for (int i = 0; i < (int)src.bone_names.size(); i++) {
+    for (int i = 0; i < std::ssize(src.bone_names); i++) {
         glb_bone_idx[src.bone_names[i]] = i;
     }
 
@@ -569,7 +570,7 @@ void Chara3D::load_face_anims(fs::path& anim_path) {
 }
 
 void Chara3D::apply_face(int face_index) {
-    if (face_index < 0 || face_index >= (int)face_textures.size()) {
+    if (face_index < 0 || face_index >= std::ssize(face_textures)) {
         return;
     }
     for (size_t p = 0; p < parts.size(); p++) {

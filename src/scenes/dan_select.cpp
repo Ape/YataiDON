@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <iterator>
 
 #include "../libs/file/script.h"
 #include "../libs/input/input.h"
@@ -59,7 +60,7 @@ void DanSelectScreen::on_screen_start() {
     }
 
     SessionData& sd_boot = global_data.session_data[(int)global_data.player_num];
-    if (sd_boot.selected_dan_folder.empty() && (int)global_data.player_num < (int)global_data.dan_folder.size()) {
+    if (sd_boot.selected_dan_folder.empty() && (int)global_data.player_num < std::ssize(global_data.dan_folder)) {
         sd_boot.selected_dan_folder = global_data.dan_folder[(int)global_data.player_num];
     }
     fs::path dan_folder = sd_boot.selected_dan_folder;

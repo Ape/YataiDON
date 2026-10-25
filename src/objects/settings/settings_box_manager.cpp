@@ -1,5 +1,7 @@
 #include "settings_box_manager.h"
 
+#include <iterator>
+
 static constexpr int INITIAL_SELECTED = 3;
 // Same 1280x720-canvas base values as SettingsBox; scale with the skin.
 static constexpr float BOX_STEP_BASE = 100.0f;
@@ -106,7 +108,7 @@ bool SettingsBoxManager::select_box() {
 }
 
 void SettingsBoxManager::update(double current_time_ms) {
-    for (int i = 0; i < (int)boxes.size(); i++) {
+    for (int i = 0; i < std::ssize(boxes); i++) {
         bool selected = (i == selected_box_index) && !box_selected;
         boxes[i]->update(current_time_ms, selected);
     }

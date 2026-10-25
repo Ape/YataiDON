@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <iterator>
 #include <map>
 #include <unordered_set>
 
@@ -455,7 +456,7 @@ public:
 
         hovered_log_index = -1;
         if (!mouse_over_panel && scroll_drag == ScrollDrag::None) {
-            for (int i = (int)debug_draw_log_prev.size() - 1; i >= 0; i--) {
+            for (auto i = std::ssize(debug_draw_log_prev) - 1; i >= 0; i--) {
                 const Rect& r = debug_draw_log_prev[i].rect;
                 if (mouse.x >= r.x && mouse.x <= r.x + r.width && mouse.y >= r.y && mouse.y <= r.y + r.height) {
                     hovered_log_index = i;
@@ -622,7 +623,7 @@ private:
     static std::string call_text(const std::vector<std::string>& lines, int first_line) {
         std::string text;
         int depth = 0;
-        for (int i = first_line - 1; i >= 0 && i < (int)lines.size() && i < first_line - 1 + CALL_TEXT_MAX_ROWS; i++) {
+        for (int i = first_line - 1; i >= 0 && i < std::ssize(lines) && i < first_line - 1 + CALL_TEXT_MAX_ROWS; i++) {
             text += lines[i];
             for (char c : lines[i]) {
                 depth += (c == '(') - (c == ')');
@@ -1065,7 +1066,7 @@ private:
         if (!has_selection) {
             return nullptr;
         }
-        if (selected_log_index >= 0 && selected_log_index < (int)debug_draw_log_prev.size()) {
+        if (selected_log_index >= 0 && selected_log_index < std::ssize(debug_draw_log_prev)) {
             const DrawLogEntry& entry = debug_draw_log_prev[selected_log_index];
             if (is_selected_entry(entry)) {
                 return &entry;
@@ -1164,7 +1165,7 @@ private:
     void rebuild_visible_rows() {
         visible_rows.clear();
         std::map<std::string, std::vector<int>> groups;
-        for (int i = 0; i < (int)debug_draw_log_prev.size(); i++) {
+        for (int i = 0; i < std::ssize(debug_draw_log_prev); i++) {
             groups[split_subset(debug_draw_log_prev[i]).first].push_back(i);
         }
         for (auto& [subset, indices] : groups) {

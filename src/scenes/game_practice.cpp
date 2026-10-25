@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <numbers>
 #include <ranges>
 
@@ -140,7 +141,7 @@ void PracticeGameScreen::sync_branch_display() {
     }
 
     auto ms_of = [&](int index) -> double {
-        return (index >= 0 && index < (int)bars.size()) ? bars[index].hit_ms : -1.0;
+        return (index >= 0 && index < std::ssize(bars)) ? bars[index].hit_ms : -1.0;
     };
     double cursor_ms = ms_of(scrobble_index);
     double jump_arrow_ms = ms_of(jump_arrow_bar);
@@ -200,7 +201,7 @@ void PracticeGameScreen::sync_branch_display() {
         if (ms < 0) {
             return -1;
         }
-        for (int i = 0; i < (int)bars.size(); ++i) {
+        for (int i = 0; i < std::ssize(bars); ++i) {
             if (bars[i].hit_ms == ms) {
                 return i;
             }
@@ -339,7 +340,7 @@ std::optional<Screens> PracticeGameScreen::handle_menu_action(PracticeMenu::Acti
     case PracticeMenu::Action::JUMP_TO_MARK: {
         bool any_mark = false;
         for (int b : jump_bars) {
-            if (b >= 0 && b < (int)bars.size()) {
+            if (b >= 0 && b < std::ssize(bars)) {
                 any_mark = true;
                 break;
             }
@@ -586,7 +587,7 @@ std::optional<Screens> PracticeGameScreen::global_keys_practice() {
                 if (!bars.empty() && (step_l || step_r)) {
                     std::vector<int> marks;
                     for (int b : jump_bars) {
-                        if (b >= 0 && b < (int)bars.size()) {
+                        if (b >= 0 && b < std::ssize(bars)) {
                             marks.push_back(b);
                         }
                     }
@@ -755,7 +756,7 @@ std::optional<Screens> PracticeGameScreen::update() {
 
     scrobble_move->update(current_ms);
     if (scrobble_move->is_started && scrobble_move->is_finished) {
-        if (scrobble_index >= 0 && scrobble_index < (int)bars.size()) {
+        if (scrobble_index >= 0 && scrobble_index < std::ssize(bars)) {
             scrobble_time = bars[scrobble_index].hit_ms;
         }
         scrobble_move = std::make_unique<MoveAnimation>(200.0, 0);
@@ -809,7 +810,7 @@ std::optional<Screens> PracticeGameScreen::update() {
 float PracticeGameScreen::get_scrobble_position_x(const Note& note, double current_ms) const {
     float speedx = note.bpm / 240000.0f * note.scroll_x * (tex.screen_width - JudgePos::X);
     float offset_px = 0.0f;
-    if (!bars.empty() && scrobble_index < (int)bars.size()) {
+    if (!bars.empty() && scrobble_index < std::ssize(bars)) {
         float bar_speedx =
             bars[scrobble_index].bpm / 240000.0f * bars[scrobble_index].scroll_x * (tex.screen_width - JudgePos::X);
         offset_px = (float)(scrobble_move->attribute * bar_speedx);
@@ -967,13 +968,13 @@ void PracticeGameScreen::draw_notes_scrobble(double current_ms) const {
 
     end_scissor_mode();
 
-    if (!bars.empty() && scrobble_index < (int)bars.size()) {
+    if (!bars.empty() && scrobble_index < std::ssize(bars)) {
         std::string bar_str = std::to_string(scrobble_index + 1);
         float dw = t_bar_count_bar->x2[0];
         float x = get_scrobble_position_x(bars[scrobble_index], current_ms) + 4 * tex.screen_scale;
         float y = tex.get_skin_config(SC::GAME_NOTES)->y + 184 * tex.screen_scale + t_bar_count_bar->y2[0] +
                   2 * tex.screen_scale;
-        for (int i = 0; i < (int)bar_str.size(); i++) {
+        for (int i = 0; i < std::ssize(bar_str); i++) {
             tex.draw_texture(t_bar_count_bar, {.frame = bar_str[i] - '0', .x = x + i * dw, .y = y});
         }
     }
@@ -1000,7 +1001,7 @@ void PracticeGameScreen::draw() {
             tex.draw_texture(t_jump_point_editing, {});
         }
         if (jump_arrow_anim && jump_arrow_anim->is_started && jump_arrow_bar >= 0 &&
-            jump_arrow_bar < (int)bars.size()) {
+            jump_arrow_bar < std::ssize(bars)) {
             float ax = get_scrobble_position_x(bars[jump_arrow_bar], scrobble_time) - t_jump_point_arrow->width / 2.0f;
             float ay = (float)jump_arrow_anim->attribute - t_jump_point_arrow->height;
             tex.draw_texture(t_jump_point_arrow, {.x = ax, .y = ay});
@@ -1096,7 +1097,7 @@ void PracticeGameScreen::draw() {
             tex.draw_texture(t_gogo_marker, {.x = mx});
         }
         for (int b : jump_bars) {
-            if (b < 0 || b >= (int)bars.size()) {
+            if (b < 0 || b >= std::ssize(bars)) {
                 continue;
             }
             float jx = (float)((bars[b].hit_ms - first_bar_time) / total_time) * bar_width;
@@ -1111,7 +1112,7 @@ void PracticeGameScreen::draw() {
         } else {
             current_bar = 0;
             double first_bar_time = bars[0].hit_ms;
-            for (int i = 0; i < (int)bars.size(); i++) {
+            for (int i = 0; i < std::ssize(bars); i++) {
                 if (bars[i].hit_ms - first_bar_time <= clock.position()) {
                     current_bar = i + 1;
                 } else {
@@ -1119,7 +1120,6 @@ void PracticeGameScreen::draw() {
                 }
             }
         }
-        int total_bars = (int)bars.size();
 
         float dw = t_bar_count->x2[0];
         float divw = t_bar_divider->x2[0];
@@ -1129,7 +1129,7 @@ void PracticeGameScreen::draw() {
         float digit_y = pb_y + (pb_h - dh) * 0.5f;
 
         std::string cur_str = std::to_string(current_bar);
-        std::string tot_str = std::to_string(total_bars);
+        std::string tot_str = std::to_string(bars.size());
         int d1 = song_speed / 10;
         int d2 = song_speed % 10;
 
@@ -1145,12 +1145,12 @@ void PracticeGameScreen::draw() {
         tex.draw_texture(t_bar_count, {.frame = d1, .x = st_right - 4 * tex.screen_scale, .y = digit_y});
         tex.draw_texture(t_bar_count, {.frame = d2, .x = dot_right - 4 * tex.screen_scale, .y = digit_y});
 
-        for (int i = 0; i < (int)cur_str.size(); i++) {
+        for (int i = 0; i < std::ssize(cur_str); i++) {
             tex.draw_texture(t_bar_count, {.frame = cur_str[i] - '0', .x = lbl_right + i * dw, .y = digit_y});
         }
         float div_x = lbl_right + (float)cur_str.size() * dw;
         tex.draw_texture(t_bar_divider, {.x = div_x, .y = digit_y});
-        for (int i = 0; i < (int)tot_str.size(); i++) {
+        for (int i = 0; i < std::ssize(tot_str); i++) {
             tex.draw_texture(t_bar_count, {.frame = tot_str[i] - '0', .x = div_x + divw + i * dw, .y = digit_y});
         }
     }

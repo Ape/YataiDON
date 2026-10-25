@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 #include <numbers>
 #include <optional>
 #include <ranges>
@@ -241,7 +242,7 @@ void Player::handle_timeline(double ms_from_start) {
         timeline.pop_front();
     }
 
-    for (int i = (int)timeline_buffer.size() - 1; i >= 0; i--) {
+    for (auto i = std::ssize(timeline_buffer) - 1; i >= 0; i--) {
         // NOTE: handlers may erase timeline_buffer[i]; take a copy and stop
         // dispatching as soon as the entry has been consumed.
         TimelineObject entry = timeline_buffer[i];
@@ -915,7 +916,7 @@ void Player::reset_chart() {
     if (score_method == ScoreMethod::SHINUCHI) {
         base_score = calculate_base_score(total_notes);
     } else if (score_method == ScoreMethod::GEN3) {
-        if (difficulty < 0 || difficulty >= (int)parser->metadata.course_data.size()) {
+        if (difficulty < 0 || difficulty >= std::ssize(parser->metadata.course_data)) {
             score_init = calculate_base_score(total_notes);
             score_diff = 0;
             return;
@@ -1005,7 +1006,7 @@ void Player::handle_gogotime(double ms_from_start, const TimelineObject& timelin
         }
     }
 
-    if (buffer_index != (int)timeline_buffer.size() - 1) {
+    if (buffer_index != std::ssize(timeline_buffer) - 1) {
         timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
     }
     timeline_buffer.pop_back();
@@ -1054,7 +1055,7 @@ void Player::handle_judgeposition(double ms_from_start, const TimelineObject& ti
             judge_y = (timeline_object.judge_pos_y.value() + timeline_object.delta_y.value()) * tex.screen_scale;
         }
 
-        if (buffer_index != (int)timeline_buffer.size() - 1) {
+        if (buffer_index != std::ssize(timeline_buffer) - 1) {
             timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
         }
         timeline_buffer.pop_back();
@@ -1074,7 +1075,7 @@ void Player::handle_bpmchange(double ms_from_start, const TimelineObject& timeli
     bpm = std::abs(timeline_object.bpm.value());
     chara->set_bpm(bpm);
 
-    if (buffer_index != (int)timeline_buffer.size() - 1) {
+    if (buffer_index != std::ssize(timeline_buffer) - 1) {
         timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
     }
     timeline_buffer.pop_back();
@@ -1135,7 +1136,7 @@ void Player::handle_branch_param(double ms_from_start, const TimelineObject& tim
                 branch_cond, e_req, m_req, timeline_object.start_time, branch_condition_end_time);
         }
     }
-    if (buffer_index != (int)timeline_buffer.size() - 1) {
+    if (buffer_index != std::ssize(timeline_buffer) - 1) {
         timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
     }
     timeline_buffer.pop_back();
@@ -1152,7 +1153,7 @@ void Player::handle_section(double ms_from_start, const TimelineObject& timeline
     branch_p_count = 0;
     branch_r_count = 0;
     branch_note_count = 0;
-    if (buffer_index != (int)timeline_buffer.size() - 1) {
+    if (buffer_index != std::ssize(timeline_buffer) - 1) {
         timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
     }
     timeline_buffer.pop_back();
@@ -1175,7 +1176,7 @@ void Player::handle_lyric(double ms_from_start, const TimelineObject& timeline_o
         (lyric_cfg && lyric_cfg->font_size > 0) ? lyric_cfg->font_size : static_cast<int>(40 * tex.screen_scale);
     float outline = (lyric_cfg && lyric_cfg->outline >= 0) ? lyric_cfg->outline : 4.0f * tex.screen_scale;
     current_lyric.emplace(timeline_object.lyric.value(), font_size, Color::WHITE, Color::BLUE, false, outline);
-    if (buffer_index != (int)timeline_buffer.size() - 1) {
+    if (buffer_index != std::ssize(timeline_buffer) - 1) {
         timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
     }
     timeline_buffer.pop_back();
@@ -1264,7 +1265,7 @@ void Player::handle_camera(double ms_from_start, const TimelineObject& timeline_
             apply_camera_prop(ev.prop, (float)ev.to);
         }
     }
-    if (buffer_index != (int)timeline_buffer.size() - 1) {
+    if (buffer_index != std::ssize(timeline_buffer) - 1) {
         timeline_buffer[buffer_index] = std::move(timeline_buffer.back());
     }
     timeline_buffer.pop_back();

@@ -1,6 +1,7 @@
 #include "box_lua_bindings.h"
 
 #include <algorithm>
+#include <iterator>
 
 #include "../../../libs/file/script.h"
 #include "../../game/exam_caption.h"
@@ -19,7 +20,7 @@ namespace {
     sol::table modifier_rows_table(ModifierSelector& m) {
         sol::table out = script_manager.lua->create_table();
         auto rows = m.lua_rows();
-        for (int i = 0; i < (int)rows.size(); i++) {
+        for (int i = 0; i < std::ssize(rows); i++) {
             sol::table r = script_manager.lua->create_table();
             r["name"] = rows[i].name;
             r["value"] = rows[i].value;
@@ -101,7 +102,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
             t["is_branching"] = info.is_branching;
             t["crown"] = info.crown;
             t["rank"] = info.rank;
-            t["has_score"] = (diff >= 0 && diff < (int)self.scores.size() && self.scores[diff].has_value());
+            t["has_score"] = (diff >= 0 && diff < std::ssize(self.scores) && self.scores[diff].has_value());
             return t;
         },
         "course_info_p2",
@@ -109,7 +110,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
             auto info = self.course_info(static_cast<int>(diff));
             info.crown = 0; // Crown::NONE
             info.rank = 0;  // Rank::_NONE
-            if (diff >= 0 && diff < (int)self.scores_p2.size() && self.scores_p2[diff].has_value()) {
+            if (diff >= 0 && diff < std::ssize(self.scores_p2) && self.scores_p2[diff].has_value()) {
                 info.crown = (int)self.scores_p2[diff]->crown;
                 info.rank = (int)self.scores_p2[diff]->rank;
             }
@@ -119,7 +120,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
             t["is_branching"] = info.is_branching;
             t["crown"] = info.crown;
             t["rank"] = info.rank;
-            t["has_score"] = (diff >= 0 && diff < (int)self.scores_p2.size() && self.scores_p2[diff].has_value());
+            t["has_score"] = (diff >= 0 && diff < std::ssize(self.scores_p2) && self.scores_p2[diff].has_value());
             return t;
         },
         "has_preimage", [](SongBox& self) { return self.preimage.has_value(); },
@@ -237,12 +238,12 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "song_title_text",
         [](DanBox& self, double i) {
             int idx = static_cast<int>(i);
-            return (idx >= 0 && idx < (int)self.song_texts.size()) ? self.song_texts[idx].first.get() : nullptr;
+            return (idx >= 0 && idx < std::ssize(self.song_texts)) ? self.song_texts[idx].first.get() : nullptr;
         },
         "song_subtitle_text",
         [](DanBox& self, double i) {
             int idx = static_cast<int>(i);
-            return (idx >= 0 && idx < (int)self.song_texts.size()) ? self.song_texts[idx].second.get() : nullptr;
+            return (idx >= 0 && idx < std::ssize(self.song_texts)) ? self.song_texts[idx].second.get() : nullptr;
         },
         "exam_count", [](DanBox& self) { return (int)self.exams.size(); }, "exam_type",
         [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].type; }, "exam_red",
@@ -257,7 +258,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
         [](DanBox& self, double i, double j) {
             const Exam& e = self.exams[static_cast<int>(i)];
             int idx = static_cast<int>(j);
-            return idx < (int)e.song_gold.size() ? e.song_gold[idx] : e.song_red[idx];
+            return idx < std::ssize(e.song_gold) ? e.song_gold[idx] : e.song_red[idx];
         },
         "exam_caption",
         [](DanBox& self, double i) {
@@ -403,7 +404,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
             }
             sol::table out = script_manager.lua->create_table();
             const auto& names = self.neiro_selector.value().lua_names();
-            for (int i = 0; i < (int)names.size(); i++) {
+            for (int i = 0; i < std::ssize(names); i++) {
                 out[i + 1] = names[i];
             }
             return out;
@@ -446,7 +447,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
         [](NeiroSelector& n) {
             sol::table out = script_manager.lua->create_table();
             const auto& names = n.lua_names();
-            for (int i = 0; i < (int)names.size(); i++) {
+            for (int i = 0; i < std::ssize(names); i++) {
                 out[i + 1] = names[i];
             }
             return out;

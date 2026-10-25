@@ -1,5 +1,6 @@
 #include "settings_box.h"
 
+#include <iterator>
 #include <stdexcept>
 
 #include "../../libs/audio/audio.h"
@@ -265,7 +266,7 @@ void SettingsBox::draw() {
         if (!options[option_index]->is_highlighted) {
             tex.draw_texture(t_blue_arrow,
                              {.x = -(float)blue_arrow_move->attribute, .fade = blue_arrow_fade->attribute, .index = 0});
-            if (option_index != (int)options.size() - 1) {
+            if (option_index != std::ssize(options) - 1) {
                 tex.draw_texture(t_blue_arrow, {.mirror = Mirror::HORIZONTAL,
                                                 .x = (float)blue_arrow_move->attribute,
                                                 .fade = blue_arrow_fade->attribute,

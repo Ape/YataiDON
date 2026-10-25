@@ -1,6 +1,7 @@
 #include "modifier.h"
 
 #include <algorithm>
+#include <iterator>
 #include <string_view>
 
 #include "../../libs/audio/audio.h"
@@ -95,7 +96,7 @@ void ModifierSelector::load_neiro_names() {
         neiro_index = (int)neiro_names.size() - 1;
     }
     neiro_index = std::clamp(neiro_index, 0, (int)neiro_names.size() - 1);
-    player->neiro_index = (neiro_index == (int)neiro_names.size() - 1) ? -1 : neiro_index;
+    player->neiro_index = (neiro_index == std::ssize(neiro_names) - 1) ? -1 : neiro_index;
 }
 
 void ModifierSelector::step_neiro(int dir) {
@@ -133,7 +134,7 @@ void ModifierSelector::confirm() {
         return;
     }
     current_mod_index++;
-    if (current_mod_index == (int)mod_names.size()) {
+    if (current_mod_index == std::ssize(mod_names)) {
         is_confirmed = true;
         if (move_out) {
             move = move_out;
@@ -238,7 +239,7 @@ bool ModifierSelector::row_greyed(const std::string& name) const {
 std::vector<ModifierSelector::ModRow> ModifierSelector::lua_rows() {
     std::vector<ModRow> rows;
     rows.reserve(mod_names.size());
-    for (int i = 0; i < (int)mod_names.size(); i++) {
+    for (int i = 0; i < std::ssize(mod_names); i++) {
         const std::string& n = mod_names[i];
         ModRow r;
         r.name = n;
