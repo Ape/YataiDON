@@ -486,8 +486,8 @@ void Navigator::init(std::vector<fs::path> songs_paths) {
         }
     }
     vertical_gallery = tex.options.contains(SCO::HORIZONTAL_SONG_SELECT) && tex.options.at(SCO::HORIZONTAL_SONG_SELECT);
-    background_move = (MoveAnimation*)tex.get_animation(0);
-    background_fade_change = (FadeAnimation*)tex.get_animation(5);
+    background_move = dynamic_cast<MoveAnimation*>(tex.get_animation(0));
+    background_fade_change = dynamic_cast<FadeAnimation*>(tex.get_animation(5));
     bg_genre_index = items.empty() ? GenreIndex::TUTORIAL : items[open_index]->genre_index;
     last_bg_genre_index = bg_genre_index;
     bg_genre_pending = true;

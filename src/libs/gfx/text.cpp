@@ -211,7 +211,7 @@ void FontManager::rebuild_atlas(SizedFont& entry, int font_size) {
         entry.atlas_dirty = false;
         return;
     } // nothing to pack; keep loaded == false
-    f.glyphs = (GlyphInfo*)std::malloc(sizeof(GlyphInfo) * n);
+    f.glyphs = static_cast<GlyphInfo*>(std::malloc(sizeof(GlyphInfo) * n));
     if (!f.glyphs) {
         return;
     }
@@ -327,8 +327,8 @@ static void blit_over(Image* dst, const Image& src, int x0, int y0) {
     if (!dst->data || !src.data) {
         return;
     }
-    unsigned char* d = (unsigned char*)dst->data;
-    const unsigned char* sp = (const unsigned char*)src.data;
+    auto* d = static_cast<unsigned char*>(dst->data);
+    const auto* sp = static_cast<const unsigned char*>(src.data);
     for (int y = 0; y < src.height; y++) {
         int dy = y0 + y;
         if (dy < 0 || dy >= dst->height) {
@@ -485,7 +485,7 @@ static void stamp_outline(Image* dst, const Font& font, const char* text, Vec2 p
         }
     }
     Image o = gen_image_color(OW, OH, Color{outline_color.r, outline_color.g, outline_color.b, 0});
-    unsigned char* op = (unsigned char*)o.data;
+    auto* op = static_cast<unsigned char*>(o.data);
     for (int i = 0; i < OW * OH; i++) {
         op[i * 4 + 3] = (unsigned char)((out[i] * (int)outline_color.a) / 255);
     }
@@ -500,7 +500,7 @@ static Font deep_copy_font(const Font& src) {
     dst.glyphCount = 0;
     if (src.glyphCount > 0 && src.glyphs && src.recs) {
         dst.glyphCount = src.glyphCount;
-        dst.glyphs = (GlyphInfo*)std::malloc(src.glyphCount * sizeof(GlyphInfo));
+        dst.glyphs = static_cast<GlyphInfo*>(std::malloc(src.glyphCount * sizeof(GlyphInfo)));
         memcpy(dst.glyphs, src.glyphs, src.glyphCount * sizeof(GlyphInfo));
         for (int i = 0; i < src.glyphCount; i++) {
             const Image& si = src.glyphs[i].image;
@@ -513,7 +513,7 @@ static Font deep_copy_font(const Font& src) {
                 di.data = nullptr;
             }
         }
-        dst.recs = (Rect*)std::malloc(src.glyphCount * sizeof(Rect));
+        dst.recs = static_cast<Rect*>(std::malloc(src.glyphCount * sizeof(Rect)));
         memcpy(dst.recs, src.recs, src.glyphCount * sizeof(Rect));
     }
     return dst;

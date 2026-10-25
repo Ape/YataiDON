@@ -47,7 +47,7 @@ SongBox::SongBox(const fs::path& path, const BoxDef& box_def, SongParser parser)
     this->parser = std::move(parser);
 
     is_favorite = false;
-    diff_fade_in = (FadeAnimation*)tex.get_animation(12);
+    diff_fade_in = dynamic_cast<FadeAnimation*>(tex.get_animation(12));
     refresh_scores();
 }
 
@@ -90,7 +90,7 @@ std::string SongBox::hash_for(int difficulty) {
 
 void SongBox::reset() {
     BaseBox::reset();
-    diff_fade_in = (FadeAnimation*)tex.get_animation(12);
+    diff_fade_in = dynamic_cast<FadeAnimation*>(tex.get_animation(12));
     if (audio.is_music_stream_valid("preview")) {
         audio.unload_music_stream("preview");
     }

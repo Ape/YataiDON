@@ -152,7 +152,7 @@ void BaseBox::update(double current_time) {
     if (yellow_box_active) {
         // The Lua skin advances the shared yellow-box animations; read their current
         // attributes to derive the box bounds the navigator uses for the inline-list bg.
-        auto yb = [](int id) { return (MoveAnimation*)tex.get_animation(id); };
+        auto yb = [](int id) { return dynamic_cast<MoveAnimation*>(tex.get_animation(id)); };
         if (is_diff_select) {
             left_bound = position + (yb(13)->attribute - yb(13)->start_position);
             right_bound = yb(14)->attribute - yb(14)->start_position;

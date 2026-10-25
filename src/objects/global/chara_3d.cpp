@@ -135,7 +135,7 @@ static ModelAnimation* reindexed_animations(const Model& model, const AnimSource
         glb_bone_idx[src.bone_names[i]] = i;
     }
 
-    auto* out = (ModelAnimation*)std::calloc(src.count, sizeof(ModelAnimation));
+    auto* out = static_cast<ModelAnimation*>(std::calloc(src.count, sizeof(ModelAnimation)));
     if (!out) {
         return nullptr;
     }
@@ -149,7 +149,7 @@ static ModelAnimation* reindexed_animations(const Model& model, const AnimSource
         }
 
         const int n = reindex ? model.skeleton.boneCount : (int)in.boneCount;
-        anim.keyframePoses = (Transform**)std::calloc(in.keyframeCount, sizeof(Transform*));
+        anim.keyframePoses = static_cast<Transform**>(std::calloc(in.keyframeCount, sizeof(Transform*)));
         if (!anim.keyframePoses) {
             continue;
         }
@@ -157,7 +157,7 @@ static ModelAnimation* reindexed_animations(const Model& model, const AnimSource
         anim.boneCount = n;
         for (int f = 0; f < in.keyframeCount; f++) {
             // calloc'd: a failed allocation leaves the rest null, which UnloadModelAnimations frees safely
-            anim.keyframePoses[f] = (Transform*)std::malloc(n * sizeof(Transform));
+            anim.keyframePoses[f] = static_cast<Transform*>(std::malloc(n * sizeof(Transform)));
             if (!anim.keyframePoses[f]) {
                 break;
             }
@@ -586,7 +586,7 @@ static Texture recolor_texture(Image& source, Color body, Color face, Color rim)
     Image img = image_copy(source);
     image_format(&img, pixel_format::RGBA8);
 
-    unsigned char* pixels = (unsigned char*)img.data;
+    auto* pixels = static_cast<unsigned char*>(img.data);
     int total = img.width * img.height;
 
     for (int i = 0; i < total; i++) {

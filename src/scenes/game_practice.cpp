@@ -59,16 +59,16 @@ void PracticeGameScreen::on_screen_start() {
     GameScreen::on_screen_start();
     init_practice_textures();
     menu.init_textures();
-    pause_don_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
-    pause_kat_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
-    resume_don_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
-    skip_l_kat_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
-    skip_r_kat_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
-    menu_don_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
-    speed_l_kat_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
-    speed_r_kat_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
-    mark_action_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
-    mark_finish_anim = (TextureResizeAnimation*)tex.get_animation(67, true);
+    pause_don_anim = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(67, true));
+    pause_kat_anim = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(67, true));
+    resume_don_anim = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(67, true));
+    skip_l_kat_anim = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(67, true));
+    skip_r_kat_anim = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(67, true));
+    menu_don_anim = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(67, true));
+    speed_l_kat_anim = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(67, true));
+    speed_r_kat_anim = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(67, true));
+    mark_action_anim = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(67, true));
+    mark_finish_anim = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(67, true));
     PracticeTimer::begin_session(get_frame_ms());
     hide_cursor();                // Hide cursor when entering practice mode
     set_touch_drum_enabled(true); // Enable touch drum (input + drawing) when entering practice mode

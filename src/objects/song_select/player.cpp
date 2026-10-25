@@ -44,13 +44,13 @@ SongSelectPlayer::SongSelectPlayer(PlayerNum player_num) : player_num(player_num
     }
     chara->set_anim(AnimIndex::DON_SELECT_LOOP);
 
-    diff_selector_move_1 = (MoveAnimation*)tex.get_animation(26, true);
-    diff_selector_move_2 = (MoveAnimation*)tex.get_animation(27, true);
-    selected_diff_bounce = (MoveAnimation*)tex.get_animation(33, true);
-    selected_diff_fadein = (FadeAnimation*)tex.get_animation(34, true);
-    selected_diff_highlight_fade = (FadeAnimation*)tex.get_animation(35, true);
-    selected_diff_text_resize = (TextureResizeAnimation*)tex.get_animation(36, true);
-    selected_diff_text_fadein = (FadeAnimation*)tex.get_animation(37, true);
+    diff_selector_move_1 = dynamic_cast<MoveAnimation*>(tex.get_animation(26, true));
+    diff_selector_move_2 = dynamic_cast<MoveAnimation*>(tex.get_animation(27, true));
+    selected_diff_bounce = dynamic_cast<MoveAnimation*>(tex.get_animation(33, true));
+    selected_diff_fadein = dynamic_cast<FadeAnimation*>(tex.get_animation(34, true));
+    selected_diff_highlight_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(35, true));
+    selected_diff_text_resize = dynamic_cast<TextureResizeAnimation*>(tex.get_animation(36, true));
+    selected_diff_text_fadein = dynamic_cast<FadeAnimation*>(tex.get_animation(37, true));
 }
 
 void SongSelectPlayer::update(double current_time) {
@@ -194,7 +194,7 @@ SongSelectState SongSelectPlayer::select_song() {
     }
 
     if (navigator.is_song(item)) {
-        SongBox* song_item = (SongBox*)item;
+        SongBox* song_item = dynamic_cast<SongBox*>(item);
         curr_diffs = song_item->get_diffs();
         if (curr_diffs.empty()) {
             return SongSelectState::BROWSING;

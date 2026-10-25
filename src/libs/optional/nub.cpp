@@ -194,7 +194,7 @@ namespace gen3 {
         MemReader reader{file.data() + riff, file.size() - riff};
 
         // The buffer avio reads through; freed via the context below.
-        unsigned char* avio_buf = (unsigned char*)av_malloc(0x4000);
+        auto* avio_buf = static_cast<unsigned char*>(av_malloc(0x4000));
         AVIOContext* avio = avio_alloc_context(avio_buf, 0x4000, 0, &reader, mem_read, nullptr, mem_seek);
         AVFormatContext* fmt = avformat_alloc_context();
         if (!avio_buf || !avio || !fmt) {

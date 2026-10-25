@@ -53,13 +53,13 @@ ModifierSelector::ModifierSelector(PlayerNum player_num, PlayerData* player) : p
         mod_names.emplace_back("neiro");
     }
 
-    blue_arrow_fade = (FadeAnimation*)tex.get_animation(29, true);
-    blue_arrow_move = (MoveAnimation*)tex.get_animation(30, true);
-    move = (MoveAnimation*)tex.get_animation(28, true);
-    move_out = tex.has_animation(43) ? (MoveAnimation*)tex.get_animation(43, true) : nullptr;
+    blue_arrow_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(29, true));
+    blue_arrow_move = dynamic_cast<MoveAnimation*>(tex.get_animation(30, true));
+    move = dynamic_cast<MoveAnimation*>(tex.get_animation(28, true));
+    move_out = tex.has_animation(43) ? dynamic_cast<MoveAnimation*>(tex.get_animation(43, true)) : nullptr;
     move->start();
-    move_sideways = (MoveAnimation*)tex.get_animation(31, true);
-    fade_sideways = (FadeAnimation*)tex.get_animation(32, true);
+    move_sideways = dynamic_cast<MoveAnimation*>(tex.get_animation(31, true));
+    fade_sideways = dynamic_cast<FadeAnimation*>(tex.get_animation(32, true));
 
     audio.play_sound("voice_options_" + std::to_string((int)player_num) + "p", VolumePreset::VOICE);
 }

@@ -34,13 +34,13 @@ NeiroSelector::NeiroSelector(PlayerNum player_num, PlayerData* player) : player_
     load_sound();
     audio.play_sound("voice_hitsound_select_" + std::to_string((int)player_num) + "p", VolumePreset::VOICE);
 
-    move = (MoveAnimation*)tex.get_animation(28, true);
-    move_out = tex.has_animation(43) ? (MoveAnimation*)tex.get_animation(43, true) : nullptr;
+    move = dynamic_cast<MoveAnimation*>(tex.get_animation(28, true));
+    move_out = tex.has_animation(43) ? dynamic_cast<MoveAnimation*>(tex.get_animation(43, true)) : nullptr;
     move->start();
-    blue_arrow_fade = (FadeAnimation*)tex.get_animation(29, true);
-    blue_arrow_move = (MoveAnimation*)tex.get_animation(30, true);
-    move_sideways = (MoveAnimation*)tex.get_animation(31, true);
-    fade_sideways = (FadeAnimation*)tex.get_animation(32, true);
+    blue_arrow_fade = dynamic_cast<FadeAnimation*>(tex.get_animation(29, true));
+    blue_arrow_move = dynamic_cast<MoveAnimation*>(tex.get_animation(30, true));
+    move_sideways = dynamic_cast<MoveAnimation*>(tex.get_animation(31, true));
+    fade_sideways = dynamic_cast<FadeAnimation*>(tex.get_animation(32, true));
 }
 
 void NeiroSelector::load_sound() {
