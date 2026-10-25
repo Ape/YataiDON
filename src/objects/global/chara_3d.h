@@ -108,7 +108,7 @@ private:
     void apply_pose();
     bool use_render_textures = true;
 
-    RenderTarget scene_target = {};
+    RenderTarget scene_target;
     int scene_target_w = 0;
     int scene_target_h = 0;
 

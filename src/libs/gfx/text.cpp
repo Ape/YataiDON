@@ -170,23 +170,23 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
     }
     std::vector<GlyphInfo> ag = load_font_data(font_data, font_size, alts);
     std::vector<bool> assigned(alts.size(), false);
-    for (size_t i = 0; i < ag.size(); i++) {
+    for (auto& i : ag) {
         bool used = false;
         for (size_t k = 0; k < alts.size(); k++) {
-            if (assigned[k] || alts[k] != ag[i].value) {
+            if (assigned[k] || alts[k] != i.value) {
                 continue;
             }
-            GlyphInfo gi = ag[i];
+            GlyphInfo gi = i;
             gi.value = missing[k];
             if (used) {
-                gi.image = image_copy(ag[i].image); // two originals folding to one form
+                gi.image = image_copy(i.image); // two originals folding to one form
             }
             entry.cache.push_back(gi);
             used = true;
             assigned[k] = true;
         }
         if (!used) {
-            unload_image(ag[i].image);
+            unload_image(i.image);
         }
     }
     // Any alt the font lacks never got assigned; retry those too.

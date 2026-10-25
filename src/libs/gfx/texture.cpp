@@ -293,7 +293,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
                     spdlog::error("Invalid crop entry {} for texture {}", j, tex_obj->name);
                     continue;
                 }
-                crops.push_back(Rect{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
+                crops.emplace_back(crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat());
             }
             if (crops.empty()) {
                 has_crop_in_first = false;
@@ -354,7 +354,7 @@ void TextureWrapper::read_tex_obj_data(const Value& tex_mapping, TextureObject* 
                     spdlog::error("Invalid crop entry {} for texture {}", j, tex_obj->name);
                     continue;
                 }
-                crops.push_back(Rect{crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat()});
+                crops.emplace_back(crop[0].GetFloat(), crop[1].GetFloat(), crop[2].GetFloat(), crop[3].GetFloat());
             }
             if (!crops.empty()) {
                 tex_obj->crop_data = crops;
@@ -724,7 +724,7 @@ private:
         size_t group;
         State state = State::Pending;
         Image image{};
-        Rect border{};
+        Rect border;
         bool want_border = false;
         bool has_border = false;
         size_t bytes = 0;

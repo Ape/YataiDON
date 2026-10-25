@@ -1085,7 +1085,7 @@ namespace {
             }
             break;
         case SDL_EVENT_MOUSE_WHEEL:
-            pending.wheel += (float)event->wheel.y;
+            pending.wheel += event->wheel.y;
             break;
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
             if (event->button.button < pending.mouse_pressed.size()) {

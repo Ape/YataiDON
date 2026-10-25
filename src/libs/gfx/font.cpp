@@ -59,7 +59,7 @@ Image gen_image_font_atlas(const GlyphInfo* glyphs, Rect** recs_out, int glyph_c
         total_width += glyphs[i].image.width + 2 * padding;
     }
     const float total_area = total_width * (font_size + 2 * padding) * 1.2f;
-    const int size = (int)powf(2, ceilf(logf(sqrtf(total_area)) / logf(2)));
+    const int size = (int)powf(2, ceilf(logf(sqrtf(total_area)) / std::numbers::ln2_v<float>));
     atlas.width = size;
     atlas.height = total_area < (size * size) / 2 ? size / 2 : size;
     int data_size = atlas.width * atlas.height;
@@ -243,5 +243,5 @@ Vec2 measure_text_ex(const Font& font, const char* text, float font_size, float 
         max_bytes = bytes > max_bytes ? bytes : max_bytes;
     }
     max_width = width > max_width ? width : max_width;
-    return {max_width * (font_size / (float)font.baseSize) + (float)((max_bytes - 1) * spacing), height};
+    return {max_width * (font_size / (float)font.baseSize) + ((max_bytes - 1) * spacing), height};
 }
