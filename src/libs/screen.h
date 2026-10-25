@@ -16,7 +16,7 @@ inline int virtual_to_screen_x(float virtual_x) {
     }
     int win_w = get_render_width();
     int win_h = get_render_height();
-    float scale = std::min((float)win_w / tex.screen_width, (float)win_h / tex.screen_height);
+    float scale = std::min(static_cast<float>(win_w) / tex.screen_width, static_cast<float>(win_h) / tex.screen_height);
     float effective_zoom = scale * global_data.camera.zoom;
     float zoom_off = (tex.screen_width * scale * (global_data.camera.zoom - 1.0f)) * 0.5f;
     float h_scale_off = (tex.screen_width * scale * (global_data.camera.h_scale - 1.0f)) * 0.5f;
@@ -31,7 +31,7 @@ inline int virtual_to_screen_y(float virtual_y) {
     }
     int win_w = get_render_width();
     int win_h = get_render_height();
-    float scale = std::min((float)win_w / tex.screen_width, (float)win_h / tex.screen_height);
+    float scale = std::min(static_cast<float>(win_w) / tex.screen_width, static_cast<float>(win_h) / tex.screen_height);
     float effective_zoom = scale * global_data.camera.zoom;
     float zoom_off = (tex.screen_height * scale * (global_data.camera.zoom - 1.0f)) * 0.5f;
     float v_scale_off = (tex.screen_height * scale * (global_data.camera.v_scale - 1.0f)) * 0.5f;

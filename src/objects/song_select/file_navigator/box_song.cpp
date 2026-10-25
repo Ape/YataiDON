@@ -119,10 +119,10 @@ void SongBox::preregister_text() {
     BaseBox::preregister_text();
     float base_sub_font = tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size;
     float sub_font = utf8_char_count(text_subtitle) >= 30 ? base_sub_font - 10.0f * tex.screen_scale : base_sub_font;
-    font_manager.register_text(text_subtitle, (int)sub_font);
+    font_manager.register_text(text_subtitle, static_cast<int>(sub_font));
     float base_name_font = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     float name_font = utf8_char_count(text_name) >= 30 ? base_name_font - 10.0f * tex.screen_scale : base_name_font;
-    font_manager.register_text(text_name, (int)name_font);
+    font_manager.register_text(text_name, static_cast<int>(name_font));
     font_manager.register_text("BPM\n0123456789", tex.get_skin_config(SC::SONG_SELECT_BOX_BPM)->font_size);
 }
 

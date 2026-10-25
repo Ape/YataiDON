@@ -62,7 +62,7 @@ ModifierSelector::ModifierSelector(PlayerNum player_num, PlayerData* player) : p
     move_sideways = dynamic_cast<MoveAnimation*>(tex.get_animation(31, true));
     fade_sideways = dynamic_cast<FadeAnimation*>(tex.get_animation(32, true));
 
-    audio.play_sound("voice_options_" + std::to_string((int)player_num) + "p", VolumePreset::VOICE);
+    audio.play_sound("voice_options_" + std::to_string(static_cast<int>(player_num)) + "p", VolumePreset::VOICE);
 }
 
 ModifierSelector::~ModifierSelector() {
@@ -93,14 +93,14 @@ void ModifierSelector::load_neiro_names() {
 
     neiro_index = player->neiro_index;
     if (neiro_index == -1) {
-        neiro_index = (int)neiro_names.size() - 1;
+        neiro_index = static_cast<int>(neiro_names.size()) - 1;
     }
-    neiro_index = std::clamp(neiro_index, 0, (int)neiro_names.size() - 1);
+    neiro_index = std::clamp(neiro_index, 0, static_cast<int>(neiro_names.size()) - 1);
     player->neiro_index = (neiro_index == std::ssize(neiro_names) - 1) ? -1 : neiro_index;
 }
 
 void ModifierSelector::step_neiro(int dir) {
-    int count = (int)neiro_names.size();
+    int count = static_cast<int>(neiro_names.size());
     neiro_index = ((neiro_index + dir) % count + count) % count;
     player->neiro_index = (neiro_index == count - 1) ? -1 : neiro_index;
 

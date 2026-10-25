@@ -89,9 +89,9 @@ void extract_osz(const fs::path& osz_path) {
         return;
     }
 
-    int num_files = (int)mz_zip_reader_get_num_files(&zip);
+    const auto num_files = mz_zip_reader_get_num_files(&zip);
     bool all_ok = true;
-    for (int i = 0; i < num_files; i++) {
+    for (auto i = 0u; i < num_files; i++) {
         mz_zip_archive_file_stat stat;
         if (!mz_zip_reader_file_stat(&zip, i, &stat)) {
             all_ok = false;
@@ -142,11 +142,11 @@ void ensure_skin_extracted(const std::string& skin_name) {
         return;
     }
 
-    int num_files = (int)mz_zip_reader_get_num_files(&zip);
+    const auto num_files = mz_zip_reader_get_num_files(&zip);
 
     std::string common_prefix;
     bool prefix_initialized = false;
-    for (int i = 0; i < num_files; i++) {
+    for (auto i = 0u; i < num_files; i++) {
         mz_zip_archive_file_stat stat;
         if (!mz_zip_reader_file_stat(&zip, i, &stat)) {
             continue;
@@ -174,7 +174,7 @@ void ensure_skin_extracted(const std::string& skin_name) {
         mz_zip_reader_end(&zip);
         return;
     }
-    for (int i = 0; i < num_files; i++) {
+    for (auto i = 0u; i < num_files; i++) {
         mz_zip_archive_file_stat stat;
         if (!mz_zip_reader_file_stat(&zip, i, &stat)) {
             continue;
@@ -485,8 +485,7 @@ std::vector<SongListEntry> read_song_list(const fs::path& path) {
         }
 
         std::string hash = fields[0];
-        if (hash.size() >= 3 && (unsigned char)hash[0] == 0xEF && (unsigned char)hash[1] == 0xBB &&
-            (unsigned char)hash[2] == 0xBF) {
+        if (hash.starts_with("\xEF\xBB\xBF")) {
             hash = hash.substr(3);
         }
 

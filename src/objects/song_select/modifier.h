@@ -59,7 +59,7 @@ public:
     bool row_greyed(const std::string& name) const;
     std::vector<ModRow> lua_rows();
     int lua_index() const { return current_mod_index; }
-    int lua_row_count() const { return (int)mod_names.size(); }
+    int lua_row_count() const { return static_cast<int>(mod_names.size()); }
     int lua_change_dir() const { return direction; }
     float lua_change_fade() const { return fade_sideways->attribute; }
     bool lua_change_active() const { return !move_sideways->is_finished; }

@@ -253,8 +253,9 @@ Screens check_args(int argc, char* argv[]) {
     }
 
     Screens current_screen = practice ? Screens::GAME_PRACTICE : Screens::GAME;
-    global_data.session_data[(int)PlayerNum::P1].selected_song = std::move(path);
-    global_data.session_data[(int)PlayerNum::P1].selected_difficulty = selected_difficulty;
+    const auto player_index = static_cast<int>(PlayerNum::P1);
+    global_data.session_data[player_index].selected_song = std::move(path);
+    global_data.session_data[player_index].selected_difficulty = selected_difficulty;
     if (auto_play) {
         global_data.force_auto_play = true;
     }
@@ -535,7 +536,9 @@ static void run_frame() {
         static int screenshot_counter = 0;
         Image image = load_image_from_screen();
         if (L.current_screen == Screens::RESULT && tex.options[SCO::CROP_RESULT_SCREENSHOT]) {
-            Image top = image_from_image(image, {0, 0, (float)image.width, (float)(image.height / 2)});
+            const auto image_width = static_cast<float>(image.width);
+            const auto crop_height = static_cast<float>(image.height / 2);
+            Image top = image_from_image(image, {0, 0, image_width, crop_height});
             unload_image(image);
             image = top;
         }

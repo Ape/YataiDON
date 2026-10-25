@@ -20,7 +20,7 @@ ResultPlayer::ResultPlayer(PlayerNum player_num, bool has_2p, bool is_2p)
     }
     chara->set_anim(AnimIndex::DON_NORMAL);
 
-    SessionData& sd = global_data.session_data[(int)player_num];
+    SessionData& sd = global_data.session_data[static_cast<int>(player_num)];
     if (!sd.result_data.cleared) {
         chara->set_anim(AnimIndex::DON_MISS_NORMAL);
     }
@@ -71,9 +71,9 @@ ResultPlayer::ResultPlayer(PlayerNum player_num, bool has_2p, bool is_2p)
         preload("HighScoreIndicator", "high_score_indicator");
     }
 
-    if (!load("ResultPlayer", "result_player", (int)player_num, is_2p, has_2p, sd.result_data.gauge_length,
-              sd.selected_difficulty, sd.selected_difficulty, (int)crown_type, score_diff, is_shinuchi, mods.display,
-              mods.inverse, mods.random, mods.speed)) {
+    if (!load("ResultPlayer", "result_player", static_cast<int>(player_num), is_2p, has_2p, sd.result_data.gauge_length,
+              sd.selected_difficulty, sd.selected_difficulty, static_cast<int>(crown_type), score_diff, is_shinuchi,
+              mods.display, mods.inverse, mods.random, mods.speed)) {
         return;
     }
 
@@ -163,9 +163,10 @@ void ResultPlayer::update_score_animation(double current_ms, bool is_skipped) {
         rows_done_ms = current_ms;
     }
     if (!score.empty() && !high_score_sound_played) {
-        SessionData& sd = global_data.session_data[(int)player_num];
+        SessionData& sd = global_data.session_data[static_cast<int>(player_num)];
         if (sd.result_data.score > sd.result_data.prev_score) {
-            audio.play_sound("high_score_voice_" + std::to_string((int)player_num) + "p", VolumePreset::VOICE);
+            audio.play_sound("high_score_voice_" + std::to_string(static_cast<int>(player_num)) + "p",
+                             VolumePreset::VOICE);
             high_score_sound_played = true;
         }
     }
@@ -216,7 +217,7 @@ void ResultPlayer::draw_song_info(const std::string& title, const std::string& s
 void ResultPlayer::draw() {
     call(fn_draw, "ResultPlayer:draw");
     auto [cx, cy] = tex.chara_xy("result");
-    cy += (int)is_2p * tex.screen_height / 2;
+    cy += static_cast<int>(is_2p) * tex.screen_height / 2;
     float cs = 1.0f;
     if (fn_chara_pos.valid()) {
         auto pos_opt = call_r<sol::table>(fn_chara_pos, "ResultPlayer:chara_pos");

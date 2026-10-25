@@ -82,14 +82,14 @@ void DanTransition::draw() {
     if (!started || !slide_in) {
         return;
     }
-    tex.draw_texture(t_background, {.x2 = (float)slide_in->attribute});
+    tex.draw_texture(t_background, {.x2 = static_cast<float>(slide_in->attribute)});
     if (!flash) {
         return;
     }
-    tex.draw_texture(t_don, {.y = (float)don_rise->attribute});
+    tex.draw_texture(t_don, {.y = static_cast<float>(don_rise->attribute)});
     // texture.json x, y is the emblem's centre, which is also the pivot
     tex.draw_texture(t_emblem, {.origin = {t_emblem->width / 2.0f, t_emblem->height / 2.0f},
-                                .rotation = (float)emblem_spin->attribute,
+                                .rotation = static_cast<float>(emblem_spin->attribute),
                                 .fade = emblem_fade->attribute});
     tex.draw_texture(t_flash, {.fade = flash->attribute});
 }

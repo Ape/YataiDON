@@ -63,10 +63,12 @@ static void read_text_entries(const fs::path& file, float scale) {
                     labels[t.name.GetString()] = t.value.GetString();
                 }
             }
-            text_entries[m.name.GetString()] =
-                SkinInfo((float)json_member(v, "x", 0.0) * scale, (float)json_member(v, "y", 0.0) * scale,
-                         (int)(json_member(v, "font_size", 0) * scale), (float)json_member(v, "width", 0.0) * scale,
-                         (float)json_member(v, "height", 0.0) * scale, labels, json_member(v, "outline", -1.0));
+            text_entries[m.name.GetString()] = SkinInfo(static_cast<float>(json_member(v, "x", 0.0)) * scale,
+                                                        static_cast<float>(json_member(v, "y", 0.0)) * scale,
+                                                        static_cast<int>(json_member(v, "font_size", 0) * scale),
+                                                        static_cast<float>(json_member(v, "width", 0.0)) * scale,
+                                                        static_cast<float>(json_member(v, "height", 0.0)) * scale,
+                                                        labels, json_member(v, "outline", -1.0));
         }
     } catch (const std::exception& e) {
         spdlog::warn("text_config {}: {}", file.string(), e.what());
@@ -88,7 +90,7 @@ void FontManager::load_text_config(const fs::path& skin_root) {
                 }
             } catch (const std::exception&) {
             }
-            scale = (float)tex.screen_width / aw;
+            scale = static_cast<float>(tex.screen_width) / aw;
         }
         read_text_entries(roots[i] / "Graphics" / "skin_config.json", scale);
         read_text_entries(roots[i] / "text_config.json", scale);
@@ -159,7 +161,7 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
         if (got.contains(cp)) {
             continue;
         }
-        int alt = (int)han_fold_codepoint((uint32_t)cp);
+        int alt = static_cast<int>(han_fold_codepoint(static_cast<uint32_t>(cp)));
         if (alt != cp) {
             missing.push_back(cp);
             alts.push_back(alt);
@@ -202,7 +204,7 @@ bool FontManager::rasterize_new(SizedFont& entry, int font_size, const std::vect
 // the GRAYSCALE bitmaps owned by `cache` (text_coverage composites from them).
 void FontManager::rebuild_atlas(SizedFont& entry, int font_size) {
     release_font(entry);
-    const int n = (int)entry.cache.size();
+    const int n = static_cast<int>(entry.cache.size());
     Font f{};
     f.baseSize = font_size;
     f.glyphCount = n;
@@ -356,15 +358,15 @@ static void blit_over(Image* dst, const Image& src, int x0, int y0) {
             const int oa = sa * 255 + da * (255 - sa); // out alpha * 255
             for (int c = 0; c < 3; c++) {
                 int v = (s[c] * sa * 255 + o[c] * da * (255 - sa) + oa / 2) / (oa ? oa : 1);
-                o[c] = (unsigned char)(v > 255 ? 255 : v);
+                o[c] = static_cast<unsigned char>(v > 255 ? 255 : v);
             }
-            o[3] = (unsigned char)((oa + 127) / 255);
+            o[3] = static_cast<unsigned char>((oa + 127) / 255);
         }
     }
 }
 
 static int text_margin(float font_size) {
-    return (int)std::ceil(font_size * 0.25f);
+    return static_cast<int>(std::ceil(font_size * 0.25f));
 }
 
 // Alpha-only rendering of a line: every caller recolors it, so only coverage is kept.
@@ -376,12 +378,12 @@ struct Coverage {
 static Coverage text_coverage(const Font& font, const char* text, float font_size, float spacing, int margin) {
     Vec2 sz = measure_text_ex(font, text, font_size, spacing);
     Coverage c;
-    c.w = (int)sz.x;
-    c.h = (int)sz.y + margin * 2;
+    c.w = static_cast<int>(sz.x);
+    c.h = static_cast<int>(sz.y) + margin * 2;
     if (c.w <= 0 || c.h <= 0) {
         return {};
     }
-    c.a.assign((size_t)c.w * c.h, 0);
+    c.a.assign(static_cast<size_t>(c.w) * c.h, 0);
     int x = 0;
     for (const char* p = text; *p;) {
         int n = 0;
@@ -406,12 +408,13 @@ static Coverage text_coverage(const Font& font, const char* text, float font_siz
                     const unsigned s = px[y * g.image.width + gx];
                     unsigned char& d = c.a[(oy + y) * c.w + ox + gx];
                     if (s) { // alpha "over", same integer rounding as before (raylib's ColorAlphaBlend)
-                        d = s == 255 ? 255 : (unsigned char)(((s + 1) * 256 + d * (255 - s)) >> 8);
+                        d = s == 255 ? 255 : static_cast<unsigned char>(((s + 1) * 256 + d * (255 - s)) >> 8);
                     }
                 }
             }
         }
-        x += (g.advanceX == 0 ? (int)(font.recs[gi].width + spacing) : g.advanceX + (int)spacing);
+        x += (g.advanceX == 0 ? static_cast<int>(font.recs[gi].width + spacing)
+                              : g.advanceX + static_cast<int>(spacing));
     }
     return c;
 }
@@ -428,7 +431,7 @@ static void draw_text_clean(Image* dst, const Font& font, const char* text, Vec2
     for (size_t i = 0; i < c.a.size(); i++) {
         px[i * 4 + 3] = c.a[i] * tint.a / 255;
     }
-    blit_over(dst, t, (int)pos.x, (int)pos.y - m);
+    blit_over(dst, t, static_cast<int>(pos.x), static_cast<int>(pos.y) - m);
     unload_image(t);
 }
 
@@ -440,7 +443,7 @@ static void stamp_outline(Image* dst, const Font& font, const char* text, Vec2 p
         return;
     }
     const std::vector<unsigned char>& a = cov.a;
-    const int r = (int)std::ceil(radius + 0.5f);
+    const int r = static_cast<int>(std::ceil(radius + 0.5f));
     const int W = cov.w, H = cov.h;
     const int OW = W + 2 * r, OH = H + 2 * r;
     std::vector<unsigned char> out(OW * OH, 0);
@@ -450,13 +453,13 @@ static void stamp_outline(Image* dst, const Font& font, const char* text, Vec2 p
     std::vector<int> lo(D, D), hi(D, -1);
     for (int dy = -r; dy <= r; dy++) {
         for (int dx = -r; dx <= r; dx++) {
-            float d = std::sqrt((float)dx * dx + (float)dy * dy);
+            float d = std::sqrt(static_cast<float>(dx) * dx + static_cast<float>(dy) * dy);
             float w = radius + 0.5f - d;
             if (w <= 0.0f) {
                 continue;
             }
             w = std::min(w, 1.0f);
-            wt[(dy + r) * D + (dx + r)] = (unsigned char)(w * 255.0f + 0.5f);
+            wt[(dy + r) * D + (dx + r)] = static_cast<unsigned char>(w * 255.0f + 0.5f);
             lo[dy + r] = std::min(lo[dy + r], dx + r);
             hi[dy + r] = std::max(hi[dy + r], dx + r);
         }
@@ -477,7 +480,7 @@ static void stamp_outline(Image* dst, const Font& font, const char* text, Vec2 p
                 unsigned char* orow = &out[(y + dy + r) * OW + x];
                 const unsigned char* wrow = &wt[row * D];
                 for (int k = lo[row]; k <= hi[row]; k++) {
-                    const unsigned char c = (unsigned char)((v * wrow[k] + 127) / 255);
+                    const unsigned char c = static_cast<unsigned char>((v * wrow[k] + 127) / 255);
                     unsigned char& o = orow[k]; // ox = x + (k - r) + r = x + k
                     o = std::max(o, c);
                 }
@@ -489,7 +492,7 @@ static void stamp_outline(Image* dst, const Font& font, const char* text, Vec2 p
     for (int i = 0; i < OW * OH; i++) {
         op[i * 4 + 3] = out[i] * outline_color.a / 255;
     }
-    blit_over(dst, o, (int)pos.x - r, (int)pos.y - m - r);
+    blit_over(dst, o, static_cast<int>(pos.x) - r, static_cast<int>(pos.y) - m - r);
     unload_image(o);
 }
 
@@ -671,12 +674,12 @@ OutlinedText::OutlinedText(std::string text, int font_size, Color color, Color o
             ++char_count;
             ptr += cp_size;
         }
-        int pad = (int)this->outline_thickness + 2;
+        int pad = static_cast<int>(this->outline_thickness) + 2;
         width = max_char_width + pad * 2;
         height = char_height * (1.0f + (char_count - 1) * v_advance) + pad * 2;
     } else {
         float sp = (spacing < 0) ? 0.0f : spacing;
-        int pad = (int)this->outline_thickness + 2;
+        int pad = static_cast<int>(this->outline_thickness) + 2;
         auto lines = split_lines(this->text);
         float line_h = measure_text_ex(worker_font, "A", font_size, sp).y;
         float line_advance = line_h + this->outline_thickness * 2;
@@ -743,20 +746,20 @@ OutlinedText::BuildData OutlinedText::build_horizontal_text(Color color, Color o
         max_w = std::max(max_w, lw);
     }
 
-    int pad = (int)outline_thickness + 2;
+    int pad = static_cast<int>(outline_thickness) + 2;
 
     top_extra = std::max(0, text_margin(font_size) - pad);
-    Image img =
-        gen_image_color((int)max_w + pad * 2, (int)(line_advance * (lines.size() - 1) + line_h) + pad * 2 + top_extra,
-                        clear_of(outline_thickness > 0 ? outline_color : color));
+    Image img = gen_image_color(static_cast<int>(max_w) + pad * 2,
+                                static_cast<int>(line_advance * (lines.size() - 1) + line_h) + pad * 2 + top_extra,
+                                clear_of(outline_thickness > 0 ? outline_color : color));
 
     for (size_t li = 0; li < lines.size(); li++) {
         float y = pad + top_extra + li * line_advance;
         if (outline_thickness > 0) {
-            stamp_outline(&img, worker_font, lines[li].c_str(), {(float)pad, y}, font_size, sp, outline_color,
-                          outline_thickness);
+            stamp_outline(&img, worker_font, lines[li].c_str(), {static_cast<float>(pad), y}, font_size, sp,
+                          outline_color, outline_thickness);
         }
-        draw_text_clean(&img, worker_font, lines[li].c_str(), {(float)pad, y}, font_size, sp, color);
+        draw_text_clean(&img, worker_font, lines[li].c_str(), {static_cast<float>(pad), y}, font_size, sp, color);
     }
 
     return {img};
@@ -818,8 +821,8 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
         max_item_width = std::max(max_item_width, item.width);
     }
 
-    int pad = (int)outline_thickness + 2;
-    int img_w = (int)(max_item_width + pad * 2);
+    int pad = static_cast<int>(outline_thickness) + 2;
+    int img_w = static_cast<int>(max_item_width + pad * 2);
 
     // Pre-compute y position for each item.
     static constexpr float small_char_advance_factor = 0.8f;
@@ -841,7 +844,7 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
         current_y += advance * v_advance;
         y_positions[i] = current_y;
     }
-    int img_h = items.empty() ? pad * 2 : (int)(y_positions.back() + char_height + pad);
+    int img_h = items.empty() ? pad * 2 : static_cast<int>(y_positions.back() + char_height + pad);
 
     Image img = gen_image_color(img_w, img_h, clear_of(color));
     Image outline_img = gen_image_color(img_w, img_h, clear_of(outline_color));
@@ -877,25 +880,26 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
                 float draw_y = y + beside_y_offset(s, char_height);
 
                 if (!is_beside_prev_char(s) && in_rotate_set(s)) {
-                    int tmp_w = (int)char_width + pad * 2;
-                    int tmp_h = (int)char_height + pad * 2;
+                    int tmp_w = static_cast<int>(char_width) + pad * 2;
+                    int tmp_h = static_cast<int>(char_height) + pad * 2;
                     Image tmp = gen_image_color(tmp_w, tmp_h, clear_of(outline_thickness > 0 ? outline_color : color));
 
                     if (pass == 0) {
                         if (outline_thickness > 0) {
-                            stamp_outline(&tmp, worker_font, s.c_str(), {(float)pad, (float)pad}, font_size, spacing,
+                            stamp_outline(&tmp, worker_font, s.c_str(),
+                                          {static_cast<float>(pad), static_cast<float>(pad)}, font_size, spacing,
                                           outline_color, outline_thickness);
                         }
                     } else {
-                        draw_text_clean(&tmp, worker_font, s.c_str(), {(float)pad, (float)pad}, font_size, spacing,
-                                        color);
+                        draw_text_clean(&tmp, worker_font, s.c_str(),
+                                        {static_cast<float>(pad), static_cast<float>(pad)}, font_size, spacing, color);
                     }
                     image_rotate_cw(&tmp);
 
                     float dx = x + (char_width - tmp.width) / 2.0f;
                     float dy = draw_y + (char_height - tmp.height) / 2.0f;
-                    Rect dst = {dx, dy, (float)tmp.width, (float)tmp.height};
-                    blit_over(target, tmp, (int)dst.x, (int)dst.y);
+                    Rect dst = {dx, dy, static_cast<float>(tmp.width), static_cast<float>(tmp.height)};
+                    blit_over(target, tmp, static_cast<int>(dst.x), static_cast<int>(dst.y));
                     unload_image(tmp);
                 } else {
                     if (pass == 0) {
@@ -944,7 +948,7 @@ bool OutlinedText::upload_pending() {
 
     texture = tex;
     width = tex.width;
-    height = (float)tex.height - top_extra;
+    height = static_cast<float>(tex.height) - top_extra;
     return true;
 }
 
@@ -962,7 +966,7 @@ void OutlinedText::draw(const DrawTextureParams& params) {
         return;
     }
 
-    Rect src = params.src.value_or(Rect{0, 0, (float)texture->width, (float)texture->height});
+    Rect src = params.src.value_or(Rect{0, 0, static_cast<float>(texture->width), static_cast<float>(texture->height)});
     float dx = params.x + x_offset;
     float dy = params.y + y_offset - top_extra;
 

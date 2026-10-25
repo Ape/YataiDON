@@ -42,16 +42,17 @@ void md5(const uint8_t* data, size_t len, uint32_t (&out)[4]) {
         memcpy(msg.data(), data, len);
     }
     msg[len] = 0x80;
-    uint64_t bits = (uint64_t)len * 8;
+    uint64_t bits = static_cast<uint64_t>(len) * 8;
     for (int i = 0; i < 8; i++) {
-        msg[padded + i] = (uint8_t)(bits >> (i * 8));
+        msg[padded + i] = static_cast<uint8_t>(bits >> (i * 8));
     }
 
     for (size_t off = 0; off < msg.size(); off += 64) {
         uint32_t w[16];
         for (int i = 0; i < 16; i++) {
-            w[i] = (uint32_t)msg[off + i * 4] | ((uint32_t)msg[off + i * 4 + 1] << 8) |
-                   ((uint32_t)msg[off + i * 4 + 2] << 16) | ((uint32_t)msg[off + i * 4 + 3] << 24);
+            w[i] = static_cast<uint32_t>(msg[off + i * 4]) | (static_cast<uint32_t>(msg[off + i * 4 + 1]) << 8) |
+                   (static_cast<uint32_t>(msg[off + i * 4 + 2]) << 16) |
+                   (static_cast<uint32_t>(msg[off + i * 4 + 3]) << 24);
         }
 
         uint32_t a = out[0], b = out[1], c = out[2], d = out[3];

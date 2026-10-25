@@ -30,11 +30,12 @@ NeiroSelector::NeiroSelector(PlayerNum player_num, PlayerData* player) : player_
     }
     sounds.emplace_back("無音");
     if (selected_sound == -1) {
-        selected_sound = (int)sounds.size() - 1;
+        selected_sound = static_cast<int>(sounds.size()) - 1;
     }
-    selected_sound = std::clamp(selected_sound, 0, (int)sounds.size() - 1);
+    selected_sound = std::clamp(selected_sound, 0, static_cast<int>(sounds.size()) - 1);
     load_sound();
-    audio.play_sound("voice_hitsound_select_" + std::to_string((int)player_num) + "p", VolumePreset::VOICE);
+    audio.play_sound("voice_hitsound_select_" + std::to_string(static_cast<int>(player_num)) + "p",
+                     VolumePreset::VOICE);
 
     move = dynamic_cast<MoveAnimation*>(tex.get_animation(28, true));
     move_out = tex.has_animation(43) ? dynamic_cast<MoveAnimation*>(tex.get_animation(43, true)) : nullptr;
@@ -62,7 +63,8 @@ void NeiroSelector::left() {
     if (move->is_started && !move->is_finished) {
         return;
     }
-    selected_sound = ((selected_sound - 1) % (int)sounds.size() + (int)sounds.size()) % (int)sounds.size();
+    const auto sound_count = static_cast<int>(sounds.size());
+    selected_sound = ((selected_sound - 1) % sound_count + sound_count) % sound_count;
     if (!curr_sound.empty()) {
         audio.unload_sound(curr_sound);
     }
@@ -82,7 +84,7 @@ void NeiroSelector::right() {
     if (move->is_started && !move->is_finished) {
         return;
     }
-    selected_sound = (selected_sound + 1) % (int)sounds.size();
+    selected_sound = (selected_sound + 1) % static_cast<int>(sounds.size());
     if (!curr_sound.empty()) {
         audio.unload_sound(curr_sound);
     }

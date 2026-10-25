@@ -83,7 +83,8 @@ Image load_image(const char* path) {
     std::vector<unsigned char> file = load_file_bytes(path);
     Image image;
     int comp = 0;
-    image.data = stbi_load_from_memory(file.data(), (int)file.size(), &image.width, &image.height, &comp, 0);
+    image.data =
+        stbi_load_from_memory(file.data(), static_cast<int>(file.size()), &image.width, &image.height, &comp, 0);
     if (!image.data) {
         if (!file.empty()) {
             spdlog::warn("IMAGE: [{}] Failed to load data: {}", path, stbi_failure_reason());
@@ -148,13 +149,14 @@ Image image_from_image(Image image, Rect rec) {
     if (rec.width <= 0 || rec.height <= 0) {
         return out; // empty (e.g. a space glyph)
     }
-    if (rec.x < 0 || rec.y < 0 || rec.width <= 0 || rec.height <= 0 || (int)rec.x + (int)rec.width > image.width ||
-        (int)rec.y + (int)rec.height > image.height) {
+    if (rec.x < 0 || rec.y < 0 || rec.width <= 0 || rec.height <= 0 ||
+        static_cast<int>(rec.x) + static_cast<int>(rec.width) > image.width ||
+        static_cast<int>(rec.y) + static_cast<int>(rec.height) > image.height) {
         spdlog::warn("IMAGE: image_from_image(), rectangle provided not valid");
         return out;
     }
     const int bpp = get_pixel_data_size(1, 1, image.format);
-    const int w = (int)rec.width, h = (int)rec.height;
+    const int w = static_cast<int>(rec.width), h = static_cast<int>(rec.height);
     const int size = get_pixel_data_size(w, h, image.format);
     if (size <= 0) {
         return out;
@@ -167,7 +169,8 @@ Image image_from_image(Image image, Rect rec) {
 
     for (int y = 0; y < h; y++) {
         std::memcpy(static_cast<unsigned char*>(out.data) + y * w * bpp,
-                    static_cast<unsigned char*>(image.data) + ((y + (int)rec.y) * image.width + (int)rec.x) * bpp,
+                    static_cast<unsigned char*>(image.data) +
+                        ((y + static_cast<int>(rec.y)) * image.width + static_cast<int>(rec.x)) * bpp,
                     w * bpp);
     }
     return out;
@@ -237,7 +240,7 @@ Rect get_image_alpha_border(Image image, float threshold) {
     }
     const int bpp = get_pixel_data_size(1, 1, image.format);
     const auto* px = static_cast<const unsigned char*>(image.data);
-    const auto limit = (unsigned char)(threshold * 255.0f);
+    const auto limit = static_cast<unsigned char>(threshold * 255.0f);
     int x_min = 65536, x_max = 0, y_min = 65536, y_max = 0;
     for (int y = 0; y < image.height; y++) {
         for (int x = 0; x < image.width; x++) {
@@ -252,7 +255,8 @@ Rect get_image_alpha_border(Image image, float threshold) {
     if (x_min == 65536) {
         return {};
     }
-    return {(float)x_min, (float)y_min, (float)(x_max + 1 - x_min), (float)(y_max + 1 - y_min)};
+    return {static_cast<float>(x_min), static_cast<float>(y_min), static_cast<float>(x_max + 1 - x_min),
+            static_cast<float>(y_max + 1 - y_min)};
 }
 
 Texture load_texture(const char* path) {

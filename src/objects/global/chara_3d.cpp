@@ -149,7 +149,7 @@ static ModelAnimation* reindexed_animations(const Model& model, const AnimSource
             continue;
         }
 
-        const int n = reindex ? model.skeleton.boneCount : (int)in.boneCount;
+        const int n = reindex ? model.skeleton.boneCount : static_cast<int>(in.boneCount);
         anim.keyframePoses = static_cast<Transform**>(std::calloc(in.keyframeCount, sizeof(Transform*)));
         if (!anim.keyframePoses) {
             continue;
@@ -168,7 +168,7 @@ static ModelAnimation* reindexed_animations(const Model& model, const AnimSource
             }
             for (int b = 0; b < n; b++) {
                 auto it = glb_bone_idx.find(model.skeleton.bones[b].name);
-                if (it != glb_bone_idx.end() && it->second < (int)in.boneCount) {
+                if (it != glb_bone_idx.end() && it->second < static_cast<int>(in.boneCount)) {
                     anim.keyframePoses[f][b] = in.keyframePoses[f][it->second];
                 } else {
                     anim.keyframePoses[f][b] = model.skeleton.bindPose[b];
@@ -182,7 +182,7 @@ static ModelAnimation* reindexed_animations(const Model& model, const AnimSource
 static std::string name_lower(const char* s) {
     std::string r(s);
     for (char& c : r) {
-        c = (char)tolower((unsigned char)c);
+        c = static_cast<char>(tolower(static_cast<unsigned char>(c)));
     }
     return r;
 }
@@ -358,7 +358,7 @@ void Chara3D::load_part(const fs::path& model_path, const fs::path& anim_path, b
             const float size = std::max(maxx - minx, maxy - miny);
             if (normalize_face_scale || size > COS_FACE_PLANE_SIZE * 1.02f) {
                 normalize_face_mesh_size(mesh, COS_FACE_PLANE_SIZE);
-                update_mesh_buffer(mesh, 0, mesh.vertices, mesh.vertexCount * 3 * (int)sizeof(float), 0);
+                update_mesh_buffer(mesh, 0, mesh.vertices, mesh.vertexCount * 3 * static_cast<int>(sizeof(float)), 0);
             }
         }
     }
@@ -510,7 +510,7 @@ void Chara3D::set_body_texture(fs::path& texture_path) {
     for (size_t p = 0; p < parts.size(); p++) {
         auto it = part_material_indices[p].find("RGB_don_color_S_CUS_0x10000001_");
         if (it != part_material_indices[p].end()) {
-            set_texture(texture_path, (int)p, it->second);
+            set_texture(texture_path, static_cast<int>(p), it->second);
             return;
         }
     }
@@ -520,7 +520,7 @@ void Chara3D::set_face_rim_texture(fs::path& texture_path) {
     for (size_t p = 0; p < parts.size(); p++) {
         auto it = part_material_indices[p].find("don_FACEHIP_color_S_CUS_0x10000001_");
         if (it != part_material_indices[p].end()) {
-            set_texture(texture_path, (int)p, it->second);
+            set_texture(texture_path, static_cast<int>(p), it->second);
             return;
         }
     }
@@ -547,7 +547,8 @@ void Chara3D::load_face_textures(fs::path& face_dir) {
     int frame_size = sheet.width;
     int frame_count = frame_size > 0 ? sheet.height / frame_size : 0;
     for (int f = 0; f < frame_count; f++) {
-        Rect rect = {0, (float)(f * frame_size), (float)frame_size, (float)frame_size};
+        Rect rect = {0, static_cast<float>(f * frame_size), static_cast<float>(frame_size),
+                     static_cast<float>(frame_size)};
         Image frame_img = image_from_image(sheet, rect);
         face_textures.push_back(load_texture_from_image(frame_img));
         unload_image(frame_img);
@@ -651,27 +652,27 @@ static constexpr int FACE_ANIM_IDS[] = {
 
 static constexpr int FUKKATU_FACE = 8;
 
-static constexpr int MIRROR_OFFSET = (int)AnimIndex::DON_BALLOON_FAILURE_MIRROR;
+static constexpr int MIRROR_OFFSET = static_cast<int>(AnimIndex::DON_BALLOON_FAILURE_MIRROR);
 static int base_anim(AnimIndex idx) {
     return static_cast<int>(idx) % MIRROR_OFFSET;
 }
 
 void Chara3D::set_anim(AnimIndex idx) {
     const int base = base_anim(idx);
-    if (base == (int)AnimIndex::DON_ENTRY_IN) {
+    if (base == static_cast<int>(AnimIndex::DON_ENTRY_IN)) {
         set_anim(AnimIndex::DON_ENTRY_LOOP);
-    } else if (base == (int)AnimIndex::DON_FUKKATU_START) {
+    } else if (base == static_cast<int>(AnimIndex::DON_FUKKATU_START)) {
         set_anim(AnimIndex::DON_FUKKATU_LOOP);
     }
     int i = base + (mirror ? MIRROR_OFFSET : 0);
-    if (mirror && (base == (int)AnimIndex::DON_MISS || base == (int)AnimIndex::DON_MISS6)) {
-        i = (int)AnimIndex::DON_MISS6_MIRROR + (int)AnimIndex::DON_MISS_MIRROR - i;
+    if (mirror && (base == static_cast<int>(AnimIndex::DON_MISS) || base == static_cast<int>(AnimIndex::DON_MISS6))) {
+        i = static_cast<int>(AnimIndex::DON_MISS6_MIRROR) + static_cast<int>(AnimIndex::DON_MISS_MIRROR) - i;
     }
     idx = static_cast<AnimIndex>(i);
     int anim_count = part_anim_count.empty() ? 0 : part_anim_count[0];
     if (i >= 0 && i < anim_count) {
-        if (base == (int)AnimIndex::DON_NORMAL || base == (int)AnimIndex::DON_SABI ||
-            base == (int)AnimIndex::DON_BALLOON_NOBEAT || base == (int)AnimIndex::DON_MISS6 ||
+        if (base == static_cast<int>(AnimIndex::DON_NORMAL) || base == static_cast<int>(AnimIndex::DON_SABI) ||
+            base == static_cast<int>(AnimIndex::DON_BALLOON_NOBEAT) || base == static_cast<int>(AnimIndex::DON_MISS6) ||
             get_anim_name(i).contains("loop")) {
             is_looping = true;
         } else {
@@ -689,17 +690,18 @@ void Chara3D::set_anim(AnimIndex idx) {
         }
     }
 
-    if (base == (int)AnimIndex::DON_FUKKATU_LOOP || base == (int)AnimIndex::DON_FUKKATU_START) {
+    if (base == static_cast<int>(AnimIndex::DON_FUKKATU_LOOP) ||
+        base == static_cast<int>(AnimIndex::DON_FUKKATU_START)) {
         // the revive sequence holds one face instead of running a face animation
         current_face_anim = nullptr;
         apply_face(FUKKATU_FACE);
-    } else if (i >= 0 && i < (int)(sizeof(FACE_ANIM_IDS) / sizeof(FACE_ANIM_IDS[0]))) {
+    } else if (i >= 0 && i < static_cast<int>(sizeof(FACE_ANIM_IDS) / sizeof(FACE_ANIM_IDS[0]))) {
         auto it = face_anims.find(FACE_ANIM_IDS[i]);
         if (it != face_anims.end()) {
             current_face_anim = it->second.get();
             current_face_anim->reset();
             current_face_anim->start();
-            apply_face((int)current_face_anim->attribute);
+            apply_face(static_cast<int>(current_face_anim->attribute));
         }
     }
 }
@@ -784,12 +786,12 @@ void Chara3D::update(double current_ms) {
         if (bpm > 0.0f && kf > 0) {
             double ms_per_beat = 60000.0 / bpm;
             const int base = base_anim(anim_index);
-            if (base == (int)AnimIndex::DON_NORMAL) {
+            if (base == static_cast<int>(AnimIndex::DON_NORMAL)) {
                 ms_per_beat *= 3;
-            } else if (base == (int)AnimIndex::DON_SABI) {
+            } else if (base == static_cast<int>(AnimIndex::DON_SABI)) {
                 ms_per_beat *= 6;
             }
-            if (base == (int)AnimIndex::DON_BALLOON_LOOP) {
+            if (base == static_cast<int>(AnimIndex::DON_BALLOON_LOOP)) {
                 ms_per_beat /= 2;
             }
             double ms_per_frame = ms_per_beat / kf;
@@ -825,7 +827,7 @@ void Chara3D::update(double current_ms) {
 
     if (current_face_anim) {
         current_face_anim->update(current_ms);
-        int new_face = (int)current_face_anim->attribute;
+        int new_face = static_cast<int>(current_face_anim->attribute);
         if (new_face != current_face_index) {
             apply_face(new_face);
         }
@@ -857,7 +859,7 @@ void Chara3D::draw_outline(float x, float y, int rt_w, int rt_h, float full_h) {
     {
         const float thickness_px = 2.5f * full_h / 720.0f;
         float param[2] = {thickness_px, 0.3f};
-        float size[2] = {(float)rt_w, (float)rt_h};
+        float size[2] = {static_cast<float>(rt_w), static_cast<float>(rt_h)};
         if (outline_param_loc < 0) {
             outline_param_loc = get_shader_location(outline_shader, "outlineParam");
         }
@@ -976,12 +978,12 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         // room for the outline hull (2.5 px at 720 lines, scaled by the vertex colour) and the
         // FXAA pass's 3-texel dilation, plus a safety pixel
         const float margin = 2.0f * (2.5f * rh / 720.0f) + 4.0f;
-        const int need_w = (int)std::ceil((bx1 - bx0) + 2.0f * margin);
-        const int need_h = (int)std::ceil((by1 - by0) + 2.0f * margin);
+        const int need_w = static_cast<int>(std::ceil((bx1 - bx0) + 2.0f * margin));
+        const int need_h = static_cast<int>(std::ceil((by1 - by0) + 2.0f * margin));
         // grow-only target, in 128-texel steps, so a changing pose rarely reallocates it
         auto round_up = [](int v) { return std::max(128, (v + 127) / 128 * 128); };
-        const int aw = round_up((int)(need_w * SUPERSAMPLE));
-        const int ah = round_up((int)(need_h * SUPERSAMPLE));
+        const int aw = round_up(static_cast<int>(need_w * SUPERSAMPLE));
+        const int ah = round_up(static_cast<int>(need_h * SUPERSAMPLE));
         if (scene_target.id == 0 || full_target || aw > scene_target_w || ah > scene_target_h) {
             const int nw = full_target ? aw : std::max(aw, scene_target_w);
             const int nh = full_target ? ah : std::max(ah, scene_target_h);
@@ -999,15 +1001,15 @@ void Chara3D::draw(float x, float y, float scale_mul) {
             set_texture_filter(scene_target.texture, texture_filter::BILINEAR);
             scene_target_w = nw;
             scene_target_h = nh;
-            float ts[2] = {(float)nw, (float)nh};
+            float ts[2] = {static_cast<float>(nw), static_cast<float>(nh)};
             set_shader_value(outline_fxaa_shader, outline_fxaa_size_loc, ts, shader_uniform::VEC2);
         }
         // the target's area, centred on the model, on whole render pixels (the supersampled
         // grid then lines up with the full-screen one)
-        const int region_w = (int)(scene_target_w / SUPERSAMPLE);
-        const int region_h = (int)(scene_target_h / SUPERSAMPLE);
-        region_x = (int)std::floor((bx0 + bx1) * 0.5f - region_w * 0.5f);
-        region_y = (int)std::floor((by0 + by1) * 0.5f - region_h * 0.5f);
+        const int region_w = static_cast<int>(scene_target_w / SUPERSAMPLE);
+        const int region_h = static_cast<int>(scene_target_h / SUPERSAMPLE);
+        region_x = static_cast<int>(std::floor((bx0 + bx1) * 0.5f - region_w * 0.5f));
+        region_y = static_cast<int>(std::floor((by0 + by1) * 0.5f - region_h * 0.5f));
 
         // the full-screen camera narrowed to that rectangle: same centre offset and pixel scale
         Camera3D rc = cam3d;
@@ -1039,8 +1041,10 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         const float region_w = scene_target_w / SUPERSAMPLE;
         const float region_h = scene_target_h / SUPERSAMPLE;
         begin_shader_mode(outline_fxaa_shader);
-        draw_texture_pro(scene_target.texture, {0, 0, (float)scene_target_w, -(float)scene_target_h},
-                         {(float)region_x, (float)region_y, region_w, region_h}, {0, 0}, 0.0f, Color::WHITE);
+        draw_texture_pro(scene_target.texture,
+                         {0, 0, static_cast<float>(scene_target_w), -static_cast<float>(scene_target_h)},
+                         {static_cast<float>(region_x), static_cast<float>(region_y), region_w, region_h}, {0, 0}, 0.0f,
+                         Color::WHITE);
         end_shader_mode();
     }
 
@@ -1050,8 +1054,8 @@ void Chara3D::draw(float x, float y, float scale_mul) {
 
 // The whole screen at 2x: kept for a rotated camera and as the fallback.
 void Chara3D::draw_full_target(float x, float y, int rw, int rh, const Camera2D& cam2d) {
-    int ssw = (int)(rw * SUPERSAMPLE);
-    int ssh = (int)(rh * SUPERSAMPLE);
+    int ssw = static_cast<int>(rw * SUPERSAMPLE);
+    int ssh = static_cast<int>(rh * SUPERSAMPLE);
 
     if (scene_target.id == 0 || !full_target || scene_target_w != ssw || scene_target_h != ssh) {
         if (scene_target.id != 0) {
@@ -1067,7 +1071,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const Camera2D&
         scene_target_w = ssw;
         scene_target_h = ssh;
         full_target = true;
-        float ts[2] = {(float)ssw, (float)ssh};
+        float ts[2] = {static_cast<float>(ssw), static_cast<float>(ssh)};
         set_shader_value(outline_fxaa_shader, outline_fxaa_size_loc, ts, shader_uniform::VEC2);
         render_dirty = true;
     }
@@ -1110,8 +1114,8 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const Camera2D&
 
     {
         begin_shader_mode(outline_fxaa_shader);
-        draw_texture_pro(scene_target.texture, {0, 0, (float)ssw, -(float)ssh}, {0, 0, (float)rw, (float)rh}, {0, 0},
-                         0.0f, Color::WHITE);
+        draw_texture_pro(scene_target.texture, {0, 0, static_cast<float>(ssw), -static_cast<float>(ssh)},
+                         {0, 0, static_cast<float>(rw), static_cast<float>(rh)}, {0, 0}, 0.0f, Color::WHITE);
         end_shader_mode();
     }
 

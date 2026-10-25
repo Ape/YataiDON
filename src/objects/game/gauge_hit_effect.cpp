@@ -23,7 +23,7 @@ GaugeHitEffect::GaugeHitEffect(NoteType note_type, bool is_big, bool is_2p)
     color = fade(Color::YELLOW, circle_fadein->attribute);
 
     t_hit_effect = tex.get_texture("gauge/hit_effect");
-    t_note = tex.get_texture("notes/" + std::to_string((int)note_type));
+    t_note = tex.get_texture("notes/" + std::to_string(static_cast<int>(note_type)));
     t_circle = is_big ? tex.get_texture("gauge/hit_effect_circle_big") : tex.get_texture("gauge/hit_effect_circle");
 
     if (!t_hit_effect) {
@@ -65,7 +65,7 @@ void GaugeHitEffect::update(double current_ms) {
         }
     }
 
-    const bool ring = (int)texture_change->attribute >= 2;
+    const bool ring = texture_change->attribute >= 2.0;
     const double scale = ring ? resize->attribute : 1.0;
     dest_width = width * scale;
     dest_height = width * scale;
@@ -79,7 +79,7 @@ void GaugeHitEffect::update(double current_ms) {
 void GaugeHitEffect::draw(float y) {
     // Main hit effect texture
     tex.draw_texture(t_hit_effect, {.color = fade(color, fade_out->attribute),
-                                    .frame = (int)texture_change->attribute,
+                                    .frame = static_cast<int>(texture_change->attribute),
                                     .center = true,
                                     .y = y,
                                     .x2 = x2_pos,

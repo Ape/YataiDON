@@ -108,14 +108,14 @@ void Judgment::draw_ray_effect(float judge_x, float judge_y) {
     if (!t_ray) {
         return;
     }
-    tex.draw_texture(t_ray, {.scale = (float)ray_scale->attribute,
+    tex.draw_texture(t_ray, {.scale = static_cast<float>(ray_scale->attribute),
                              .center = true,
                              .x = judge_x,
                              .y = judge_y,
                              .fade = ray_fade->attribute,
                              .blend = blend_mode::ADDITIVE});
     if (ray2_scale) {
-        tex.draw_texture(t_ray, {.scale = (float)ray2_scale->attribute,
+        tex.draw_texture(t_ray, {.scale = static_cast<float>(ray2_scale->attribute),
                                  .center = true,
                                  .x = judge_x,
                                  .y = judge_y,

@@ -9,7 +9,8 @@ GenreBG::GenreBG(const std::string& text_name, std::optional<Color> color, Textu
         font_size = base_font_size - 10.0f * tex.screen_scale;
         name_outline = 5.0f * (font_size / base_font_size);
     }
-    name = make_unique<OutlinedText>(text_name, (int)font_size, Color::WHITE, Color::BLACK, false, name_outline);
+    name = make_unique<OutlinedText>(text_name, static_cast<int>(font_size), Color::WHITE, Color::BLACK, false,
+                                     name_outline);
 
     if (color.has_value()) {
         shader = load_shader("shader/dummy.vs", "shader/colortransform.fs");
@@ -27,8 +28,8 @@ GenreBG::GenreBG(const std::string& text_name, std::optional<Color> color, Textu
                                               std::nullopt, EaseType::Cubic);
     scale = std::make_unique<TextureResizeAnimation>(100 * duration_scale, 0.9f, false, false, 1.0);
     move = std::make_unique<MoveAnimation>(600 * duration_scale,
-                                           std::min((float)tex.screen_width, distance) * tex.screen_scale, false, false,
-                                           0, stretch->duration * 1.5);
+                                           std::min(static_cast<float>(tex.screen_width), distance) * tex.screen_scale,
+                                           false, false, 0, stretch->duration * 1.5);
     fade = std::make_unique<FadeAnimation>(100 * duration_scale, 0.0, false, false, 1.0);
     stretch->start();
     scale->start();
@@ -44,11 +45,11 @@ void GenreBG::exit(float left_position, float right_position, FolderBox* center_
 
     float boundary_left_exit = tex.get_skin_config(SC::SONG_SELECT_GENRE_BG_BOUNDARY)->x;
     float boundary_right_exit = tex.get_skin_config(SC::SONG_SELECT_GENRE_BG_BOUNDARY)->width;
-    int left_distance = (int)((boundary_left_exit - left_start) * tex.screen_scale);
-    int right_distance = (int)((boundary_right_exit - right_start) * tex.screen_scale);
+    int left_distance = static_cast<int>((boundary_left_exit - left_start) * tex.screen_scale);
+    int right_distance = static_cast<int>((boundary_right_exit - right_start) * tex.screen_scale);
 
-    move_left = std::make_unique<MoveAnimation>(200, left_distance, false, false, (int)left_start, 166);
-    move_right = std::make_unique<MoveAnimation>(200, right_distance, false, false, (int)right_start, 166);
+    move_left = std::make_unique<MoveAnimation>(200, left_distance, false, false, static_cast<int>(left_start), 166);
+    move_right = std::make_unique<MoveAnimation>(200, right_distance, false, false, static_cast<int>(right_start), 166);
     float delay = std::max(move_left->duration, move_right->duration);
     fade = std::make_unique<FadeAnimation>(100, 1.0, false, false, 0.0, delay);
     move_left->start();

@@ -149,10 +149,12 @@ void WebCamera::update() {
     std::vector<uint8_t> packed;
     void* pixels = rgba->pixels;
     if (rgba->pitch != rgba->w * 4) {
-        packed.resize((size_t)rgba->w * rgba->h * 4);
+        const auto row_bytes = static_cast<size_t>(rgba->w) * 4;
+        packed.resize(row_bytes * rgba->h);
         const uint8_t* src = static_cast<const uint8_t*>(rgba->pixels);
         for (int y = 0; y < rgba->h; y++) {
-            memcpy(packed.data() + (size_t)y * rgba->w * 4, src + (size_t)y * rgba->pitch, (size_t)rgba->w * 4);
+            const auto row = static_cast<size_t>(y);
+            memcpy(packed.data() + row * row_bytes, src + row * rgba->pitch, row_bytes);
         }
         pixels = packed.data();
     }

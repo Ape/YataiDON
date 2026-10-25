@@ -95,8 +95,8 @@ static float box_step() {
 
 SettingsBox::SettingsBox(const std::string& name, const std::string& label_text, const rapidjson::Value& options_json)
     : box_name(name),
-      label(std::make_unique<OutlinedText>(label_text, (int)(LABEL_FONT_SIZE_BASE * tex.screen_scale), Color::WHITE,
-                                           Color{109, 68, 24, 255}, false, LABEL_OUTLINE_BASE)),
+      label(std::make_unique<OutlinedText>(label_text, static_cast<int>(LABEL_FONT_SIZE_BASE * tex.screen_scale),
+                                           Color::WHITE, Color{109, 68, 24, 255}, false, LABEL_OUTLINE_BASE)),
       x(10.0f * tex.screen_scale), y(wrap_top()), start_position(wrap_top()),
       wrap_bottom(wrap_top()) // corrected by set_box_count() once the manager knows the total
       ,
@@ -190,7 +190,7 @@ void SettingsBox::move_option_right() {
     if (options[option_index]->is_highlighted) {
         options[option_index]->move_right();
     } else {
-        option_index = std::min(option_index + 1, (int)options.size() - 1);
+        option_index = std::min(option_index + 1, static_cast<int>(options.size()) - 1);
     }
 }
 
@@ -264,11 +264,12 @@ void SettingsBox::draw() {
     if (in_box && !options.empty()) {
         options[option_index]->draw();
         if (!options[option_index]->is_highlighted) {
-            tex.draw_texture(t_blue_arrow,
-                             {.x = -(float)blue_arrow_move->attribute, .fade = blue_arrow_fade->attribute, .index = 0});
+            tex.draw_texture(
+                t_blue_arrow,
+                {.x = -static_cast<float>(blue_arrow_move->attribute), .fade = blue_arrow_fade->attribute, .index = 0});
             if (option_index != std::ssize(options) - 1) {
                 tex.draw_texture(t_blue_arrow, {.mirror = Mirror::HORIZONTAL,
-                                                .x = (float)blue_arrow_move->attribute,
+                                                .x = static_cast<float>(blue_arrow_move->attribute),
                                                 .fade = blue_arrow_fade->attribute,
                                                 .index = 1});
             }

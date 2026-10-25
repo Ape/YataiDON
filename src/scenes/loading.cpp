@@ -132,7 +132,7 @@ void LoadingScreen::load_song_hashes() {
                         }
                         for (const auto& [course, data] : parser.metadata.course_data) {
                             if (course >= 0 && course <= 4) {
-                                stamp.levels[course] = (int)data.level;
+                                stamp.levels[course] = static_cast<int>(data.level);
                             }
                         }
                         meta = stamp;
@@ -153,7 +153,7 @@ void LoadingScreen::load_song_hashes() {
                     scores_manager.add_path_binding(songs[i], hashes);
                     scores_manager.set_song_meta(path, meta);
 
-                    progress = (float)++songs_loaded / songs.size();
+                    progress = static_cast<float>(++songs_loaded) / songs.size();
                 } catch (const std::exception& e) {
                     spdlog::error("Failed to record song {}: {}", path, e.what());
                 }

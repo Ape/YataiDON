@@ -380,8 +380,7 @@ namespace av {
                     std::vector<int16_t> tmp(out_samples * 2);
                     uint8_t* out_ptr = reinterpret_cast<uint8_t*>(tmp.data());
 
-                    int converted = swr_convert(swr, &out_ptr, out_samples, (const uint8_t**)frame->extended_data,
-                                                frame->nb_samples);
+                    int converted = swr_convert(swr, &out_ptr, out_samples, frame->extended_data, frame->nb_samples);
                     if (converted > 0) {
                         pcm.insert(pcm.end(), tmp.begin(), tmp.begin() + converted * 2);
                     }

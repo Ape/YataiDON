@@ -37,15 +37,15 @@ BaseBox::~BaseBox() {
 void BaseBox::preregister_text() {
     float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     if (utf8_char_count(text_name) >= 30) {
-        font_size -= (int)(10 * tex.screen_scale);
+        font_size -= static_cast<int>(10 * tex.screen_scale);
     }
-    font_manager.register_text(text_name, (int)font_size);
+    font_manager.register_text(text_name, static_cast<int>(font_size));
 }
 
 void BaseBox::load_text() {
     float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     if (utf8_char_count(text_name) >= 30) {
-        font_size -= (int)(10 * tex.screen_scale);
+        font_size -= static_cast<int>(10 * tex.screen_scale);
     }
     name = make_unique<OutlinedText>(text_name, font_size, text_color, fore_color, true);
 

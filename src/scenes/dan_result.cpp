@@ -56,7 +56,7 @@ void DanResultScreen::on_screen_start() {
     page_start_ms = get_current_ms();
     page1_start_ms = page_start_ms;
 
-    const SessionData& sd = global_data.session_data[(int)global_data.player_num];
+    const SessionData& sd = global_data.session_data[static_cast<int>(global_data.player_num)];
     background.emplace(PlayerNum::DAN, tex.screen_width);
 
     {
@@ -107,7 +107,7 @@ void DanResultScreen::on_screen_start() {
 }
 
 void DanResultScreen::apply_reward() {
-    const SessionData& sd = global_data.session_data[(int)global_data.player_num];
+    const SessionData& sd = global_data.session_data[static_cast<int>(global_data.player_num)];
     const DanResultData& rd = sd.dan_result_data;
     if (rd.odai_result < 0) {
         return; // legacy record — no verdict
@@ -159,7 +159,7 @@ void DanResultScreen::apply_reward() {
 }
 
 void DanResultScreen::build_page2_timeline() {
-    const SessionData& sd = global_data.session_data[(int)global_data.player_num];
+    const SessionData& sd = global_data.session_data[static_cast<int>(global_data.player_num)];
     const DanResultData& rd = sd.dan_result_data;
 
     totals_start = TOTAL_SLIDE_MS;
@@ -187,7 +187,7 @@ void DanResultScreen::build_page2_timeline() {
     se_row_fill.assign(row_count, false);
     se_row_judge.assign(row_count, false);
     double t = totals_end + WAIT_DETAIL_MS;
-    for (int i = 0; i < (int)row_count; i++) {
+    for (int i = 0; i < static_cast<int>(row_count); i++) {
         DanResultRowSchedule& r = rows[i];
         if (i == gauge_exam) {
             r.land = 0.0;
@@ -315,7 +315,7 @@ void DanResultScreen::handle_input(double current_ms) {
 
 void DanResultScreen::update_sounds(double now) {
     const double on_page = now - page_start_ms;
-    const SessionData& sd = global_data.session_data[(int)global_data.player_num];
+    const SessionData& sd = global_data.session_data[static_cast<int>(global_data.player_num)];
     const DanResultData& rd = sd.dan_result_data;
 
     if (congrats_showing) {

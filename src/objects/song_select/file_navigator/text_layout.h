@@ -56,7 +56,7 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
         size_t i = 0;
         while (i < word.size()) {
             size_t char_len = 1;
-            while (i + char_len < word.size() && ((unsigned char)word[i + char_len] & 0xC0) == 0x80) {
+            while (i + char_len < word.size() && (static_cast<unsigned char>(word[i + char_len]) & 0xC0) == 0x80) {
                 char_len++;
             }
             std::string candidate = piece + word.substr(i, char_len);

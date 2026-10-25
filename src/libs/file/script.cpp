@@ -77,7 +77,7 @@ static SessionData& current_session() {
     if (global_data.session_data.empty()) {
         return fallback;
     }
-    int idx = (int)global_data.player_num;
+    int idx = static_cast<int>(global_data.player_num);
     if (idx < 0 || idx >= std::ssize(global_data.session_data)) {
         idx = 0;
     }
@@ -711,7 +711,7 @@ void ScriptManager::register_lua_bindings() {
         draw_rectangle_rounded(r, roundness, 16, Color{to_u8(fill[0]), to_u8(fill[1]), to_u8(fill[2]), to_u8(fill[3])});
 
         if (thickness > 0) {
-            draw_rectangle_rounded_lines_ex(r, roundness, 16, (float)thickness,
+            draw_rectangle_rounded_lines_ex(r, roundness, 16, static_cast<float>(thickness),
                                             Color{to_u8(line[0]), to_u8(line[1]), to_u8(line[2]), to_u8(line[3])});
         }
     });
@@ -928,7 +928,7 @@ void ScriptManager::register_lua_bindings() {
     tex.set_function("get_current_ms",
                      [] -> double { return script_manager.current_ms_override.value_or(get_current_ms()); });
 
-    tex.set_function("player_num", [] -> int { return (int)global_data.player_num; });
+    tex.set_function("player_num", [] -> int { return static_cast<int>(global_data.player_num); });
 
     tex.set_function("display_bpm", [] -> bool { return global_data.config->general.display_bpm; });
 
@@ -949,7 +949,7 @@ void ScriptManager::register_lua_bindings() {
     tex.set_function("song_subtitle", [] -> std::string { return current_session().song_subtitle; });
 
     tex.set_function("genre_frame", [](double genre_index) -> int {
-        return genre_to_ref_frame((GenreIndex) static_cast<int>(genre_index));
+        return genre_to_ref_frame(static_cast<GenreIndex>(static_cast<int>(genre_index)));
     });
 
     tex.set_function("songs_played", [] -> int { return global_data.songs_played; });
@@ -1016,7 +1016,7 @@ void ScriptManager::register_lua_bindings() {
         if (!webcam.is_ready()) {
             return;
         }
-        Rect src{0, 0, (float)webcam.width(), (float)webcam.height()};
+        Rect src{0, 0, static_cast<float>(webcam.width()), static_cast<float>(webcam.height())};
         Rect dst{x, y, w, h};
         draw_texture_pro(webcam.get_texture(), src, dst, Vec2{0, 0}, 0, Color::WHITE);
     });

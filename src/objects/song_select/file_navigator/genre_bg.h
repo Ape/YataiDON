@@ -19,7 +19,7 @@ public:
     bool is_finished();
     bool is_complete();
 
-    int texture_frame() const { return (int)texture_index; }
+    int texture_frame() const { return static_cast<int>(texture_index); }
     OutlinedText* name_text() const { return name.get(); }
     bool has_recolor() const { return shader_loaded; }
     void begin_recolor() {

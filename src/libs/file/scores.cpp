@@ -629,7 +629,7 @@ Score ScoresManager::save_score(const std::string& hash, int difficulty, const s
         *out_score_id = sqlite3_last_insert_rowid(db_fsd);
     }
     sqlite3_finalize(stmt);
-    spdlog::info("Saved score for hash: {} score: {} crown: {}", hash, score.score, (int)score.crown);
+    spdlog::info("Saved score for hash: {} score: {} crown: {}", hash, score.score, static_cast<int>(score.crown));
 
     auto key = std::make_tuple(hash, difficulty, player_id);
     std::scoped_lock lock(maps_mutex);

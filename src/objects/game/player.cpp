@@ -20,10 +20,10 @@ Player::Player(std::optional<SongParser>& parser_ref, PlayerNum player_num_param
       modifiers(modifiers_param), parser(parser_ref), combo_display(combo, 0), score_counter(is_2p, player_num) {
     init_player_textures();
     reset_chart();
-    don_hitsound = "hitsound_don_" + std::to_string((int)player_num) + "p";
-    kat_hitsound = "hitsound_kat_" + std::to_string((int)player_num) + "p";
+    don_hitsound = "hitsound_don_" + std::to_string(static_cast<int>(player_num)) + "p";
+    kat_hitsound = "hitsound_kat_" + std::to_string(static_cast<int>(player_num)) + "p";
 
-    std::string pnum = std::to_string((int)player_num);
+    std::string pnum = std::to_string(static_cast<int>(player_num));
     lane_cover_tex_id = tex.get_texture("lane/" + pnum + "p_lane_cover");
     lane_icon_tex_id = tex.get_texture("lane/" + pnum + "p_icon");
     for (int t = 1; t <= 9; ++t) {
@@ -307,7 +307,7 @@ void Player::autoplay_manager(double ms_from_start, double current_ms, std::opti
             }
         };
 
-        const double bad_window = (difficulty <= (int)Difficulty::NORMAL) ? Timing::BAD_EASY : Timing::BAD;
+        const double bad_window = (difficulty <= static_cast<int>(Difficulty::NORMAL)) ? Timing::BAD_EASY : Timing::BAD;
 
         while (!don_notes.empty() && ms_from_start >= don_notes.front().hit_ms) {
             if (ms_from_start > don_notes.front().hit_ms + bad_window) {
@@ -382,9 +382,12 @@ void Player::evaluate_branch(double current_ms) {
     if (current_ms >= branch_end_ms) {
         is_branch = false;
         if (branch_condition == "p") {
-            branch_p_count = branch_note_count != 0
-                                 ? std::max(std::min((int)((double)branch_p_count / branch_note_count * 100), 100), 0)
-                                 : 0;
+            branch_p_count =
+                branch_note_count != 0
+                    ? std::max(std::min(static_cast<int>(static_cast<double>(branch_p_count) / branch_note_count * 100),
+                                        100),
+                               0)
+                    : 0;
         } else if (branch_condition == "r") {
             branch_r_count = std::max(curr_drumroll_count, branch_r_count);
         }
@@ -542,8 +545,8 @@ void Player::update(double ms_from_start, double current_ms, std::optional<Backg
         if (background.has_value()) {
             background->handle_gauge(player_num, gauge->get_length() / 100.0f, gauge->get_is_clear(),
                                      gauge->get_is_rainbow());
-            if ((int)is_gogo_time != last_reported_gogo) {
-                last_reported_gogo = (int)is_gogo_time;
+            if (static_cast<int>(is_gogo_time) != last_reported_gogo) {
+                last_reported_gogo = static_cast<int>(is_gogo_time);
                 background->handle_gogo(player_num, is_gogo_time);
             }
             if (score != last_reported_score) {
@@ -1254,9 +1257,9 @@ void Player::handle_camera(double ms_from_start, const TimelineObject& timeline_
             global_data.camera = CameraConfig();
             global_data.camera.border_color = border;
         } else if (ev.prop == CamProp::BORDER_COLOR) {
-            global_data.camera.border_color = {(unsigned char)std::clamp(ev.from, 0.0, 255.0),
-                                               (unsigned char)std::clamp(ev.to, 0.0, 255.0),
-                                               (unsigned char)std::clamp(ev.extra, 0.0, 255.0), 255};
+            global_data.camera.border_color = {static_cast<unsigned char>(std::clamp(ev.from, 0.0, 255.0)),
+                                               static_cast<unsigned char>(std::clamp(ev.to, 0.0, 255.0)),
+                                               static_cast<unsigned char>(std::clamp(ev.extra, 0.0, 255.0)), 255};
         } else if (ev.ease) {
             std::erase_if(camera_eases, [&](const TimelineObject& t) { return t.cam->prop == ev.prop; });
             camera_eases.push_back(timeline_object);
@@ -1283,7 +1286,7 @@ void Player::update_camera(double ms_from_start) {
 }
 
 void Player::play_note_manager(double current_ms, std::optional<Background>& background) {
-    const double miss_window = (difficulty <= (int)Difficulty::NORMAL) ? Timing::BAD_EASY : Timing::BAD;
+    const double miss_window = (difficulty <= static_cast<int>(Difficulty::NORMAL)) ? Timing::BAD_EASY : Timing::BAD;
     while (!don_notes.empty() && don_notes.front().hit_ms + miss_window < current_ms) {
         combo = 0;
         if (background.has_value()) {
@@ -1583,7 +1586,7 @@ void Player::check_note(double ms_from_start, DrumType drum_type, double current
     float good_window_ms;
     float ok_window_ms;
     float bad_window_ms;
-    if (difficulty <= (int)Difficulty::NORMAL) {
+    if (difficulty <= static_cast<int>(Difficulty::NORMAL)) {
         good_window_ms = Timing::GOOD_EASY;
         ok_window_ms = Timing::OK_EASY;
         bad_window_ms = Timing::BAD_EASY;
@@ -1913,7 +1916,8 @@ void Player::draw_drumroll(double current_ms, float y, const Note& head, int cur
     bool is_big = head.type == NoteType::ROLL_HEAD_L;
     float end_position = get_position_x(tail, current_ms);
     float length = end_position - start_position;
-    Color color = Color{255, (unsigned char)head.color.value(), (unsigned char)head.color.value(), 255};
+    const auto color_channel = static_cast<unsigned char>(head.color.value());
+    Color color = Color{255, color_channel, color_channel, 255};
     float y_pos = y + tex.get_skin_config(SC::GAME_NOTES)->y + get_position_y(head, current_ms) + judge_y;
     start_position += judge_x;
     end_position += judge_x;
@@ -1938,10 +1942,10 @@ void Player::draw_drumroll(double current_ms, float y, const Note& head, int cur
         } else {
             tex.draw_texture(t_drumroll_tail, {.color = color, .x = end_position, .y = y_pos});
         }
-        tex.draw_texture(note_tex_ids[(int)head.type], {.color = color,
-                                                        .frame = current_eighth % 2,
-                                                        .x = start_position - t_notes_9->width / 2.0f,
-                                                        .y = y_pos + judge_y});
+        tex.draw_texture(note_tex_ids[static_cast<int>(head.type)], {.color = color,
+                                                                     .frame = current_eighth % 2,
+                                                                     .x = start_position - t_notes_9->width / 2.0f,
+                                                                     .y = y_pos + judge_y});
     }
 }
 
@@ -1984,7 +1988,7 @@ void Player::draw_balloon(double current_ms, float y, const Note& head, int curr
         return;
     }
     if (head.display) {
-        tex.draw_texture(note_tex_ids[(int)head.type],
+        tex.draw_texture(note_tex_ids[static_cast<int>(head.type)],
                          {.frame = current_eighth % 2, .x = position - offset - t_notes_9->width / 2.0f, .y = y_pos});
         tex.draw_texture(t_notes_10, {.frame = current_eighth % 2,
                                       .x = position - offset + t_notes_10->width - t_notes_9->width / 2.0f,
@@ -2056,10 +2060,11 @@ void Player::draw_notes(double current_ms, float y) {
         } else if (note.type == NoteType::BALLOON_HEAD) {
             draw_balloon(current_ms, y, note, current_eighth, false);
         } else if (note.display) {
-            tex.draw_texture(note_tex_ids[(int)note.type], {.frame = current_eighth % 2,
-                                                            .center = true,
-                                                            .x = pos->first - (t_notes_9->width / 2.0f),
-                                                            .y = pos->second + tex.get_skin_config(SC::GAME_NOTES)->y});
+            tex.draw_texture(note_tex_ids[static_cast<int>(note.type)],
+                             {.frame = current_eighth % 2,
+                              .center = true,
+                              .x = pos->first - (t_notes_9->width / 2.0f),
+                              .y = pos->second + tex.get_skin_config(SC::GAME_NOTES)->y});
         }
     }
 
@@ -2235,7 +2240,7 @@ void Player::draw_lyric(float y) {
     const SkinInfo* lyric_cfg = tex.get_skin_config(SC::LYRIC);
     float lyric_y = (lyric_cfg && lyric_cfg->y > 0)
                         ? lyric_cfg->y
-                        : static_cast<float>(tex.screen_height - (int)(current_lyric->height * 1.5));
+                        : static_cast<float>(tex.screen_height - static_cast<int>(current_lyric->height * 1.5));
     current_lyric->draw({.x = (tex.screen_width / 2) - current_lyric->width / 2, .y = lyric_y});
 }
 
@@ -2272,7 +2277,7 @@ void Player::seek_to(double resume_time) {
         TimelineObject entry = timeline.front();
         timeline.pop_front();
         timeline_buffer.push_back(entry);
-        int idx = (int)timeline_buffer.size() - 1;
+        int idx = static_cast<int>(timeline_buffer.size()) - 1;
         const size_t before = timeline_buffer.size();
         handle_bpmchange(resume_time, entry, idx);
         if (timeline_buffer.size() != before) {

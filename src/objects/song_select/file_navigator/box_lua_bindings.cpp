@@ -84,9 +84,9 @@ void register_song_select_lua_bindings(sol::state& lua) {
             return t;
         },
         "name", &BaseBox::horizontal_name, "collection", &BaseBox::collection, "genre_index",
-        [](BaseBox& self) { return (int)self.genre_index; }, "texture_index",
-        [](BaseBox& self) { return (int)self.texture_index; }, "has_recolor", &BaseBox::has_recolor, "begin_recolor",
-        &BaseBox::begin_recolor, "end_recolor", &BaseBox::end_recolor);
+        [](BaseBox& self) { return static_cast<int>(self.genre_index); }, "texture_index",
+        [](BaseBox& self) { return static_cast<int>(self.texture_index); }, "has_recolor", &BaseBox::has_recolor,
+        "begin_recolor", &BaseBox::begin_recolor, "end_recolor", &BaseBox::end_recolor);
 
     lua.new_usertype<SongBox>(
         "SongBox", sol::base_classes, sol::bases<BaseBox>(), "text_subtitle", &SongBox::text_subtitle, "subtitle",
@@ -111,8 +111,8 @@ void register_song_select_lua_bindings(sol::state& lua) {
             info.crown = 0; // Crown::NONE
             info.rank = 0;  // Rank::_NONE
             if (diff >= 0 && diff < std::ssize(self.scores_p2) && self.scores_p2[diff].has_value()) {
-                info.crown = (int)self.scores_p2[diff]->crown;
-                info.rank = (int)self.scores_p2[diff]->rank;
+                info.crown = static_cast<int>(self.scores_p2[diff]->crown);
+                info.rank = static_cast<int>(self.scores_p2[diff]->rank);
             }
             sol::table t = script_manager.lua->create_table(0, 6);
             t["has_course"] = info.has_course;
@@ -130,7 +130,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
             if (!self.preimage.has_value()) {
                 return;
             }
-            Rect src{0, 0, (float)self.preimage->width, (float)self.preimage->height};
+            Rect src{0, 0, static_cast<float>(self.preimage->width), static_cast<float>(self.preimage->height)};
             Rect dest{x, y, width, height};
             draw_texture_pro(self.preimage.value(), src, dest, Vec2{0, 0}, 0, ::fade(Color::WHITE, fade));
         });
@@ -145,8 +145,8 @@ void register_song_select_lua_bindings(sol::state& lua) {
             }
             auto it = self.crown.rbegin(); // std::map is sorted -> highest diff
             sol::table t = script_manager.lua->create_table(0, 2);
-            t["crown"] = (int)it->second;
-            t["frame"] = std::min((int)Difficulty::URA, it->first);
+            t["crown"] = static_cast<int>(it->second);
+            t["frame"] = std::min(static_cast<int>(Difficulty::URA), it->first);
             return t;
         },
         "highest_crown_p2",
@@ -156,8 +156,8 @@ void register_song_select_lua_bindings(sol::state& lua) {
             }
             auto it = self.crown_p2.rbegin();
             sol::table t = script_manager.lua->create_table(0, 2);
-            t["crown"] = (int)it->second;
-            t["frame"] = std::min((int)Difficulty::URA, it->first);
+            t["crown"] = static_cast<int>(it->second);
+            t["frame"] = std::min(static_cast<int>(Difficulty::URA), it->first);
             return t;
         },
         "explanation",
@@ -230,7 +230,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
             auto k = static_cast<size_t>(i);
             return k < self.song_masked.size() && self.song_masked[k];
         },
-        "song_count", [](DanBox& self) { return (int)self.songs.size(); }, "song_genre",
+        "song_count", [](DanBox& self) { return static_cast<int>(self.songs.size()); }, "song_genre",
         [](DanBox& self, double i) { return self.songs[static_cast<int>(i)].genre_index; }, "song_difficulty",
         [](DanBox& self, double i) { return self.songs[static_cast<int>(i)].difficulty; }, "song_level",
         [](DanBox& self, double i) { return self.songs[static_cast<int>(i)].level; }, "chip_name",
@@ -245,14 +245,15 @@ void register_song_select_lua_bindings(sol::state& lua) {
             int idx = static_cast<int>(i);
             return (idx >= 0 && idx < std::ssize(self.song_texts)) ? self.song_texts[idx].second.get() : nullptr;
         },
-        "exam_count", [](DanBox& self) { return (int)self.exams.size(); }, "exam_type",
+        "exam_count", [](DanBox& self) { return static_cast<int>(self.exams.size()); }, "exam_type",
         [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].type; }, "exam_red",
         [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].red; }, "exam_gold",
         [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].gold; }, "exam_range",
         [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].range; }, "exam_gothrough",
         [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].gothrough; }, "exam_per_song",
         [](DanBox& self, double i) { return self.exams[static_cast<int>(i)].per_song(); }, "exam_song_count",
-        [](DanBox& self, double i) { return (int)self.exams[static_cast<int>(i)].song_red.size(); }, "exam_song_red",
+        [](DanBox& self, double i) { return static_cast<int>(self.exams[static_cast<int>(i)].song_red.size()); },
+        "exam_song_red",
         [](DanBox& self, double i, double j) { return self.exams[static_cast<int>(i)].song_red[static_cast<int>(j)]; },
         "exam_song_gold",
         [](DanBox& self, double i, double j) {
@@ -321,15 +322,16 @@ void register_song_select_lua_bindings(sol::state& lua) {
         });
 
     lua.new_usertype<SongSelectPlayer>(
-        "SongSelectPlayer", "selected_difficulty", [](SongSelectPlayer& self) { return (int)self.selected_difficulty; },
-        "player_num", [](SongSelectPlayer& self) { return (int)self.player_num; }, "difficulty_decided",
+        "SongSelectPlayer", "selected_difficulty",
+        [](SongSelectPlayer& self) { return static_cast<int>(self.selected_difficulty); }, "player_num",
+        [](SongSelectPlayer& self) { return static_cast<int>(self.player_num); }, "difficulty_decided",
         [](SongSelectPlayer& self) { return self.difficulty_decided(); },
         // state for the cursor drawn under the wheel
         "selector_state",
         [](SongSelectPlayer& self) {
             sol::table t = script_manager.lua->create_table();
-            t["selected"] = (int)self.selected_difficulty;
-            t["prev"] = (int)self.prev_diff;
+            t["selected"] = static_cast<int>(self.selected_difficulty);
+            t["prev"] = static_cast<int>(self.prev_diff);
             t["move_right"] = self.diff_select_move_right;
             t["move1"] = self.diff_selector_move_1->attribute;
             t["move1_done"] = self.diff_selector_move_1->is_finished;
@@ -342,7 +344,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
         "bg_diff_state",
         [](SongSelectPlayer& self) {
             sol::table t = script_manager.lua->create_table();
-            t["selected"] = (int)self.selected_difficulty;
+            t["selected"] = static_cast<int>(self.selected_difficulty);
             t["bounce"] = self.selected_diff_bounce->attribute;
             t["fade_in"] = self.selected_diff_fadein->attribute;
             t["highlight_fade"] = self.selected_diff_highlight_fade->attribute;
@@ -434,7 +436,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
         });
 
     lua.new_usertype<ModifierSelector>(
-        "ModifierPanel", "player_num", [](ModifierSelector& m) { return (int)m.lua_player(); }, "offset",
+        "ModifierPanel", "player_num", [](ModifierSelector& m) { return static_cast<int>(m.lua_player()); }, "offset",
         [](ModifierSelector& m) { return option_panel_offset(m.move, m.is_confirmed); }, "rows",
         [](ModifierSelector& m) { return modifier_rows_table(m); }, "index",
         [](ModifierSelector& m) { return m.lua_index() + 1; }, "confirmed",
@@ -442,7 +444,7 @@ void register_song_select_lua_bindings(sol::state& lua) {
         [](ModifierSelector& m) { return modifier_change_table(m); });
 
     lua.new_usertype<NeiroSelector>(
-        "NeiroPanel", "player_num", [](NeiroSelector& n) { return (int)n.lua_player(); }, "offset",
+        "NeiroPanel", "player_num", [](NeiroSelector& n) { return static_cast<int>(n.lua_player()); }, "offset",
         [](NeiroSelector& n) { return option_panel_offset(n.move, n.is_confirmed); }, "names",
         [](NeiroSelector& n) {
             sol::table out = script_manager.lua->create_table();

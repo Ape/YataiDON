@@ -92,8 +92,8 @@ void BalloonCounter::draw(float y) {
             char digit = counter[i];
             tex.draw_texture(t_counter, {.frame = digit - '0',
                                          .x = x_offset - (total_width / 2.0f) + (i * margin),
-                                         .y = y - (float)stretch->attribute + digit_y_offset,
-                                         .y2 = (float)stretch->attribute,
+                                         .y = y - static_cast<float>(stretch->attribute) + digit_y_offset,
+                                         .y2 = static_cast<float>(stretch->attribute),
                                          .fade = fade->attribute});
         }
     }

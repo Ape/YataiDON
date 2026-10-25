@@ -257,10 +257,10 @@ void TitleScreen::draw() {
     allnet_indicator.draw();
     entry_overlay.draw(true);
 
-    hit_taiko_text->draw({.x = (float)(tex.screen_width * 0.25 - hit_taiko_text->width / 2),
+    hit_taiko_text->draw({.x = static_cast<float>(tex.screen_width * 0.25 - hit_taiko_text->width / 2),
                           .y = font_manager.get_text_info("hit_taiko_to_start")->y,
                           .fade = text_overlay_fade->attribute});
-    hit_taiko_text->draw({.x = (float)(tex.screen_width * 0.75 - hit_taiko_text->width / 2),
+    hit_taiko_text->draw({.x = static_cast<float>(tex.screen_width * 0.75 - hit_taiko_text->width / 2),
                           .y = font_manager.get_text_info("hit_taiko_to_start")->y,
                           .fade = text_overlay_fade->attribute});
 }

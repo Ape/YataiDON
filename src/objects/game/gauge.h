@@ -26,7 +26,7 @@ public:
 
     // exam threshold check: floor like the arcade and use POINTS_EPS to absorb
     // double accumulation. computed before any narrowing to float.
-    int get_percent() const { return (int)std::floor((points + POINTS_EPS) / max_points * 100.0); }
+    int get_percent() const { return static_cast<int>(std::floor((points + POINTS_EPS) / max_points * 100.0)); }
 
 private:
     bool lua_tried = false;

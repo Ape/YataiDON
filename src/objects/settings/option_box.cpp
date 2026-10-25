@@ -18,7 +18,7 @@ static constexpr float DESC_FONT_SIZE_BASE = 25.0f;
 // These are laid out for the 1280x720 base canvas; scale with the skin so
 // higher-resolution skins don't drift out of alignment with the box art.
 static int option_font_size() {
-    return (int)(OPTION_FONT_SIZE_BASE * tex.screen_scale);
+    return static_cast<int>(OPTION_FONT_SIZE_BASE * tex.screen_scale);
 }
 
 static std::unique_ptr<FadeAnimation> make_flicker() {
@@ -46,7 +46,7 @@ void BaseOptionBox::draw_base() const {
     name_text->draw({.x = text_x, .y = text_y});
 
     float desc_font_size = DESC_FONT_SIZE_BASE * tex.screen_scale;
-    Font font = font_manager.get_font(description_text, (int)desc_font_size);
+    Font font = font_manager.get_font(description_text, static_cast<int>(desc_font_size));
     draw_text_ex(font, description_text.c_str(), {DESC_X_BASE * tex.screen_scale, DESC_Y_BASE * tex.screen_scale},
                  desc_font_size, 1, Color::BLACK);
 }
@@ -161,7 +161,7 @@ void IntOptionBox::move_left() {
 
 void IntOptionBox::move_right() {
     if (!value_list.empty()) {
-        value_index = std::min((int)value_list.size() - 1, value_index + 1);
+        value_index = std::min(static_cast<int>(value_list.size()) - 1, value_index + 1);
         value = value_list[value_index].first;
     } else {
         value++;
@@ -254,7 +254,7 @@ void StrOptionBox::move_left() {
 
 void StrOptionBox::move_right() {
     if (!value_list.empty()) {
-        value_index = std::min((int)value_list.size() - 1, value_index + 1);
+        value_index = std::min(static_cast<int>(value_list.size()) - 1, value_index + 1);
         value = value_list[value_index].first;
         rebuild_text();
     }
@@ -263,8 +263,8 @@ void StrOptionBox::move_right() {
 void StrOptionBox::draw() {
     draw_base();
     if (is_highlighted && value_list.empty()) {
-        ime_ui_set_field(
-            {(float)t_button_on->x[2], (float)t_button_on->y[2], (float)t_button_on->x2[2], (float)t_button_on->y2[2]});
+        ime_ui_set_field({static_cast<float>(t_button_on->x[2]), static_cast<float>(t_button_on->y[2]),
+                          static_cast<float>(t_button_on->x2[2]), static_cast<float>(t_button_on->y2[2])});
     }
 
     tex.draw_texture(t_button_off, {.index = 2});
@@ -411,7 +411,7 @@ FloatOptionBox::FloatOptionBox(const std::string& name, const std::string& descr
 }
 
 void FloatOptionBox::rebuild_text() {
-    std::string label = std::to_string((int)(value * 100)) + "%";
+    std::string label = std::to_string(static_cast<int>(value * 100)) + "%";
     value_text = std::make_unique<OutlinedText>(label, option_font_size(), Color::WHITE, Color::BLACK, false, 4, -4);
 }
 

@@ -31,7 +31,7 @@ float FPSCounter::get_fps() const {
 
 void FPSCounter::draw() {
     int curr_fps = get_fps();
-    int size = (int)(20.0f * global_tex.screen_scale);
+    int size = static_cast<int>(20.0f * global_tex.screen_scale);
     float pos = size;
 
     Color color;
