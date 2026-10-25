@@ -74,7 +74,7 @@ public:
 
     void clear() { items.clear(); }
 
-    static float pad_for(float outline, float screen_scale) { return (float)((int)(outline * screen_scale) + 2); }
+    static float pad_for(float outline, float screen_scale) { return (int)(outline * screen_scale) + 2; }
 
 private:
     std::map<std::string, std::unique_ptr<OutlinedText>> items;

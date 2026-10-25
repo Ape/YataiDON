@@ -462,7 +462,7 @@ void SongSelectScreen::draw() {
         coin_overlay.draw();
         global_data.in_transition = false;
     }
-    script->draw_top(dan_transition.has_value() ? (float)dan_transition->progress() : -1.0f);
+    script->draw_top(dan_transition.has_value() ? dan_transition->progress() : -1.0f);
 
     if (dan_transition.has_value()) {
         dan_transition->draw();

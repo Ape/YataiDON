@@ -998,7 +998,7 @@ void ScriptManager::register_lua_bindings() {
                            [](const std::string& name) -> bool { return audio.is_sound_playing(name); });
 
     audio_tbl.set_function("play_count",
-                           [](const std::string& name) -> double { return (double)audio.sound_play_count(name); });
+                           [](const std::string& name) -> double { return audio.sound_play_count(name); });
 
     audio_tbl.set_function("has_sound", [](const std::string& name) -> bool { return audio.has_sound(name); });
 

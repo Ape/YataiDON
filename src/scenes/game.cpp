@@ -65,7 +65,7 @@ void GameScreen::on_screen_start() {
     std::optional<Note> first_note = players.back()->get_first_note();
     if (first_note.has_value()) {
         double travel_time = first_note->hit_ms - first_note->load_ms;
-        double initial_ms = parser->metadata.offset * 1000 + (double)global_data.config->general.audio_offset;
+        double initial_ms = parser->metadata.offset * 1000 + global_data.config->general.audio_offset;
         double extra_delay = initial_ms - start_delay + travel_time;
         if (extra_delay > 0.0) {
             clock.seek(get_current_ms(), clock.position() - extra_delay);
@@ -714,7 +714,7 @@ void GameScreen::draw_players() {
         players[0]->draw(clock.position(), 0, 184 * tex.screen_scale);
         players[1]->draw(clock.position(), 0, tex.get_skin_config(SC::GAME_P2_Y)->y);
     } else {
-        float gap = ((float)tex.screen_height - (players.size() * 176 * tex.screen_scale)) / (players.size() + 1);
+        float gap = (tex.screen_height - (players.size() * 176 * tex.screen_scale)) / (players.size() + 1);
         for (int i = 0; i < players.size(); i++) {
             float position = gap + i * ((176 * tex.screen_scale) + gap);
             players[i]->draw(clock.position(), 0, position);

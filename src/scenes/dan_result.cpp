@@ -208,7 +208,7 @@ void DanResultScreen::build_page2_timeline() {
         }
         r.land = t;
         r.fill0 = t + ROW_SLIDE_MS;
-        r.filld = std::max(0.0, (double)std::lround(travel * 100.0f) * ROW_UNIT_MS);
+        r.filld = std::max(0.0, std::lround(travel * 100.0f) * ROW_UNIT_MS);
         r.numin = r.fill0 + r.filld + ROW_NUMIN_MS;
         t = r.numin + ROW_NUMWAIT_MS;
     }

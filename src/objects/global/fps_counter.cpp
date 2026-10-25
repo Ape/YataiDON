@@ -16,7 +16,7 @@ void FPSCounter::update() {
     double deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
-    frameTimes[currentFrame] = (float)std::clamp(deltaTime, 0.0, 1000.0);
+    frameTimes[currentFrame] = std::clamp(deltaTime, 0.0, 1000.0);
     currentFrame = (currentFrame + 1) % SAMPLE_SIZE;
 }
 
@@ -32,7 +32,7 @@ float FPSCounter::get_fps() const {
 void FPSCounter::draw() {
     int curr_fps = get_fps();
     int size = (int)(20.0f * global_tex.screen_scale);
-    float pos = (float)size;
+    float pos = size;
 
     Color color;
     std::string fps_text = std::to_string(curr_fps) + " FPS";

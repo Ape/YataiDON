@@ -277,8 +277,8 @@ DanInfoCache DanGameScreen::calculate_dan_info() {
     Player* p = players[0].get();
     int used = p->get_good() + p->get_ok() + p->get_bad();
     cache.remaining_notes = std::max(0, total_notes - used);
-    const bool near_end = (float)total_notes * 0.10f > (float)cache.remaining_notes;
-    const bool just_before_end = (float)total_notes * 0.05f > (float)cache.remaining_notes;
+    const bool near_end = total_notes * 0.10f > cache.remaining_notes;
+    const bool just_before_end = total_notes * 0.05f > cache.remaining_notes;
 
     const auto& exams = global_data.session_data[(int)global_data.player_num].selected_dan_exam;
     for (const auto& exam : exams) {

@@ -104,7 +104,7 @@ inline std::string dan_bar_state(const Exam& exam, int value, bool live = false,
         }
         // fall through to the flat palette -- no `max` during play
     }
-    int gauge = (exam.red > 0) ? (int)std::floor(100.0 * (double)value / (double)exam.red) : 100;
+    int gauge = (exam.red > 0) ? (int)std::floor(100.0 * value / exam.red) : 100;
     gauge = std::clamp(gauge, 0, 100);
     if (down) {
         gauge = 100 - gauge;
@@ -121,8 +121,7 @@ inline std::string dan_bar_state(const Exam& exam, int value, bool live = false,
         }
         return "up_100";
     }
-    const int good =
-        (exam.red > 0 && exam.gold > 0) ? 100 - (int)std::floor(100.0 * (double)exam.gold / (double)exam.red) : 100;
+    const int good = (exam.red > 0 && exam.gold > 0) ? 100 - (int)std::floor(100.0 * exam.gold / exam.red) : 100;
     if (gauge < 30) {
         return "down_80";
     }

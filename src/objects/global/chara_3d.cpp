@@ -975,7 +975,7 @@ void Chara3D::draw(float x, float y, float scale_mul) {
         }
         // room for the outline hull (2.5 px at 720 lines, scaled by the vertex colour) and the
         // FXAA pass's 3-texel dilation, plus a safety pixel
-        const float margin = 2.0f * (2.5f * (float)rh / 720.0f) + 4.0f;
+        const float margin = 2.0f * (2.5f * rh / 720.0f) + 4.0f;
         const int need_w = (int)std::ceil((bx1 - bx0) + 2.0f * margin);
         const int need_h = (int)std::ceil((by1 - by0) + 2.0f * margin);
         // grow-only target, in 128-texel steps, so a changing pose rarely reallocates it
@@ -1050,8 +1050,8 @@ void Chara3D::draw(float x, float y, float scale_mul) {
 
 // The whole screen at 2x: kept for a rotated camera and as the fallback.
 void Chara3D::draw_full_target(float x, float y, int rw, int rh, const Camera2D& cam2d) {
-    int ssw = (int)((float)rw * SUPERSAMPLE);
-    int ssh = (int)((float)rh * SUPERSAMPLE);
+    int ssw = (int)(rw * SUPERSAMPLE);
+    int ssh = (int)(rh * SUPERSAMPLE);
 
     if (scene_target.id == 0 || !full_target || scene_target_w != ssw || scene_target_h != ssh) {
         if (scene_target.id != 0) {
@@ -1102,7 +1102,7 @@ void Chara3D::draw_full_target(float x, float y, int rw, int rh, const Camera2D&
         begin_blend_mode(blend_mode::CUSTOM_SEPARATE);
         begin_mode_3d(cam3d);
         draw_3d(x, y);
-        draw_outline(x, y, ssw, ssh, (float)ssh);
+        draw_outline(x, y, ssw, ssh, ssh);
         end_mode_3d();
         end_blend_mode();
         end_texture_mode();

@@ -66,7 +66,7 @@ static void read_text_entries(const fs::path& file, float scale) {
             text_entries[m.name.GetString()] =
                 SkinInfo((float)json_member(v, "x", 0.0) * scale, (float)json_member(v, "y", 0.0) * scale,
                          (int)(json_member(v, "font_size", 0) * scale), (float)json_member(v, "width", 0.0) * scale,
-                         (float)json_member(v, "height", 0.0) * scale, labels, (float)json_member(v, "outline", -1.0));
+                         (float)json_member(v, "height", 0.0) * scale, labels, json_member(v, "outline", -1.0));
         }
     } catch (const std::exception& e) {
         spdlog::warn("text_config {}: {}", file.string(), e.what());
@@ -426,7 +426,7 @@ static void draw_text_clean(Image* dst, const Font& font, const char* text, Vec2
     Image t = gen_image_color(c.w, c.h, tint);
     auto* px = static_cast<unsigned char*>(t.data);
     for (size_t i = 0; i < c.a.size(); i++) {
-        px[i * 4 + 3] = (unsigned char)((c.a[i] * (int)tint.a) / 255);
+        px[i * 4 + 3] = c.a[i] * tint.a / 255;
     }
     blit_over(dst, t, (int)pos.x, (int)pos.y - m);
     unload_image(t);
@@ -487,7 +487,7 @@ static void stamp_outline(Image* dst, const Font& font, const char* text, Vec2 p
     Image o = gen_image_color(OW, OH, Color{outline_color.r, outline_color.g, outline_color.b, 0});
     auto* op = static_cast<unsigned char*>(o.data);
     for (int i = 0; i < OW * OH; i++) {
-        op[i * 4 + 3] = (unsigned char)((out[i] * (int)outline_color.a) / 255);
+        op[i * 4 + 3] = out[i] * outline_color.a / 255;
     }
     blit_over(dst, o, (int)pos.x - r, (int)pos.y - m - r);
     unload_image(o);
@@ -686,7 +686,7 @@ OutlinedText::OutlinedText(std::string text, int font_size, Color color, Color o
             max_w = std::max(max_w, lw);
         }
         width = max_w + pad * 2;
-        height = line_advance * (float)(lines.size() - 1) + line_h + pad * 2;
+        height = line_advance * (lines.size() - 1) + line_h + pad * 2;
     }
 
 #ifdef __EMSCRIPTEN__
@@ -746,9 +746,9 @@ OutlinedText::BuildData OutlinedText::build_horizontal_text(Color color, Color o
     int pad = (int)outline_thickness + 2;
 
     top_extra = std::max(0, text_margin(font_size) - pad);
-    Image img = gen_image_color((int)max_w + pad * 2,
-                                (int)(line_advance * (float)(lines.size() - 1) + line_h) + pad * 2 + top_extra,
-                                clear_of(outline_thickness > 0 ? outline_color : color));
+    Image img =
+        gen_image_color((int)max_w + pad * 2, (int)(line_advance * (lines.size() - 1) + line_h) + pad * 2 + top_extra,
+                        clear_of(outline_thickness > 0 ? outline_color : color));
 
     for (size_t li = 0; li < lines.size(); li++) {
         float y = pad + top_extra + li * line_advance;
@@ -824,8 +824,8 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
     // Pre-compute y position for each item.
     static constexpr float small_char_advance_factor = 0.8f;
     static constexpr float beside_advance_factor = 0.3f;
-    std::vector<float> y_positions(items.size(), (float)pad);
-    float current_y = (float)pad;
+    std::vector<float> y_positions(items.size(), pad);
+    float current_y = pad;
     for (size_t i = 1; i < items.size(); i++) {
         float advance;
         const auto& first = items[i].chars[0];
@@ -892,8 +892,8 @@ OutlinedText::BuildData OutlinedText::build_vertical_text(Color color, Color out
                     }
                     image_rotate_cw(&tmp);
 
-                    float dx = x + (char_width - (float)tmp.width) / 2.0f;
-                    float dy = draw_y + (char_height - (float)tmp.height) / 2.0f;
+                    float dx = x + (char_width - tmp.width) / 2.0f;
+                    float dy = draw_y + (char_height - tmp.height) / 2.0f;
                     Rect dst = {dx, dy, (float)tmp.width, (float)tmp.height};
                     blit_over(target, tmp, (int)dst.x, (int)dst.y);
                     unload_image(tmp);
@@ -943,7 +943,7 @@ bool OutlinedText::upload_pending() {
     unload_image(*img);
 
     texture = tex;
-    width = (float)tex.width;
+    width = tex.width;
     height = (float)tex.height - top_extra;
     return true;
 }

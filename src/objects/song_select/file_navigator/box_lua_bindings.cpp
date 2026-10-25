@@ -188,8 +188,8 @@ void register_song_select_lua_bindings(sol::state& lua) {
             float x = params.get_or("x", 0.0f);
             float y = params.get_or("y", 0.0f);
             float fade = params.get_or("fade", 1.0f);
-            float w = (float)self.box_texture->width;
-            float h = (float)self.box_texture->height;
+            float w = self.box_texture->width;
+            float h = self.box_texture->height;
             float dw = w * s * scale;
             float dh = h * s * scale;
 

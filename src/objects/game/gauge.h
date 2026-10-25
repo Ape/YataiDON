@@ -22,7 +22,7 @@ public:
     bool get_is_clear() const { return points >= clear_points; }
     bool get_is_rainbow() const { return points >= max_points; }
     bool is_dan() const { return dan_mode; }
-    float get_length() const { return (float)(points / max_points * 100); }
+    float get_length() const { return points / max_points * 100; }
 
     // exam threshold check: floor like the arcade and use POINTS_EPS to absorb
     // double accumulation. computed before any narrowing to float.

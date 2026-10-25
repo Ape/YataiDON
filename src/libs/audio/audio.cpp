@@ -431,7 +431,7 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
         }
         frame = (unsigned int)frame_f;
 
-        std::atomic_ref<float>(snd.frame_frac).store((float)(frame_f - (double)frame), std::memory_order_relaxed);
+        std::atomic_ref<float>(snd.frame_frac).store(frame_f - frame, std::memory_order_relaxed);
         aref_frame.store(frame, std::memory_order_relaxed);
         if (!still_playing) {
             aref_playing.store(false, std::memory_order_release);
@@ -478,7 +478,7 @@ void AudioEngine::mix(float* out, unsigned int framesPerBuffer, AudioEngine* eng
                     }
 
                     if (mus.resampler && frames_read > 0) {
-                        double ratio = engine->target_sample_rate / (double)mus.file_info.samplerate;
+                        double ratio = engine->target_sample_rate / mus.file_info.samplerate;
                         const unsigned int channels = mus.file_info.channels;
                         const long output_budget = (long)(frames_read * ratio) + 256;
 
@@ -946,11 +946,11 @@ static float* adopt_decoded_pcm(std::vector<float>& samples, int channels, unsig
     float* data = new float[samples.size()];
     std::memcpy(data, samples.data(), samples.size() * sizeof(float));
 
-    if ((double)rate == target_rate) {
+    if (rate == target_rate) {
         return data;
     }
 
-    double ratio = target_rate / (double)rate;
+    double ratio = target_rate / rate;
     long out_frames = (long)(frames * ratio) + 1;
     float* resampled = new float[(size_t)out_frames * channels];
     SRC_DATA sd{};
@@ -1063,8 +1063,8 @@ std::string AudioEngine::load_sound(const fs::path& file_path, const std::string
             snd.frame_count = ff_frames;
             snd.sample_rate = ff_rate;
             snd.channels = ff_ch;
-            if ((double)ff_rate != target_sample_rate) {
-                double ratio = target_sample_rate / (double)ff_rate;
+            if (ff_rate != target_sample_rate) {
+                double ratio = target_sample_rate / ff_rate;
                 long out_frames = (long)(ff_frames * ratio) + 1;
                 float* rs = new float[out_frames * ff_ch];
                 SRC_DATA sd;
@@ -1119,7 +1119,7 @@ std::string AudioEngine::load_sound(const fs::path& file_path, const std::string
         snd.channels = channels;
 
         if (snd.sample_rate != target_sample_rate) {
-            double ratio = target_sample_rate / (double)snd.sample_rate;
+            double ratio = target_sample_rate / snd.sample_rate;
             long output_frames = (long)(frames_read * ratio) + 1;
             float* resampled_data = new float[output_frames * channels];
 
@@ -1542,8 +1542,8 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
                 return "";
             }
 
-            if ((double)ff_rate != target_sample_rate) {
-                double ratio = target_sample_rate / (double)ff_rate;
+            if (ff_rate != target_sample_rate) {
+                double ratio = target_sample_rate / ff_rate;
                 long out_frames = (long)(ff_frames * ratio) + 1;
                 float* rs = new float[out_frames * ff_ch];
                 SRC_DATA sd{};
@@ -1607,7 +1607,7 @@ std::string AudioEngine::load_music_stream(const fs::path& file_path, const std:
                 return "";
             }
 
-            double ratio = target_sample_rate / (double)file_info.samplerate;
+            double ratio = target_sample_rate / file_info.samplerate;
             unsigned int resample_buffer_size = (unsigned int)(mus.buffer_size * ratio) + 256;
             mus.resample_buffer = new float[resample_buffer_size * file_info.channels];
 
@@ -1686,7 +1686,7 @@ std::string AudioEngine::load_music_stream_memory(const av::AVAudioStream& audio
                 music_streams.erase(name);
                 return "";
             }
-            double ratio = target_sample_rate / (double)file_info.samplerate;
+            double ratio = target_sample_rate / file_info.samplerate;
             unsigned int resample_buf_size = (unsigned int)(stored.buffer_size * ratio) + 256;
             stored.resample_buffer = new float[resample_buf_size * file_info.channels];
             spdlog::info("Memory music stream '{}' will be resampled from {} Hz to {} Hz", name, file_info.samplerate,

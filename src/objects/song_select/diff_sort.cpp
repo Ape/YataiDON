@@ -89,10 +89,10 @@ int DiffSortSelect::lua_phase() const {
 
 float DiffSortSelect::lua_alpha() const {
     if (t_out > 0.0) {
-        float u = (float)((now_ms - t_out) / SORT_OUT_MS);
+        float u = (now_ms - t_out) / SORT_OUT_MS;
         return std::max(0.0f, 1.0f - u);
     }
-    float u = (float)((now_ms - t_open) / SORT_IN_MS);
+    float u = (now_ms - t_open) / SORT_IN_MS;
     return std::min(1.0f, std::max(0.0f, u));
 }
 
@@ -105,9 +105,8 @@ float DiffSortSelect::lua_arrow_offset(int row) const {
         return 0.0f;
     }
     double f = e / SORT_ARROW_MS * 10.0;
-    float local =
-        (f <= 5.0) ? (float)(-SORT_ARROW_PUSH * (f / 5.0)) : (float)(-SORT_ARROW_PUSH * (1.0 - (f - 5.0) / 5.0));
-    return local * (float)arrow_dir[row];
+    float local = (f <= 5.0) ? (-SORT_ARROW_PUSH * (f / 5.0)) : (-SORT_ARROW_PUSH * (1.0 - (f - 5.0) / 5.0));
+    return local * arrow_dir[row];
 }
 
 void DiffSortSelect::one_menu_sort_change_param(int move) {

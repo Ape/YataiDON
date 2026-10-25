@@ -2,7 +2,7 @@
 
 GenreBG::GenreBG(const std::string& text_name, std::optional<Color> color, TextureIndex texture_index, float distance)
     : texture_index(texture_index) {
-    float base_font_size = (float)tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
+    float base_font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     float font_size = base_font_size;
     float name_outline = 5.0f;
     if (utf8_char_count(text_name) >= 30) {

@@ -60,7 +60,7 @@ sol::protected_function cached_skin_module_fn(const char* module, const char* fn
 }
 
 float option_panel_offset(const MoveAnimation* move, bool confirmed) {
-    float v = (float)move->attribute;
+    float v = move->attribute;
     if (!confirmed) {
         return -v;
     }

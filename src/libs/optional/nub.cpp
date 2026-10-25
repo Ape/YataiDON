@@ -118,14 +118,14 @@ namespace gen3 {
             case AV_SAMPLE_FMT_DBLP:
                 for (int s = 0; s < frame->nb_samples; s++) {
                     for (int c = 0; c < channels; c++) {
-                        out.push_back((float)reinterpret_cast<const double*>(frame->data[c])[s]);
+                        out.push_back(reinterpret_cast<const double*>(frame->data[c])[s]);
                     }
                 }
                 return true;
             case AV_SAMPLE_FMT_DBL: {
                 const double* p = reinterpret_cast<const double*>(frame->data[0]);
                 for (int i = 0; i < frame->nb_samples * channels; i++) {
-                    out.push_back((float)p[i]);
+                    out.push_back(p[i]);
                 }
                 return true;
             }

@@ -798,7 +798,7 @@ static float dan_cursor_alpha(double ms) {
     }
     double t = f / 5.0; // the table is every 5th frame
     int i = (int)t;
-    float u = (float)(t - i);
+    float u = t - i;
     return A[i % 12] * (1.0f - u) + A[(i + 1) % 12] * u;
 }
 
@@ -883,8 +883,8 @@ void DanNavigator::draw() {
     if (af < 0.0 || af > 60.0) {
         return;
     }
-    const float drift = (float)(af / 60.0 * 10.0);
-    const float aa = (af <= 30.0) ? 1.0f : (float)(1.0 - (af - 30.0) / 30.0);
+    const float drift = af / 60.0 * 10.0;
+    const float aa = (af <= 30.0) ? 1.0f : (1.0 - (af - 30.0) / 30.0);
     if (t_arrow_r) {
         tex.draw_texture(t_arrow_r, {.x = pos + drift, .fade = aa});
     }

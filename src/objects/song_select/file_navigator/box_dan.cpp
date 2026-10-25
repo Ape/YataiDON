@@ -26,9 +26,13 @@ void DanBox::load_text() {
     }
     BaseBox::load_text(); // populates name (vertical) for closed state
     const SkinInfo* chip_slot = tex.get_skin_config(SC::DAN_SELECT_CHIP_NAME);
-    float base_font = (chip_slot && chip_slot->font_size > 0)
-                          ? (float)chip_slot->font_size
-                          : (float)tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
+    float base_font;
+    if (chip_slot && chip_slot->font_size > 0) {
+        base_font = chip_slot->font_size;
+    } else {
+        base_font = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
+    }
+
     float name_outline = 5.0f;
     if (utf8_char_count(text_name) >= 30) {
         float shrunk = dan_shrink_font(base_font);
@@ -83,8 +87,8 @@ void DanBox::load_text() {
         int sub_font = base_sub_font;
         float sub_outline = 5.0f;
         if (utf8_char_count(sub_str) >= 30) {
-            float shrunk = dan_shrink_font((float)base_sub_font);
-            sub_outline = 5.0f * (shrunk / (float)base_sub_font);
+            float shrunk = dan_shrink_font(base_sub_font);
+            sub_outline = 5.0f * (shrunk / base_sub_font);
             sub_font = (int)shrunk;
         }
 

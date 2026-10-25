@@ -57,7 +57,7 @@ public:
 
     float slide_offset() const {
         if (slide_anim) {
-            return (float)slide_anim->attribute;
+            return slide_anim->attribute;
         }
         return open ? 0.0f : PANEL_WIDTH;
     }
@@ -127,19 +127,19 @@ public:
     }
 
     void draw_text(const char* text, int x, int y, int font_size, Color color) const {
-        draw_text_ex(ui_font, text, {(float)x, (float)y}, (float)font_size, font_size / 10.0f, color);
+        draw_text_ex(ui_font, text, {(float)x, (float)y}, font_size, font_size / 10.0f, color);
     }
 
     int measure_text(const char* text, int font_size) const {
-        return (int)measure_text_ex(ui_font, text, (float)font_size, font_size / 10.0f).x;
+        return (int)measure_text_ex(ui_font, text, font_size, font_size / 10.0f).x;
     }
 
     void draw_code_text(const char* text, int x, int y, int font_size, Color color) const {
-        draw_text_ex(code_font, text, {(float)x, (float)y}, (float)font_size, font_size / 10.0f, color);
+        draw_text_ex(code_font, text, {(float)x, (float)y}, font_size, font_size / 10.0f, color);
     }
 
     int measure_code_text(const char* text, int font_size) const {
-        return (int)measure_text_ex(code_font, text, (float)font_size, font_size / 10.0f).x;
+        return (int)measure_text_ex(code_font, text, font_size, font_size / 10.0f).x;
     }
 
     FramedTexture* get_selected_framed() const { return dynamic_cast<FramedTexture*>(selected_obj()); }
@@ -327,7 +327,7 @@ public:
             }
 
             const float data_top = button_bottom;
-            const float data_bottom = (float)tex.screen_height;
+            const float data_bottom = tex.screen_height;
             std::vector<DataField> fields = build_data_fields();
             const int field_count = (int)fields.size();
             const int data_shown = std::max(0, (int)((data_bottom - data_top) / ROW_HEIGHT));
@@ -415,7 +415,7 @@ public:
         if (active_tab == 2) {
             const DrawLogEntry* entry = clicked && mouse_over_panel ? find_selected_entry() : nullptr;
             if (entry && entry->from_lua && !entry->lua_source.empty()) {
-                LuaButtons buttons = lua_buttons(panel_x, (float)tex.screen_height);
+                LuaButtons buttons = lua_buttons(panel_x, tex.screen_height);
                 std::string path = resolve_lua_path(entry->lua_source).string();
                 if (path.empty()) {
                     return;
@@ -554,8 +554,8 @@ public:
             return;
         }
 
-        const float screen_w = (float)tex.screen_width;
-        const float screen_h = (float)tex.screen_height;
+        const float screen_w = tex.screen_width;
+        const float screen_h = tex.screen_height;
         const float panel_x = screen_w - PANEL_WIDTH + slide_offset();
         const float tab_width = PANEL_WIDTH / TAB_COUNT;
 

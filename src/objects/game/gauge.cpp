@@ -9,7 +9,7 @@ Gauge::Gauge(int total_notes, int difficulty, int level, PlayerNum player_num) :
                    : this->difficulty <= (int)Difficulty::HARD ? 7000
                                                                : 8000;
     const GaugeTable& table_row = table[this->difficulty][std::clamp(level - 1, 0, 9)];
-    const double denom = std::max(1, total_notes) * (double)table_row.soul_percent;
+    const double denom = std::max(1, total_notes) * table_row.soul_percent;
     good_points = (denom > 0.0) ? 1'000'000.0 / denom : 0;
     ok_points = good_points * table_row.ok_multiplier;
     bad_points = good_points * table_row.bad_multiplier;
@@ -126,7 +126,7 @@ void Gauge::update(double current_ms) {
 
     if (rainbow_fade_in.has_value()) {
         rainbow_fade_in.value()->update(current_ms);
-        rainbow_frac = (float)fmod((current_ms - rainbow_start_ms) / 75.0, 8.0);
+        rainbow_frac = fmod((current_ms - rainbow_start_ms) / 75.0, 8.0);
     }
 }
 
@@ -140,8 +140,8 @@ void Gauge::draw(float y) {
         }
     }
     const bool anim_active = gauge_update_anim && gauge_update_anim->is_started && !gauge_update_anim->is_finished;
-    const float anim_alpha = gauge_update_anim ? (float)gauge_update_anim->attribute : 0.0f;
-    const float rainbow_fade = rainbow_fade_in.has_value() ? (float)rainbow_fade_in.value()->attribute : -1.0f;
+    const float anim_alpha = gauge_update_anim ? gauge_update_anim->attribute : 0.0f;
+    const float rainbow_fade = rainbow_fade_in.has_value() ? rainbow_fade_in.value()->attribute : -1.0f;
     const int fire_frame = tamashii_fire_change ? (int)tamashii_fire_change->attribute : 0;
     call(fn_draw, "Gauge:draw", y, points, previous_points, max_points, clear_points, get_is_clear(), get_is_rainbow(),
          anim_active, anim_alpha, rainbow_fade, rainbow_frac, fire_frame);

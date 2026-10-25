@@ -1262,7 +1262,7 @@ void Player::handle_camera(double ms_from_start, const TimelineObject& timeline_
             camera_eases.push_back(timeline_object);
         } else {
             std::erase_if(camera_eases, [&](const TimelineObject& t) { return t.cam->prop == ev.prop; });
-            apply_camera_prop(ev.prop, (float)ev.to);
+            apply_camera_prop(ev.prop, ev.to);
         }
     }
     if (buffer_index != std::ssize(timeline_buffer) - 1) {
@@ -1277,7 +1277,7 @@ void Player::update_camera(double ms_from_start) {
         double len = t.end_time - t.start_time;
         double p = len > 0 ? (ms_from_start - t.start_time) / len : 1.0;
         double e = ease_progress(p, ev.dir, ev.calc);
-        apply_camera_prop(ev.prop, (float)(ev.from + (ev.to - ev.from) * e));
+        apply_camera_prop(ev.prop, ev.from + (ev.to - ev.from) * e);
     }
     std::erase_if(camera_eases, [&](const TimelineObject& t) { return ms_from_start >= t.end_time; });
 }
@@ -2085,7 +2085,7 @@ void Player::draw_notes(double current_ms, float y) {
 }
 
 void Player::draw_song_timer(double current_ms, float y) {
-    float progress = end_time > 0 ? (float)(current_ms / end_time) : 0.0f;
+    float progress = end_time > 0 ? current_ms / end_time : 0.0f;
     float width = tex.get_skin_config(SC::GAME_SONG_TIMER)->width * std::max(std::min(progress, 1.0f), 0.0f);
     draw_rectangle(tex.get_skin_config(SC::GAME_SONG_TIMER)->x, y + tex.get_skin_config(SC::GAME_SONG_TIMER)->y, width,
                    tex.get_skin_config(SC::GAME_SONG_TIMER)->height, Color(0, 255, 158, 255));
@@ -2097,9 +2097,9 @@ void Player::draw_modifiers(float y) {
         if (!is_2p) {
             return y;
         }
-        float cover_h = (float)t_lane_score_cover->y2[0];
-        float json_y = (float)id->y[0];
-        float icon_h = (float)id->y2[0];
+        float cover_h = t_lane_score_cover->y2[0];
+        float json_y = id->y[0];
+        float icon_h = id->y2[0];
         return y + tex.get_skin_config(SC::GAME_SCORE_COUNTER_2P_Y_OFFSET)->y + cover_h - icon_h - 2.0f * json_y;
     };
 
@@ -2117,11 +2117,11 @@ void Player::draw_modifiers(float y) {
             const float gy = grid->y + (slot / cols) * grid->height;
             float by = y + gy;
             if (is_2p) {
-                float cover_h = (float)t_lane_score_cover->y2[0];
-                float icon_h = (float)id->y2[0];
+                float cover_h = t_lane_score_cover->y2[0];
+                float icon_h = id->y2[0];
                 by = y + tex.get_skin_config(SC::GAME_SCORE_COUNTER_2P_Y_OFFSET)->y + cover_h - icon_h - 2.0f * gy;
             }
-            tex.draw_texture(id, {.x = gx - (float)id->x[0], .y = by - (float)id->y[0]});
+            tex.draw_texture(id, {.x = gx - id->x[0], .y = by - id->y[0]});
             slot++;
         }
         if (score_method == ScoreMethod::SHINUCHI && t_mod_shinuchi) {

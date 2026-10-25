@@ -1832,8 +1832,8 @@ void Navigator::begin_inline_load() {
     // not widen, so they stay put and set_positions moves them once the songs are in -- sending
     // them off screen left the right side empty for the whole wait.
     if (approx_items > 0) {
-        const float edge_delay = (float)(genre_bg->stretch->duration * 1.5);
-        const float edge_duration = (float)genre_bg->move->duration;
+        const float edge_delay = genre_bg->stretch->duration * 1.5;
+        const float edge_duration = genre_bg->move->duration;
         for (const auto& item : items) {
             if (item->position >
                 items[open_index]->position) { // "18" is a '''magic''' number that should fits for almost everything

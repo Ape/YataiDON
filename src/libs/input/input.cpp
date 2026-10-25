@@ -305,7 +305,7 @@ static int touch_quadrant_vkey(Vec2 pos, int sw, int sh) {
 
     float render_scale = std::min((float)sw / tex.screen_width, (float)sh / tex.screen_height);
     float cx = sw * 0.5f;
-    float cy = (float)sh * 0.5f + tex.screen_height * render_scale * 0.5f;
+    float cy = sh * 0.5f + tex.screen_height * render_scale * 0.5f;
 
     float rx = tex.screen_width * 0.262f * render_scale;
     float ry = tex.screen_width * 0.242f * render_scale;
@@ -441,7 +441,7 @@ bool draw_touch_drum() {
         touch_drum_resize->restart();
     }
     touch_drum_resize->update(get_current_ms());
-    const float scale = (float)touch_drum_resize->attribute;
+    const float scale = touch_drum_resize->attribute;
     float y_fix = 0.0f;
     auto drum_it = global_tex.textures.find("overlay/touch_drum");
     if (drum_it != global_tex.textures.end()) {
@@ -1154,8 +1154,8 @@ Vec2 mouse_position() {
 #else
     int ix = 0, iy = 0;
     SDL_GetMouseState(&ix, &iy);
-    x = (float)ix;
-    y = (float)iy;
+    x = ix;
+    y = iy;
 #endif
     return {x, y};
 }

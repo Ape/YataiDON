@@ -23,7 +23,7 @@ std::vector<GlyphInfo> load_font_data(std::span<const unsigned char> data, int f
         spdlog::warn("FONT: Failed to process TTF font data");
         return glyphs;
     }
-    const float scale = stbtt_ScaleForPixelHeight(&info, (float)font_size);
+    const float scale = stbtt_ScaleForPixelHeight(&info, font_size);
     int ascent = 0, descent = 0, line_gap = 0;
     stbtt_GetFontVMetrics(&info, &ascent, &descent, &line_gap);
     for (int cp : codepoints) {
@@ -33,13 +33,13 @@ std::vector<GlyphInfo> load_font_data(std::span<const unsigned char> data, int f
         GlyphInfo& g = glyphs.emplace_back();
         g.value = cp;
         stbtt_GetCodepointHMetrics(&info, cp, &g.advanceX, nullptr);
-        g.advanceX = (int)((float)g.advanceX * scale);
+        g.advanceX = (int)(g.advanceX * scale);
         // Blank glyphs (spaces) get no bitmap: width/height stay 0, only advanceX matters.
         g.image.data =
             stbtt_GetCodepointBitmap(&info, scale, scale, cp, &g.image.width, &g.image.height, &g.offsetX, &g.offsetY);
         g.image.mipmaps = 1;
         g.image.format = pixel_format::GRAYSCALE;
-        g.offsetY += (int)((float)ascent * scale);
+        g.offsetY += (int)(ascent * scale);
     }
     return glyphs;
 }
@@ -232,8 +232,8 @@ Vec2 measure_text_ex(const Font& font, const char* text, float font_size, float 
         const int gi = get_glyph_index(font, cp);
         i += n;
         if (cp != '\n') {
-            width += font.glyphs[gi].advanceX > 0 ? (float)font.glyphs[gi].advanceX
-                                                  : font.recs[gi].width + (float)font.glyphs[gi].offsetX;
+            width +=
+                font.glyphs[gi].advanceX > 0 ? font.glyphs[gi].advanceX : font.recs[gi].width + font.glyphs[gi].offsetX;
         } else {
             max_width = width > max_width ? width : max_width;
             bytes = 0;
@@ -243,5 +243,5 @@ Vec2 measure_text_ex(const Font& font, const char* text, float font_size, float 
         max_bytes = bytes > max_bytes ? bytes : max_bytes;
     }
     max_width = width > max_width ? width : max_width;
-    return {max_width * (font_size / (float)font.baseSize) + ((max_bytes - 1) * spacing), height};
+    return {max_width * (font_size / font.baseSize) + ((max_bytes - 1) * spacing), height};
 }

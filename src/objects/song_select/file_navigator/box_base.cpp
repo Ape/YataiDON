@@ -132,7 +132,7 @@ void BaseBox::update(double current_time) {
     if (!move->is_finished) {
         position += move->attribute - prev_position;
         if (move_delta != 0.0f && cross_lead != 0.0f) {
-            float p = (float)(move->attribute / move_delta);
+            float p = move->attribute / move_delta;
             if (p < 0.0f) {
                 p = 0.0f;
             } else if (p > 1.0f) {
