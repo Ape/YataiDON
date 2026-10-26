@@ -1171,7 +1171,7 @@ void TJAParser::handle_JPOSSCROLL(const std::string& part, ParserState& state) {
     // field width ("3/5"); the distance is one component or a complex "x+yi" / "x-yi" / "yi"
     auto component = [&](std::string c, double& out) -> bool {
         if (c.empty() || c == "+" || c == "-") {
-            c += "1";
+            c += '1';
         }
         size_t slash = c.find('/');
         try {

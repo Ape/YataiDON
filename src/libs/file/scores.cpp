@@ -1131,7 +1131,7 @@ std::string dan_course_id(const std::vector<DanSongEntry>& songs, const std::vec
         for (int v : e.song_gold) {
             key += ",g" + std::to_string(v);
         }
-        key += ";";
+        key += ';';
     }
     static const char* hex = "0123456789abcdef";
     std::string out;

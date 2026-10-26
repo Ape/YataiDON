@@ -22,6 +22,7 @@ Checks: >-
   performance-inefficient-string-concatenation,
   performance-inefficient-vector-operation,
   performance-move-const-arg,
+  performance-prefer-single-char-overloads,
   performance-unnecessary-copy-initialization,
   performance-use-std-move,
   readability-container-contains,
