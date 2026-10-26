@@ -28,7 +28,12 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
   # Generic Xcode Archive instead of an iOS App Archive.
   XCODE_ATTRIBUTE_INSTALL_PATH "$(LOCAL_APPS_DIR)"
   XCODE_ATTRIBUTE_SKIP_INSTALL "NO"
+  XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "AppIcon"
   XCODE_GENERATE_SCHEME TRUE)
+# A single 1024x1024 AppIcon; actool generates the per-device sizes.
+target_sources(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/ios/Assets.xcassets")
+set_source_files_properties("${CMAKE_SOURCE_DIR}/ios/Assets.xcassets" PROPERTIES
+  MACOSX_PACKAGE_LOCATION Resources)
 if(IOS_DEVELOPMENT_TEAM)
   set_target_properties(${PROJECT_NAME} PROPERTIES
     XCODE_ATTRIBUTE_DEVELOPMENT_TEAM "${IOS_DEVELOPMENT_TEAM}")
