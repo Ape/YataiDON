@@ -83,7 +83,7 @@ int calculate_base_score(const NoteList& notes) {
     return static_cast<int>(std::ceil(calculation)) * 10;
 }
 
-std::string test_encodings(const std::filesystem::path& file_path) {
+std::string_view test_encodings(const std::filesystem::path& file_path) {
     std::ifstream file(file_path, std::ios::binary);
     if (!file.is_open()) {
         return "";

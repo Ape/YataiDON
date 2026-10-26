@@ -13,6 +13,7 @@
 #include <regex>
 #include <spdlog/spdlog.h>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <vector>
 
@@ -431,7 +432,7 @@ private:
 
 double get_ms_per_measure(double bpm_val, double time_sig);
 int calculate_base_score(const NoteList& notes);
-std::string test_encodings(const std::filesystem::path& file_path);
+std::string_view test_encodings(const std::filesystem::path& file_path);
 std::string strip_comments(const std::string& code);
 
 Interval get_note_interval_type(double interval_ms, double bpm, double time_sig = 4.0);

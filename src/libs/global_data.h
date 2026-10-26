@@ -9,6 +9,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "file/config.h"
@@ -88,8 +89,8 @@ struct Exam {
     }
 };
 
-inline std::string dan_bar_state(const Exam& exam, int value, bool live = false, bool near_end = false,
-                                 bool just_before_end = false) {
+inline std::string_view dan_bar_state(const Exam& exam, int value, bool live = false, bool near_end = false,
+                                      bool just_before_end = false) {
     const bool down = (exam.range == "less");
     // CheckMax
     if (exam.gold > 0 && ((down && value < exam.gold) || (!down && value >= exam.gold))) {
