@@ -11,6 +11,7 @@ Checks: >-
   modernize-deprecated-headers,
   modernize-loop-convert,
   modernize-pass-by-value,
+  modernize-use-bool-literals,
   modernize-use-default-member-init,
   modernize-use-emplace,
   modernize-use-equals-default,
