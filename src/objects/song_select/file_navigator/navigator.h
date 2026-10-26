@@ -140,8 +140,8 @@ private:
     void wait_for_song_files();
     void enqueue_box(std::unique_ptr<BaseBox> box);
     void enqueue_inline_box(std::unique_ptr<BaseBox> box);
-    void parse_song_list(const fs::path& path, BoxDef box_def, bool inline_mode);
-    void load_current_directory_async(const fs::path path);
+    void parse_song_list(const fs::path& path, const BoxDef& box_def, bool inline_mode);
+    void load_current_directory_async(const fs::path& path);
     void load_all_roots();
     void load_collection_difficulty(const fs::path& path, const BoxDef& box_def, int course, int level, int order = 1);
     void load_from_song_list(const fs::path& path, const BoxDef& box_def, bool mark_favorite);

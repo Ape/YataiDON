@@ -24,6 +24,7 @@
 #include <random>
 #include <ranges>
 #include <thread>
+#include <utility>
 
 // Song Search normalisation: ASCII is lower-cased, full-width ASCII (U+FF01..FF5E) becomes
 // half-width, and simplified / traditional Chinese characters are folded to their Japanese
@@ -441,7 +442,7 @@ void Navigator::init(std::vector<fs::path> songs_paths) {
 
     if (!is_init) {
         if (!is_preloaded) {
-            preload(songs_paths);
+            preload(std::move(songs_paths));
         }
 
         load_all_roots();
@@ -713,7 +714,7 @@ void Navigator::flush_pending_boxes() {
     }
 }
 
-void Navigator::parse_song_list(const fs::path& path, BoxDef box_def, bool inline_mode) {
+void Navigator::parse_song_list(const fs::path& path, const BoxDef& box_def, bool inline_mode) {
     auto entries = read_song_list(path);
     std::vector<SongListEntry> out_entries;
     bool needs_rewrite = false;
@@ -786,7 +787,7 @@ void Navigator::parse_song_list(const fs::path& path, BoxDef box_def, bool inlin
     }
 }
 
-void Navigator::load_current_directory_async(const fs::path path) {
+void Navigator::load_current_directory_async(const fs::path& path) {
     BoxDef box_def = parse_box_def(path);
 
     setup_back_box(path, true);
@@ -1845,6 +1846,7 @@ void Navigator::begin_inline_load() {
     }
 }
 
+// NOLINTNEXTLINE(performance-unnecessary-value-param): setup_back_box can destroy the item owning the argument.
 void Navigator::load_current_directory(const fs::path path) {
     BoxDef box_def = parse_box_def(path);
     bool has_children = has_child_folders(path);
