@@ -253,8 +253,8 @@ public:
     void unload_textures();
 
     bool has_animation(const int id) const { return animations.contains(id); }
-    BaseAnimation* get_animation(const int id, bool is_copy = false);
-    BaseAnimation* get_animation(const int id, const std::string& screen_name);
+    BaseAnimation* get_animation(int id, bool is_copy = false);
+    BaseAnimation* get_animation(int id, const std::string& screen_name);
 
     void read_tex_obj_data(const Value& tex_mapping, TextureObject* tex_obj, float scale = 1.0f);
 

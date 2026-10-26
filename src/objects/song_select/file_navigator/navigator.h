@@ -148,7 +148,7 @@ private:
     void load_collection_new(const fs::path& path, const BoxDef& box_def);
     void load_collection_recommended(const fs::path& path, const BoxDef& box_def);
     void load_collection_search(const fs::path& path, const BoxDef& box_def);
-    void load_songs_inline_async(const fs::path path, BoxDef box_def);
+    void load_songs_inline_async(fs::path path, BoxDef box_def);
     void promote_recent_box(const SongBox* song);
     void collapse_inline_now();
     void flush_pending_boxes();
@@ -184,7 +184,7 @@ public:
     bool diff_sort_ready() { return awaiting_diff_sort; }
     void apply_diff_sort(int course, int level, int order = 1);
     void cancel_diff_sort();
-    void load_current_directory(const fs::path path);
+    void load_current_directory(fs::path path);
     bool jump_to_song(const std::string& hash);
     bool jump_to_song_path(const fs::path& song_path);
     void enter_diff_select();
