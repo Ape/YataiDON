@@ -247,7 +247,7 @@ struct GlobalData {
     std::string current_screen = "LOADING";
     std::string previous_screen;
     bool in_transition = false;
-    std::string title_state = "";
+    std::string title_state;
     double title_state_start_ms = 0.0;
     int live_skip_count = -1;
     bool live_skip_used = false;

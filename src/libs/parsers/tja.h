@@ -271,7 +271,7 @@ struct TJAMetadata {
     std::map<std::string, std::string> title = {{"en", ""}};
     std::map<std::string, std::string> subtitle = {{"en", ""}};
     bool subtitle_full_display = false;
-    std::string genre = "";
+    std::string genre;
     fs::path wave;
     double demostart = 0.0f;
     double offset = 0.0f;
@@ -279,7 +279,7 @@ struct TJAMetadata {
     fs::path bgmovie;
     double movieoffset = 0.0f;
     fs::path preimage;
-    std::string scene_preset = "";
+    std::string scene_preset;
     std::map<int, CourseData> course_data;
 };
 

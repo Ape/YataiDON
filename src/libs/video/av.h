@@ -249,7 +249,7 @@ namespace av {
 
     private:
         // Private default constructor used only by make_silent().
-        AVAudioStream() : stream_(nullptr), url_(""), silent_(false), silent_duration_(0.0) {}
+        AVAudioStream() : stream_(nullptr), silent_(false), silent_duration_(0.0) {}
 
         std::vector<uint8_t> remux_to_wav() const {
             // Open a private AVFormatContext so we never advance or corrupt the
