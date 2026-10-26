@@ -1512,11 +1512,9 @@ void modifier_moji(NoteList& notes) {
                     notes.notes[i].moji = 4;
                 }
             }
-            if (length == 3) {
-                if (notes.notes[start + 0].type == NoteType::DON && notes.notes[start + 1].type == NoteType::DON &&
-                    notes.notes[start + 2].type == NoteType::DON) {
-                    notes.notes[start + 1].moji = 2;
-                }
+            if (length == 3 && notes.notes[start + 0].type == NoteType::DON &&
+                notes.notes[start + 1].type == NoteType::DON && notes.notes[start + 2].type == NoteType::DON) {
+                notes.notes[start + 1].moji = 2;
             }
         }
     }

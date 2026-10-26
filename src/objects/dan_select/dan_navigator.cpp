@@ -848,10 +848,8 @@ void DanNavigator::draw() {
 
     for (auto& b : boxes) {
         float pos = b->position;
-        if (pos >= -156 * tex.screen_scale && pos <= tex.screen_width + 144 * tex.screen_scale) {
-            if (fn_draw_box.valid()) {
-                fn_draw_box(lua_paint, b.get());
-            }
+        if (pos >= -156 * tex.screen_scale && pos <= tex.screen_width + 144 * tex.screen_scale && fn_draw_box.valid()) {
+            fn_draw_box(lua_paint, b.get());
         }
     }
 

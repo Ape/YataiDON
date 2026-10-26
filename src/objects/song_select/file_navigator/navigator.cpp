@@ -459,11 +459,11 @@ void Navigator::init(std::vector<fs::path> songs_paths) {
             load_all_roots();
         } else {
             if (inline_state.has_value()) {
-                if (open_index >= 0 && open_index < std::ssize(items)) {
-                    if (dynamic_cast<SongBox*>(items[open_index].get())) {
-                        reopen_song_path = items[open_index]->path;
-                    }
+                if (open_index >= 0 && open_index < std::ssize(items) &&
+                    dynamic_cast<SongBox*>(items[open_index].get())) {
+                    reopen_song_path = items[open_index]->path;
                 }
+
                 reopen_folder_path = inline_state->saved_folder_box
                                          ? std::optional<fs::path>(inline_state->saved_folder_box->path)
                                          : std::nullopt;
@@ -2904,10 +2904,8 @@ void Navigator::draw() {
     for (auto& box : items) {
         bool on_screen = vertical_gallery ? (box->position > -100 && box->position < tex.screen_height + 100)
                                           : (box->position > -100 && box->position < tex.screen_width + 100);
-        if (on_screen) {
-            if (script) {
-                script->draw_box(box.get());
-            }
+        if (on_screen && script) {
+            script->draw_box(box.get());
         }
     }
 }

@@ -325,11 +325,10 @@ std::vector<std::string> enumerate_audio_devices(int device_type) {
 
     // Default (SDL3) backend and any unrecognized type: enumerate SDL3 devices.
     bool init_here = false;
-    if (!(SDL_WasInit(SDL_INIT_AUDIO) & SDL_INIT_AUDIO)) {
-        if (SDL_InitSubSystem(SDL_INIT_AUDIO)) {
-            init_here = true;
-        }
+    if (!(SDL_WasInit(SDL_INIT_AUDIO) & SDL_INIT_AUDIO) && SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+        init_here = true;
     }
+
     int count = 0;
     SDL_AudioDeviceID* devices = SDL_GetAudioPlaybackDevices(&count);
     if (devices) {

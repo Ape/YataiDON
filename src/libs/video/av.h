@@ -481,10 +481,8 @@ namespace av {
         std::unique_ptr<AVVideoStream> video(int n = 0) const {
             int found = 0;
             for (unsigned i = 0; i < fmt_ctx_->nb_streams; ++i) {
-                if (fmt_ctx_->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-                    if (found++ == n) {
-                        return std::make_unique<AVVideoStream>(fmt_ctx_->streams[i]);
-                    }
+                if (fmt_ctx_->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO && found++ == n) {
+                    return std::make_unique<AVVideoStream>(fmt_ctx_->streams[i]);
                 }
             }
             throw std::runtime_error("av::AVStreamCollection::video: stream not found");
@@ -496,10 +494,8 @@ namespace av {
         std::unique_ptr<AVAudioStream> audio(int n = 0) const {
             int found = 0;
             for (unsigned i = 0; i < fmt_ctx_->nb_streams; ++i) {
-                if (fmt_ctx_->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-                    if (found++ == n) {
-                        return std::make_unique<AVAudioStream>(fmt_ctx_->streams[i], fmt_ctx_);
-                    }
+                if (fmt_ctx_->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && found++ == n) {
+                    return std::make_unique<AVAudioStream>(fmt_ctx_->streams[i], fmt_ctx_);
                 }
             }
             // No audio stream found – synthesise silence for the video duration.
