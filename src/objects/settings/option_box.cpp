@@ -8,8 +8,6 @@
 #include "../../libs/input/input.h"
 #include "../../libs/math/animation.h"
 
-std::string getKeyString(int key_code);
-
 static constexpr int OPTION_FONT_SIZE_BASE = 30;
 static constexpr float DESC_X_BASE = 450.0f;
 static constexpr float DESC_Y_BASE = 270.0f;
