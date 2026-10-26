@@ -95,7 +95,7 @@ public:
 
     void move_box(float target_position, float duration, float delay = 0.0f,
                   std::optional<EaseType> ease = EaseType::Cubic);
-    virtual void update(double current_ms);
+    virtual void update(double current_time);
 
     const char* draw_state() const {
         if (yellow_box_active && is_diff_select) {

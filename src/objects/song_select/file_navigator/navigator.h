@@ -169,8 +169,8 @@ public:
     SongSelectScript* script = nullptr;
 
     void join_loader();
-    // `files`: the chart files under songs_paths when the caller already listed them (the loading screen)
-    void preload(std::vector<fs::path> songs_paths, std::optional<std::vector<fs::path>> files = std::nullopt);
+    // `listed`: the chart files under songs_paths when the caller already listed them (the loading screen)
+    void preload(std::vector<fs::path> songs_paths, std::optional<std::vector<fs::path>> listed = std::nullopt);
     void init(std::vector<fs::path> songs_paths);
 
     void reset_for_skin_reload();
