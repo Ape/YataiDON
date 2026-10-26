@@ -9,6 +9,7 @@ Checks: >-
   bugprone-use-after-move,
   modernize-avoid-c-style-cast,
   modernize-loop-convert,
+  modernize-pass-by-value,
   modernize-use-default-member-init,
   modernize-use-emplace,
   modernize-use-equals-default,

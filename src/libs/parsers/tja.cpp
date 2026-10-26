@@ -162,9 +162,9 @@ static std::vector<std::string> read_lines_once(const std::filesystem::path& pat
     return lines;
 }
 
-TJAParser::TJAParser(const std::filesystem::path& path, int start_delay, int player_num)
-    : file_path(path), start_ms(static_cast<double>(start_delay)), current_ms(static_cast<double>(start_delay)),
-      player_num(player_num) {
+TJAParser::TJAParser(std::filesystem::path path, int start_delay, int player_num)
+    : file_path(std::move(path)), start_ms(static_cast<double>(start_delay)),
+      current_ms(static_cast<double>(start_delay)), player_num(player_num) {
     PROFILE_SCOPE();
 
     std::vector<std::string> lines = read_lines_once(file_path, encoding);

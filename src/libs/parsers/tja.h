@@ -341,7 +341,7 @@ public:
 
     TJAParser() = default;
 
-    TJAParser(const std::filesystem::path& path, int start_delay = 0, int player_num = 0);
+    TJAParser(std::filesystem::path path, int start_delay = 0, int player_num = 0);
 
     std::filesystem::path file_path;
     TJAMetadata metadata;

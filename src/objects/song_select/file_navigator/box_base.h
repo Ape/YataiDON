@@ -72,7 +72,7 @@ public:
     bool is_new = false;
     bool preserve_order = false;
 
-    BaseBox(const fs::path& path, const BoxDef& box_def);
+    BaseBox(fs::path path, const BoxDef& box_def);
     virtual ~BaseBox();
 
     virtual void load_text();
