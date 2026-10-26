@@ -18,7 +18,6 @@
 #include "../../../libs/optional/gen3.h"
 #include "../../../libs/optional/gen4.h"
 #endif
-#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <random>

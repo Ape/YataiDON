@@ -29,6 +29,7 @@ Checks: >-
   performance-unnecessary-value-param,
   performance-use-std-move,
   readability-container-contains,
+  readability-duplicate-include,
   readability-else-after-return,
   readability-redundant-casting,
   readability-redundant-declaration,

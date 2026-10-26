@@ -39,7 +39,6 @@ static bool decode_bank(const fs::path& p, gen4::DecodedAudio& out) {
     return p.extension() == ".nub" ? gen3::decode_nub(p, out) : gen4::decode_nus3bank(p, out);
 }
 #endif
-#include <algorithm>
 #if defined(__ANDROID__) || defined(YATAIDON_PLATFORM_IOS)
 extern "C" {
 #include <libavcodec/avcodec.h>
