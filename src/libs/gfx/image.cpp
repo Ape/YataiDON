@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include <spdlog/spdlog.h>
 #include <vector>
 
@@ -53,25 +54,37 @@ int get_pixel_data_size(int width, int height, int format) {
     if (width <= 0 || height <= 0) {
         return 0;
     }
+    int bpp = 0;
     switch (format) {
     case pixel_format::GRAYSCALE:
-        return width * height;
+        bpp = 1;
+        break;
     case pixel_format::GRAY_ALPHA:
-        return width * height * 2;
+        bpp = 2;
+        break;
     case pixel_format::RGB8:
-        return width * height * 3;
+        bpp = 3;
+        break;
     case pixel_format::RGBA8:
-        return width * height * 4;
+        bpp = 4;
+        break;
     default:
         return 0; // only the formats load_image/gen_image_color produce
     }
+
+    if (width > std::numeric_limits<int>::max() / bpp / height) {
+        return 0;
+    }
+
+    return width * height * bpp;
 }
 
 Image load_image(const char* path) {
     std::vector<unsigned char> file = load_file_bytes(path);
     Image image;
     int comp = 0;
-    image.data = stbi_load_from_memory(file.data(), (int)file.size(), &image.width, &image.height, &comp, 0);
+    image.data =
+        stbi_load_from_memory(file.data(), static_cast<int>(file.size()), &image.width, &image.height, &comp, 0);
     if (!image.data) {
         if (!file.empty()) {
             spdlog::warn("IMAGE: [{}] Failed to load data: {}", path, stbi_failure_reason());
@@ -91,11 +104,26 @@ void unload_image(Image image) {
 
 bool export_image(Image image, const char* path) {
     const int comp = get_pixel_data_size(1, 1, image.format);
-    return comp && stbi_write_png(path, image.width, image.height, comp, image.data, image.width * comp);
+    if (!image.data || comp <= 0 || image.width <= 0 || image.height <= 0 ||
+        image.width > (std::numeric_limits<int>::max() / image.height - 1) / comp) {
+        return false;
+    }
+
+    const int stride = image.width * comp;
+    if (stride < comp) {
+        return false;
+    }
+
+    return stbi_write_png(path, image.width, image.height, comp, image.data, stride);
 }
 
 Image gen_image_color(int w, int h, Color color) {
-    Image image{std::calloc(get_pixel_data_size(w, h, pixel_format::RGBA8), 1), w, h, 1, pixel_format::RGBA8};
+    const int size = get_pixel_data_size(w, h, pixel_format::RGBA8);
+    if (size <= 0) {
+        return {};
+    }
+
+    Image image{std::calloc(size, 1), w, h, 1, pixel_format::RGBA8};
     auto* px = static_cast<Color*>(image.data);
     for (int i = 0; px && i < w * h; i++) {
         px[i] = color;
@@ -106,7 +134,7 @@ Image gen_image_color(int w, int h, Color color) {
 Image image_copy(Image image) { // CPU images are always a single level
     const int size = get_pixel_data_size(image.width, image.height, image.format);
     Image out = image;
-    out.data = image.data ? std::malloc(size) : nullptr;
+    out.data = image.data && size > 0 ? std::malloc(size) : nullptr;
     if (out.data) {
         std::memcpy(out.data, image.data, size);
     }
@@ -115,36 +143,52 @@ Image image_copy(Image image) { // CPU images are always a single level
 
 Image image_from_image(Image image, Rect rec) {
     Image out;
-    if (!image.data || image.width == 0 || image.height == 0) {
+    if (!image.data || get_pixel_data_size(image.width, image.height, image.format) <= 0) {
         return out;
     }
     if (rec.width <= 0 || rec.height <= 0) {
         return out; // empty (e.g. a space glyph)
     }
-    if (rec.x < 0 || rec.y < 0 || rec.width <= 0 || rec.height <= 0 || (int)rec.x + (int)rec.width > image.width ||
-        (int)rec.y + (int)rec.height > image.height) {
+    if (rec.x < 0 || rec.y < 0 || rec.width <= 0 || rec.height <= 0 ||
+        static_cast<int>(rec.x) + static_cast<int>(rec.width) > image.width ||
+        static_cast<int>(rec.y) + static_cast<int>(rec.height) > image.height) {
         spdlog::warn("IMAGE: image_from_image(), rectangle provided not valid");
         return out;
     }
     const int bpp = get_pixel_data_size(1, 1, image.format);
-    const int w = (int)rec.width, h = (int)rec.height;
-    out = Image{std::calloc(w * h * bpp, 1), w, h, 1, image.format};
+    const int w = static_cast<int>(rec.width), h = static_cast<int>(rec.height);
+    const int size = get_pixel_data_size(w, h, image.format);
+    if (size <= 0) {
+        return out;
+    }
+
+    out = Image{std::calloc(size, 1), w, h, 1, image.format};
+    if (!out.data) {
+        return {};
+    }
+
     for (int y = 0; y < h; y++) {
         std::memcpy(static_cast<unsigned char*>(out.data) + y * w * bpp,
-                    static_cast<unsigned char*>(image.data) + ((y + (int)rec.y) * image.width + (int)rec.x) * bpp,
+                    static_cast<unsigned char*>(image.data) +
+                        ((y + static_cast<int>(rec.y)) * image.width + static_cast<int>(rec.x)) * bpp,
                     w * bpp);
     }
     return out;
 }
 
 void image_rotate_cw(Image* image) {
-    if (!image->data || image->width == 0 || image->height == 0) {
+    const int size = get_pixel_data_size(image->width, image->height, image->format);
+    if (!image->data || size <= 0) {
         return;
     }
     const int bpp = get_pixel_data_size(1, 1, image->format);
     const int w = image->width, h = image->height;
     auto* src = static_cast<unsigned char*>(image->data);
-    auto* out = static_cast<unsigned char*>(std::malloc(w * h * bpp));
+    auto* out = static_cast<unsigned char*>(std::malloc(size));
+    if (!out) {
+        return;
+    }
+
     for (int y = 0; y < h; y++) {
         for (int x = 0; x < w; x++) {
             std::memcpy(out + (x * h + (h - y - 1)) * bpp, src + (y * w + x) * bpp, bpp);
@@ -196,7 +240,7 @@ Rect get_image_alpha_border(Image image, float threshold) {
     }
     const int bpp = get_pixel_data_size(1, 1, image.format);
     const auto* px = static_cast<const unsigned char*>(image.data);
-    const auto limit = (unsigned char)(threshold * 255.0f);
+    const auto limit = static_cast<unsigned char>(threshold * 255.0f);
     int x_min = 65536, x_max = 0, y_min = 65536, y_max = 0;
     for (int y = 0; y < image.height; y++) {
         for (int x = 0; x < image.width; x++) {
@@ -211,7 +255,8 @@ Rect get_image_alpha_border(Image image, float threshold) {
     if (x_min == 65536) {
         return {};
     }
-    return {(float)x_min, (float)y_min, (float)(x_max + 1 - x_min), (float)(y_max + 1 - y_min)};
+    return {static_cast<float>(x_min), static_cast<float>(y_min), static_cast<float>(x_max + 1 - x_min),
+            static_cast<float>(y_max + 1 - y_min)};
 }
 
 static Texture load_texture(const char* path, bool mipmaps) {

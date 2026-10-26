@@ -11,7 +11,7 @@ private:
 
 public:
     ScoreCounter(bool is_2p, PlayerNum player_num) {
-        if (!load("ScoreCounter", "score_counter", is_2p, (int)player_num)) {
+        if (!load("ScoreCounter", "score_counter", is_2p, static_cast<int>(player_num))) {
             return;
         }
         fn_update = lua_object["update"];

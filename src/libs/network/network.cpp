@@ -695,7 +695,7 @@ static std::string map_to_json_impl(const std::map<double, InputLogType>& my_map
         char keybuf[32];
         std::snprintf(keybuf, sizeof(keybuf), "%.17g", pair.first);
         rapidjson::Value key(keybuf, allocator);
-        doc.AddMember(key, (int)pair.second, allocator);
+        doc.AddMember(key, static_cast<int>(pair.second), allocator);
     }
 
     rapidjson::StringBuffer buffer;

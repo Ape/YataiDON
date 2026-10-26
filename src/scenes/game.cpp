@@ -18,7 +18,7 @@ void GameScreen::on_screen_start() {
     JudgePos::X = tex.get_skin_config(SC::GAME_JUDGE_POS)->x;
     JudgePos::Y = tex.get_skin_config(SC::GAME_JUDGE_POS)->y;
     TJAParser::jpos_field_width = (tex.screen_width - JudgePos::X) / tex.screen_scale;
-    SessionData& session_data = global_data.session_data[(int)global_data.player_num];
+    SessionData& session_data = global_data.session_data[static_cast<int>(global_data.player_num)];
     if (session_data.selected_song.empty() || !exists(session_data.selected_song)) {
         auto songs = get_song_files(global_data.config->paths.tja_path);
         if (songs.empty()) {
@@ -65,7 +65,7 @@ void GameScreen::on_screen_start() {
     std::optional<Note> first_note = players.back()->get_first_note();
     if (first_note.has_value()) {
         double travel_time = first_note->hit_ms - first_note->load_ms;
-        double initial_ms = parser->metadata.offset * 1000 + (double)global_data.config->general.audio_offset;
+        double initial_ms = parser->metadata.offset * 1000 + global_data.config->general.audio_offset;
         double extra_delay = initial_ms - start_delay + travel_time;
         if (extra_delay > 0.0) {
             clock.seek(get_current_ms(), clock.position() - extra_delay);
@@ -132,11 +132,12 @@ void GameScreen::set_session_song_info(PlayerNum player_num) {
 }
 
 void GameScreen::create_players() {
-    players.push_back(std::make_unique<Player>(
-        parser, global_data.player_num, global_data.session_data[(int)global_data.player_num].selected_difficulty,
-        false, get_player_modifiers(global_data.player_num)));
+    const auto player_index = static_cast<int>(global_data.player_num);
+    players.push_back(std::make_unique<Player>(parser, global_data.player_num,
+                                               global_data.session_data[player_index].selected_difficulty, false,
+                                               get_player_modifiers(global_data.player_num)));
 
-    SessionData& replay_session_data = global_data.session_data[(int)global_data.player_num];
+    SessionData& replay_session_data = global_data.session_data[player_index];
     if (replay_session_data.replay_input_log.has_value()) {
         std::map<double, InputLogType> typed_log;
         for (const auto& [ms, type] : *replay_session_data.replay_input_log) {
@@ -318,7 +319,7 @@ void GameScreen::toggle_pause() {
 
 void GameScreen::restart_song() {
     unload_song();
-    initialize_chart(global_data.session_data[(int)restart_player_num()].selected_song);
+    initialize_chart(global_data.session_data[static_cast<int>(restart_player_num())].selected_song);
 
     if (background.has_value()) {
         for (const auto& player : players) {
@@ -375,7 +376,7 @@ void GameScreen::save_score(const std::string& player_id, PlayerNum player_num) 
 
     try {
         Score score;
-        SessionData& session_data = global_data.session_data[(int)player_num];
+        SessionData& session_data = global_data.session_data[static_cast<int>(player_num)];
         std::string hash = session_data.song_hash;
         score.score = session_data.result_data.score;
         score.good = session_data.result_data.good;
@@ -383,8 +384,7 @@ void GameScreen::save_score(const std::string& player_id, PlayerNum player_num) 
         score.bad = session_data.result_data.bad;
         score.max_combo = session_data.result_data.max_combo;
         score.drumroll = session_data.result_data.total_drumroll;
-        auto prev_score =
-            scores_manager.get_score(hash, global_data.session_data[(int)player_num].selected_difficulty, player_id);
+        auto prev_score = scores_manager.get_score(hash, session_data.selected_difficulty, player_id);
         if (prev_score.has_value()) {
             session_data.result_data.prev_score = prev_score->score;
         }
@@ -465,6 +465,8 @@ void GameScreen::init_skip() {
 
     bool wanted = false;
     bool lane_used[3] = {false, false, false};
+    const auto p1_index = static_cast<int>(PlayerNum::P1);
+    const auto p2_index = static_cast<int>(PlayerNum::P2);
     for (const auto& player : players) {
         if (!player) {
             continue;
@@ -472,8 +474,8 @@ void GameScreen::init_skip() {
         if (player->is_skip_enabled()) {
             wanted = true;
         }
-        int pn = (int)player->player_num;
-        if (pn == (int)PlayerNum::P1 || pn == (int)PlayerNum::P2) {
+        const auto pn = static_cast<int>(player->player_num);
+        if (pn == p1_index || pn == p2_index) {
             lane_used[pn] = true;
         }
     }
@@ -481,9 +483,9 @@ void GameScreen::init_skip() {
         return;
     }
 
-    if (!lane_used[(int)PlayerNum::P2]) {
+    if (!lane_used[p2_index]) {
         skip_lane = PlayerNum::P2;
-    } else if (!lane_used[(int)PlayerNum::P1]) {
+    } else if (!lane_used[p1_index]) {
         skip_lane = PlayerNum::P1;
     }
     if (skip_lane != PlayerNum::ALL) {
@@ -609,7 +611,8 @@ void GameScreen::draw_skip() {
 void GameScreen::end_song(double end_time, double transition_delay, BackgroundNotification notification) {
     if (clock.position() >= end_time + 1000 && !score_saved) {
         for (const auto& player : players) {
-            global_data.session_data[(int)player->player_num].result_data = player->get_result_score();
+            const auto player_index = static_cast<int>(player->player_num);
+            global_data.session_data[player_index].result_data = player->get_result_score();
         }
 
         for (const auto& player : players) {
@@ -714,7 +717,7 @@ void GameScreen::draw_players() {
         players[0]->draw(clock.position(), 0, 184 * tex.screen_scale);
         players[1]->draw(clock.position(), 0, tex.get_skin_config(SC::GAME_P2_Y)->y);
     } else {
-        float gap = ((float)tex.screen_height - (players.size() * 176 * tex.screen_scale)) / (players.size() + 1);
+        float gap = (tex.screen_height - (players.size() * 176 * tex.screen_scale)) / (players.size() + 1);
         for (int i = 0; i < players.size(); i++) {
             float position = gap + i * ((176 * tex.screen_scale) + gap);
             players[i]->draw(clock.position(), 0, position);

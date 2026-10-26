@@ -56,11 +56,11 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
         size_t i = 0;
         while (i < word.size()) {
             size_t char_len = 1;
-            while (i + char_len < word.size() && ((unsigned char)word[i + char_len] & 0xC0) == 0x80) {
+            while (i + char_len < word.size() && (static_cast<unsigned char>(word[i + char_len]) & 0xC0) == 0x80) {
                 char_len++;
             }
             std::string candidate = piece + word.substr(i, char_len);
-            if (!piece.empty() && measure_text_ex(font, candidate.c_str(), (float)font_size, spacing).x > max_width) {
+            if (!piece.empty() && measure_text_ex(font, candidate.c_str(), font_size, spacing).x > max_width) {
                 pieces.push_back(piece);
                 piece = word.substr(i, char_len);
             } else {
@@ -77,7 +77,7 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
     std::string wrapped, current;
     for (const auto& w : words) {
         std::string candidate = current.empty() ? w : std::format("{} {}", current, w);
-        float width = measure_text_ex(font, candidate.c_str(), (float)font_size, spacing).x;
+        float width = measure_text_ex(font, candidate.c_str(), font_size, spacing).x;
         if (width <= max_width) {
             current = candidate;
             continue;
@@ -86,7 +86,7 @@ inline std::string word_wrap(const std::string& text, int font_size, float spaci
             wrapped += current + "\n";
             current.clear();
         }
-        if (measure_text_ex(font, w.c_str(), (float)font_size, spacing).x > max_width) {
+        if (measure_text_ex(font, w.c_str(), font_size, spacing).x > max_width) {
             std::vector<std::string> pieces = break_long_word(w);
             for (size_t i = 0; i + 1 < pieces.size(); i++) {
                 wrapped += pieces[i] + "\n";

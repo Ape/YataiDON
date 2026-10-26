@@ -84,7 +84,7 @@ std::vector<std::vector<double>> OsuParser::read_section_list(const std::vector<
             continue;
         }
         // only parse lines that start with a digit or sign
-        if (!std::isdigit((unsigned char)line[0]) && line[0] != '-' && line[0] != '+') {
+        if (!std::isdigit(static_cast<unsigned char>(line[0])) && line[0] != '-' && line[0] != '+') {
             continue;
         }
         std::vector<double> nums;
@@ -122,7 +122,7 @@ std::vector<std::vector<std::string>> OsuParser::read_hitobjects_fields(const st
         if (line.empty() || line[0] == '/' || line[0] == '\r') {
             continue;
         }
-        if (!std::isdigit((unsigned char)line[0]) && line[0] != '-' && line[0] != '+') {
+        if (!std::isdigit(static_cast<unsigned char>(line[0])) && line[0] != '-' && line[0] != '+') {
             continue;
         }
         std::vector<std::string> fields;
@@ -275,7 +275,8 @@ OsuParser::OsuParser(const fs::path& path) : file_path(path) {
             if (std::regex_search(el, m, bg_re)) {
                 fs::path candidate = path.parent_path() / m[1].str();
                 std::string ext = candidate.extension().string();
-                std::ranges::transform(ext, ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+                std::ranges::transform(ext, ext.begin(),
+                                       [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
                 if (std::ranges::contains(video_extensions, ext)) {
                     metadata.bgmovie = candidate;
                     break;

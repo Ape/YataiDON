@@ -5,6 +5,7 @@
 #include <bitset>
 #include <cstdint>
 #include <deque>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -91,7 +92,7 @@ static void refresh_sdl_joysticks() {
                 SDL_Gamepad* gp = SDL_OpenGamepad(ids[i]);
                 if (gp) {
                     sdl_gamepads[ids[i]] = gp;
-                    spdlog::info("Gamepad: opened '{}' (id {})", SDL_GetGamepadName(gp), (int)ids[i]);
+                    spdlog::info("Gamepad: opened '{}' (id {})", SDL_GetGamepadName(gp), static_cast<int>(ids[i]));
                 }
             }
             continue;
@@ -100,7 +101,8 @@ static void refresh_sdl_joysticks() {
             SDL_Joystick* joy = SDL_OpenJoystick(ids[i]);
             if (joy) {
                 sdl_joysticks[ids[i]] = joy;
-                spdlog::info("Joystick fallback: opened '{}' (id {})", SDL_GetJoystickName(joy), (int)ids[i]);
+                spdlog::info("Joystick fallback: opened '{}' (id {})", SDL_GetJoystickName(joy),
+                             static_cast<int>(ids[i]));
             }
         }
     }
@@ -160,7 +162,7 @@ bool is_input_key_pressed(const std::vector<int>& keys, const std::vector<int>& 
 
 static bool keys_held(const std::vector<int>& keys, const std::vector<int>& pad) {
     for (int k : keys) {
-        if (k >= 0 && k < (int)previous_key_states.size() && previous_key_states[k]) {
+        if (k >= 0 && k < std::ssize(previous_key_states) && previous_key_states[k]) {
             return true;
         }
     }
@@ -302,9 +304,10 @@ static int touch_quadrant_vkey(Vec2 pos, int sw, int sh) {
         return left ? TOUCH_L_KAT : TOUCH_R_KAT;
     }
 
-    float render_scale = std::min((float)sw / tex.screen_width, (float)sh / tex.screen_height);
+    float render_scale =
+        std::min(static_cast<float>(sw) / tex.screen_width, static_cast<float>(sh) / tex.screen_height);
     float cx = sw * 0.5f;
-    float cy = (float)sh * 0.5f + tex.screen_height * render_scale * 0.5f;
+    float cy = sh * 0.5f + tex.screen_height * render_scale * 0.5f;
 
     float rx = tex.screen_width * 0.262f * render_scale;
     float ry = tex.screen_width * 0.242f * render_scale;
@@ -345,7 +348,7 @@ static bool handle_linux_text_input(SDL_Event* event) {
     const auto* key_state = SDL_GetKeyboardState(nullptr);
     std::scoped_lock lock(input_mutex);
     for (const char* p = event->text.text; *p; p++) {
-        unsigned char c = (unsigned char)*p;
+        unsigned char c = static_cast<unsigned char>(*p);
         int key = char_to_raylib_key(c);
         if (!key) {
             continue;
@@ -440,7 +443,7 @@ bool draw_touch_drum() {
         touch_drum_resize->restart();
     }
     touch_drum_resize->update(get_current_ms());
-    const float scale = (float)touch_drum_resize->attribute;
+    const float scale = touch_drum_resize->attribute;
     float y_fix = 0.0f;
     auto drum_it = global_tex.textures.find("overlay/touch_drum");
     if (drum_it != global_tex.textures.end()) {
@@ -487,7 +490,7 @@ void poll_keyboard_once() {
 #else
     int num_keys = 0;
     const auto* kb_state = SDL_GetKeyboardState(&num_keys);
-    for (int key = 0; key < std::min(num_keys, (int)SDL_SCANCODE_COUNT); key++) {
+    for (int key = 0; key < std::min(num_keys, static_cast<int>(SDL_SCANCODE_COUNT)); key++) {
         bool current_state = kb_state[key];
         bool previous_state = previous_key_states[key];
         if (current_state && !previous_state) {
@@ -545,7 +548,7 @@ void poll_keyboard_once() {
     for (auto& [joy_id, joy] : sdl_joysticks) {
         int num_buttons = SDL_GetNumJoystickButtons(joy);
         for (int btn = 0; btn < num_buttons && btn < 32; btn++) {
-            int64_t state_key = (int64_t)joy_id * 256 + btn;
+            int64_t state_key = static_cast<int64_t>(joy_id) * 256 + btn;
             // Use 1-indexed encoding to match raylib's gamepad button convention
             int vkey = 10000 + btn + 1;
             bool cur = SDL_GetJoystickButton(joy, btn);
@@ -561,7 +564,7 @@ void poll_keyboard_once() {
 
         int num_axes = SDL_GetNumJoystickAxes(joy);
         for (int axis = 0; axis < num_axes && axis < 8; axis++) {
-            int64_t state_key = (int64_t)joy_id * 256 + axis;
+            int64_t state_key = static_cast<int64_t>(joy_id) * 256 + axis;
             float value = SDL_GetJoystickAxis(joy, axis) / 32767.0f;
             float prev = sdl_prev_axis[state_key];
             int key_pos = 20000 + axis * 2;
@@ -1005,7 +1008,7 @@ TextEditAction poll_text_edit(std::string& text, const std::function<bool(int)>&
     TextEditAction action = TextEditAction::None;
     if (key_pressed(SDL_SCANCODE_BACKSPACE)) {
         // Remove one whole UTF-8 code point (continuation bytes first).
-        while (!text.empty() && ((unsigned char)text.back() & 0xC0) == 0x80) {
+        while (!text.empty() && (static_cast<unsigned char>(text.back()) & 0xC0) == 0x80) {
             text.pop_back();
         }
         if (!text.empty()) {
@@ -1085,7 +1088,7 @@ namespace {
             }
             break;
         case SDL_EVENT_MOUSE_WHEEL:
-            pending.wheel += (float)event->wheel.y;
+            pending.wheel += event->wheel.y;
             break;
         case SDL_EVENT_MOUSE_BUTTON_DOWN:
             if (event->button.button < pending.mouse_pressed.size()) {
@@ -1153,8 +1156,8 @@ Vec2 mouse_position() {
 #else
     int ix = 0, iy = 0;
     SDL_GetMouseState(&ix, &iy);
-    x = (float)ix;
-    y = (float)iy;
+    x = ix;
+    y = iy;
 #endif
     return {x, y};
 }
@@ -1165,7 +1168,7 @@ bool mouse_down(int button) {
 
 bool mouse_pressed(int button) {
     std::scoped_lock lock(frame_mutex);
-    return button >= 0 && button < (int)frame.mouse_pressed.size() && frame.mouse_pressed.test(button);
+    return button >= 0 && button < std::ssize(frame.mouse_pressed) && frame.mouse_pressed.test(button);
 }
 
 void show_cursor() {

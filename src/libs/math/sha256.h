@@ -16,7 +16,7 @@ namespace crypto {
             }
             total_len += len;
             while (len > 0) {
-                size_t n = std::min(len, size_t(64) - buffer_len);
+                size_t n = std::min(len, 64uz - buffer_len);
                 std::memcpy(buffer + buffer_len, data, n);
                 buffer_len += n;
                 data += n;
@@ -89,8 +89,8 @@ namespace crypto {
 
             uint32_t w[64];
             for (int i = 0; i < 16; ++i) {
-                w[i] = (uint32_t(block[i * 4]) << 24) | (uint32_t(block[i * 4 + 1]) << 16) |
-                       (uint32_t(block[i * 4 + 2]) << 8) | uint32_t(block[i * 4 + 3]);
+                w[i] = (static_cast<uint32_t>(block[i * 4]) << 24) | (static_cast<uint32_t>(block[i * 4 + 1]) << 16) |
+                       (static_cast<uint32_t>(block[i * 4 + 2]) << 8) | static_cast<uint32_t>(block[i * 4 + 3]);
             }
             for (int i = 16; i < 64; ++i) {
                 uint32_t s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >> 3);

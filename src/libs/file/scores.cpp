@@ -1,5 +1,6 @@
 #include "scores.h"
 
+#include <iterator>
 #include <numeric>
 
 #include "../gfx/color_utils.h"
@@ -628,7 +629,7 @@ Score ScoresManager::save_score(const std::string& hash, int difficulty, const s
         *out_score_id = sqlite3_last_insert_rowid(db_fsd);
     }
     sqlite3_finalize(stmt);
-    spdlog::info("Saved score for hash: {} score: {} crown: {}", hash, score.score, (int)score.crown);
+    spdlog::info("Saved score for hash: {} score: {} crown: {}", hash, score.score, static_cast<int>(score.crown));
 
     auto key = std::make_tuple(hash, difficulty, player_id);
     std::scoped_lock lock(maps_mutex);
@@ -1200,7 +1201,7 @@ void ScoresManager::save_dan_score(const std::string& player_id, const std::stri
         spdlog::error("save_dan_score: songs prepare failed: {}", sqlite3_errmsg(db_fsd));
         return;
     }
-    for (int i = 0; i < (int)rd.songs.size(); i++) {
+    for (int i = 0; i < std::ssize(rd.songs); i++) {
         const auto& s = rd.songs[i];
         sqlite3_bind_int64(stmt, 1, id);
         sqlite3_bind_int(stmt, 2, i);

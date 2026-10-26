@@ -11,11 +11,12 @@
 #include "gfx/sdl_compat.h"
 #endif
 #include <algorithm>
+#include <numbers>
 #include <span>
 #include <string>
 #include <vector>
 
-inline constexpr float deg2rad = 3.14159265358979323846f / 180.0f;
+inline constexpr float deg2rad = std::numbers::pi_v<float> / 180.0f;
 
 inline Color fade(Color c, float alpha) {
     return Color(c.r, c.g, c.b, static_cast<uint8_t>(std::clamp(alpha, 0.0f, 1.0f) * 255.0f + 0.5f));

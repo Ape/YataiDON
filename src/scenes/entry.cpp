@@ -327,14 +327,14 @@ void EntryScreen::start_second_player_join() {
     players[1] = std::make_unique<EntryPlayer>(second, second_side, box_manager.get());
     players[1]->start_animations();
     audio.play_sound("cloud", VolumePreset::SOUND);
-    audio.play_sound("entry_start_" + std::to_string((int)second) + "p", VolumePreset::VOICE);
+    audio.play_sound("entry_start_" + std::to_string(static_cast<int>(second)) + "p", VolumePreset::VOICE);
 
     global_data.player_num = PlayerNum::P1;
     is_2p = true;
     side = 1;
     state = EntryState::SELECT_MODE;
-    spdlog::info("[2P join] ENTRY resumed: {}P kept (first_login {}P), {}P entered, mode select", (int)first,
-                 (int)global_data.first_login_player, (int)second);
+    spdlog::info("[2P join] ENTRY resumed: {}P kept (first_login {}P), {}P entered, mode select",
+                 static_cast<int>(first), static_cast<int>(global_data.first_login_player), static_cast<int>(second));
 }
 
 std::unique_ptr<Chara3D> EntryScreen::make_preview_chara(PlayerNum player_num) {
@@ -423,7 +423,7 @@ void EntryScreen::join_player(PlayerNum player_num, bool do_login) {
         is_2p = false;
     }
     audio.play_sound("cloud", VolumePreset::SOUND);
-    audio.play_sound("entry_start_" + std::to_string((int)player_num) + "p", VolumePreset::VOICE);
+    audio.play_sound("entry_start_" + std::to_string(static_cast<int>(player_num)) + "p", VolumePreset::VOICE);
     if (state == EntryState::SELECT_SIDE) {
         lua_entry->decide_side_select(side);
     }
@@ -684,7 +684,7 @@ std::optional<Screens> EntryScreen::update() {
     }
     for (auto& player : players) {
         if (player && player->is_cloud_animation_finished() &&
-            !audio.is_sound_playing("entry_start_" + std::to_string((int)global_data.player_num) + "p") &&
+            !audio.is_sound_playing("entry_start_" + std::to_string(static_cast<int>(global_data.player_num)) + "p") &&
             !announce_played && state != EntryState::NAME_ENTRY) {
             audio.play_sound("select_mode", VolumePreset::VOICE);
             announce_played = true;

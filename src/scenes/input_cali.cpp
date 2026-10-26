@@ -14,7 +14,7 @@ Modifiers InputCaliScreen::get_player_modifiers(PlayerNum pn) {
 }
 
 void InputCaliScreen::on_screen_start() {
-    SessionData& session_data = global_data.session_data[(int)global_data.player_num];
+    SessionData& session_data = global_data.session_data[static_cast<int>(global_data.player_num)];
     session_data.selected_song = CALI_TJA_PATH;
     session_data.selected_difficulty = 2;
     GameScreen::on_screen_start();
@@ -79,7 +79,7 @@ void InputCaliScreen::draw() {
     if (average_latency_text.has_value()) {
         average_latency_text->draw(
             {.x = (tex.screen_width / 2) - average_latency_text->width / 2,
-             .y = static_cast<float>(tex.screen_height - 40 - (int)(average_latency_text->height * 1.5))});
+             .y = static_cast<float>(tex.screen_height - 40 - static_cast<int>(average_latency_text->height * 1.5))});
     }
     if (background.has_value()) {
         background->draw_fore();

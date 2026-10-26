@@ -7,7 +7,7 @@
 namespace {
     std::string lower_extension(const fs::path& path) {
         std::string ext = path.extension().string();
-        std::ranges::transform(ext, ext.begin(), [](unsigned char c) { return (char)std::tolower(c); });
+        std::ranges::transform(ext, ext.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
         return ext;
     }
 } // namespace

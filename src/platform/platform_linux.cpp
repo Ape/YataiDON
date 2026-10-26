@@ -47,7 +47,7 @@ namespace {
         buf[1] = 'x';
         for (std::size_t i = 0; i < sizeof(value) * 2; i++) {
             int nibble = (value >> (4 * (sizeof(value) * 2 - 1 - i))) & 0xF;
-            buf[2 + i] = nibble < 10 ? char('0' + nibble) : char('a' + nibble - 10);
+            buf[2 + i] = nibble < 10 ? static_cast<char>('0' + nibble) : static_cast<char>('a' + nibble - 10);
         }
         write_all(fd, buf, sizeof(buf));
     }

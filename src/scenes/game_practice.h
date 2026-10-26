@@ -65,7 +65,7 @@ public:
         if (draw_drum_hit_list.size() < 4) {
             draw_drum_hit_list.push_back(std::make_unique<DrumHitEffect>(drum_type, side));
         }
-        spawn_scrobble_effect(drum_type, side, (int)player_num - 1);
+        spawn_scrobble_effect(drum_type, side, static_cast<int>(player_num) - 1);
     }
 
     void spawn_scrobble_effect(DrumType drum_type, Side side, int player_index) {

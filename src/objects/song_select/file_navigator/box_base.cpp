@@ -37,15 +37,15 @@ BaseBox::~BaseBox() {
 void BaseBox::preregister_text() {
     float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     if (utf8_char_count(text_name) >= 30) {
-        font_size -= (int)(10 * tex.screen_scale);
+        font_size -= static_cast<int>(10 * tex.screen_scale);
     }
-    font_manager.register_text(text_name, (int)font_size);
+    font_manager.register_text(text_name, static_cast<int>(font_size));
 }
 
 void BaseBox::load_text() {
     float font_size = tex.get_skin_config(SC::SONG_SELECT_BOX_NAME)->font_size;
     if (utf8_char_count(text_name) >= 30) {
-        font_size -= (int)(10 * tex.screen_scale);
+        font_size -= static_cast<int>(10 * tex.screen_scale);
     }
     name = make_unique<OutlinedText>(text_name, font_size, text_color, fore_color, true);
 
@@ -132,7 +132,7 @@ void BaseBox::update(double current_time) {
     if (!move->is_finished) {
         position += move->attribute - prev_position;
         if (move_delta != 0.0f && cross_lead != 0.0f) {
-            float p = (float)(move->attribute / move_delta);
+            float p = move->attribute / move_delta;
             if (p < 0.0f) {
                 p = 0.0f;
             } else if (p > 1.0f) {
@@ -152,7 +152,7 @@ void BaseBox::update(double current_time) {
     if (yellow_box_active) {
         // The Lua skin advances the shared yellow-box animations; read their current
         // attributes to derive the box bounds the navigator uses for the inline-list bg.
-        auto yb = [](int id) { return (MoveAnimation*)tex.get_animation(id); };
+        auto yb = [](int id) { return dynamic_cast<MoveAnimation*>(tex.get_animation(id)); };
         if (is_diff_select) {
             left_bound = position + (yb(13)->attribute - yb(13)->start_position);
             right_bound = yb(14)->attribute - yb(14)->start_position;

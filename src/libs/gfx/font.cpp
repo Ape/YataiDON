@@ -23,7 +23,7 @@ std::vector<GlyphInfo> load_font_data(std::span<const unsigned char> data, int f
         spdlog::warn("FONT: Failed to process TTF font data");
         return glyphs;
     }
-    const float scale = stbtt_ScaleForPixelHeight(&info, (float)font_size);
+    const float scale = stbtt_ScaleForPixelHeight(&info, font_size);
     int ascent = 0, descent = 0, line_gap = 0;
     stbtt_GetFontVMetrics(&info, &ascent, &descent, &line_gap);
     for (int cp : codepoints) {
@@ -33,13 +33,13 @@ std::vector<GlyphInfo> load_font_data(std::span<const unsigned char> data, int f
         GlyphInfo& g = glyphs.emplace_back();
         g.value = cp;
         stbtt_GetCodepointHMetrics(&info, cp, &g.advanceX, nullptr);
-        g.advanceX = (int)((float)g.advanceX * scale);
+        g.advanceX = static_cast<int>(g.advanceX * scale);
         // Blank glyphs (spaces) get no bitmap: width/height stay 0, only advanceX matters.
         g.image.data =
             stbtt_GetCodepointBitmap(&info, scale, scale, cp, &g.image.width, &g.image.height, &g.offsetX, &g.offsetY);
         g.image.mipmaps = 1;
         g.image.format = pixel_format::GRAYSCALE;
-        g.offsetY += (int)((float)ascent * scale);
+        g.offsetY += static_cast<int>(ascent * scale);
     }
     return glyphs;
 }
@@ -59,7 +59,7 @@ Image gen_image_font_atlas(const GlyphInfo* glyphs, Rect** recs_out, int glyph_c
         total_width += glyphs[i].image.width + 2 * padding;
     }
     const float total_area = total_width * (font_size + 2 * padding) * 1.2f;
-    const int size = (int)powf(2, ceilf(logf(sqrtf(total_area)) / logf(2)));
+    const int size = static_cast<int>(powf(2, ceilf(logf(sqrtf(total_area)) / std::numbers::ln2_v<float>)));
     atlas.width = size;
     atlas.height = total_area < (size * size) / 2 ? size / 2 : size;
     int data_size = atlas.width * atlas.height;
@@ -88,7 +88,8 @@ Image gen_image_font_atlas(const GlyphInfo* glyphs, Rect** recs_out, int glyph_c
                 }
             }
         }
-        recs[i] = {(float)ox, (float)oy, (float)im.width, (float)im.height};
+        recs[i] = {static_cast<float>(ox), static_cast<float>(oy), static_cast<float>(im.width),
+                   static_cast<float>(im.height)};
         ox += im.width + 2 * padding;
     }
 
@@ -136,7 +137,7 @@ Font load_font_from_memory(std::span<const unsigned char> data, int font_size) {
     }
     Font font;
     font.baseSize = font_size;
-    font.glyphCount = (int)glyphs.size();
+    font.glyphCount = static_cast<int>(glyphs.size());
     font.glyphPadding = TTF_GLYPH_PADDING;
     font.glyphs = static_cast<GlyphInfo*>(std::malloc(glyphs.size() * sizeof(GlyphInfo)));
     std::memcpy(font.glyphs, glyphs.data(), glyphs.size() * sizeof(GlyphInfo));
@@ -212,22 +213,22 @@ const char* codepoint_to_utf8(int codepoint, int* utf8_size) {
     std::memset(utf8, 0, sizeof(utf8));
     int size = 0;
     if (codepoint <= 0x7f) {
-        utf8[0] = (char)codepoint;
+        utf8[0] = static_cast<char>(codepoint);
         size = 1;
     } else if (codepoint <= 0x7ff) {
-        utf8[0] = (char)(((codepoint >> 6) & 0x1f) | 0xc0);
-        utf8[1] = (char)((codepoint & 0x3f) | 0x80);
+        utf8[0] = static_cast<char>(((codepoint >> 6) & 0x1f) | 0xc0);
+        utf8[1] = static_cast<char>((codepoint & 0x3f) | 0x80);
         size = 2;
     } else if (codepoint <= 0xffff) {
-        utf8[0] = (char)(((codepoint >> 12) & 0x0f) | 0xe0);
-        utf8[1] = (char)(((codepoint >> 6) & 0x3f) | 0x80);
-        utf8[2] = (char)((codepoint & 0x3f) | 0x80);
+        utf8[0] = static_cast<char>(((codepoint >> 12) & 0x0f) | 0xe0);
+        utf8[1] = static_cast<char>(((codepoint >> 6) & 0x3f) | 0x80);
+        utf8[2] = static_cast<char>((codepoint & 0x3f) | 0x80);
         size = 3;
     } else if (codepoint <= 0x10ffff) {
-        utf8[0] = (char)(((codepoint >> 18) & 0x07) | 0xf0);
-        utf8[1] = (char)(((codepoint >> 12) & 0x3f) | 0x80);
-        utf8[2] = (char)(((codepoint >> 6) & 0x3f) | 0x80);
-        utf8[3] = (char)((codepoint & 0x3f) | 0x80);
+        utf8[0] = static_cast<char>(((codepoint >> 18) & 0x07) | 0xf0);
+        utf8[1] = static_cast<char>(((codepoint >> 12) & 0x3f) | 0x80);
+        utf8[2] = static_cast<char>(((codepoint >> 6) & 0x3f) | 0x80);
+        utf8[3] = static_cast<char>((codepoint & 0x3f) | 0x80);
         size = 4;
     }
     *utf8_size = size;
@@ -238,7 +239,7 @@ Vec2 measure_text_ex(const Font& font, const char* text, float font_size, float 
     if (!font.glyphs || !font.recs || font.baseSize <= 0 || !text || !text[0]) {
         return {};
     }
-    const int size = (int)std::strlen(text);
+    const int size = static_cast<int>(std::strlen(text));
     int max_bytes = 0, bytes = 0;
     float width = 0.0f, max_width = 0.0f, height = font_size;
     for (int i = 0; i < size;) {
@@ -248,8 +249,8 @@ Vec2 measure_text_ex(const Font& font, const char* text, float font_size, float 
         const int gi = get_glyph_index(font, cp);
         i += n;
         if (cp != '\n') {
-            width += font.glyphs[gi].advanceX > 0 ? (float)font.glyphs[gi].advanceX
-                                                  : font.recs[gi].width + (float)font.glyphs[gi].offsetX;
+            width +=
+                font.glyphs[gi].advanceX > 0 ? font.glyphs[gi].advanceX : font.recs[gi].width + font.glyphs[gi].offsetX;
         } else {
             max_width = width > max_width ? width : max_width;
             bytes = 0;
@@ -259,5 +260,5 @@ Vec2 measure_text_ex(const Font& font, const char* text, float font_size, float 
         max_bytes = bytes > max_bytes ? bytes : max_bytes;
     }
     max_width = width > max_width ? width : max_width;
-    return {max_width * (font_size / (float)font.baseSize) + (float)((max_bytes - 1) * spacing), height};
+    return {max_width * (font_size / font.baseSize) + ((max_bytes - 1) * spacing), height};
 }

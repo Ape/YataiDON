@@ -2,6 +2,7 @@
 
 #include <atomic>
 #include <cmath>
+#include <iterator>
 #include <thread>
 
 #include "../../../libs/audio/audio.h"
@@ -76,10 +77,10 @@ public:
     const char* lua_kind() const override { return "song"; }
     OutlinedText* horizontal_subtitle() {
         if (!horizontal_subtitle_cache) {
-            float font_size =
-                utf8_char_count(text_subtitle) < 30
-                    ? tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size
-                    : tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size - (int)(10 * tex.screen_scale);
+            float font_size = utf8_char_count(text_subtitle) < 30
+                                  ? tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size
+                                  : tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size -
+                                        static_cast<int>(10 * tex.screen_scale);
             horizontal_subtitle_cache =
                 std::make_unique<OutlinedText>(text_subtitle, font_size, text_color, fore_color, false);
         }
@@ -87,16 +88,16 @@ public:
     }
     OutlinedText* horizontal_subtitle_large() {
         if (!horizontal_subtitle_large_cache) {
-            float font_size =
-                utf8_char_count(text_subtitle) < 30
-                    ? tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size
-                    : tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size - (int)(10 * tex.screen_scale);
-            horizontal_subtitle_large_cache =
-                std::make_unique<OutlinedText>(text_subtitle, (int)(font_size * 1.3f), text_color, fore_color, false);
+            float font_size = utf8_char_count(text_subtitle) < 30
+                                  ? tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size
+                                  : tex.get_skin_config(SC::SONG_SELECT_BOX_SUBTITLE)->font_size -
+                                        static_cast<int>(10 * tex.screen_scale);
+            horizontal_subtitle_large_cache = std::make_unique<OutlinedText>(
+                text_subtitle, static_cast<int>(font_size * 1.3f), text_color, fore_color, false);
         }
         return horizontal_subtitle_large_cache.get();
     }
-    bool has_ura() const { return parser.metadata.course_data.contains((int)Difficulty::URA); }
+    bool has_ura() const { return parser.metadata.course_data.contains(static_cast<int>(Difficulty::URA)); }
     int ex_data_flag() const {
         if (parser.ex_data.new_audio) {
             return 1;
@@ -122,14 +123,14 @@ public:
     CourseInfo course_info(int diff) const {
         auto it = parser.metadata.course_data.find(diff);
         bool has_course = it != parser.metadata.course_data.end();
-        CourseInfo info{has_course, 0, false, (int)Crown::NONE, (int)Rank::_NONE};
+        CourseInfo info{has_course, 0, false, static_cast<int>(Crown::NONE), static_cast<int>(Rank::_NONE)};
         if (has_course) {
-            info.level = (int)std::round(it->second.level);
+            info.level = static_cast<int>(std::round(it->second.level));
             info.is_branching = it->second.is_branching;
         }
-        if (diff >= 0 && diff < (int)scores.size() && scores[diff].has_value()) {
-            info.crown = (int)scores[diff]->crown;
-            info.rank = (int)scores[diff]->rank;
+        if (diff >= 0 && diff < std::ssize(scores) && scores[diff].has_value()) {
+            info.crown = static_cast<int>(scores[diff]->crown);
+            info.rank = static_cast<int>(scores[diff]->rank);
         }
         return info;
     }
