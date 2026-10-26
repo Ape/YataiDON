@@ -7,6 +7,7 @@ Checks: >-
   bugprone-unchecked-string-to-number-conversion,
   bugprone-unused-local-non-trivial-variable,
   bugprone-use-after-move,
+  cppcoreguidelines-virtual-class-destructor,
   modernize-avoid-c-style-cast,
   modernize-deprecated-headers,
   modernize-loop-convert,
